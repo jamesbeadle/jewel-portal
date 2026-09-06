@@ -17,7 +17,7 @@
         @if (CanEdit)
         {
             <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="OpenDrawingPicker">Attach documents</button>
-            <label class="btn-secondary text-xs cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
+            <label class="btn-secondary text-xs cursor-pointer @(busy ?"opacity-50 pointer-events-none" : "")">
                 @(uploading ? "Uploading…" : "Attach images")
                 @* No `capture` attribute: on mobile it forces the camera and takes away the photo
                    library, which would stop someone attaching a picture they took ten minutes ago.
@@ -30,7 +30,7 @@
 
     @if (error is not null)
     {
-        <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</div>
+        <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
     }
 
     @if (items.Count == 0)
@@ -47,7 +47,7 @@
             @foreach (var item in items)
             {
                 var attachment = item;
-                <li class="rounded-lg border border-line overflow-hidden bg-surface-raised">
+                <li class="rounded border border-line overflow-hidden bg-surface-raised">
                     @if (attachment.IsImage)
                     {
                         <a href="@Attachments.FileUrl(RequestId, attachment.RequestAttachmentId)" target="_blank" rel="noopener">
@@ -66,14 +66,14 @@
                         <p class="text-xs text-content truncate" title="@attachment.DisplayName">@attachment.DisplayName</p>
                         @if (!string.IsNullOrWhiteSpace(attachment.Caption))
                         {
-                            <p class="text-[11px] text-content-subtle truncate" title="@attachment.Caption">@attachment.Caption</p>
+                            <p class="text-xs text-content-subtle truncate" title="@attachment.Caption">@attachment.Caption</p>
                         }
                         <div class="flex items-center justify-between gap-2 mt-1">
-                            <a class="text-[11px] text-accent hover:underline"
+                            <a class="text-xs text-accent hover:underline"
                                href="@LinkFor(attachment)" target="_blank" rel="noopener">Open</a>
                             @if (CanEdit)
                             {
-                                <button type="button" class="text-[11px] text-content-subtle hover:text-negative"
+                                <button type="button" class="text-xs text-content-subtle hover:text-negative"
                                         disabled="@busy" @onclick="() => Remove(attachment)">Remove</button>
                             }
                         </div>
@@ -96,7 +96,7 @@
     <div class="space-y-3">
         @if (pickerError is not null)
         {
-            <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@pickerError</div>
+            <Notice Tone="Tone.Negative">@pickerError</Notice>
         }
         @if (PickableRevisions.Count == 0)
         {

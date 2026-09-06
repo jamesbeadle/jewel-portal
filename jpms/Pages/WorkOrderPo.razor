@@ -19,29 +19,17 @@
 
 <PageTitle>@Title · JPMS</PageTitle>
 
-@if (!isLoaded)
-{
-    <section class="px-4 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (Detail is null)
-{
-    <section class="px-4 md:px-8 py-12">
-        <h1 class="text-2xl font-semibold text-content mb-2">Work order not found</h1>
+<Page>
+    @if (Detail is null)
+    {
+        <PageHeader Title="Work order not found" />
         <p class="text-content-muted">
             This work order doesn't exist on this project.
             <a class="underline underline-offset-4" href="@($"/projects/{ProjectId}/work-orders")">Back to the Work Orders tab</a>
         </p>
-    </section>
-}
-else
-{
-    <section class="px-4 md:px-8 py-6">
+    }
+    else
+    {
         <div class="po-toolbar flex items-center justify-between gap-3 mb-5 max-w-[820px] mx-auto">
             <a class="text-sm text-content-subtle hover:text-content underline underline-offset-4"
                href="@($"/projects/{ProjectId}/work-orders")">← Work orders</a>
@@ -50,37 +38,33 @@ else
                 {
                     @* Checked before acceptance: a cancelled order may well have been accepted
                        first, and "Accepted by supplier" on a voided order reads as live. *@
-                    <span class="rounded-full border border-line px-2.5 py-0.5 text-xs font-medium text-content-subtle"
-                          title="This order was cancelled after issue — it keeps its number as the record of a voided purchase order, but its value counts nowhere.">
+                    <Pill Tone="Tone.Muted" Title="This order was cancelled after issue — it keeps its number as the record of a voided purchase order, but its value counts nowhere.">
                         Cancelled
-                    </span>
+                    </Pill>
                 }
                 else if (Detail.Order.IsAccepted)
                 {
-                    <span class="rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 px-2.5 py-0.5 text-xs font-medium"
-                          title="@($"Electronically accepted by {Detail.Order.AcceptedByName} on {Detail.Order.AcceptedAt!.Value.LocalDateTime:d MMM yyyy, HH:mm}")">
+                    <Pill Tone="Tone.Positive" Title="@($"Electronically accepted by {Detail.Order.AcceptedByName} on {Detail.Order.AcceptedAt!.Value.LocalDateTime:d MMM yyyy, HH:mm}")">
                         Accepted by supplier
-                    </span>
+                    </Pill>
                 }
                 else if (Detail.Order.Status == WorkOrderStatus.Released)
                 {
-                    <span class="rounded-full border border-amber-200 bg-amber-50 text-amber-800 px-2.5 py-0.5 text-xs font-medium">
+                    <Pill Tone="Tone.Warning">
                         Awaiting supplier acceptance
-                    </span>
+                    </Pill>
                 }
                 else if (Detail.Order.IsDraft)
                 {
-                    <span class="rounded-full border border-line px-2.5 py-0.5 text-xs font-medium text-content-subtle"
-                          title="This order hasn't been approved — it has no order number and the supplier can't see it. Approve or reject it from the Work Orders tab.">
+                    <Pill Tone="Tone.Muted" Title="This order hasn't been approved — it has no order number and the supplier can't see it. Approve or reject it from the Work Orders tab.">
                         Draft — awaiting approval
-                    </span>
+                    </Pill>
                 }
                 else if (Detail.Order.IsRejected)
                 {
-                    <span class="rounded-full border border-line px-2.5 py-0.5 text-xs font-medium text-content-subtle"
-                          title="This draft was rejected — it was never issued and counts nowhere.">
+                    <Pill Tone="Tone.Muted" Title="This draft was rejected — it was never issued and counts nowhere.">
                         Rejected
-                    </span>
+                    </Pill>
                 }
                 @* A draft has no number and the supplier must not hear about it (and a
                    rejected draft never does), so the covering email waits for approval.
@@ -102,17 +86,17 @@ else
 
         @if (emailNote is not null)
         {
-            <p class="po-toolbar rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-4 max-w-[820px] mx-auto">
+            <Notice Tone="Tone.Positive" Class="po-toolbar mb-4 max-w-[820px] mx-auto">
                 @emailNote
                 @if (emailLink is not null)
                 {
                     <a class="text-accent underline ml-1" href="@emailLink" target="_blank" rel="noopener">Open the draft in Outlook</a>
                 }
-            </p>
+            </Notice>
         }
         @if (emailError is not null)
         {
-            <p class="po-toolbar rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4 max-w-[820px] mx-auto">@emailError</p>
+            <Notice Tone="Tone.Negative" Class="po-toolbar mb-4 max-w-[820px] mx-auto">@emailError</Notice>
         }
 
         <PurchaseOrderSheet Order="Detail.Order"
@@ -145,7 +129,7 @@ else
                         <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-accent shrink-0" aria-hidden="true"></span>
                         <div class="min-w-0">
                             <p class="text-sm text-content">Raised@(Detail.Order.IsDraft ? " — still a draft" : Detail.Order.IsRejected ? " — draft, later rejected" : "")</p>
-                            <p class="text-xs text-content-subtle mt-0.5">@Detail.Order.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p>
+                            <p class="text-xs text-content-subtle mt-0.5">@DateTimeText(Detail.Order.CreatedAt.ToLocalTime())</p>
                         </div>
                     </li>
                     @if (Detail.Order.Status is WorkOrderStatus.Released or WorkOrderStatus.Complete or WorkOrderStatus.Cancelled)
@@ -155,7 +139,7 @@ else
                             <div class="min-w-0">
                                 <p class="text-sm text-content">Approved &amp; issued as @Detail.Order.Reference</p>
                                 <p class="text-xs text-content-subtle mt-0.5">
-                                    @Detail.Order.AwardedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")
+                                    @DateTimeText(Detail.Order.AwardedAt.ToLocalTime())
                                     @if (!string.IsNullOrWhiteSpace(ApproverDisplay))
                                     {
                                         <span class="mx-1.5" aria-hidden="true">·</span>
@@ -172,7 +156,7 @@ else
                             <div class="min-w-0">
                                 <p class="text-sm text-content">Accepted by the supplier</p>
                                 <p class="text-xs text-content-subtle mt-0.5">
-                                    @Detail.Order.AcceptedAt!.Value.ToLocalTime().ToString("dd MMM yyyy HH:mm")
+                                    @DateTimeText(Detail.Order.AcceptedAt!.Value.ToLocalTime())
                                     @if (!string.IsNullOrWhiteSpace(Detail.Order.AcceptedByName))
                                     {
                                         <span class="mx-1.5" aria-hidden="true">·</span>
@@ -199,20 +183,22 @@ else
         <Modal IsOpen="showEmailModal" Title="@($"Email work order {Title2} to {Detail.SubcontractorName}")" ShowFooter="true"
                ConfirmLabel="@(emailBusy ? "Drafting…" : "Create draft in mailbox")" ConfirmDisabled="@emailBusy" CancelLabel="Cancel"
                OnCancel="CloseEmailModal" OnConfirm="ConfirmEmailDraftAsync" Class="max-w-3xl w-full">
-            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+            <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
                 Nothing sends from here — this creates a draft in the shared mailbox, addressed to the supplier's
                 directory email, for you to review and send from Outlook. Print the purchase order to PDF first if
                 you want to attach it before sending.
             </p>
 
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subject</label>
+            <FormField Label="Subject">
             <input class="field mb-3" @bind="emailSubject" />
+            </FormField>
 
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Body (HTML)</label>
+            <FormField Label="Body (HTML)">
             <textarea class="field font-mono text-xs" rows="14" @bind="emailBody"></textarea>
+            </FormField>
         </Modal>
-    </section>
-}
+    }
+</Page>
 
 <style>
     @@media print {
@@ -226,7 +212,6 @@ else
     [Parameter] public string ProjectId { get; set; } = "";
     [Parameter] public string WorkOrderId { get; set; } = "";
 
-    private bool isLoaded;
 
     private ProjectWorkOrderDetail? Detail =>
         WorkOrders.Current(ProjectId).FirstOrDefault(detail =>
@@ -325,7 +310,6 @@ else
         _ = WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
         _ = Projects.RefreshAsync(CancellationToken.None);
         await Subcontractors.RefreshAsync(CancellationToken.None);
-        isLoaded = true;
     }
 
     public void Dispose()

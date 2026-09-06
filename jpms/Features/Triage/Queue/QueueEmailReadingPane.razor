@@ -26,14 +26,14 @@
             @if (Selected.Bucket is not null || Selected.Categories.Count > 0)
             {
                 <div class="flex flex-wrap items-center gap-1.5">
-                    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Tagged</span>
+                    <span class="eyebrow">Tagged</span>
                     @if (TriagePathways.FromBucket(Selected.Bucket) is { } openEmailPathway)
                     {
-                        <span class="inline-flex items-center rounded-full @TriagePathways.ChipColour(openEmailPathway) text-xs font-medium px-2.5 py-1">@TriagePathways.Label(openEmailPathway)</span>
+                        <Pill Tone="@TriagePathways.Tone(openEmailPathway)">@TriagePathways.Label(openEmailPathway)</Pill>
                     }
                     @foreach (var tag in Selected.Categories)
                     {
-                        <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-xs font-medium px-2.5 py-1">@TriageEmailDisplay.TagLabel(tag)</span>
+                        <Pill Tone="Tone.Info">@TriageEmailDisplay.TagLabel(tag)</Pill>
                     }
                 </div>
             }

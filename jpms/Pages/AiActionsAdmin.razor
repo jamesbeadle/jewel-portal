@@ -16,35 +16,17 @@
     travel — whatever AI tool is connecting.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!CanSee)
-{
-    <section class="px-6 md:px-8 py-12">
-        <p class="text-sm text-content-muted">You do not have access to the assistant's actions.</p>
-    </section>
-}
-else
-{
-    <section class="px-6 py-6 md:px-8">
-        <p class="eyebrow mb-1">Assistant</p>
-        <h1 class="text-2xl font-semibold text-content mb-1">AI actions</h1>
-        <p class="text-sm text-content-muted mb-6 max-w-3xl">
-            Every action a connected AI tool can perform, and the
-            <a class="underline" href="/admin/skills">skills</a> attached to each. An attached
-            skill's doctrine is served with the action's contract, so the model reads it in the
-            same breath as the schema — before it performs anything. Attach to a whole
-            <span class="text-content">area</span> for discipline-wide doctrine, or to a single
-            action for the exceptions. Changes are in force immediately.
-        </p>
+<Page CanAccess="CanSee" AccessDeniedMessage="You do not have access to the assistant's actions.">
+        <PageHeader>
+            <SubtitleContent>
+                Every action a connected AI tool can perform, and the
+                <a class="underline" href="/admin/skills">skills</a> attached to each. An attached
+                skill's doctrine is served with the action's contract, so the model reads it in the
+                same breath as the schema — before it performs anything. Attach to a whole
+                <span class="text-content">area</span> for discipline-wide doctrine, or to a single
+                action for the exceptions. Changes are in force immediately.
+            </SubtitleContent>
+        </PageHeader>
 
         @if (dataFailed)
         {
@@ -70,7 +52,7 @@ else
 
             @if (OrphanedAttachments.Count > 0)
             {
-                <div class="rounded-lg border border-negative/40 bg-negative/5 px-4 py-3 mb-4">
+                <div class="rounded border border-negative/40 bg-negative/5 px-4 py-3 mb-4">
                     <p class="text-xs font-medium text-content mb-1">
                         Attachments pointing at nothing — the action or area was renamed or removed
                         in code. Detach them, or re-attach the skill under the current name.
@@ -168,8 +150,7 @@ else
                 </div>
             }
         }
-    </section>
-}
+</Page>
 
 @code {
     private RenderFragment SkillChip(string skillKey, bool viaArea) => __builder =>
@@ -177,7 +158,7 @@ else
         var skill = SkillFor(skillKey);
         var label = skill?.DisplayName ?? skillKey;
         var isOff = skill is { IsActive: false };
-        <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-raised px-2 py-0.5 text-[11px] @(viaArea || isOff ? "text-content-subtle" : "text-content")"
+        <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-raised px-2 py-0.5 text-xs @(viaArea || isOff ?"text-content-subtle" : "text-content")"
               title="@(viaArea ? "Attached to the whole area — edit with the Area skills button." : skill?.Description ?? skillKey)">
             @label
             @if (viaArea)
@@ -199,7 +180,7 @@ else
             </p>
             @if (saveErrors.Count > 0)
             {
-                <div class="rounded-lg border border-negative/40 bg-negative/5 px-3 py-2 mb-2">
+                <div class="rounded border border-negative/40 bg-negative/5 px-3 py-2 mb-2">
                     @foreach (var saveError in saveErrors)
                     {
                         <p class="text-xs leading-snug text-content-muted">@saveError</p>

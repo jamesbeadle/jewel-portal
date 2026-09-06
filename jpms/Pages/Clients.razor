@@ -8,91 +8,71 @@
 
 <PageTitle>Clients · JPMS</PageTitle>
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!CanManage)
-{
-    <section class="px-6 md:px-8 py-12 text-content-subtle text-sm">You don't have access to client accounts.</section>
-}
-else
-{
-    <section class="px-6 md:px-8 py-8 md:py-12">
-        <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
-            <div>
-                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS</p>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Client accounts</h1>
-                @* The count waits for the list. Rendering "0 clients" while the fetch is in flight
-                   states a fact the page does not yet have; the sentence itself is chrome. *@
-                <p class="text-sm text-content-muted mt-2">
-                    @if (clients is not null)
-                    {
-                        <text>@clients.Count client@(clients.Count == 1 ? "" : "s") · </text>
-                    }
-                    when a client is a project's party, request documents go to the primary contact here. Architects are managed on the <a class="underline hover:text-content" href="/architects">Architects</a> page.
-                </p>
-            </div>
+<Page CanAccess="CanManage" AccessDeniedMessage="You don't have access to client accounts.">
+    <PageHeader>
+        <SubtitleContent>
+            @if (clients is not null)
+            {
+                <text>@clients.Count client@(clients.Count == 1 ? "" : "s") · </text>
+            }
+            when a client is a project's party, request documents go to the primary contact here. Architects are managed on the <a class="underline hover:text-content" href="/architects">Architects</a> page.
+        </SubtitleContent>
+        <Primary>
+            <button type="button" class="btn-primary" @onclick="OpenCreate">New client</button>
+        </Primary>
+        <Actions>
             <div class="flex items-center gap-4 shrink-0">
                 <ExportToExcelButton FileName="Clients"
                                      Disabled="@(AllClients.Count == 0)"
                                      BuildWorkbook="BuildExportWorkbook" />
-                <button type="button" class="btn-primary" @onclick="OpenCreate">New client</button>
-            </div>
-        </header>
 
-        @if (loadError is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
-        }
-
-        <LoadGate IsLoading="@(!ClientsReady)" Prominent="true" Label="Loading client accounts">
-        @if (clients is null)
-        {
-            <p class="text-sm text-negative">Couldn't load the client accounts. The reason is in the red bar above — reload to try again.</p>
-        }
-        else if (clients.Count == 0)
-        {
-            <div class="panel p-8 text-center text-sm text-content-subtle">No client accounts yet. Create one to link projects and requests to the client.</div>
-        }
-        else
-        {
-            <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="text-left text-content-subtle border-b border-line">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Client</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Primary contact</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Contact email</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var client in clients)
-                        {
-                            <tr class="border-b border-line last:border-0">
-                                <td class="px-4 py-3 font-medium text-content">@client.Name</td>
-                                <td class="px-4 py-3 text-content-muted">@Dash(client.PrimaryContactName)</td>
-                                <td class="px-4 py-3 text-content-muted">@Dash(client.PrimaryContactEmail)</td>
-                                <td class="px-4 py-3 text-right whitespace-nowrap">
-                                    <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenContacts(client)">Contacts</button>
-                                    <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenEdit(client)">Edit</button>
-                                    <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => OpenInvite(client)">Invite to portal</button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
             </div>
-        }
-        </LoadGate>
-    </section>
+        </Actions>
+    </PageHeader>
+
+    @if (loadError is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-4">@loadError</Notice>
+    }
+
+    <LoadGate IsLoading="@(!ClientsReady)" Prominent="true" Label="Loading client accounts">
+    @if (clients is null)
+    {
+        <p class="text-sm text-negative">Couldn't load the client accounts. The reason is in the red bar above — reload to try again.</p>
+    }
+    else if (clients.Count == 0)
+    {
+        <EmptyState Message="No client accounts yet. Create one to link projects and requests to the client." />
+    }
+    else
+    {
+        <RecordsTable>
+            <thead>
+                <tr>
+                    <th>Client</th>
+                    <th>Primary contact</th>
+                    <th>Contact email</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var client in clients)
+                {
+                    <tr>
+                        <td class="font-medium text-content">@client.Name</td>
+                        <td>@Dash(client.PrimaryContactName)</td>
+                        <td>@Dash(client.PrimaryContactEmail)</td>
+                        <td class="text-right whitespace-nowrap">
+                            <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenContacts(client)">Contacts</button>
+                            <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenEdit(client)">Edit</button>
+                            <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => OpenInvite(client)">Invite to portal</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </RecordsTable>
+    }
+    </LoadGate>
 
     <PartyContactsEditor @ref="contactsEditor" Kind="PartyKind.Client" OnChanged="ReloadAsync" />
 
@@ -105,7 +85,7 @@ else
         <div class="space-y-4">
             @if (formError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+                <Notice Tone="Tone.Negative">@formError</Notice>
             }
             <FormField Label="Client name" Value="@formName" OnChange="v => formName = v" Required="true" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -131,14 +111,14 @@ else
             </p>
             @if (inviteError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@inviteError</p>
+                <Notice Tone="Tone.Negative">@inviteError</Notice>
             }
             @if (inviteResult is not null)
             {
-                <div class="rounded-lg bg-positive/10 border border-positive/30 px-3 py-2 text-sm text-positive">
-                    <p class="mb-1">Invite sent to <span class="font-medium">@inviteResult.Email</span>. If the email doesn't arrive, share this link (valid until @inviteResult.ExpiresAt.LocalDateTime.ToString("d MMM yyyy")):</p>
+                <Notice Tone="Tone.Positive">
+                    <p class="mb-1">Invite sent to <span class="font-medium">@inviteResult.Email</span>. If the email doesn't arrive, share this link (valid until @DateText(inviteResult.ExpiresAt)):</p>
                     <code class="block break-all text-xs bg-white/60 rounded px-2 py-1">@inviteResult.InviteLink</code>
-                </div>
+                </Notice>
             }
         </div>
     </Modal>
@@ -152,7 +132,7 @@ else
         <div class="space-y-4">
             @if (formError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+                <Notice Tone="Tone.Negative">@formError</Notice>
             }
             <FormField Label="Client name" Value="@formName" OnChange="v => formName = v" Required="true" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -161,12 +141,11 @@ else
             </div>
         </div>
     </Modal>
-}
+</Page>
 
 @code {
     // Session checked and the user signed in. This is NOT "the data is here" — keeping the two
     // apart is what lets the page show its chrome at once and hold the table until the list lands.
-    private bool sessionReady;
     private bool busy;
     private string? loadError;
     private string? formError;
@@ -193,7 +172,6 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         // Paint the chrome before the fetch: Blazor re-renders OnInitializedAsync only at its
         // FIRST await, which has already passed, so without this the page waits on the list.
         StateHasChanged();

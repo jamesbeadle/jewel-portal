@@ -33,8 +33,7 @@ else
                 }
             </select>
         </div>
-        <input class="field" type="search" placeholder="Search reference, title or description…"
-               value="@search" @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
+        <SearchInput @bind-Value="search" Placeholder="Search reference, title or description…" />
         <label class="flex w-fit items-center gap-2 text-xs text-content-subtle cursor-pointer select-none"
                title="The list defaults to live records — tick to also list closed, rejected and completed ones">
             <input type="checkbox" class="cursor-pointer align-middle" checked="@shouldIncludeInactive"
@@ -66,14 +65,14 @@ else
                 @foreach (var result in FilteredRecords)
                 {
                     <button type="button" @key="result.RecordId" @onclick="() => openRecord = result"
-                            class="w-full text-left rounded-lg border border-line hover:border-line-strong hover:bg-surface-raised transition px-3 py-2">
+                            class="w-full text-left rounded border border-line hover:border-line-strong hover:bg-surface-raised transition px-3 py-2">
                         <div class="flex items-baseline justify-between gap-2">
                             <span class="text-sm text-content truncate">
                                 <span class="font-mono text-xs text-content-muted mr-2">@result.Reference</span>@result.Title
                             </span>
                             @if (!string.IsNullOrWhiteSpace(result.StatusLabel))
                             {
-                                <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5 shrink-0">@result.StatusLabel</span>
+                                <Pill Tone="Tone.Info" Class="shrink-0">@result.StatusLabel</Pill>
                             }
                         </div>
                         @if (!string.IsNullOrWhiteSpace(result.Summary))
@@ -84,7 +83,7 @@ else
                 }
                 @if (FilteredRecords.Count == ResultCap)
                 {
-                    <p class="text-[11px] text-content-subtle px-1">Showing the first @ResultCap matches — narrow the search for the rest.</p>
+                    <p class="text-xs text-content-subtle px-1">Showing the first @ResultCap matches — narrow the search for the rest.</p>
                 }
             </div>
         }

@@ -16,7 +16,6 @@ public partial class ProjectBidPackageInviteDetail
 
     // Session checked and the user is signed in — not "the package is here". The tab chrome and
     // the back link show straight away; each section waits behind its own gate.
-    private bool sessionReady;
 
     // ---- Section tabs (Details leads) — local panes, the request page's pattern. ----
 
@@ -36,8 +35,8 @@ public partial class ProjectBidPackageInviteDetail
 
     // The chip classes the RFIs register uses for its document-type tabs.
     private string TabClass(string key) => key == activeTab
-        ? "px-3 py-1.5 rounded-md bg-accent text-accent-ink font-medium"
-        : "px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
+        ? "chip chip-active"
+        : "chip";
 
     // ---- The Actions menu (header) --------------------------------------------------------------
 

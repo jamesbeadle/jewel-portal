@@ -22,46 +22,48 @@
        Class="max-w-3xl">
     @if (error is not null)
     {
-        <p class="rounded bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</p>
+        <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
     }
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">Name *</label>
+            <FormField Label="Name" Required>
             <input type="text" class="field w-full" maxlength="256" placeholder="Something short you'd say out loud — e.g. Build before the price rise"
                    value="@name" @oninput="e => name = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
         </div>
         <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">The idea, in your own words *</label>
+            <FormField Label="The idea, in your own words" Required
+                       Hint="This is what the research works from. Say who you're after and why they'd say yes; the AI finds the where, the numbers and the sources.">
             <textarea class="field w-full" rows="5" maxlength="4000"
                       placeholder="e.g. Find the areas where house prices are about to rise faster than the rest of the county — new stations, big planning consents, that sort of thing — and write to the owners of the bigger houses there with the research, making the case that extending or rebuilding now is an investment that pays twice."
                       value="@brief" @oninput="e => brief = e.Value?.ToString() ?? string.Empty"></textarea>
-            <p class="text-xs text-content-subtle mt-1">This is what the research works from. Say who you're after and why they'd say yes; the AI finds the where, the numbers and the sources.</p>
+            </FormField>
         </div>
         <div>
-            <label class="block text-sm font-medium text-content mb-1">Who it targets</label>
+            <FormField Label="Who it targets">
             <select class="field w-full" value="@audience" @onchange="e => audience = Enum.Parse<SalesAudience>(e.Value?.ToString() ?? nameof(SalesAudience.Homeowners))">
                 @foreach (var option in Enum.GetValues<SalesAudience>())
                 {
                     <option value="@option">@option.DisplayName()</option>
                 }
             </select>
+            </FormField>
         </div>
         <div>
-            <label class="block text-sm font-medium text-content mb-1">How they are reached</label>
+            <FormField Label="How they are reached">
             <select class="field w-full" value="@channel" @onchange="e => channel = Enum.Parse<SalesChannel>(e.Value?.ToString() ?? nameof(SalesChannel.Mixed))">
                 @foreach (var option in Enum.GetValues<SalesChannel>())
                 {
                     <option value="@option">@option.DisplayName()</option>
                 }
             </select>
+            </FormField>
         </div>
         @if (Existing is null)
         {
             <div class="sm:col-span-2">
-                <label class="inline-flex items-center gap-2 text-sm text-content cursor-pointer">
-                    <input type="checkbox" checked="@researchNow" @onchange="e => researchNow = e.Value is true" />
-                    <span>Research it now with AI — find the areas, the evidence and the pitch, and draft the plan (a few minutes, in the background)</span>
-                </label>
+                <Checkbox Value="@researchNow" ValueChanged="v => researchNow = v"
+                          Label="Research it now with AI — find the areas, the evidence and the pitch, and draft the plan (a few minutes, in the background)" />
             </div>
         }
         <div class="sm:col-span-2">
@@ -72,30 +74,35 @@
         @if (detailsOpen)
         {
             <div class="sm:col-span-2">
-                <label class="block text-sm font-medium text-content mb-1">Where</label>
+                <FormField Label="Where">
                 <input type="text" class="field w-full" maxlength="512" placeholder="Leave blank for the research to find — or postcodes, towns, a radius"
                        value="@targetArea" @oninput="e => targetArea = e.Value?.ToString() ?? string.Empty" />
+                </FormField>
             </div>
             <div class="sm:col-span-2">
-                <label class="block text-sm font-medium text-content mb-1">Hypothesis — why these people, why now</label>
+                <FormField Label="Hypothesis — why these people, why now">
                 <textarea class="field w-full" rows="3" maxlength="4000" placeholder="Leave blank for the research to write from the evidence"
                           value="@hypothesis" @oninput="e => hypothesis = e.Value?.ToString() ?? string.Empty"></textarea>
+                </FormField>
             </div>
             <div class="sm:col-span-2">
-                <label class="block text-sm font-medium text-content mb-1">Evidence — the data and findings behind it</label>
+                <FormField Label="Evidence — the data and findings behind it">
                 <textarea class="field w-full" rows="3" maxlength="4000" placeholder="Leave blank for the research to find — or what you already know and where it came from"
                           value="@evidence" @oninput="e => evidence = e.Value?.ToString() ?? string.Empty"></textarea>
+                </FormField>
             </div>
             <div class="sm:col-span-2">
-                <label class="block text-sm font-medium text-content mb-1">Proposition — what we say to them</label>
+                <FormField Label="Proposition — what we say to them">
                 <textarea class="field w-full" rows="2" maxlength="1024" placeholder="Leave blank for the research to draft"
                           value="@proposition" @oninput="e => proposition = e.Value?.ToString() ?? string.Empty"></textarea>
+                </FormField>
             </div>
         }
         <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">Owner *</label>
+            <FormField Label="Owner" Required>
             <SearchSelect Options="@OwnerOptions" Value="@ownerEmail" ValueChanged="v => ownerEmail = v"
                           Placeholder="Who is running it" WidthClass="w-full" InputClass="field" />
+            </FormField>
         </div>
     </div>
 </Modal>

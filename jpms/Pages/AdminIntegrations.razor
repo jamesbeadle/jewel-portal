@@ -14,43 +14,29 @@
     ?bluebeam=connected|failed, which the banner below reads.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (Session.ActiveRole != Role.Admin)
-{
-    <section class="px-6 md:px-8 py-12 max-w-2xl">
+<Page>
+    @if (Session.ActiveRole != Role.Admin)
+    {
         <div class="panel p-6">
             <p class="text-sm text-content-muted">
                 This area is for administrators. If you hold the Administrator role, switch to it to manage integrations.
             </p>
         </div>
-    </section>
-}
-else
-{
-    <section class="px-6 md:px-8 py-8 md:py-12">
+    }
+    else
+    {
         <WorkspaceSectionNav />
-        <header class="mb-6 md:mb-8">
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Admin</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Integrations</h1>
-            <p class="text-sm text-content-muted mt-1">
+        <PageHeader>
+            <SubtitleContent>
                 The portal's shared connections to outside services. One connection serves everyone —
                 connecting or disconnecting here changes what the whole portal can do.
-            </p>
-        </header>
+            </SubtitleContent>
+        </PageHeader>
 
         <div class="max-w-2xl">
             @if (callbackNote is not null)
             {
-                <p class="mb-4 rounded-lg px-3 py-2 text-sm @(callbackFailed ? "bg-negative/10 border border-negative/30 text-negative" : "bg-positive/10 border border-positive/30 text-positive")">
+                <p class="mb-4 rounded px-3 py-2 text-sm @(callbackFailed ?"bg-negative/10 border border-negative/30 text-negative" : "bg-positive/10 border border-positive/30 text-positive")">
                     @callbackNote
                 </p>
             }
@@ -94,15 +80,15 @@ else
                         @if (status.LastRefreshSucceededAt is { } refreshed)
                         {
                             <p class="text-xs text-content-subtle mt-1">
-                                Connection last verified @refreshed.ToLocalTime().ToString("d MMM yyyy, HH:mm") —
+                                Connection last verified @DateTimeText(refreshed.ToLocalTime()) —
                                 the nightly keep-alive exercises it so it never lapses.
                             </p>
                         }
                         @if (status.LastRefreshError is { Length: > 0 } refreshError)
                         {
-                            <p class="mt-3 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">
+                            <Notice Tone="Tone.Negative" Class="mt-3">
                                 The connection is failing: @refreshError
-                            </p>
+                            </Notice>
                             <div class="mt-3">
                                 <button type="button" class="btn-primary" disabled="@busy" @onclick="ConnectAsync">
                                     @(busy ? "Redirecting…" : "Reconnect Bluebeam")
@@ -123,7 +109,7 @@ else
                                 </p>
                                 <div class="flex items-center gap-2">
                                     <button type="button" disabled="@busy" @onclick="DisconnectAsync"
-                                            class="rounded-lg border border-red-300 text-red-700 font-medium text-sm px-3 py-2 hover:bg-red-50 transition disabled:opacity-60">
+                                            class="btn-secondary text-negative border-negative/40 hover:border-negative">
                                         @(busy ? "Disconnecting…" : "Disconnect")
                                     </button>
                                     <button type="button" class="btn-neutral" disabled="@busy" @onclick="() => confirmingDisconnect = false">
@@ -135,16 +121,15 @@ else
                     }
                     @if (actionError is not null)
                     {
-                        <p class="mt-3 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
+                        <Notice Tone="Tone.Negative" Class="mt-3">@actionError</Notice>
                     }
                 }
             </Panel>
         </div>
-    </section>
-}
+    }
+</Page>
 
 @code {
-    private bool sessionReady;
     private bool statusFailed;
     private bool busy;
     private bool confirmingDisconnect;
@@ -162,7 +147,6 @@ else
         }
         Session.OnChange += OnSessionChanged;
         Bluebeam.OnChange += StateHasChanged;
-        sessionReady = true;
         ReadCallbackOutcome();
 
         if (Session.ActiveRole == Role.Admin)

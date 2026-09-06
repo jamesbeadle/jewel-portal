@@ -14,82 +14,79 @@
     administrators can list everyone's with the toggle.
 *@
 
-<ApprovedSessionGate>
-    <section class="px-6 py-6 md:px-8">
-        <div class="flex items-start justify-between gap-3 mb-1">
-            <div>
-                <h1 class="text-2xl font-semibold text-content">AI Connections</h1>
-                <p class="text-sm text-content-muted mt-1 max-w-2xl">
-                    The AI tools (Claude, Perplexity…) connected to the portal as
-                    @(showAll ? "any user" : "you") through the connector. Connect one from the
-                    tool itself using the portal's address — it signs in with your portal email and
-                    password. Disconnect revokes its access immediately.
-                </p>
-            </div>
+<Page>
+    <PageHeader>
+        <SubtitleContent>
+            <p class="max-w-2xl">
+                The AI tools (Claude, Perplexity…) connected to the portal as
+                @(showAll ? "any user" : "you") through the connector. Connect one from the
+                tool itself using the portal's address — it signs in with your portal email and
+                password. Disconnect revokes its access immediately.
+            </p>
+        </SubtitleContent>
+        <Actions>
             @if (IsAdmin)
             {
-                <label class="shrink-0 flex items-center gap-2 text-xs text-content-subtle cursor-pointer mt-1">
+                <label class="shrink-0 flex items-center gap-2 text-xs text-content-subtle cursor-pointer">
                     <input type="checkbox" checked="@showAll" @onchange="ToggleShowAll" />
                     Everyone's connections
                 </label>
             }
-        </div>
+        </Actions>
+    </PageHeader>
 
-        @if (error is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-4">@error</p>
-        }
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mt-4">@error</Notice>
+    }
 
-        <div class="mt-5">
-            <LoadGate IsLoading="@(rows is null && error is null)" Label="Loading connections">
-                @if (Rows.Count == 0)
-                {
-                    <p class="text-sm text-content-subtle">
-                        Nothing is connected@(showAll ? "" : " for you") yet. Add the portal as a
-                        connector in your AI tool and sign in — the setup guide has the steps.
-                    </p>
-                }
-                else
-                {
-                    <div class="panel overflow-hidden">
-                        <table class="w-full text-sm">
-                            <thead>
-                                <tr class="border-b border-line text-left">
-                                    <th class="px-4 py-2.5 eyebrow">Tool</th>
-                                    @if (showAll)
-                                    {
-                                        <th class="px-4 py-2.5 eyebrow">User</th>
-                                    }
-                                    <th class="px-4 py-2.5 eyebrow">Connected</th>
-                                    <th class="px-4 py-2.5 eyebrow">Last used</th>
-                                    <th class="px-4 py-2.5"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var row in Rows)
+    <div class="mt-5">
+        <LoadGate IsLoading="@(rows is null && error is null)" Label="Loading connections">
+            @if (Rows.Count == 0)
+            {
+                <p class="text-sm text-content-subtle">
+                    Nothing is connected@(showAll ? "" : " for you") yet. Add the portal as a
+                    connector in your AI tool and sign in — the setup guide has the steps.
+                </p>
+            }
+            else
+            {
+                <RecordsTable Dense="true" MaxHeight="">
+                    <thead>
+                        <tr>
+                            <th>Tool</th>
+                            @if (showAll)
+                            {
+                                <th>User</th>
+                            }
+                            <th>Connected</th>
+                            <th>Last used</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Rows)
+                        {
+                            <tr>
+                                <td class="font-medium text-content">@row.ClientName</td>
+                                @if (showAll)
                                 {
-                                    <tr class="border-b border-line/60 last:border-0">
-                                        <td class="px-4 py-2.5 font-medium text-content">@row.ClientName</td>
-                                        @if (showAll)
-                                        {
-                                            <td class="px-4 py-2.5 text-content-muted">@row.UserEmail</td>
-                                        }
-                                        <td class="px-4 py-2.5 text-content-muted">@row.ConnectedAt.ToLocalTime().ToString("d MMM yyyy HH:mm")</td>
-                                        <td class="px-4 py-2.5 text-content-muted">@(row.LastUsedAt?.ToLocalTime().ToString("d MMM yyyy HH:mm") ?? "—")</td>
-                                        <td class="px-4 py-2.5 text-right">
-                                            <button type="button" class="btn-secondary text-xs" disabled="@busy"
-                                                    @onclick="() => RevokeAsync(row)">Disconnect</button>
-                                        </td>
-                                    </tr>
+                                    <td>@row.UserEmail</td>
                                 }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-            </LoadGate>
-        </div>
-    </section>
-</ApprovedSessionGate>
+                                <td>@DateTimeText(row.ConnectedAt.ToLocalTime())</td>
+                                <td>@(DateTimeText(row.LastUsedAt?.ToLocalTime()) ?? "—")</td>
+                                <td class="text-right">
+                                    <button type="button" class="btn-secondary text-xs" disabled="@busy"
+                                            @onclick="() => RevokeAsync(row)">Disconnect</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </RecordsTable>
+            }
+        </LoadGate>
+    </div>
+</Page>
 
 @code {
     private bool busy;

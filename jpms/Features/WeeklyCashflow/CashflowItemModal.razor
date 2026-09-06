@@ -12,8 +12,8 @@
         <FormField Label="Name" Value="@formName" OnChange="value => formName = value" Required="true" />
         <div class="grid grid-cols-2 gap-4">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Category</label>
-                <select class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content"
+                <FormField Label="Category">
+                <select class="field"
                         value="@((int)formCategory)"
                         @onchange="args => formCategory = (WeeklyCashflowCategory)int.Parse((string)args.Value!)">
                     @foreach (var category in WeeklyCashflowCategories.All)
@@ -21,18 +21,20 @@
                         <option value="@((int)category)">@WeeklyCashflowCategories.Label(category)</option>
                     }
                 </select>
+                </FormField>
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amount (£) *</label>
+                <FormField Label="Amount (£)" Required>
                 <input type="number" min="0" step="0.01" value="@formAmount"
                        @oninput="args => formAmount = (string)args.Value!"
-                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content" />
+                       class="field" />
+                </FormField>
             </div>
         </div>
         <div class="grid grid-cols-2 gap-4">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Repeats</label>
-                <select class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content"
+                <FormField Label="Repeats">
+                <select class="field"
                         value="@((int)formRecurrence)"
                         @onchange="args => formRecurrence = (WeeklyCashflowRecurrence)int.Parse((string)args.Value!)">
                     @foreach (var recurrence in WeeklyCashflowRecurrences.All)
@@ -40,7 +42,8 @@
                         <option value="@((int)recurrence)">@WeeklyCashflowRecurrences.Label(recurrence)</option>
                     }
                 </select>
-                <p class="text-[11px] text-content-faint mt-1">
+                </FormField>
+                <p class="text-xs text-content-faint mt-1">
                     @(formRecurrence switch
                     {
                         WeeklyCashflowRecurrence.Weekly => "Every week on the first date's weekday.",
@@ -50,29 +53,31 @@
                 </p>
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
+                <label class="block text-sm font-medium text-content mb-1">
                     @(formRecurrence == WeeklyCashflowRecurrence.OneOff ? "Due on *" : "First due on *")
                 </label>
                 <input type="date" value="@formFirstDue"
                        @onchange="args => formFirstDue = (string)args.Value!"
-                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content" />
+                       class="field" />
             </div>
         </div>
         @if (formRecurrence != WeeklyCashflowRecurrence.OneOff)
         {
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Last payment on</label>
+                <FormField Label="Last payment on">
                 <input type="date" value="@formLastDue"
                        @onchange="args => formLastDue = (string)args.Value!"
-                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content" />
-                <p class="text-[11px] text-content-faint mt-1">Leave empty for open-ended.</p>
+                       class="field" />
+                </FormField>
+                <p class="text-xs text-content-faint mt-1">Leave empty for open-ended.</p>
             </div>
         }
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+            <FormField Label="Notes">
             <textarea rows="2" value="@formNotes"
                       @oninput="args => formNotes = (string)args.Value!"
-                      class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content"></textarea>
+                      class="field"></textarea>
+            </FormField>
         </div>
         @if (error is not null)
         {

@@ -7,7 +7,7 @@
    Changing the role clears the pin (the old person doesn't hold the new role); clearing the
    person drops back to the role's pool; clearing the role is "Unassigned". *@
 
-<div class="grid gap-2 @(ShowPeople ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")">
+<div class="grid gap-2 @(ShowPeople ?"grid-cols-1 sm:grid-cols-2" : "grid-cols-1")">
     <SearchSelect Options="@RoleOptions" Value="@RoleValue" ValueChanged="OnRoleChangedAsync"
                   Placeholder="@Placeholder" WidthClass="w-full" InputClass="@InputClass"
                   Disabled="@Disabled" />

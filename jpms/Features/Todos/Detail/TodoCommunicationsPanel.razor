@@ -34,19 +34,19 @@
     <ChildContent>
         @if (failed is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@failed</p>
+            <Notice Tone="Tone.Negative" Class="mb-3">@failed</Notice>
         }
 
         @if (sentNote is not null)
         {
-            <div class="rounded-lg bg-positive/10 border border-positive/30 px-3 py-2 mb-3">
+            <Notice Tone="Tone.Positive" Class="mb-3">
                 <p class="text-sm font-medium text-positive">@sentNote</p>
                 @if (sentNoteWebLink is not null)
                 {
                     <a href="@sentNoteWebLink" target="_blank" rel="noopener"
                        class="text-xs text-accent hover:underline underline-offset-2">Open it in Outlook</a>
                 }
-            </div>
+            </Notice>
         }
 
         @if (composingNew)

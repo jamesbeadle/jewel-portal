@@ -13,13 +13,11 @@ public partial class TodoDetail
 
     // Session checked and the user signed in — NOT "the data is here"; every data-bearing region
     // gates on its own sources.
-    private bool sessionReady;
     private bool itemLoading = true;
     private bool loadFailed;
     private TodoItem? item;
     private bool busy;
     private string? error;
-    private bool deleteArmed;
     // Bumped after every item-changing command so the timeline panel re-reads its lines.
     private int activityVersion;
     private IReadOnlyList<SearchSelect.Option> assigneeOptions = Array.Empty<SearchSelect.Option>();
@@ -60,7 +58,6 @@ public partial class TodoDetail
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         StateHasChanged();
         if (!Session.IsApproved || !HasInternalRole) { itemLoading = false; return; }
 
@@ -128,7 +125,6 @@ public partial class TodoDetail
     private async Task ToggleCompleteAsync()
     {
         if (item is null) return;
-        deleteArmed = false;
         await RunAsync(() => TodoStore.UpdateAsync(new UpdateTodoItem(
             item.TodoItemId, item.Title, NullIfBlank(item.Notes),
             item.AssigneeRole, item.AssigneePersonEmail, item.DueAt,
@@ -168,8 +164,6 @@ public partial class TodoDetail
     private async Task DeleteAsync()
     {
         if (item is null || busy) return;
-        if (!deleteArmed) { deleteArmed = true; return; }
-        deleteArmed = false;
         error = null;
         try
         {

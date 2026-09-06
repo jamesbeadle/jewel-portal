@@ -68,7 +68,7 @@ public partial class ProjectRequests
 
     private bool Searching => !string.IsNullOrWhiteSpace(search);
 
-    private void OnSearchInput(ChangeEventArgs e) => search = e.Value?.ToString() ?? "";
+    private void OnSearchInput(string value) => search = value;
 
     private void ClearSearch() => search = "";
 
@@ -156,16 +156,16 @@ public partial class ProjectRequests
 
     private string StatusViewClass(StatusView view) =>
         view == statusView
-            ? "px-3 py-1.5 rounded-md bg-accent text-accent-ink font-medium"
-            : "px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
+            ? "px-3 py-1.5 rounded bg-accent text-accent-ink font-medium"
+            : "px-3 py-1.5 rounded text-content-muted hover:text-content hover:bg-surface-raised";
 
     private string HrefFor(string slug) =>
         slug == "rfis" ? $"/projects/{ProjectId}/requests" : $"/projects/{ProjectId}/requests/{slug}";
 
     private string FilterClass(string slug)
     {
-        if (slug == ActiveSlug) return "px-3 py-1.5 rounded-md bg-accent text-accent-ink font-medium";
-        return "px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
+        if (slug == ActiveSlug) return "chip chip-active";
+        return "chip";
     }
 
     // ---- Excel export ----------------------------------------------------------------------
@@ -224,7 +224,6 @@ public partial class ProjectRequests
         // background reload lands — so navigating back to this tab never shows stale data.
         RequestRegister.Refresh(ProjectId);
         Activity.Refresh(ProjectId);    // Activity badges land in the background — absent until then.
-        isLoaded = true;
     }
 
     public void Dispose()

@@ -140,11 +140,7 @@ public partial class PathwayPane
     private static string ChipLabel(LinkableRecord record) =>
         record.Type is RecordType.ValuationReportSnapshot or RecordType.ValuationClaim ? record.Title : record.Reference;
 
-    private string TabClass(PaneTab tab) =>
-        "px-4 py-2 text-sm border-b-2 -mb-px transition inline-flex items-center gap-1.5 "
-        + (activeTab == tab
-            ? "border-accent text-content font-semibold"
-            : "border-transparent text-content-muted hover:text-content");
+    private string TabClass(PaneTab tab) => activeTab == tab ? "tab tab-active" : "tab";
 
 
 }

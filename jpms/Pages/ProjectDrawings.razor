@@ -9,18 +9,7 @@
 
 <PageTitle>Documents · JPMS</PageTitle>
 
-@if (!isLoaded)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="documents">
         <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
             <div>
@@ -41,9 +30,9 @@ else
                     }
                     @if (Ambiguous.Count > 0)
                     {
-                        <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                        <Pill Tone="Tone.Warning" Class="ml-2">
                             @Ambiguous.Count ambiguous
-                        </span>
+                        </Pill>
                     }
                 </p>
             </div>
@@ -54,7 +43,7 @@ else
                                      IncludeAllLabel="Include unapproved"
                                      BuildWorkbook="BuildExportWorkbook" />
                 <button type="button" @onclick="() => approvedOnly = !approvedOnly"
-                        class="rounded-lg border text-sm px-3 py-2 transition @(approvedOnly ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "border-line-strong text-content-muted hover:bg-surface-raised")">
+                        class="rounded border text-sm px-3 py-2 transition @(approvedOnly ?"bg-positive/10 border-positive/30 text-positive" : "border-line-strong text-content-muted hover:bg-surface-raised")">
                     @(approvedOnly ? "Showing approved" : "All documents")
                 </button>
                 @if (CanManage)
@@ -65,18 +54,18 @@ else
                            extracted — the Bluebeam markups + text-layer backlog in one click.
                            Extraction reads PDFs regardless of what they are — drawings or not. *@
                         <button type="button" @onclick="() => confirmingExtractAll = true"
-                                class="rounded-lg border border-line-strong text-sm px-3 py-2 text-content-muted hover:bg-surface-raised transition">
+                                class="btn-secondary">
                             Extract all
                         </button>
                     }
                     <button type="button" @onclick="OpenNewFolder"
-                            class="rounded-lg border border-line-strong text-sm px-3 py-2 text-content-muted hover:bg-surface-raised transition">
+                            class="btn-secondary">
                         + New folder
                     </button>
                     @* "Add documents" OPENS the panel; the button that actually uploads lives inside
                        it and says "…to the register" — two different acts, two different labels. *@
                     <button type="button" @onclick="ToggleUploadPanel"
-                            class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
+                            class="btn-primary">
                         @(isUploading ? "Close" : "+ Add documents")
                     </button>
                 }
@@ -117,12 +106,13 @@ else
                ConfirmDisabled="@(folderBusy || string.IsNullOrWhiteSpace(folderName))"
                OnCancel="CloseFolderDialog"
                OnConfirm="SaveFolderAsync">
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Folder name *</label>
+            <FormField Label="Folder name" Required>
             <input type="text" @bind="folderName" @bind:event="oninput" placeholder="Architectural, Structural, M&E…"
                    class="field" />
+            </FormField>
             @if (folderError is not null)
             {
-                <p class="mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@folderError</p>
+                <Notice Tone="Tone.Negative" Class="mt-2">@folderError</Notice>
             }
         </Modal>
 
@@ -139,7 +129,7 @@ else
             </p>
             @if (folderError is not null)
             {
-                <p class="mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@folderError</p>
+                <Notice Tone="Tone.Negative" Class="mt-2">@folderError</Notice>
             }
         </Modal>
 
@@ -157,14 +147,14 @@ else
             </p>
             @if (extractAllError is not null)
             {
-                <p class="mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@extractAllError</p>
+                <Notice Tone="Tone.Negative" Class="mt-2">@extractAllError</Notice>
             }
         </Modal>
 
         @if (extractAllNote is not null)
         {
-            <p class="mt-4 rounded-lg bg-surface-raised border border-line px-3 py-2 text-sm text-content">@extractAllNote</p>
+            <p class="mt-4 rounded bg-surface-raised border border-line px-3 py-2 text-sm text-content">@extractAllNote</p>
         }
     </ProjectPageShell>
-}
+</Page>
 

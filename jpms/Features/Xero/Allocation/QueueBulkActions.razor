@@ -5,15 +5,15 @@
                   Value="@ProjectId" ValueChanged="ProjectIdChanged" />
     <SearchSelect Options="@CostCenterOptions" WidthClass="w-52" Placeholder="Cost centre…"
                   Value="@CostCenterCode" ValueChanged="CostCenterCodeChanged" />
-    <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
+    <button class="text-sm font-medium rounded px-3 py-1.5 bg-content text-surface disabled:opacity-50"
             disabled="@(Busy || string.IsNullOrEmpty(ProjectId) || string.IsNullOrEmpty(CostCenterCode))"
             @onclick="() => OnAllocate.InvokeAsync()">Allocate selected</button>
-    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
+    <button class="btn-secondary"
             title="Save the project and set its Xero site on every selected line — moves them to that project's tab, cost centres to follow"
             disabled="@(Busy || string.IsNullOrEmpty(ProjectId))"
             @onclick="() => OnSetProject.InvokeAsync()">Set selected</button>
     <span class="text-content-subtle">·</span>
-    <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm"
+    <select class="field"
             value="@Bucket" @onchange="e => BucketChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)">
         <option value="">Bucket…</option>
         @foreach (var bucket in XeroBuckets.All)
@@ -21,9 +21,9 @@
             <option value="@bucket">@bucket</option>
         }
     </select>
-    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
+    <button class="btn-secondary"
             disabled="@(Busy || string.IsNullOrEmpty(Bucket))" @onclick="() => OnBucket.InvokeAsync()">Bucket selected</button>
-    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
+    <button class="btn-secondary"
             disabled="@Busy" @onclick="() => OnIgnore.InvokeAsync()">Ignore selected</button>
 </BulkSelectionBar>
 

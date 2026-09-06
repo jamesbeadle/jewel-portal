@@ -14,7 +14,7 @@
             <h2 class="text-sm font-semibold text-content">KPI emails</h2>
             @if (Kpis.Current is { Count: > 0 } all)
             {
-                <span class="text-[11px] text-content-subtle">@all.Count marked · @all.Select(k => k.PersonId).Distinct().Count() people</span>
+                <span class="text-xs text-content-subtle">@all.Count marked · @all.Select(k => k.PersonId).Distinct().Count() people</span>
             }
         </div>
         <a class="text-xs text-accent underline underline-offset-2" href="/admin/kpis">Open register</a>
@@ -26,9 +26,7 @@
         }
         else if (Kpis.Current is { Count: 0 })
         {
-            <p class="text-sm text-content-subtle italic">
-                No emails marked yet. Mark one from the Control Centre's Internal pane — Actions → Mark as KPI.
-            </p>
+            <EmptyState Message="No emails marked yet. Mark one from the Control Centre's Internal pane — Actions → Mark as KPI." />
         }
         else
         {

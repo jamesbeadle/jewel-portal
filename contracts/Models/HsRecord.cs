@@ -57,12 +57,4 @@ public static class HsRecordExtensions
         _ => kind.ToString()
     };
 
-    public static string SeverityPillClass(this HsSeverity severity) => severity switch
-    {
-        HsSeverity.Low      => "bg-slate-100 border-slate-200 text-slate-700",
-        HsSeverity.Medium   => "bg-amber-50 border-amber-200 text-amber-800",
-        HsSeverity.High     => "bg-rose-50 border-rose-200 text-rose-800",
-        HsSeverity.Critical => "bg-rose-100 border-rose-300 text-rose-900",
-        _ => "bg-slate-100 border-slate-200 text-slate-700"
-    };
 }

@@ -15,16 +15,16 @@
 <div class="panel px-4 py-3 mb-3 relative space-y-3">
     <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
         <div class="min-w-0 max-w-full xl:max-w-sm">
-            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Dealing with</p>
+            <p class="eyebrow">Dealing with</p>
             <p class="text-sm font-medium text-content truncate" title="@TriageEmailDisplay.Dash(Selected.Subject)">@TriageEmailDisplay.Dash(Selected.Subject)</p>
-            <p class="text-[11px] text-content-subtle truncate">@TriageEmailDisplay.DisplayFrom(Selected) · @TriageEmailDisplay.Date(Selected.ReceivedAt)</p>
+            <p class="text-xs text-content-subtle truncate">@TriageEmailDisplay.DisplayFrom(Selected) · @TriageEmailDisplay.Date(Selected.ReceivedAt)</p>
         </div>
 
         @* PROJECT — the easiest decision, made first; everything staged below uses it.
            Auto-matched from the email text when a single live project's name appears. The
            picker carries the completed-projects toggle inside its own panel (ProjectSelect). *@
         <div class="flex flex-wrap items-center gap-2">
-            <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
+            <label class="eyebrow shrink-0">Project</label>
             <ProjectSelect Projects="@Projects" Value="@ProjectId" ValueChanged="OnProjectPicked"
                            ToggleTitle="The email's project — everything staged files against it" />
         </div>
@@ -64,13 +64,13 @@
     }
     @if (ActionError is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@ActionError</p>
+        <Notice Tone="Tone.Negative">@ActionError</Notice>
     }
     @if (DiscardArmed)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-content">
+        <Notice Tone="Tone.Negative">
             Discard this email if it isn't for a record at all — spam, an auto-reply, or sent to the wrong place. It (and its thread) gets a "discarded" tag and leaves the queue; nothing moves in the mailbox, and it can be restored from the Tagged tab. Press <strong class="font-semibold">@ApplyLabel</strong> to go ahead, or <strong class="font-semibold">Keep email</strong> to change your mind.
-        </p>
+        </Notice>
     }
     @* ---- The one action bar: whatever is set up here and in the windows below — a reply,
            to-dos, a record filing — is applied together, in one click. ---- *@
@@ -89,7 +89,7 @@
                guide me"). A tooltip on a disabled button is invisible; this isn't. *@
             @if (!Busy && PendingSummary is not null && (DecisionsMissing || ProjectMissing))
             {
-                <p class="text-xs text-amber-600 max-w-xs text-right">@(DecisionsMissing ? DecisionsMissingHint : ProjectMissingHint)</p>
+                <p class="text-xs text-warning max-w-xs text-right">@(DecisionsMissing ? DecisionsMissingHint : ProjectMissingHint)</p>
             }
             @* Armed, this button is the way OUT — so it stops looking destructive and says so:
                grey "Keep email" against the green "Discard email", per the design system's
@@ -170,7 +170,7 @@
     // a red-hovering "🗑 Discard" while it is the destructive act on offer, a plain grey
     // "Keep email" once it is the escape from one.
     private string DiscardTabClass =>
-        "rounded-lg px-3 py-1.5 text-sm border transition "
+        "rounded px-3 py-1.5 text-sm border transition "
         + (DiscardArmed
             ? "border-line-strong text-content bg-surface-raised font-medium hover:border-line-strong"
             : "border-line text-content-subtle hover:text-negative hover:border-negative/50");

@@ -18,33 +18,15 @@
     on), a markdown body, and optional reference documents the model loads on demand.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!CanSee)
-{
-    <section class="px-6 md:px-8 py-12">
-        <p class="text-sm text-content-muted">You do not have access to the assistant's skills.</p>
-    </section>
-}
-else
-{
-    <section class="px-6 py-6 md:px-8">
-        <p class="eyebrow mb-1">Assistant</p>
-        <h1 class="text-2xl font-semibold text-content mb-1">AI skills</h1>
-        <p class="text-sm text-content-muted mb-6 max-w-3xl">
-            The domain knowledge behind each agent — doctrine, method, standing rules — written as
-            markdown and versioned on every save. A skill saved here is in force on the assistant's
-            next message. <span class="text-content">Pinned</span> skills ride with the agent on every
-            turn; unpinned ones are loaded by the assistant when the task needs them.
-        </p>
+<Page CanAccess="CanSee" AccessDeniedMessage="You do not have access to the assistant's skills.">
+        <PageHeader>
+            <SubtitleContent>
+                The domain knowledge behind each agent — doctrine, method, standing rules — written as
+                markdown and versioned on every save. A skill saved here is in force on the assistant's
+                next message. <span class="text-content">Pinned</span> skills ride with the agent on every
+                turn; unpinned ones are loaded by the assistant when the task needs them.
+            </SubtitleContent>
+        </PageHeader>
 
         @if (editing is null)
         {
@@ -70,9 +52,7 @@ else
             else if (skills.Count == 0)
             {
                 <div class="panel p-5">
-                    <p class="text-sm text-content-muted">
-                        No skills yet. Add the first — paste a SKILL.md straight in, frontmatter and all.
-                    </p>
+                    <EmptyState Message="No skills yet. Add the first — paste a SKILL.md straight in, frontmatter and all." />
                 </div>
             }
             else
@@ -103,7 +83,7 @@ else
                                         <td class="whitespace-nowrap">@AgentLabel(row.AgentKey)</td>
                                         <td>@(row.Pinned ? "Pinned" : "On demand")</td>
                                         <td>
-                                            <span class="@(row.IsActive ? "text-content" : "text-content-subtle")">
+                                            <span class="@(row.IsActive ?"text-content" : "text-content-subtle")">
                                                 @(row.IsActive ? "Active" : "Off")
                                             </span>
                                         </td>
@@ -142,7 +122,7 @@ else
 
             @if (saveErrors.Count > 0)
             {
-                <div class="rounded-lg border border-negative/40 bg-negative/5 px-4 py-3 mb-4">
+                <div class="rounded border border-negative/40 bg-negative/5 px-4 py-3 mb-4">
                     @foreach (var saveError in saveErrors)
                     {
                         <p class="text-xs leading-snug text-content-muted">@saveError</p>
@@ -156,7 +136,7 @@ else
                         <span class="block text-xs font-medium text-content-muted mb-1">Skill key</span>
                         <input class="field w-full" @bind="editing.SkillKey" disabled="@(!isNew)"
                                placeholder="nigel-commercial-doctrine" />
-                        <span class="block mt-1 text-[11px] text-content-subtle">
+                        <span class="block mt-1 text-xs text-content-subtle">
                             Lowercase, hyphenated. Fixed once created — saves become new versions.
                         </span>
                     </label>
@@ -169,7 +149,7 @@ else
                                 <option value="@agent.Key">@agent.DisplayName (@agent.Key)</option>
                             }
                         </select>
-                        <span class="block mt-1 text-[11px] text-content-subtle">
+                        <span class="block mt-1 text-xs text-content-subtle">
                             Which agent works from this skill. Shared is for house-wide knowledge.
                         </span>
                     </label>
@@ -225,7 +205,7 @@ else
                             @foreach (var reference in references)
                             {
                                 <button type="button" @onclick="() => EditReference(reference)"
-                                        class="w-full text-left rounded-lg border border-line bg-surface-raised px-3 py-2 hover:border-line-strong transition">
+                                        class="w-full text-left rounded border border-line bg-surface-raised px-3 py-2 hover:border-line-strong transition">
                                     <span class="block text-sm text-content">@reference.DisplayName
                                         <span class="text-xs text-content-subtle">— @reference.RefKey</span></span>
                                     <span class="block text-xs text-content-subtle truncate">@reference.Description</span>
@@ -240,7 +220,7 @@ else
                     }
                     else
                     {
-                        <div class="rounded-lg border border-line p-4 space-y-3">
+                        <div class="rounded border border-line p-4 space-y-3">
                             <div class="grid gap-3 md:grid-cols-2">
                                 <label class="block">
                                     <span class="block text-xs font-medium text-content-muted mb-1">Reference key</span>
@@ -274,6 +254,5 @@ else
                 </div>
             }
         }
-    </section>
-}
+</Page>
 

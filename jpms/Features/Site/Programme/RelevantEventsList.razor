@@ -10,7 +10,7 @@
    creates a reply-all draft in the projects mailbox — nothing is sent from here. *@
 @if (Error is not null)
 {
-    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@Error</p>
+    <Notice Tone="Tone.Negative" Class="mb-4">@Error</Notice>
 }
 
 <LoadGate IsLoading="@(!Loaded)" Prominent="true" Label="Loading programme emails">
@@ -32,23 +32,23 @@ else
     <ul class="space-y-2">
         @foreach (var email in Emails)
         {
-            <li class="rounded-lg border border-line bg-surface px-4 py-3">
+            <li class="rounded border border-line bg-surface px-4 py-3">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <span class="text-sm font-medium text-content">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
-                    <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                    <span class="text-xs text-content-subtle">@DateTimeText(email.ReceivedAt)</span>
                 </div>
                 <p class="text-sm text-content mt-0.5">
                     @email.Subject
                     @if (email.HasAttachments)
                     {
-                        <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                        <Pill Tone="Tone.Muted" Class="ml-2">attachment</Pill>
                     }
                 </p>
                 @if (expanded.Contains(email.Id))
                 {
                     @* The listed BodyPreview is only Graph's short snippet, so long emails and
                        their history only appear here. HTML is sanitised server-side. *@
-                    <div class="mt-2 rounded-lg bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
+                    <div class="mt-2 rounded bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
                         @if (!details.TryGetValue(email.Id, out var detail) || detail is null)
                         {
                             <p class="text-sm text-content-subtle italic">Loading full email…</p>
@@ -96,10 +96,10 @@ else
                 </div>
                 @if (replyForId == email.Id)
                 {
-                    <div class="mt-2 rounded-lg border border-line bg-surface-raised px-4 py-3">
+                    <div class="mt-2 rounded border border-line bg-surface-raised px-4 py-3">
                         @if (replyError is not null)
                         {
-                            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@replyError</p>
+                            <Notice Tone="Tone.Negative" Class="mb-3">@replyError</Notice>
                         }
                         <textarea class="field mb-3" rows="4" value="@replyBody" @oninput='e => replyBody = e.Value?.ToString() ?? ""'
                                   placeholder="Write your reply — in the draft it will sit above the quoted thread…"></textarea>
@@ -117,7 +117,7 @@ else
                 }
                 @if (replyDraftForId == email.Id && replyDraft is not null)
                 {
-                    <div class="mt-2 rounded-lg bg-positive/10 border border-positive/30 px-3 py-2">
+                    <Notice Tone="Tone.Positive" Class="mt-2">
                         <p class="text-sm font-medium text-positive">
                             Reply draft created in the projects mailbox — in this email's thread.
                         </p>
@@ -135,7 +135,7 @@ else
                             <a href="@replyDraft.WebLink" target="_blank" rel="noopener"
                                class="text-xs text-accent hover:underline underline-offset-2">Open the draft in Outlook</a>
                         }
-                    </div>
+                    </Notice>
                 }
             </li>
         }

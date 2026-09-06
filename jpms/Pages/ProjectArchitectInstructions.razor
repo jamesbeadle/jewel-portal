@@ -19,16 +19,7 @@
     from the attachment, or filed straight into this register by the architect or the Jewel team.
 *@
 
-@if (!sessionReady)
-{
-    <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@(Auth.CurrentUser?.Email ?? "")" DisplayName="@(Auth.CurrentUser?.DisplayName ?? "")" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="architect-instructions">
         <div class="flex items-start justify-between gap-3 mb-5">
             <div>
@@ -47,7 +38,7 @@ else
 
         @if (error is not null)
         {
-            <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</div>
+            <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
         }
 
         @* A failed load must open the panel, or the jewel pulses for ever; the banner above carries
@@ -69,45 +60,45 @@ else
             else
             {
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
+                    <table class="data-table data-table-dense">
                         <thead>
-                            <tr class="text-left text-xs uppercase tracking-wider text-content-subtle border-b border-line">
-                                <th class="py-2 pr-3 font-semibold">Ref</th>
-                                <th class="py-2 pr-3 font-semibold">Title</th>
-                                <th class="py-2 pr-3 font-semibold">Instructed</th>
-                                <th class="py-2 pr-3 font-semibold">Issued by</th>
-                                <th class="py-2 pr-3 font-semibold">Variations</th>
-                                <th class="py-2 pr-3 font-semibold">Document</th>
-                                <th class="py-2 font-semibold"></th>
+                            <tr>
+                                <th>Ref</th>
+                                <th>Title</th>
+                                <th>Instructed</th>
+                                <th>Issued by</th>
+                                <th>Variations</th>
+                                <th>Document</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var item in instructions!)
                             {
                                 var instruction = item;
-                                <tr class="border-b border-line/60 align-top">
-                                    <td class="py-2.5 pr-3">
+                                <tr class="align-top">
+                                    <td>
                                         <span class="font-mono text-content">@instruction.DisplayReference</span>
                                         @if (!string.Equals(instruction.DisplayReference, instruction.Reference, StringComparison.OrdinalIgnoreCase))
                                         {
-                                            <span class="block text-[11px] text-content-subtle font-mono">@instruction.Reference</span>
+                                            <span class="block text-xs text-content-subtle font-mono">@instruction.Reference</span>
                                         }
                                     </td>
-                                    <td class="py-2.5 pr-3 text-content">
+                                    <td class="text-content">
                                         @instruction.Title
                                         @if (!string.IsNullOrWhiteSpace(instruction.Notes))
                                         {
                                             <span class="block text-xs text-content-subtle">@instruction.Notes</span>
                                         }
                                     </td>
-                                    <td class="py-2.5 pr-3 text-content-muted whitespace-nowrap">@Date(instruction.InstructedAt ?? instruction.ReceivedAt)</td>
-                                    <td class="py-2.5 pr-3 text-content-muted">
+                                    <td class="whitespace-nowrap">@Date(instruction.InstructedAt ?? instruction.ReceivedAt)</td>
+                                    <td>
                                         @(string.IsNullOrWhiteSpace(instruction.IssuedByEmail) ? "—" : instruction.IssuedByEmail)
-                                        <span class="block text-[11px] text-content-subtle">
+                                        <span class="block text-xs text-content-subtle">
                                             @(instruction.Source == ArchitectInstructionSource.Email ? "From email" : "Uploaded")
                                         </span>
                                     </td>
-                                    <td class="py-2.5 pr-3">
+                                    <td>
                                         @if (instruction.Links.Count == 0)
                                         {
                                             <span class="text-content-subtle text-xs">Not linked</span>
@@ -119,7 +110,7 @@ else
                                                 {
                                                     <a href="@($"/projects/{ProjectId}/variations/{link.VariationOrderId}")"
                                                        title="@($"{link.Title} — {link.Status.DisplayName()}")"
-                                                       class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-mono bg-surface-raised border border-line text-content-muted hover:text-content">
+                                                       class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-mono bg-surface-raised border border-line text-content-muted hover:text-content">
                                                         @link.DisplayNumber
                                                     </a>
                                                 }
@@ -127,11 +118,11 @@ else
                                         }
                                         @if (CanManage)
                                         {
-                                            <button type="button" class="mt-1 text-[11px] text-accent hover:underline"
+                                            <button type="button" class="mt-1 text-xs text-accent hover:underline"
                                                     disabled="@busy" @onclick="() => OpenLinkDialog(instruction)">Link a variation…</button>
                                         }
                                     </td>
-                                    <td class="py-2.5 pr-3">
+                                    <td>
                                         @if (instruction.HasFile)
                                         {
                                             <a class="text-accent hover:underline text-xs"
@@ -143,10 +134,10 @@ else
                                             <span class="text-xs text-content-subtle" title="No document has been attached yet">Awaited</span>
                                         }
                                     </td>
-                                    <td class="py-2.5 text-right">
+                                    <td class="text-right">
                                         @if (CanManage)
                                         {
-                                            <button type="button" class="text-[11px] text-content-subtle hover:text-negative"
+                                            <button type="button" class="text-xs text-content-subtle hover:text-negative"
                                                     disabled="@busy" @onclick="() => OpenDeleteDialog(instruction)">Delete…</button>
                                         }
                                     </td>
@@ -169,7 +160,7 @@ else
         <div class="space-y-4">
             @if (dialogError is not null)
             {
-                <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@dialogError</div>
+                <Notice Tone="Tone.Negative">@dialogError</Notice>
             }
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -186,14 +177,16 @@ else
             <FormField Label="Issued by (architect's email)" Value="@formIssuedBy" OnChange="v => formIssuedBy = v" />
 
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+                <FormField Label="Notes">
                 <textarea class="field" rows="3" value="@formNotes"
                           @oninput="e => formNotes = e.Value?.ToString() ?? string.Empty"></textarea>
+                </FormField>
             </div>
 
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Document</label>
+                <FormField Label="Document">
                 <InputFile OnChange="OnInstructionFileSelected" accept=".pdf,image/*,.doc,.docx" class="text-sm" />
+                </FormField>
                 <p class="mt-1 text-xs text-content-subtle">
                     @(formFile is null
                         ? "Optional — file the row now and attach the document when it arrives."
@@ -204,7 +197,7 @@ else
             @if (VariationOptions.Count > 0)
             {
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Covers these variations</label>
+                    <label class="block text-sm font-medium text-content mb-1">Covers these variations</label>
                     <p class="text-xs text-content-subtle mb-2">
                         Variations waiting on an instruction are listed first — linking one here saves going back for it.
                     </p>
@@ -238,7 +231,7 @@ else
         <div class="space-y-3">
             @if (dialogError is not null)
             {
-                <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@dialogError</div>
+                <Notice Tone="Tone.Negative">@dialogError</Notice>
             }
             @if (VariationOptions.Count == 0)
             {
@@ -284,7 +277,7 @@ else
         <div class="space-y-3">
             @if (dialogError is not null)
             {
-                <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@dialogError</div>
+                <Notice Tone="Tone.Negative">@dialogError</Notice>
             }
             <p class="text-sm text-content-subtle">
                 Permanently removes the instruction, its stored document and its links to variations. The variations
@@ -292,5 +285,5 @@ else
             </p>
         </div>
     </Modal>
-}
+</Page>
 

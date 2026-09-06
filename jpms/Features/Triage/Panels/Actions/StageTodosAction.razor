@@ -17,7 +17,7 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
+                <label class="block text-sm font-medium text-content mb-1">Assigned to</label>
                 @if (row.Assignees.Count > 0)
                 {
                     <div class="flex flex-wrap gap-1 mb-1.5">
@@ -50,8 +50,9 @@
         </div>
 
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+            <FormField Label="Detail">
             <textarea class="field" rows="5" value="@row.Notes" @oninput="e => { row.Notes = e.Value?.ToString() ?? string.Empty; NotifyTodos(); }"></textarea>
+            </FormField>
         </div>
 
         <div class="flex items-center justify-between pt-1">
@@ -67,11 +68,11 @@
 
         @if (TitledTodoRows.Count == 0)
         {
-            <p class="text-sm text-content-subtle italic">No to-dos drafted from this email yet.</p>
+            <EmptyState Message="No to-dos drafted from this email yet." />
         }
         else
         {
-            <div class="divide-y divide-line rounded-lg border border-line">
+            <div class="divide-y divide-line rounded border border-line">
                 @for (var i = 0; i < TodoRows.Count; i++)
                 {
                     var listIndex = i;

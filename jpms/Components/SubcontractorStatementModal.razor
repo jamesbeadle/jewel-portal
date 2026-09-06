@@ -17,7 +17,7 @@
        Class="max-w-3xl w-full">
     @if (loadError is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@loadError</p>
+        <Notice Tone="Tone.Negative">@loadError</Notice>
     }
     else if (statement is null)
     {
@@ -25,60 +25,58 @@
     }
     else
     {
-        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+        <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
             Nothing sends from here — this creates a draft in the shared mailbox with the statement PDF
             attached, addressed to @(string.IsNullOrWhiteSpace(statement.ContactEmail) ? "the subcontractor (no directory email yet)" : statement.ContactEmail),
             for you to review and send from Outlook. The PDF is rendered from the register when the
             draft is created, so its figures are always current.
         </p>
 
-        <div class="rounded-xl border border-line bg-surface mb-3 overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-surface-raised border-b border-line">
-                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                        <th class="px-3 py-2">Project</th>
-                        <th class="px-3 py-2 text-right">Orders</th>
-                        <th class="px-3 py-2 text-right">Ordered</th>
-                        <th class="px-3 py-2 text-right">Invoiced</th>
-                        <th class="px-3 py-2 text-right">Remaining</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-line">
-                    @if (statement.Projects.Count == 0)
-                    {
-                        <tr>
-                            <td colspan="5" class="px-3 py-3 text-content-subtle italic">
-                                No work orders are recorded on this account yet.
-                            </td>
-                        </tr>
-                    }
-                    @foreach (var project in statement.Projects)
-                    {
-                        <tr>
-                            <td class="px-3 py-2 text-content whitespace-nowrap">
-                                <span class="font-mono text-[11px] text-content-subtle mr-1.5">@project.ProjectReference</span>@project.ProjectName
-                            </td>
-                            <td class="px-3 py-2 text-right">@project.Orders.Count</td>
-                            <td class="px-3 py-2 text-right">@MoneyExact(project.Ordered)</td>
-                            <td class="px-3 py-2 text-right">@MoneyExact(project.Invoiced)</td>
-                            <td class="px-3 py-2 text-right @(project.Remaining < 0 ? "text-negative" : "")">@MoneyExact(project.Remaining)</td>
-                        </tr>
-                    }
-                </tbody>
-                @if (statement.Projects.Count > 0)
+        <RecordsTable Dense="true" MaxHeight="" Class="mb-3">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th class="text-right">Orders</th>
+                    <th class="text-right">Ordered</th>
+                    <th class="text-right">Invoiced</th>
+                    <th class="text-right">Remaining</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (statement.Projects.Count == 0)
                 {
-                    <tfoot class="border-t border-line-strong bg-surface-raised">
-                        <tr class="font-semibold text-content">
-                            <td class="px-3 py-2">Account total</td>
-                            <td class="px-3 py-2 text-right">@statement.OrderCount</td>
-                            <td class="px-3 py-2 text-right">@MoneyExact(statement.TotalOrdered)</td>
-                            <td class="px-3 py-2 text-right">@MoneyExact(statement.TotalInvoiced)</td>
-                            <td class="px-3 py-2 text-right @(statement.TotalRemaining < 0 ? "text-negative" : "")">@MoneyExact(statement.TotalRemaining)</td>
-                        </tr>
-                    </tfoot>
+                    <tr>
+                        <td colspan="5" class="text-content-subtle italic">
+                            No work orders are recorded on this account yet.
+                        </td>
+                    </tr>
                 }
-            </table>
-        </div>
+                @foreach (var project in statement.Projects)
+                {
+                    <tr>
+                        <td class="text-content whitespace-nowrap">
+                            <span class="font-mono text-xs text-content-subtle mr-1.5">@project.ProjectReference</span>@project.ProjectName
+                        </td>
+                        <td class="text-right">@project.Orders.Count</td>
+                        <td class="text-right">@MoneyExact(project.Ordered)</td>
+                        <td class="text-right">@MoneyExact(project.Invoiced)</td>
+                        <td class="text-right @(project.Remaining < 0 ?"text-negative" : "")">@MoneyExact(project.Remaining)</td>
+                    </tr>
+                }
+            </tbody>
+            @if (statement.Projects.Count > 0)
+            {
+                <tfoot class="border-t border-line-strong bg-surface-raised">
+                    <tr class="font-semibold text-content">
+                        <td>Account total</td>
+                        <td class="text-right">@statement.OrderCount</td>
+                        <td class="text-right">@MoneyExact(statement.TotalOrdered)</td>
+                        <td class="text-right">@MoneyExact(statement.TotalInvoiced)</td>
+                        <td class="text-right @(statement.TotalRemaining < 0 ?"text-negative" : "")">@MoneyExact(statement.TotalRemaining)</td>
+                    </tr>
+                </tfoot>
+            }
+        </RecordsTable>
 
         <div class="flex items-center justify-between gap-3 mb-3">
             <a class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
@@ -90,7 +88,7 @@
 
         @if (drafted)
         {
-            <div class="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-900">
+            <Notice Tone="Tone.Positive">
                 <p class="mb-1">
                     Draft created in the shared mailbox to <span class="font-medium">@draftRecipient</span>,
                     with the statement PDF attached. Review and send it from the mailbox's Drafts folder.
@@ -99,20 +97,22 @@
                 {
                     <a class="underline underline-offset-4 font-medium" href="@draftLink" target="_blank" rel="noopener">Open the draft in Outlook on the web</a>
                 }
-            </div>
+            </Notice>
         }
         else
         {
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subject</label>
+            <FormField Label="Subject">
             <input class="field mb-3" @bind="subject" />
+            </FormField>
 
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Cover note (HTML) — the statement itself travels as the attached PDF</label>
+            <FormField Label="Cover note (HTML) — the statement itself travels as the attached PDF">
             <textarea class="field font-mono text-xs" rows="10" @bind="htmlBody"></textarea>
+            </FormField>
         }
 
         @if (error is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-3">@error</p>
+            <Notice Tone="Tone.Negative" Class="mt-3">@error</Notice>
         }
     }
 </Modal>

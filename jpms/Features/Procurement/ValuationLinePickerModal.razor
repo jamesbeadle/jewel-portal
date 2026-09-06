@@ -23,14 +23,12 @@
     }
     else if (SelectableLines.Count == 0)
     {
-        <p class="text-sm text-content-subtle italic">
-            No priced lines on this project's valuation report yet. Build the report on the
-            Valuation tab first, or key line items by hand under Edit details.
-        </p>
+        <EmptyState Message="No priced lines on this project's valuation report yet. Build the report on the
+            Valuation tab first, or key line items by hand under Edit details." />
     }
     else
     {
-        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+        <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
             Tick the report lines this package covers — each becomes a line item carrying the
             report's cost code, description, unit and quantity (trade defaults to the package's
             own). Sale values are internal figures shown for context only — they are not saved
@@ -52,67 +50,65 @@
         }
         else
         {
-        <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[60vh]">
-            <table class="w-full text-sm">
-                <thead class="bg-surface-raised border-b border-line">
-                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 w-8"></th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Cost code</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Description</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 hidden sm:table-cell">Unit</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 text-right">Qty</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 text-right" title="Internal — never shown to tenderers">Sale value</th>
+        <RecordsTable Dense="true" MaxHeight="max-h-[60vh]">
+            <thead>
+                <tr>
+                    <th class="w-8"></th>
+                    <th>Cost code</th>
+                    <th>Description</th>
+                    <th class="hidden sm:table-cell">Unit</th>
+                    <th class="text-right">Qty</th>
+                    <th class="text-right" title="Internal — never shown to tenderers">Sale value</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var group in FilteredLines.GroupBy(GroupLabel))
+                {
+                    var groupIds = group.Where(l => !string.IsNullOrWhiteSpace(l.CostCode)).Select(l => l.ValuationLineItemId).ToList();
+                    var allTicked = groupIds.Count > 0 && groupIds.All(selection.Contains);
+                    <tr class="bg-surface-raised/60">
+                        <td>
+                            <input type="checkbox" checked="@allTicked" disabled="@(Busy || groupIds.Count == 0)"
+                                   title="Select every line shown in this section"
+                                   @onchange="() => ToggleGroup(group)" />
+                        </td>
+                        <td colspan="5" class="eyebrow">@group.Key</td>
                     </tr>
-                </thead>
-                <tbody class="divide-y divide-line">
-                    @foreach (var group in FilteredLines.GroupBy(GroupLabel))
+                    @foreach (var line in group)
                     {
-                        var groupIds = group.Where(l => !string.IsNullOrWhiteSpace(l.CostCode)).Select(l => l.ValuationLineItemId).ToList();
-                        var allTicked = groupIds.Count > 0 && groupIds.All(selection.Contains);
-                        <tr class="bg-surface-raised/60">
-                            <td class="px-3 py-1.5">
-                                <input type="checkbox" checked="@allTicked" disabled="@(Busy || groupIds.Count == 0)"
-                                       title="Select every line shown in this section"
-                                       @onchange="() => ToggleGroup(group)" />
+                        var hasCostCode = !string.IsNullOrWhiteSpace(line.CostCode);
+                        <tr class="@(hasCostCode ?"" : "opacity-60")">
+                            <td>
+                                <input type="checkbox" checked="@selection.Contains(line.ValuationLineItemId)"
+                                       disabled="@(Busy || !hasCostCode)"
+                                       title="@(hasCostCode ? null : "This line has no cost code on the valuation report — set one there first.")"
+                                       @onchange="() => ToggleLine(line)" />
                             </td>
-                            <td colspan="5" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-content-subtle">@group.Key</td>
+                            <td>
+                                @if (hasCostCode)
+                                {
+                                    <span class="text-content-muted" title="@CostCentreLabel(line.CostCode)">@line.CostCode</span>
+                                }
+                                else
+                                {
+                                    <Pill Tone="Tone.Warning">No cost code</Pill>
+                                }
+                            </td>
+                            <td class="text-content">
+                                @LineDescription(line)
+                                @if (LineTypeBadge(line) is { } badge)
+                                {
+                                    <Pill Tone="Tone.Muted" Class="ml-2">@badge</Pill>
+                                }
+                            </td>
+                            <td class="hidden sm:table-cell">@line.Unit</td>
+                            <td class="text-right">@line.Quantity</td>
+                            <td class="text-right tabular-nums">@line.LineAmount.ToString("£#,##0.00")</td>
                         </tr>
-                        @foreach (var line in group)
-                        {
-                            var hasCostCode = !string.IsNullOrWhiteSpace(line.CostCode);
-                            <tr class="@(hasCostCode ? "" : "opacity-60")">
-                                <td class="px-3 py-2">
-                                    <input type="checkbox" checked="@selection.Contains(line.ValuationLineItemId)"
-                                           disabled="@(Busy || !hasCostCode)"
-                                           title="@(hasCostCode ? null : "This line has no cost code on the valuation report — set one there first.")"
-                                           @onchange="() => ToggleLine(line)" />
-                                </td>
-                                <td class="px-3 py-2">
-                                    @if (hasCostCode)
-                                    {
-                                        <span class="text-content-muted" title="@CostCentreLabel(line.CostCode)">@line.CostCode</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">No cost code</span>
-                                    }
-                                </td>
-                                <td class="px-3 py-2 text-content">
-                                    @LineDescription(line)
-                                    @if (LineTypeBadge(line) is { } badge)
-                                    {
-                                        <span class="ml-2 inline-flex items-center rounded-full border border-line bg-surface-raised px-1.5 py-0.5 text-[10px] font-medium text-content-subtle">@badge</span>
-                                    }
-                                </td>
-                                <td class="px-3 py-2 text-content-muted hidden sm:table-cell">@line.Unit</td>
-                                <td class="px-3 py-2 text-content-muted text-right">@line.Quantity</td>
-                                <td class="px-3 py-2 text-content-muted text-right tabular-nums">@line.LineAmount.ToString("£#,##0.00")</td>
-                            </tr>
-                        }
                     }
-                </tbody>
-            </table>
-        </div>
+                }
+            </tbody>
+        </RecordsTable>
         }
         <p class="text-xs text-content-subtle mt-2">
             Lines are appended — nothing already on the package changes. Adjust descriptions,

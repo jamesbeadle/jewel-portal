@@ -3,16 +3,18 @@
 @* The two-week critical-path nudge: an RFI still outstanding after a fortnight is usually
    gating programme work. Yes tags it (same command as the Actions-menu toggle); No records
    the decision on the request so the banner never re-asks anyone about this RFI. *@
-<div class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+<Notice Tone="Tone.Warning" Class="mb-5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-        <p class="text-sm font-medium text-amber-700">RFI 2 weeks old — tag as critical path?</p>
+        <p class="text-sm font-medium text-warning">RFI 2 weeks old — tag as critical path?</p>
         <p class="text-xs text-content-subtle">Outstanding @DaysOutstanding days. Critical path RFIs surface in the Programme tab, where their answers gate the programme.</p>
     </div>
     <div class="flex items-center gap-2 shrink-0">
         <button type="button" class="btn-primary text-xs" disabled="@Busy" @onclick="() => OnAnswer.InvokeAsync(true)">Yes — tag as critical path</button>
         <button type="button" class="btn-neutral text-xs" disabled="@Busy" @onclick="() => OnAnswer.InvokeAsync(false)" title="Hides this prompt for this RFI, for everyone — the tag can still be set from the Actions menu">No</button>
     </div>
-</div>
+    </div>
+</Notice>
 
 @code {
     [Parameter] public int? DaysOutstanding { get; set; }

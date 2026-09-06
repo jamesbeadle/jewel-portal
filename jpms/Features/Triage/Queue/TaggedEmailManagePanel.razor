@@ -9,7 +9,7 @@
 <div class="panel p-5 space-y-4 relative">
     @if (ActionError is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@ActionError</p>
+        <Notice Tone="Tone.Negative">@ActionError</Notice>
     }
 
     <TriageMessageDetail Selected="Selected"
@@ -29,35 +29,35 @@
 
     <div class="pt-3 border-t border-line space-y-4">
         <div>
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Tags on this email</p>
+            <p class="eyebrow mb-2">Tags on this email</p>
             @* The pathway badge is shown apart from the tag chips: it isn't removable here —
                the server drops the bucket itself when the last record tag goes. *@
             @if (Pathway is { } taggedPathway)
             {
                 <div class="mb-2">
-                    <span class="inline-flex items-center rounded-full @TriagePathways.ChipColour(taggedPathway) text-xs font-medium px-2.5 py-1">Filed under @TriagePathways.Label(taggedPathway)</span>
+                    <Pill Tone="@TriagePathways.Tone(taggedPathway)">Filed under @TriagePathways.Label(taggedPathway)</Pill>
                 </div>
             }
             @if (Selected.Categories.Count == 0)
             {
-                <p class="text-sm text-content-subtle italic">No workflow tags. (Refresh if you just changed them.)</p>
+                <EmptyState Message="No workflow tags. (Refresh if you just changed them.)" />
             }
             else
             {
                 <div class="flex flex-wrap gap-2">
                     @foreach (var tag in Selected.Categories)
                     {
-                        <span class="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-raised px-2.5 py-1 text-xs text-content">
+                        <Pill Tone="Tone.Muted">
                             @TriageEmailDisplay.TagLabel(tag)
                             <button type="button" class="text-content-subtle hover:text-negative" disabled="@Busy" @onclick="() => OnRemoveTag.InvokeAsync(tag)" title="Remove this tag">✕</button>
-                        </span>
+                        </Pill>
                     }
                 </div>
             }
         </div>
 
         <div>
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Link to another record</p>
+            <p class="eyebrow mb-2">Link to another record</p>
             <div class="space-y-3">
                 @* Each type shows the pathway it files under. Every type is offered
                    whatever the thread's pathway (the hard client wall was removed

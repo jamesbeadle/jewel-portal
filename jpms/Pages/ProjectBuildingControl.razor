@@ -20,24 +20,13 @@
     email is filed to a stage — or a new stage raised from it — in the Control Centre.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="building-control">
         <h2 class="text-lg font-semibold text-content mb-4">Building Control</h2>
 
         @if (actionError is { } error)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/40 px-3 py-2 text-sm text-content mb-4">@error</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
         }
 
         @if (!BuildingControl.LoadedFor(ProjectId) && !dataFailed)
@@ -53,7 +42,7 @@ else
             @* ---- Case panel: who signs the work off, and where the case stands. ---- *@
             @if (ActiveCase is null)
             {
-                <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+                <section class="panel p-5 mb-5">
                     <h3 class="text-sm font-medium text-content-muted mb-1">No building control case yet</h3>
                     <p class="text-sm text-content-subtle mb-4">
                         Set up the case — the body signing this project off, their reference and the notice dates —
@@ -61,7 +50,7 @@ else
                     </p>
                     @if (!caseFormOpen)
                     {
-                        <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition"
+                        <button type="button" class="btn-primary"
                                 @onclick="OpenCreateCase">
                             Set up building control
                         </button>
@@ -70,12 +59,12 @@ else
             }
             else
             {
-                <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+                <section class="panel p-5 mb-5">
                     <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
                         <div class="min-w-0">
                             <div class="flex items-center gap-2">
                                 <h3 class="text-base font-semibold text-content truncate">@ActiveCase.BodyName</h3>
-                                <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent whitespace-nowrap">@ActiveCase.Status.DisplayName()</span>
+                                <Pill Tone="Tone.Info">@ActiveCase.Status.DisplayName()</Pill>
                             </div>
                             <p class="text-xs text-content-subtle mt-0.5">
                                 @ActiveCase.Regime.Label()
@@ -100,7 +89,7 @@ else
                     </div>
                     <dl class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2 text-sm mb-4">
                         <div>
-                            <dt class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Contact</dt>
+                            <dt class="eyebrow">Contact</dt>
                             <dd class="text-content">@(string.IsNullOrWhiteSpace(ActiveCase.ContactName) ? "—" : ActiveCase.ContactName)</dd>
                             @if (!string.IsNullOrWhiteSpace(ActiveCase.ContactEmail))
                             {
@@ -108,15 +97,15 @@ else
                             }
                         </div>
                         <div>
-                            <dt class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Notice submitted</dt>
+                            <dt class="eyebrow">Notice submitted</dt>
                             <dd class="text-content">@DateText(ActiveCase.NoticeSubmittedOn)</dd>
                         </div>
                         <div>
-                            <dt class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Accepted</dt>
+                            <dt class="eyebrow">Accepted</dt>
                             <dd class="text-content">@DateText(ActiveCase.AcceptedOn)</dd>
                         </div>
                         <div>
-                            <dt class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Completion certified</dt>
+                            <dt class="eyebrow">Completion certified</dt>
                             <dd class="text-content">@DateText(ActiveCase.CompletionCertifiedOn)</dd>
                         </div>
                     </dl>
@@ -129,7 +118,7 @@ else
                     <div class="border-t border-line pt-3">
                         <div class="flex items-center justify-between mb-2">
                             <h4 class="eyebrow">Case documents</h4>
-                            <label class="text-xs text-accent hover:underline cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
+                            <label class="text-xs text-accent hover:underline cursor-pointer @(busy ?"opacity-50 pointer-events-none" : "")">
                                 + Add files
                                 <InputFile OnChange="e => UploadToCaseAsync(ActiveCase, e)" multiple class="hidden" />
                             </label>
@@ -146,7 +135,7 @@ else
                         </div>
                         @if (CaseFiles(ActiveCase).Count == 0)
                         {
-                            <p class="text-sm text-content-subtle italic">No documents on the case yet — the notice, the acknowledgement and the decision notice belong here.</p>
+                            <EmptyState Message="No documents on the case yet — the notice, the acknowledgement and the decision notice belong here." />
                         }
                         else
                         {
@@ -171,63 +160,72 @@ else
             @* ---- Case set-up / edit form. ---- *@
             @if (caseFormOpen)
             {
-                <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+                <section class="panel p-5 mb-5">
                     <h3 class="text-sm font-medium text-content-muted mb-3">@(editingCase is null ? "Set up building control" : "Edit case details")</h3>
                     <div class="space-y-3">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Regime</label>
+                                <FormField Label="Regime">
                                 <select class="field" value="@((int)formRegime)" @onchange="e => formRegime = ParseRegime(e)">
                                     @foreach (var regime in BuildingControlRegimes.All)
                                     {
                                         <option value="@((int)regime)">@regime.Label()</option>
                                     }
                                 </select>
+                                </FormField>
                             </div>
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Body *</label>
+                                <FormField Label="Body" Required>
                                 <input type="text" class="field" maxlength="256" placeholder="Who signs the work off — the council or the approver"
                                        value="@formBodyName" @oninput="e => formBodyName = e.Value?.ToString() ?? string.Empty" />
+                                </FormField>
                             </div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Their reference</label>
+                                <FormField Label="Their reference">
                                 <input type="text" class="field" maxlength="128" placeholder="e.g. BC2415406DOMFPB"
                                        value="@formBodyReference" @oninput="e => formBodyReference = e.Value?.ToString() ?? string.Empty" />
+                                </FormField>
                             </div>
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notice submitted</label>
+                                <FormField Label="Notice submitted">
                                 <input type="date" class="field" value="@formNoticeSubmittedOn"
                                        @onchange="e => formNoticeSubmittedOn = e.Value?.ToString() ?? string.Empty" />
+                                </FormField>
                             </div>
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Accepted / in force</label>
+                                <FormField Label="Accepted / in force">
                                 <input type="date" class="field" value="@formAcceptedOn"
                                        @onchange="e => formAcceptedOn = e.Value?.ToString() ?? string.Empty" />
+                                </FormField>
                             </div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Contact name</label>
+                                <FormField Label="Contact name">
                                 <input type="text" class="field" maxlength="256"
                                        value="@formContactName" @oninput="e => formContactName = e.Value?.ToString() ?? string.Empty" />
+                                </FormField>
                             </div>
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Contact email</label>
+                                <FormField Label="Contact email">
                                 <input type="text" class="field" maxlength="256"
                                        value="@formContactEmail" @oninput="e => formContactEmail = e.Value?.ToString() ?? string.Empty" />
+                                </FormField>
                             </div>
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Contact phone</label>
+                                <FormField Label="Contact phone">
                                 <input type="text" class="field" maxlength="64"
                                        value="@formContactPhone" @oninput="e => formContactPhone = e.Value?.ToString() ?? string.Empty" />
+                                </FormField>
                             </div>
                         </div>
                         <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+                            <FormField Label="Notes">
                             <textarea class="field" rows="2" maxlength="4096"
                                       value="@formNotes" @oninput="e => formNotes = e.Value?.ToString() ?? string.Empty"></textarea>
+                            </FormField>
                         </div>
                         @if (editingCase is null)
                         {
@@ -238,7 +236,7 @@ else
                             </label>
                         }
                         <div class="flex items-center gap-3">
-                            <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition disabled:opacity-50"
+                            <button type="button" class="btn-primary"
                                     disabled="@(string.IsNullOrWhiteSpace(formBodyName) || busy)"
                                     @onclick="SaveCaseAsync">
                                 @(editingCase is null ? "Set up case" : "Save changes")
@@ -255,7 +253,7 @@ else
             {
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-base font-semibold text-content">Inspections</h3>
-                    <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition"
+                    <button type="button" class="btn-primary"
                             @onclick="() => addStageOpen = !addStageOpen">
                         @(addStageOpen ? "Close" : "Add inspection")
                     </button>
@@ -263,20 +261,22 @@ else
 
                 @if (addStageOpen)
                 {
-                    <section class="rounded-xl border border-line bg-surface p-5 mb-4">
+                    <section class="panel p-5 mb-4">
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                             <div class="sm:col-span-2">
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Stage *</label>
+                                <FormField Label="Stage" Required>
                                 <input type="text" class="field" maxlength="256" placeholder="What's being inspected — Foundations, Drainage, Steel frame…"
                                        value="@newStageName" @oninput="e => newStageName = e.Value?.ToString() ?? string.Empty" />
+                                </FormField>
                             </div>
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Booked for</label>
+                                <FormField Label="Booked for">
                                 <input type="date" class="field" value="@newStageBookedFor"
                                        @onchange="e => newStageBookedFor = e.Value?.ToString() ?? string.Empty" />
+                                </FormField>
                             </div>
                         </div>
-                        <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition disabled:opacity-50"
+                        <button type="button" class="btn-primary"
                                 disabled="@(string.IsNullOrWhiteSpace(newStageName) || busy)"
                                 @onclick="AddStageAsync">
                             Add inspection
@@ -286,51 +286,49 @@ else
 
                 @if (Inspections.Count == 0)
                 {
-                    <p class="text-sm text-content-subtle italic">No inspection stages yet — add the stages this build will be signed off in.</p>
+                    <EmptyState Message="No inspection stages yet — add the stages this build will be signed off in." />
                 }
                 else
                 {
-                    <div class="rounded-xl border border-line bg-surface overflow-hidden">
-                        <table class="w-full text-sm">
-                            <thead>
-                                <tr class="border-b border-line text-left">
-                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Ref</th>
-                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Stage</th>
-                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Status</th>
-                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Booked for</th>
-                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Inspected</th>
-                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Files</th>
-                                    <th class="px-4 py-2.5"></th>
+                    <RecordsTable Dense="true" MaxHeight="">
+                        <thead>
+                            <tr>
+                                <th>Ref</th>
+                                <th>Stage</th>
+                                <th>Status</th>
+                                <th>Booked for</th>
+                                <th>Inspected</th>
+                                <th>Files</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var inspection in Inspections)
+                            {
+                                <tr @key="inspection.BuildingControlInspectionId" class="border-b border-line last:border-0 hover:bg-surface-raised/50 cursor-pointer"
+                                    @onclick="() => OpenInspection(inspection)">
+                                    <td class="font-mono text-xs whitespace-nowrap">@inspection.Reference</td>
+                                    <td class="text-content font-medium">@inspection.StageName</td>
+                                    <td class="whitespace-nowrap">
+                                        <Pill Tone="@inspection.Status.ToTone()">@inspection.Status.DisplayName()</Pill>
+                                    </td>
+                                    <td class="whitespace-nowrap">@DateText(inspection.BookedFor)</td>
+                                    <td class="whitespace-nowrap">@DateText(inspection.InspectedAt)</td>
+                                    <td class="whitespace-nowrap">@FileCountText(inspection)</td>
+                                    <td class="whitespace-nowrap text-right" @onclick:stopPropagation>
+                                        @if (inspection.Status == BuildingControlInspectionStatus.Planned && FilesFor(inspection).Count == 0)
+                                        {
+                                            <button type="button" class="text-xs text-content-subtle hover:text-negative underline underline-offset-4" disabled="@busy"
+                                                    @onclick="() => DeleteStageAsync(inspection)">Remove</button>
+                                        }
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var inspection in Inspections)
-                                {
-                                    <tr @key="inspection.BuildingControlInspectionId" class="border-b border-line last:border-0 hover:bg-surface-raised/50 cursor-pointer"
-                                        @onclick="() => OpenInspection(inspection)">
-                                        <td class="px-4 py-2.5 font-mono text-xs text-content-muted whitespace-nowrap">@inspection.Reference</td>
-                                        <td class="px-4 py-2.5 text-content font-medium">@inspection.StageName</td>
-                                        <td class="px-4 py-2.5 whitespace-nowrap">
-                                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(inspection.Status)">@inspection.Status.DisplayName()</span>
-                                        </td>
-                                        <td class="px-4 py-2.5 text-content-muted whitespace-nowrap">@DateText(inspection.BookedFor)</td>
-                                        <td class="px-4 py-2.5 text-content-muted whitespace-nowrap">@DateText(inspection.InspectedAt)</td>
-                                        <td class="px-4 py-2.5 text-content-muted whitespace-nowrap">@FileCountText(inspection)</td>
-                                        <td class="px-4 py-2.5 whitespace-nowrap text-right" @onclick:stopPropagation>
-                                            @if (inspection.Status == BuildingControlInspectionStatus.Planned && FilesFor(inspection).Count == 0)
-                                            {
-                                                <button type="button" class="text-xs text-content-subtle hover:text-negative underline underline-offset-4" disabled="@busy"
-                                                        @onclick="() => DeleteStageAsync(inspection)">Remove</button>
-                                            }
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
+                            }
+                        </tbody>
+                    </RecordsTable>
                 }
             }
         }
     </ProjectPageShell>
-}
+</Page>
 

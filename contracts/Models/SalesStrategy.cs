@@ -167,14 +167,6 @@ public static class SalesStrategyStatusExtensions
         _ => status.ToString()
     };
 
-    public static string PillClass(this SalesStrategyStatus status) => status switch
-    {
-        SalesStrategyStatus.Draft   => "bg-surface-raised text-content-subtle",
-        SalesStrategyStatus.Active  => "bg-positive/25 text-positive",
-        SalesStrategyStatus.Paused  => "bg-info/15 text-info",
-        SalesStrategyStatus.Retired => "bg-surface-raised text-content-faint",
-        _ => "bg-surface-raised text-content-subtle"
-    };
 }
 
 /// <summary>A strategy's funnel — how many leads it has found and how far they got. Counted

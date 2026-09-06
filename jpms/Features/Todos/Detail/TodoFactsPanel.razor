@@ -17,31 +17,31 @@
             <TodoAssigneeFact Item="@Item" CanReassign="@CanReassign"
                               Options="@AssigneeOptions" Busy="@Busy" Reassign="@Reassign" />
             <div>
-                <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Due</dt>
-                <dd class="mt-0.5 @(IsOverdue ? "text-negative font-medium" : "text-content")">
-                    @(Item.DueAt is null ? "—" : Item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy"))@(IsOverdue ? " (overdue)" : "")
+                <dt class="eyebrow">Due</dt>
+                <dd class="mt-0.5 @(IsOverdue ?"text-negative font-medium" : "text-content")">
+                    @(Item.DueAt is null ? "—" : DateText(Item.DueAt.Value))@(IsOverdue ? " (overdue)" : "")
                 </dd>
             </div>
             <div>
-                <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Added</dt>
+                <dt class="eyebrow">Added</dt>
                 <dd class="text-content mt-0.5">
-                    @Item.CreatedAt.LocalDateTime.ToString("d MMM yyyy")@(string.IsNullOrWhiteSpace(Item.CreatedByEmail) ? "" : $" by {Item.CreatedByEmail}")
+                    @DateText(Item.CreatedAt)@(string.IsNullOrWhiteSpace(Item.CreatedByEmail) ? "" : $" by {Item.CreatedByEmail}")
                 </dd>
             </div>
             @if (Item.StartedAt is not null && !Item.IsComplete)
             {
                 <div>
-                    <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">In progress since</dt>
+                    <dt class="eyebrow">In progress since</dt>
                     <dd class="text-content mt-0.5">
-                        @Item.StartedAt.Value.LocalDateTime.ToString("d MMM yyyy")@(string.IsNullOrWhiteSpace(Item.StartedByEmail) ? "" : $" by {Item.StartedByEmail}")
+                        @DateText(Item.StartedAt.Value)@(string.IsNullOrWhiteSpace(Item.StartedByEmail) ? "" : $" by {Item.StartedByEmail}")
                     </dd>
                 </div>
             }
             @if (Item.CompletedAt is not null)
             {
                 <div>
-                    <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Completed</dt>
-                    <dd class="text-content mt-0.5">@Item.CompletedAt.Value.LocalDateTime.ToString("d MMM yyyy")</dd>
+                    <dt class="eyebrow">Completed</dt>
+                    <dd class="text-content mt-0.5">@DateText(Item.CompletedAt.Value)</dd>
                 </div>
             }
         </dl>

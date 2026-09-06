@@ -60,7 +60,6 @@ public partial class ProjectBidPackageInviteDetail
         {
             await Session.EnsureLoadedAsync();
             if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-            sessionReady = true;
             Subs.OnChange += OnStoreChanged;
             CostCenters.OnChanged += OnStoreChanged;
             // The project list feeds the reply composer's attachment picker (drawings/photos by
@@ -80,7 +79,6 @@ public partial class ProjectBidPackageInviteDetail
         {
             // Set here too: a failure before the session resolved still has to reveal the page,
             // banner and all, rather than leaving it under a spinner.
-            sessionReady = true;
             loadAttempted = true;
         }
     }

@@ -26,7 +26,7 @@
                 var rowIndex = index;
                 var row = rows[rowIndex];
                 <div class="flex items-center gap-2">
-                    <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm flex-1"
+                    <select class="field flex-1"
                             disabled="@busy"
                             @onchange="e => SetRowOrder(rowIndex, e.Value?.ToString())">
                         <option value="" selected="@(row.WorkOrderId is null)">Choose a work order…</option>
@@ -38,11 +38,11 @@
                         }
                     </select>
                     <input type="number" step="any" placeholder="Amount £" disabled="@busy"
-                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-36"
+                           class="field text-right w-36"
                            value="@row.AmountText"
                            @oninput="e => SetRowAmount(rowIndex, e.Value?.ToString())" />
                     <button type="button" aria-label="Remove this slice" disabled="@busy"
-                            class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-negative hover:bg-surface-raised"
+                            class="inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-negative hover:bg-surface-raised"
                             @onclick="() => rows.RemoveAt(rowIndex)">
                         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                              stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -56,9 +56,9 @@
             + Add another work order
         </button>
 
-        <div class="rounded-lg border border-line bg-surface-raised px-3 py-2 text-sm flex items-center justify-between gap-4">
+        <div class="rounded border border-line bg-surface-raised px-3 py-2 text-sm flex items-center justify-between gap-4">
             <span class="text-content-muted">Allocated @MoneyExact(AllocatedTotal) of @MoneyExact(LineNet)</span>
-            <span class="@(Remainder == 0m ? "text-content-subtle" : "text-content font-medium")">
+            <span class="@(Remainder == 0m ?"text-content-subtle" : "text-content font-medium")">
                 @MoneyExact(Remainder) not linked
             </span>
         </div>

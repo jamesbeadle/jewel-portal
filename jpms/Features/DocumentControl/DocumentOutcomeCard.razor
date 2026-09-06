@@ -3,8 +3,8 @@
 
 @if (Item.Status == DocumentControlStatus.Filed)
 {
-    <div class="rounded-lg border border-positive/30 bg-positive/5 p-3 space-y-1">
-        <p class="text-[11px] uppercase tracking-wider text-positive font-semibold">Filed</p>
+    <div class="rounded border border-positive/30 bg-positive/5 p-3 space-y-1">
+        <p class="text-sm font-medium text-positive">Filed</p>
         <p class="text-sm text-content">
             @Item.FiledLabel — by @Item.ResolvedBy, @(Item.ResolvedAt is { } filedAt ? Date(filedAt) : "")
         </p>
@@ -16,7 +16,7 @@
 }
 else if (Item.Status == DocumentControlStatus.Discarded)
 {
-    <div class="rounded-lg border border-line bg-surface-raised p-3 space-y-2">
+    <div class="rounded border border-line bg-surface-raised p-3 space-y-2">
         <p class="text-sm text-content-muted">
             Discarded by @Item.ResolvedBy, @(Item.ResolvedAt is { } discardedAt ? Date(discardedAt) : "") —
             the file and its email context are kept. Restore it to file it after all.

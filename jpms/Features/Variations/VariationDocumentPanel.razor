@@ -23,26 +23,26 @@
 
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+        <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
     }
 
     @if (!editing)
     {
         <div class="space-y-3">
             <div>
-                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope of works</h4>
+                <h4 class="eyebrow mb-1">Scope of works</h4>
                 <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(Order.Description) ? "—" : Order.Description)</p>
             </div>
             <div>
-                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Commercial basis</h4>
+                <h4 class="eyebrow mb-1">Commercial basis</h4>
                 <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(Order.CommercialBasis) ? "—" : Order.CommercialBasis)</p>
             </div>
             <div>
-                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme impact</h4>
+                <h4 class="eyebrow mb-1">Programme impact</h4>
                 <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(Order.ProgrammeImpact) ? "—" : Order.ProgrammeImpact)</p>
             </div>
             <div>
-                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Exclusions</h4>
+                <h4 class="eyebrow mb-1">Exclusions</h4>
                 <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(Order.Exclusions) ? "—" : Order.Exclusions)</p>
             </div>
             @if (CanManage)
@@ -56,22 +56,25 @@
         @* The next download or send picks the new prose up; nothing commercial moves. *@
         <div class="space-y-3">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Commercial basis</label>
+                <FormField Label="Commercial basis">
                 <textarea class="field" rows="4" value="@commercialBasis"
                           @oninput="e => commercialBasis = e.Value?.ToString() ?? string.Empty"
                           placeholder="What the price is based on — tender-face position, rate basis, OH&amp;P…"></textarea>
+                </FormField>
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme impact</label>
+                <FormField Label="Programme impact">
                 <textarea class="field" rows="4" value="@programmeImpact"
                           @oninput="e => programmeImpact = e.Value?.ToString() ?? string.Empty"
                           placeholder="Effect on the programme — procurement, mobilisation, works duration…"></textarea>
+                </FormField>
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Exclusions</label>
+                <FormField Label="Exclusions">
                 <textarea class="field" rows="4" value="@exclusions"
                           @oninput="e => exclusions = e.Value?.ToString() ?? string.Empty"
                           placeholder="What this variation expressly does not price…"></textarea>
+                </FormField>
             </div>
             <p class="text-xs text-content-subtle">
                 Clearing a section removes it from the document. The PDF renders fresh on every

@@ -58,20 +58,6 @@ public static class LeadStageExtensions
         _ => ""
     };
 
-    /// <summary>Pill classes on the design-system tokens: the open stages step from faint to the
-    /// accent as a lead warms, Won reads positive, Lost negative, Nurture neutral.</summary>
-    public static string PillClass(this LeadStage stage) => stage switch
-    {
-        LeadStage.New       => "bg-surface-raised text-content-subtle",
-        LeadStage.Contacted => "bg-surface-raised text-content",
-        LeadStage.Engaged   => "bg-info/15 text-info",
-        LeadStage.SiteVisit => "bg-info/25 text-info",
-        LeadStage.Proposal  => "bg-accent/15 text-accent",
-        LeadStage.Won       => "bg-positive/25 text-positive",
-        LeadStage.Lost      => "bg-negative/15 text-negative",
-        LeadStage.Nurture   => "bg-surface-raised text-content-faint",
-        _ => "bg-surface-raised text-content-subtle"
-    };
 
     /// <summary>Still being worked — not Won, Lost or parked in Nurture.</summary>
     public static bool IsOpen(this LeadStage stage) =>

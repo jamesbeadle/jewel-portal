@@ -14,13 +14,13 @@
     }
     else
     {
-        <table class="w-full text-sm">
+        <table class="data-table data-table-dense">
             <thead>
-                <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
-                    <th class="px-5 py-3">Name</th>
+                <tr>
+                    <th>Name</th>
                     @foreach (var weekStart in MonthWeeks)
                     {
-                        <th class="px-2 py-3 text-center">
+                        <th class="text-center">
                             <div>w/c @weekStart.ToString("dd MMM")</div>
                             @if (PartLabel(weekStart) is { } part)
                             {
@@ -33,17 +33,17 @@
             <tbody>
                 @foreach (var worker in Snapshot.Workers)
                 {
-                    <tr class="border-b border-line/60">
-                        <td class="px-5 py-2.5 font-medium text-content whitespace-nowrap">@worker.Name</td>
+                    <tr>
+                        <td class="font-medium text-content whitespace-nowrap">@worker.Name</td>
                         @foreach (var weekStart in MonthWeeks)
                         {
-                            <td class="px-2 py-2.5 text-center">@WeekCell(worker, weekStart)</td>
+                            <td class="text-center">@WeekCell(worker, weekStart)</td>
                         }
                     </tr>
                 }
             </tbody>
         </table>
-        <p class="px-5 py-3 text-[11px] text-content-subtle border-t border-line">
+        <p class="px-5 py-3 text-xs text-content-subtle border-t border-line">
             A week signs off only when every elapsed weekday is approved, rejected with a
             reason, or covered by a recorded absence. Approvals themselves live on each
             project's Labour tab — this marker records that the week was looked at whole.
@@ -79,7 +79,7 @@
         @if (signOff is not null)
         {
             <button type="button"
-                    class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-positive/10 text-positive"
+                    class="text-xs font-semibold rounded-full px-2 py-0.5 bg-positive/10 text-positive"
                     title="@($"Signed off by {signOff.SignedOffByEmail} on {signOff.SignedOffAt:dd MMM HH:mm} — press to undo")"
                     @onclick="() => OnRemoveSignOff.InvokeAsync((worker.WorkerId, signOff.WeekStart))">Signed off</button>
         }
@@ -102,7 +102,7 @@
             }
             else
             {
-                <span class="text-[11px] text-content-subtle" title="Elapsed days still need approving, rejecting or an absence recording.">Open</span>
+                <span class="text-xs text-content-subtle" title="Elapsed days still need approving, rejecting or an absence recording.">Open</span>
             }
         }
     };

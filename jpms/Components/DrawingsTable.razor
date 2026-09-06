@@ -7,98 +7,96 @@
    Drawings sit at whatever level their folder is. With no folders it renders the flat register
    it always was. Collapse state is per-visit; the register reopens fully expanded. *@
 
-<div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-    <table class="w-full text-sm">
-        <thead class="bg-surface-raised border-b border-line">
-            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Code</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Title</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">File</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-center">Latest approved</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-center">Status</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-center">Pipeline</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden md:table-cell">Added</th>
-            </tr>
-        </thead>
-        @if (Folders.Count == 0)
+<RecordsTable Dense="true" MaxHeight="max-h-[85vh]">
+    <thead>
+        <tr>
+            <th>Code</th>
+            <th>Title</th>
+            <th class="hidden lg:table-cell">File</th>
+            <th class="text-center">Latest approved</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">Pipeline</th>
+            <th class="hidden md:table-cell">Added</th>
+        </tr>
+    </thead>
+    @if (Folders.Count == 0)
+    {
+        <tbody>
+            @foreach (var drawing in Drawings)
+            {
+                @DrawingRow(drawing, depth: 0)
+            }
+        </tbody>
+    }
+    else
+    {
+        @foreach (var folderSection in VisibleSections)
         {
-            <tbody class="divide-y divide-line">
-                @foreach (var drawing in Drawings)
+            <tbody>
+                <tr class="bg-surface-raised/70 cursor-pointer select-none hover:bg-surface-raised transition"
+                    @onclick="() => ToggleCollapse(folderSection.Key)">
+                    <td colspan="@ColumnCount" style="@IndentStyle(folderSection.Depth)">
+                        <div class="flex items-center gap-2">
+                            <ActionIcon Name="chevron-down"
+                                        Class="@(IsCollapsed(folderSection.Key) ? "w-3.5 h-3.5 text-content-subtle -rotate-90 transition-transform" : "w-3.5 h-3.5 text-content-subtle transition-transform")" />
+                            @if (folderSection.Folder is not null)
+                            {
+                                <ActionIcon Name="folder" Class="w-4 h-4 text-content-subtle" />
+                                <span class="font-medium text-content">@folderSection.Folder.Name</span>
+                            }
+                            else
+                            {
+                                <span class="font-medium text-content-muted italic">Ungrouped</span>
+                            }
+                            <span class="text-xs text-content-subtle tabular-nums" title="Documents in this folder, sub-folders included">@SubtreeCount(folderSection)</span>
+                            @if (CanManage && folderSection.Folder is { } folder)
+                            {
+                                <span class="ml-auto flex items-center gap-1">
+                                    <button type="button" title="Upload documents into this folder" aria-label="Upload documents into this folder"
+                                            @onclick="() => OnUploadToFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
+                                            class="inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-content hover:bg-surface transition">
+                                        <ActionIcon Name="upload" Class="w-3.5 h-3.5" />
+                                    </button>
+                                    <button type="button" title="New sub-folder" aria-label="New sub-folder"
+                                            @onclick="() => OnCreateSubFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
+                                            class="inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-content hover:bg-surface transition">
+                                        <ActionIcon Name="plus" Class="w-3.5 h-3.5" />
+                                    </button>
+                                    <button type="button" title="Rename folder" aria-label="Rename folder"
+                                            @onclick="() => OnRenameFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
+                                            class="inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-content hover:bg-surface transition">
+                                        <ActionIcon Name="pencil" Class="w-3.5 h-3.5" />
+                                    </button>
+                                    <button type="button" title="Delete folder (its documents and sub-folders move up a level)" aria-label="Delete folder"
+                                            @onclick="() => OnDeleteFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
+                                            class="inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-negative hover:bg-negative/10 transition">
+                                        <ActionIcon Name="trash" Class="w-3.5 h-3.5" />
+                                    </button>
+                                </span>
+                            }
+                        </div>
+                    </td>
+                </tr>
+                @if (!IsCollapsed(folderSection.Key))
                 {
-                    @DrawingRow(drawing, depth: 0)
+                    @if (folderSection.Drawings.Count == 0 && !HasSubFolders(folderSection))
+                    {
+                        <tr>
+                            <td colspan="@ColumnCount" class="text-xs text-content-subtle italic" style="@IndentStyle(folderSection.Depth + 1)">No documents in this folder yet.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var drawing in folderSection.Drawings)
+                        {
+                            @DrawingRow(drawing, folderSection.Depth + 1)
+                        }
+                    }
                 }
             </tbody>
         }
-        else
-        {
-            @foreach (var folderSection in VisibleSections)
-            {
-                <tbody class="divide-y divide-line border-t border-line">
-                    <tr class="bg-surface-raised/70 cursor-pointer select-none hover:bg-surface-raised transition"
-                        @onclick="() => ToggleCollapse(folderSection.Key)">
-                        <td colspan="@ColumnCount" class="px-4 py-2" style="@IndentStyle(folderSection.Depth)">
-                            <div class="flex items-center gap-2">
-                                <ActionIcon Name="chevron-down"
-                                            Class="@(IsCollapsed(folderSection.Key) ? "w-3.5 h-3.5 text-content-subtle -rotate-90 transition-transform" : "w-3.5 h-3.5 text-content-subtle transition-transform")" />
-                                @if (folderSection.Folder is not null)
-                                {
-                                    <ActionIcon Name="folder" Class="w-4 h-4 text-content-subtle" />
-                                    <span class="font-medium text-content">@folderSection.Folder.Name</span>
-                                }
-                                else
-                                {
-                                    <span class="font-medium text-content-muted italic">Ungrouped</span>
-                                }
-                                <span class="text-xs text-content-subtle tabular-nums" title="Documents in this folder, sub-folders included">@SubtreeCount(folderSection)</span>
-                                @if (CanManage && folderSection.Folder is { } folder)
-                                {
-                                    <span class="ml-auto flex items-center gap-1">
-                                        <button type="button" title="Upload documents into this folder" aria-label="Upload documents into this folder"
-                                                @onclick="() => OnUploadToFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
-                                                class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface transition">
-                                            <ActionIcon Name="upload" Class="w-3.5 h-3.5" />
-                                        </button>
-                                        <button type="button" title="New sub-folder" aria-label="New sub-folder"
-                                                @onclick="() => OnCreateSubFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
-                                                class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface transition">
-                                            <ActionIcon Name="plus" Class="w-3.5 h-3.5" />
-                                        </button>
-                                        <button type="button" title="Rename folder" aria-label="Rename folder"
-                                                @onclick="() => OnRenameFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
-                                                class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface transition">
-                                            <ActionIcon Name="pencil" Class="w-3.5 h-3.5" />
-                                        </button>
-                                        <button type="button" title="Delete folder (its documents and sub-folders move up a level)" aria-label="Delete folder"
-                                                @onclick="() => OnDeleteFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
-                                                class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-red-700 hover:bg-red-50 transition">
-                                            <ActionIcon Name="trash" Class="w-3.5 h-3.5" />
-                                        </button>
-                                    </span>
-                                }
-                            </div>
-                        </td>
-                    </tr>
-                    @if (!IsCollapsed(folderSection.Key))
-                    {
-                        @if (folderSection.Drawings.Count == 0 && !HasSubFolders(folderSection))
-                        {
-                            <tr>
-                                <td colspan="@ColumnCount" class="px-4 py-3 text-xs text-content-subtle italic" style="@IndentStyle(folderSection.Depth + 1)">No documents in this folder yet.</td>
-                            </tr>
-                        }
-                        else
-                        {
-                            @foreach (var drawing in folderSection.Drawings)
-                            {
-                                @DrawingRow(drawing, folderSection.Depth + 1)
-                            }
-                        }
-                    }
-                </tbody>
-            }
-        }
-    </table>
-</div>
+    }
+</RecordsTable>
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<Drawing> Drawings { get; set; } = Array.Empty<Drawing>();
@@ -201,9 +199,9 @@
             <td class="px-4 py-3 text-center">
                 @if (DrawingNaming.ApprovedRevisionText(drawing) is { } approvedText)
                 {
-                    <span class="inline-flex items-center justify-center rounded bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-mono font-medium text-emerald-800">
+                    <Pill Tone="Tone.Positive" Class="justify-center font-mono">
                         @approvedText
-                    </span>
+                    </Pill>
                 }
                 else
                 {
@@ -213,21 +211,21 @@
             <td class="px-4 py-3 text-center whitespace-nowrap">
                 @if (drawing.UnapprovedCount > 0)
                 {
-                    <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                    <Pill Tone="Tone.Warning">
                         @drawing.UnapprovedCount pending
-                    </span>
+                    </Pill>
                 }
                 @if (drawing.ArchivedCount > 0)
                 {
-                    <span class="ml-1 inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle">
+                    <Pill Tone="Tone.Muted" Class="ml-1">
                         @drawing.ArchivedCount archived
-                    </span>
+                    </Pill>
                 }
                 @if (drawing.UnapprovedCount == 0 && drawing.ArchivedCount == 0 && drawing.HasApprovedRevision)
                 {
-                    <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                    <Pill Tone="Tone.Positive">
                         Approved
-                    </span>
+                    </Pill>
                 }
             </td>
             <td class="px-4 py-3 text-center whitespace-nowrap">
@@ -236,35 +234,31 @@
                    just as loudly so un-analysed drawings can't be silently missed. *@
                 @if (drawing.LatestMetadataExtractedAt is { } extractedAt)
                 {
-                    <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800"
-                          title="Metadata extracted @extractedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">
+                    <Pill Tone="Tone.Positive" Title="@($"Metadata extracted {extractedAt.LocalDateTime:d MMM yyyy, HH:mm}")">
                         Metadata ✓
-                    </span>
+                    </Pill>
                 }
                 else
                 {
-                    <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
-                          title="The latest revision's metadata has not been extracted yet">
+                    <Pill Tone="Tone.Warning" Title="The latest revision's metadata has not been extracted yet">
                         Not extracted
-                    </span>
+                    </Pill>
                 }
                 @if (drawing.LatestAnalysedAt is { } analysedAt)
                 {
-                    <span class="ml-1 inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800"
-                          title="Change analysis run @analysedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">
+                    <Pill Tone="Tone.Positive" Class="ml-1" Title="@($"Change analysis run {analysedAt.LocalDateTime:d MMM yyyy, HH:mm}")">
                         Analysed ✓
-                    </span>
+                    </Pill>
                 }
                 else
                 {
-                    <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
-                          title="The latest revision has not been analysed yet">
+                    <Pill Tone="Tone.Warning" Class="ml-1" Title="The latest revision has not been analysed yet">
                         Not analysed
-                    </span>
+                    </Pill>
                 }
             </td>
             <td class="px-4 py-3 text-content-muted hidden md:table-cell">
-                @drawing.CreatedAt.LocalDateTime.ToString("d MMM yyyy")
+                @DateText(drawing.CreatedAt)
             </td>
         </tr>
     };

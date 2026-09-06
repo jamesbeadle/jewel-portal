@@ -9,7 +9,6 @@ public partial class SubcontractorDetail
     // Session checked and the user signed in. This is NOT "the record is here" — the directory's
     // own arrival is read from SubcontractorStore.IsLoaded above, so "not found" is never flashed
     // before the fetch lands.
-    private bool sessionReady;
     private Subcontractor? subcontractor;
 
     // Statement-of-account email modal (the download link needs no state).
@@ -79,7 +78,6 @@ public partial class SubcontractorDetail
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         SubcontractorStore.OnChange += HandleChange;
         Reload();
-        sessionReady = true;
     }
 
     protected override void OnParametersSet() => Reload();

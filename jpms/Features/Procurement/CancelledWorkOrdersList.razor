@@ -6,12 +6,12 @@
     <summary class="text-xs font-medium text-content-subtle cursor-pointer select-none">
         Cancelled work orders (@Orders.Count)
     </summary>
-    <ul class="mt-2 text-sm divide-y divide-line rounded-xl border border-line bg-surface opacity-70">
+    <ul class="mt-2 text-sm divide-y divide-line panel opacity-70">
         @foreach (var detail in Orders)
         {
             <li class="px-4 py-2 flex items-center gap-3">
-                <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">Cancelled</span>
-                <span class="font-mono text-[11px] text-content-subtle">@detail.Order.Reference</span>
+                <Pill Tone="Tone.Muted">Cancelled</Pill>
+                <span class="font-mono text-xs text-content-subtle">@detail.Order.Reference</span>
                 <span class="text-content-muted">@detail.Order.Title</span>
                 <span class="text-content-subtle">@detail.SubcontractorName</span>
                 <span class="ml-auto text-content-subtle line-through">@Money(detail.Order.Value)</span>

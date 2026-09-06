@@ -52,7 +52,7 @@ public partial class ProjectContractTermsDialog
     private decimal dayworkMaterialsPercent = 10m;
     private decimal dayworkPlantPercent = 10m;
 
-    private const string LabelClass = "block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1";
+    private const string LabelClass = "block eyebrow mb-1";
 
     private ProjectContract? Current => Contracts.ForProject(ProjectId);
 

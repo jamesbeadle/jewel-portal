@@ -20,36 +20,24 @@
     the client-safe subset, ready for the client surface when that access is built.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="calendar">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h2 class="text-lg font-semibold text-content">Calendar</h2>
-            <div class="flex items-center gap-2">
-                <button type="button" class="btn-secondary" @onclick="() => MoveMonth(-1)">‹ Prev</button>
-                <span class="text-content-subtle w-32 text-center text-sm">@MonthLabel</span>
-                <button type="button" class="btn-secondary" @onclick="() => MoveMonth(1)">Next ›</button>
-                <button type="button" class="btn-secondary" @onclick="GoToday">Today</button>
-                <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition ml-2"
-                        @onclick="OpenAdd">
-                    Add event
-                </button>
-            </div>
-        </div>
+        <SectionHeader Title="Calendar">
+            <Actions>
+            <button type="button" class="btn-secondary" @onclick="() => MoveMonth(-1)">‹ Prev</button>
+            <span class="text-content-subtle w-32 text-center text-sm">@MonthLabel</span>
+            <button type="button" class="btn-secondary" @onclick="() => MoveMonth(1)">Next ›</button>
+            <button type="button" class="btn-secondary" @onclick="GoToday">Today</button>
+            <button type="button" class="btn-primary ml-2"
+                    @onclick="OpenAdd">
+                Add event
+            </button>
+            </Actions>
+        </SectionHeader>
 
         @if (actionError is { } error)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/40 px-3 py-2 text-sm text-content mb-4">@error</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
         }
 
         @if (!Calendar.LoadedFor(ProjectId) && !dataFailed)
@@ -64,11 +52,11 @@ else
         {
             var eventsByDay = EventsByDay;
             var upcoming = Upcoming;
-            <div class="rounded-xl border border-line bg-surface overflow-hidden mb-6">
+            <div class="panel overflow-hidden mb-6">
                 <div class="grid grid-cols-7 border-b border-line">
                     @foreach (var dayName in new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" })
                     {
-                        <div class="px-2 py-2 text-xs uppercase tracking-wider text-content-subtle font-semibold text-center">@dayName</div>
+                        <div class="px-2 py-2 eyebrow text-center">@dayName</div>
                     }
                 </div>
                 @foreach (var week in CalendarMaths.Weeks(year, month))
@@ -81,10 +69,10 @@ else
                             var dayEvents = eventsByDay.TryGetValue(day, out var list) ? list : NoEvents;
                             var showAll = expandedDay == day;
                             var visible = showAll ? dayEvents : dayEvents.Take(3).ToList();
-                            <div class="min-h-[6.5rem] border-r border-line last:border-0 px-1.5 py-1.5 @(inMonth ? "" : "bg-surface-raised/40")">
+                            <div class="min-h-[6.5rem] border-r border-line last:border-0 px-1.5 py-1.5 @(inMonth ?"" : "bg-surface-raised/40")">
                                 <div class="flex justify-end mb-1">
                                     <span class="text-xs w-6 h-6 inline-flex items-center justify-center rounded-full
-                                                 @(isToday ? "bg-accent text-accent-ink font-semibold" : inMonth ? "text-content-muted" : "text-content-subtle/60")">
+                                                 @(isToday ?"bg-accent text-accent-ink font-semibold" : inMonth ? "text-content-muted" : "text-content-subtle/60")">
                                         @day.Day
                                     </span>
                                 </div>
@@ -103,7 +91,7 @@ else
                                             <span class="text-content truncate">@item.Title</span>
                                             @if (item.ClientVisible)
                                             {
-                                                <span class="text-[10px] font-semibold rounded-full px-1.5 bg-info/10 text-info shrink-0">Client</span>
+                                                <Pill Tone="Tone.Info" Class="shrink-0">Client</Pill>
                                             }
                                         </button>
                                     }
@@ -136,11 +124,11 @@ else
                 }
                 else
                 {
-                    <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                    <div class="panel overflow-hidden">
                         @foreach (var group in upcoming.GroupBy(e => AgendaDay(e)))
                         {
                             <div class="border-b border-line last:border-0 px-4 py-3">
-                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1.5">
+                                <p class="eyebrow mb-1.5">
                                     @group.Key.ToDateTime(TimeOnly.MinValue).ToString("ddd dd MMM")@(group.Key == Today ? " · Today" : "")
                                 </p>
                                 <div class="space-y-1">
@@ -160,7 +148,7 @@ else
                                             }
                                             @if (item.ClientVisible)
                                             {
-                                                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-info/10 text-info shrink-0">Client</span>
+                                                <Pill Tone="Tone.Info" Class="shrink-0">Client</Pill>
                                             }
                                             <span class="ml-auto font-mono text-xs text-content-subtle shrink-0">@item.Reference</span>
                                         </button>
@@ -173,7 +161,7 @@ else
             </section>
         }
     </ProjectPageShell>
-}
+</Page>
 
 <Modal IsOpen="@editOpen" Title="@(editingId is null ? "Add a calendar event" : $"Calendar event {editingReference}")"
        OnCancel="CloseEdit" DismissOnOverlayClick="false">
@@ -181,18 +169,19 @@ else
         <div class="space-y-3">
             @if (modalError is { } problem)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/40 px-3 py-2 text-sm text-content">@problem</p>
+                <Notice Tone="Tone.Negative">@problem</Notice>
             }
             <FormField Label="Title" Value="@fTitle" OnChange="v => fTitle = v" Required="true" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Kind</label>
+                    <FormField Label="Kind">
                     <select class="field" value="@((int)fKind)" @onchange="OnKindChanged">
                         @foreach (var kind in CalendarEventKinds.All)
                         {
                             <option value="@((int)kind)">@CalendarEventKinds.Label(kind)</option>
                         }
                     </select>
+                    </FormField>
                 </div>
                 <FormField Label="Start time" Value="@fStartTime" OnChange="v => fStartTime = v" InputType="time" />
             </div>
@@ -201,9 +190,10 @@ else
                 <FormField Label="End date (multi-day)" Value="@fEndDate" OnChange="v => fEndDate = v" InputType="date" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+                <FormField Label="Notes">
                 <textarea class="field" rows="3" maxlength="4096" placeholder="Detail and who's attending"
                           value="@fNotes" @oninput="e => fNotes = e.Value?.ToString() ?? string.Empty"></textarea>
+                </FormField>
             </div>
             <label class="flex items-center gap-2 text-sm text-content cursor-pointer">
                 <input type="checkbox" checked="@fClientVisible" @onchange="e => fClientVisible = e.Value is true" />
@@ -214,7 +204,7 @@ else
             @if (editingId is not null)
             {
                 <div class="pt-2 border-t border-line">
-                    <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Linked mail</p>
+                    <p class="eyebrow mb-2">Linked mail</p>
                     @if (linkedEmails is null)
                     {
                         <p class="text-sm text-content-subtle italic">Loading emails…</p>
@@ -231,7 +221,7 @@ else
                             @foreach (var email in linkedEmails)
                             {
                                 <div class="flex items-baseline gap-3 text-sm">
-                                    <span class="text-content-subtle whitespace-nowrap shrink-0">@email.ReceivedAt.ToLocalTime().ToString("d MMM yyyy")</span>
+                                    <span class="text-content-subtle whitespace-nowrap shrink-0">@DateText(email.ReceivedAt)</span>
                                     <span class="text-content truncate" title="@email.BodyPreview">@email.Subject</span>
                                     <span class="text-content-subtle truncate shrink-0">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
                                     @if (email.HasAttachments)

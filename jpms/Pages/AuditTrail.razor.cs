@@ -9,7 +9,6 @@ public partial class AuditTrail
     // Session checked and the user signed in. This is NOT "the register is here" — that is
     // `loaded`, below; keeping the two apart is what lets the chrome and the filters show at once
     // while the first page is still in flight.
-    private bool sessionReady;
     private bool loaded;
     // The project labels have answered (or failed — a failure leaves the picker with the one
     // "All projects" option, which is honest once it is known to be all there is).
@@ -82,7 +81,6 @@ public partial class AuditTrail
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         // Paint the chrome before the fetches: Blazor re-renders OnInitializedAsync only at its
         // FIRST await, which has already passed, so without this the page waits on the first page.
         StateHasChanged();
@@ -163,19 +161,9 @@ public partial class AuditTrail
 
     private string PathwayTabClass(string? pathway) =>
         pathwayFilter == pathway
-            ? "btn-primary text-xs px-2.5 py-1.5"
-            : "btn-secondary text-xs px-2.5 py-1.5";
+            ? "chip chip-active"
+            : "chip";
 
-    private static string PathwayChipClass(string pathway)
-    {
-        const string baseClass = "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ";
-        return pathway switch
-        {
-            "Client"        => baseClass + "bg-accent/10 text-accent",
-            "Subcontractor" => baseClass + "bg-positive/10 text-positive",
-            _               => baseClass + "bg-surface-raised border border-line text-content-muted"
-        };
-    }
 
     private static string EventLabel(AuditEventType type) => type switch
     {
@@ -226,7 +214,7 @@ public partial class AuditTrail
         if (span < TimeSpan.FromHours(1)) return $"{(int)span.TotalMinutes}m ago";
         if (span < TimeSpan.FromHours(24)) return $"{(int)span.TotalHours}h ago";
         if (span < TimeSpan.FromDays(30)) return $"{(int)span.TotalDays}d ago";
-        return at.LocalDateTime.ToString("d MMM yyyy");
+        return DateText(at);
     }
 
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;

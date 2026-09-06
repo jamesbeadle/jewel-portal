@@ -11,21 +11,21 @@
     <td class="px-4 pl-7 py-2 whitespace-nowrap">
         <a href="@($"/projects/{Project.ProjectId}/cashflow")" class="text-xs text-content-muted hover:text-content hover:underline underline-offset-4"
            title="This project's full statement — the figures this line is spread from">
-            <span class="font-mono text-[10px] text-content-subtle mr-1.5">@Project.Reference</span>@Project.Name
+            <span class="font-mono text-xs text-content-subtle mr-1.5">@Project.Reference</span>@Project.Name
         </a>
         @if (Category == ForecastCategory.FutureValuations)
         {
-            <span class="block mt-1 text-[10px] text-content-faint whitespace-nowrap">
+            <span class="block mt-1 text-xs text-content-faint whitespace-nowrap">
                 next valuation
                 <input type="date" value="@(Project.NextExpectedValuationDate?.ToString("yyyy-MM-dd"))"
                        @onchange="args => OnNextValuationChanged.InvokeAsync((Project, args))"
                        title="The full date matters: each valuation is paid the contract's payment terms after this day of the month, so cash lands on payment dates"
-                       class="rounded border border-line-strong bg-surface-field px-1 py-0.5 text-[10px] text-content mx-1" />
+                       class="field text-xs" />
                 · expects
                 <input type="number" min="0" step="1000" placeholder="even"
                        value="@(Project.ExpectedMonthlyValuation?.ToString("0"))"
                        @onchange="args => OnMonthlyValuationChanged.InvokeAsync((Project, args))"
-                       class="w-20 rounded border border-line-strong bg-surface-field px-1 py-0.5 text-[10px] text-content mx-1" />
+                       class="field w-20 text-xs" />
                 £/month · blank = spread evenly to practical completion
             </span>
         }

@@ -19,25 +19,13 @@
     Status (Draft / Active / Paused / Retired) is the directors' call. Edits are modals.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!Detail.LoadedFor(StrategyId) && !dataFailed)
-{
-    <section class="px-6 md:px-8 py-12">
+<Page>
+    @if (!Detail.LoadedFor(StrategyId) && !dataFailed)
+    {
         <LoadGate IsLoading="true" Prominent="true" Label="Loading strategy" />
-    </section>
-}
-else if (Strategy is null)
-{
-    <section class="px-6 md:px-8 py-12 max-w-2xl">
+    }
+    else if (Strategy is null)
+    {
         <WorkspaceSectionNav />
         <div class="panel p-6">
             <p class="text-sm text-content-muted">
@@ -45,288 +33,290 @@ else if (Strategy is null)
                 <a href="/sales/strategies" class="text-info underline underline-offset-4 ml-1">Back to strategies</a>
             </p>
         </div>
-    </section>
-}
-else
-{
-    var strategy = Strategy;
-    var funnel = Funnel;
-    <section class="px-6 md:px-8 py-8 md:py-12">
-        <WorkspaceSectionNav />
-        <header class="mb-6 flex flex-wrap items-start justify-between gap-4">
-            <div class="min-w-0">
-                <p class="eyebrow mb-1"><a href="/sales/strategies" class="hover:text-content">Strategies</a></p>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight flex flex-wrap items-center gap-3">
+    }
+    else
+    {
+        var strategy = Strategy;
+        var funnel = Funnel;
+        <div>
+            <WorkspaceSectionNav />
+            <PageHeader>
+                <TitleContent>
                     <span>@strategy.Name</span>
-                    <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap @strategy.Status.PillClass()">@strategy.Status.DisplayName()</span>
-                </h1>
-                <p class="text-sm text-content-muted mt-2">
+                    <Pill Tone="@strategy.Status.ToTone()">@strategy.Status.DisplayName()</Pill>
+                </TitleContent>
+                <EyebrowContent>
+                    <a href="/sales/strategies" class="hover:text-content">Strategies</a>
+                </EyebrowContent>
+                <SubtitleContent>
                     @strategy.Audience.DisplayName() · @strategy.Channel.DisplayName()
                     @if (!string.IsNullOrWhiteSpace(strategy.TargetArea))
                     {
                         <text> · @strategy.TargetArea</text>
                     }
                     · owned by @strategy.OwnerEmail
-                </p>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-                @if (CanDecide)
-                {
-                    <select class="field h-8 py-1 text-sm w-36" value="@strategy.Status" disabled="@busy"
-                            @onchange="e => SetStatusAsync(Enum.Parse<SalesStrategyStatus>(e.Value?.ToString() ?? nameof(SalesStrategyStatus.Draft)))">
-                        @foreach (var status in Enum.GetValues<SalesStrategyStatus>())
+                </SubtitleContent>
+                <Actions>
+                    <div class="flex items-center gap-2 shrink-0">
+                        @if (CanDecide)
                         {
-                            <option value="@status">@status.DisplayName()</option>
+                            <select class="field h-8 py-1 text-sm w-36" value="@strategy.Status" disabled="@busy"
+                                    @onchange="e => SetStatusAsync(Enum.Parse<SalesStrategyStatus>(e.Value?.ToString() ?? nameof(SalesStrategyStatus.Draft)))">
+                                @foreach (var status in Enum.GetValues<SalesStrategyStatus>())
+                                {
+                                    <option value="@status">@status.DisplayName()</option>
+                                }
+                            </select>
                         }
-                    </select>
-                }
-                @if (CanWork)
-                {
-                    <button type="button" class="btn-secondary" @onclick="() => editOpen = true">Edit</button>
-                    <button type="button" class="btn-secondary" disabled="@(busy || strategy.ResearchStatus.IsInProgress())"
-                            title="Claude reads the brief, searches the web, fills in the blanks and drafts the plan — a few minutes, in the background"
-                            @onclick="RunResearchAsync">
-                        @(strategy.ResearchStatus == StrategyResearchStatus.Complete ? "Research again with AI" : "Research with AI")
-                    </button>
-                    <button type="button" class="btn-primary" @onclick="() => addLeadOpen = true">Add lead</button>
-                }
-            </div>
-        </header>
-
-        @if (actionError is not null)
-        {
-            <p class="rounded bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@actionError</p>
-        }
-
-        @if (strategy.ResearchStatus.IsInProgress())
-        {
-            <div class="panel px-6 py-4 mb-6 flex items-center gap-4">
-                <JewelIcon Class="w-5 h-5 animate-jewel-pulse shrink-0" />
-                <div class="text-sm">
-                    <p class="text-content font-medium">@(strategy.ResearchStatus == StrategyResearchStatus.Queued ? "Research queued" : "Claude is researching this strategy")</p>
-                    <p class="text-content-subtle">Reading the brief, searching the web for the areas, the numbers and the sources, then drafting the plan. Usually two to five minutes — this page checks back every few seconds; you can leave and come back.</p>
-                </div>
-            </div>
-        }
-        else if (strategy.ResearchStatus == StrategyResearchStatus.Failed)
-        {
-            <div class="panel px-6 py-4 mb-6 text-sm">
-                <p class="text-negative font-medium">The research didn't complete.</p>
-                <p class="text-content-muted mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.ResearchError) ? "No reason was recorded." : strategy.ResearchError)</p>
-                @if (CanWork)
-                {
-                    <p class="text-content-subtle mt-2">Fix the cause if it names one, then Research with AI again.</p>
-                }
-            </div>
-        }
-
-        <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-            <Stat Label="Leads found" Value="@funnel.Leads.ToString()" />
-            <Stat Label="Contacted" Value="@funnel.Contacted.ToString()" />
-            <Stat Label="Engaged" Value="@funnel.Engaged.ToString()" />
-            <Stat Label="Proposals" Value="@funnel.Proposals.ToString()" />
-            <Stat Label="Won" Value="@($"{funnel.Won}{(funnel.Lost > 0 ? $" · {funnel.Lost} lost" : "")}")" />
-            <Stat Label="Open pipeline" Value="@WholeMoney(funnel.PipelineValue)" />
-        </div>
-
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div class="xl:col-span-2 space-y-6">
-                @if (!string.IsNullOrWhiteSpace(strategy.ResearchFindings))
-                {
-                    <Panel Title="Research findings">
-                        <SimpleMarkdown Text="@strategy.ResearchFindings" />
-                        @if (strategy.ResearchCompletedAt is { } researchedAt)
-                        {
-                            <p class="text-xs text-content-faint mt-4">Researched by Claude @researchedAt.ToLocalTime().ToString("d MMM yyyy HH:mm"). Every figure carries its source; check the ones a decision rests on.</p>
-                        }
-                    </Panel>
-                }
-
-                <Panel Title="Approach plan">
-                    <HeaderActions>
                         @if (CanWork)
                         {
-                            <button type="button" class="btn-secondary" disabled="@busy" @onclick="OpenPlanEdit">
-                                @(string.IsNullOrWhiteSpace(strategy.ApproachPlan) ? "Write plan" : "Edit plan")
+                            <button type="button" class="btn-secondary" @onclick="() => editOpen = true">Edit</button>
+                            <button type="button" class="btn-secondary" disabled="@(busy || strategy.ResearchStatus.IsInProgress())"
+                                    title="Claude reads the brief, searches the web, fills in the blanks and drafts the plan — a few minutes, in the background"
+                                    @onclick="RunResearchAsync">
+                                @(strategy.ResearchStatus == StrategyResearchStatus.Complete ? "Research again with AI" : "Research with AI")
                             </button>
-                            <button type="button" class="btn-secondary" disabled="@busy" @onclick="OpenGenerate">
-                                @(generating ? "Drafting…" : string.IsNullOrWhiteSpace(strategy.ApproachPlan) ? "Generate with AI" : "Regenerate with AI")
-                            </button>
+                            <button type="button" class="btn-primary" @onclick="() => addLeadOpen = true">Add lead</button>
                         }
-                    </HeaderActions>
-                    <ChildContent>
-                        @if (generating)
+                    </div>
+                </Actions>
+            </PageHeader>
+
+            @if (actionError is not null)
+            {
+                <Notice Tone="Tone.Negative" Class="mb-4">@actionError</Notice>
+            }
+
+            @if (strategy.ResearchStatus.IsInProgress())
+            {
+                <div class="panel px-6 py-4 mb-6 flex items-center gap-4">
+                    <JewelIcon Class="w-5 h-5 animate-jewel-pulse shrink-0" />
+                    <div class="text-sm">
+                        <p class="text-content font-medium">@(strategy.ResearchStatus == StrategyResearchStatus.Queued ? "Research queued" : "Claude is researching this strategy")</p>
+                        <p class="text-content-subtle">Reading the brief, searching the web for the areas, the numbers and the sources, then drafting the plan. Usually two to five minutes — this page checks back every few seconds; you can leave and come back.</p>
+                    </div>
+                </div>
+            }
+            else if (strategy.ResearchStatus == StrategyResearchStatus.Failed)
+            {
+                <Notice Tone="Tone.Negative" Title="The research didn't complete." Class="mb-6">
+                    <p class="whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.ResearchError) ? "No reason was recorded." : strategy.ResearchError)</p>
+                    @if (CanWork)
+                    {
+                        <p class="mt-2">Fix the cause if it names one, then Research with AI again.</p>
+                    }
+                </Notice>
+            }
+
+            <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+                <StatTile Label="Leads found" Value="@funnel.Leads.ToString()" />
+                <StatTile Label="Contacted" Value="@funnel.Contacted.ToString()" />
+                <StatTile Label="Engaged" Value="@funnel.Engaged.ToString()" />
+                <StatTile Label="Proposals" Value="@funnel.Proposals.ToString()" />
+                <StatTile Label="Won" Value="@($"{funnel.Won}{(funnel.Lost > 0 ? $" · {funnel.Lost} lost" : "")}")" />
+                <StatTile Label="Open pipeline" Value="@WholeMoney(funnel.PipelineValue)" />
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div class="xl:col-span-2 space-y-6">
+                    @if (!string.IsNullOrWhiteSpace(strategy.ResearchFindings))
+                    {
+                        <Panel Title="Research findings">
+                            <SimpleMarkdown Text="@strategy.ResearchFindings" />
+                            @if (strategy.ResearchCompletedAt is { } researchedAt)
+                            {
+                                <p class="text-xs text-content-faint mt-4">Researched by Claude @DateTimeText(researchedAt.ToLocalTime()). Every figure carries its source; check the ones a decision rests on.</p>
+                            }
+                        </Panel>
+                    }
+
+                    <Panel Title="Approach plan">
+                        <HeaderActions>
+                            @if (CanWork)
+                            {
+                                <button type="button" class="btn-secondary" disabled="@busy" @onclick="OpenPlanEdit">
+                                    @(string.IsNullOrWhiteSpace(strategy.ApproachPlan) ? "Write plan" : "Edit plan")
+                                </button>
+                                <button type="button" class="btn-secondary" disabled="@busy" @onclick="OpenGenerate">
+                                    @(generating ? "Drafting…" : string.IsNullOrWhiteSpace(strategy.ApproachPlan) ? "Generate with AI" : "Regenerate with AI")
+                                </button>
+                            }
+                        </HeaderActions>
+                        <ChildContent>
+                            @if (generating)
+                            {
+                                <LoadGate IsLoading="true" Prominent="true" Label="Claude is drafting the plan from the strategy's argument" />
+                            }
+                            else if (string.IsNullOrWhiteSpace(strategy.ApproachPlan))
+                            {
+                                <p class="text-sm text-content-subtle italic">
+                                    No plan yet. Research with AI (above) finds the evidence and drafts the plan in one go; Generate with AI
+                                    drafts one from what is written here; or write it by hand.
+                                </p>
+                            }
+                            else
+                            {
+                                <SimpleMarkdown Text="@strategy.ApproachPlan" />
+                                @if (strategy.PlanGeneratedAt is { } generatedAt)
+                                {
+                                    <p class="text-xs text-content-faint mt-4">Drafted by Claude @DateTimeText(generatedAt.ToLocalTime()) — edited since if the text differs.</p>
+                                }
+                            }
+                        </ChildContent>
+                    </Panel>
+
+                    <Panel Title="Leads this strategy found" BodyClass="p-0">
+                        @if (Leads.Count == 0)
                         {
-                            <LoadGate IsLoading="true" Prominent="true" Label="Claude is drafting the plan from the strategy's argument" />
-                        }
-                        else if (string.IsNullOrWhiteSpace(strategy.ApproachPlan))
-                        {
-                            <p class="text-sm text-content-subtle italic">
-                                No plan yet. Research with AI (above) finds the evidence and drafts the plan in one go; Generate with AI
-                                drafts one from what is written here; or write it by hand.
-                            </p>
+                            <p class="px-6 py-6 text-sm text-content-subtle italic">None yet — Add lead captures one attributed to this strategy.</p>
                         }
                         else
                         {
-                            <SimpleMarkdown Text="@strategy.ApproachPlan" />
-                            @if (strategy.PlanGeneratedAt is { } generatedAt)
-                            {
-                                <p class="text-xs text-content-faint mt-4">Drafted by Claude @generatedAt.ToLocalTime().ToString("d MMM yyyy HH:mm") — edited since if the text differs.</p>
-                            }
-                        }
-                    </ChildContent>
-                </Panel>
-
-                <Panel Title="Leads this strategy found" BodyClass="p-0">
-                    @if (Leads.Count == 0)
-                    {
-                        <p class="px-6 py-6 text-sm text-content-subtle italic">None yet — Add lead captures one attributed to this strategy.</p>
-                    }
-                    else
-                    {
-                        <div class="overflow-x-auto">
-                            <table class="data-table w-full">
-                                <thead>
-                                    <tr>
-                                        <th>Ref</th>
-                                        <th>Lead</th>
-                                        <th>Property</th>
-                                        <th>Stage</th>
-                                        <th class="text-right">Value</th>
-                                        <th>Captured</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var lead in Leads)
-                                    {
-                                        var row = lead;
-                                        <tr class="is-clickable cursor-pointer" @key="row.LeadId" @onclick="() => OpenLead(row)">
-                                            <td class="whitespace-nowrap font-mono text-xs">@row.Reference</td>
-                                            <td>
-                                                <p class="text-content font-medium">@(string.IsNullOrWhiteSpace(row.ContactName) ? row.CompanyName : row.ContactName)</p>
-                                                @if (!string.IsNullOrWhiteSpace(row.Summary))
-                                                {
-                                                    <p class="text-xs text-content-subtle line-clamp-1 max-w-sm">@row.Summary</p>
-                                                }
-                                            </td>
-                                            <td>
-                                                <p class="max-w-xs truncate" title="@row.PropertyAddress">@(string.IsNullOrWhiteSpace(row.PropertyAddress) ? "—" : row.PropertyAddress)</p>
-                                                @if (!string.IsNullOrWhiteSpace(row.Postcode))
-                                                {
-                                                    <p class="text-xs text-content-subtle">@row.Postcode</p>
-                                                }
-                                            </td>
-                                            <td><LeadStagePill Stage="@row.Stage" /></td>
-                                            <td class="text-right whitespace-nowrap">@(row.EstimatedValue is { } v ? WholeMoney(v) : "—")</td>
-                                            <td class="whitespace-nowrap text-xs">@row.CapturedAt.ToLocalTime().ToString("d MMM yyyy")</td>
+                            <div class="overflow-x-auto">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ref</th>
+                                            <th>Lead</th>
+                                            <th>Property</th>
+                                            <th>Stage</th>
+                                            <th class="text-right">Value</th>
+                                            <th>Captured</th>
                                         </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                </Panel>
-            </div>
-
-            <div class="space-y-6">
-                <Panel Title="The argument">
-                    <dl class="space-y-4 text-sm">
-                        <div>
-                            <dt class="eyebrow">The brief — the idea in our words</dt>
-                            <dd class="text-content mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.Brief) ? "—" : strategy.Brief)</dd>
-                        </div>
-                        <div>
-                            <dt class="eyebrow">Hypothesis — why these people, why now</dt>
-                            <dd class="text-content mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.Hypothesis) ? "—" : strategy.Hypothesis)</dd>
-                        </div>
-                        <div>
-                            <dt class="eyebrow">Evidence</dt>
-                            <dd class="text-content-muted mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.Evidence) ? "—" : strategy.Evidence)</dd>
-                        </div>
-                        <div>
-                            <dt class="eyebrow">Proposition</dt>
-                            <dd class="text-content mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.Proposition) ? "—" : strategy.Proposition)</dd>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <dt class="eyebrow">Audience</dt>
-                                <dd class="text-content mt-1">@strategy.Audience.DisplayName()</dd>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var lead in Leads)
+                                        {
+                                            var row = lead;
+                                            <tr class="is-clickable cursor-pointer" @key="row.LeadId" @onclick="() => OpenLead(row)">
+                                                <td class="whitespace-nowrap font-mono text-xs">@row.Reference</td>
+                                                <td>
+                                                    <p class="text-content font-medium">@(string.IsNullOrWhiteSpace(row.ContactName) ? row.CompanyName : row.ContactName)</p>
+                                                    @if (!string.IsNullOrWhiteSpace(row.Summary))
+                                                    {
+                                                        <p class="text-xs text-content-subtle line-clamp-1 max-w-sm">@row.Summary</p>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <p class="max-w-xs truncate" title="@row.PropertyAddress">@(string.IsNullOrWhiteSpace(row.PropertyAddress) ? "—" : row.PropertyAddress)</p>
+                                                    @if (!string.IsNullOrWhiteSpace(row.Postcode))
+                                                    {
+                                                        <p class="text-xs text-content-subtle">@row.Postcode</p>
+                                                    }
+                                                </td>
+                                                <td><LeadStagePill Stage="@row.Stage" /></td>
+                                                <td class="text-right whitespace-nowrap">@(row.EstimatedValue is { } v ? WholeMoney(v) : "—")</td>
+                                                <td class="whitespace-nowrap text-xs">@DateText(row.CapturedAt)</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
                             </div>
-                            <div>
-                                <dt class="eyebrow">Channel</dt>
-                                <dd class="text-content mt-1">@strategy.Channel.DisplayName()</dd>
-                            </div>
-                            <div>
-                                <dt class="eyebrow">Where</dt>
-                                <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(strategy.TargetArea) ? "—" : strategy.TargetArea)</dd>
-                            </div>
-                            <div>
-                                <dt class="eyebrow">Since</dt>
-                                <dd class="text-content mt-1">@strategy.CreatedAt.ToLocalTime().ToString("d MMM yyyy")</dd>
-                            </div>
-                        </div>
-                    </dl>
-                </Panel>
-                <Panel Title="Funnel">
-                    <ol class="space-y-2 text-sm">
-                        @foreach (var step in FunnelSteps)
-                        {
-                            var width = funnel.Leads == 0 ? 0 : (int)Math.Round(100.0 * step.Count / funnel.Leads);
-                            <li>
-                                <div class="flex items-center justify-between mb-1">
-                                    <span class="text-content-muted">@step.Label</span>
-                                    <span class="text-content font-medium">@step.Count</span>
-                                </div>
-                                <div class="h-1.5 bg-surface-raised rounded overflow-hidden">
-                                    <div class="h-full @(step.Label == "Won" ? "bg-positive" : "bg-info")" style="width: @(width)%"></div>
-                                </div>
-                            </li>
                         }
-                    </ol>
-                    @if (funnel.Lost + funnel.Nurture > 0)
-                    {
-                        <p class="text-xs text-content-subtle mt-3">@funnel.Lost lost · @funnel.Nurture in nurture</p>
-                    }
-                </Panel>
+                    </Panel>
+                </div>
+
+                <div class="space-y-6">
+                    <Panel Title="The argument">
+                        <dl class="space-y-4 text-sm">
+                            <div>
+                                <dt class="eyebrow">The brief — the idea in our words</dt>
+                                <dd class="text-content mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.Brief) ? "—" : strategy.Brief)</dd>
+                            </div>
+                            <div>
+                                <dt class="eyebrow">Hypothesis — why these people, why now</dt>
+                                <dd class="text-content mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.Hypothesis) ? "—" : strategy.Hypothesis)</dd>
+                            </div>
+                            <div>
+                                <dt class="eyebrow">Evidence</dt>
+                                <dd class="text-content-muted mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.Evidence) ? "—" : strategy.Evidence)</dd>
+                            </div>
+                            <div>
+                                <dt class="eyebrow">Proposition</dt>
+                                <dd class="text-content mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.Proposition) ? "—" : strategy.Proposition)</dd>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <dt class="eyebrow">Audience</dt>
+                                    <dd class="text-content mt-1">@strategy.Audience.DisplayName()</dd>
+                                </div>
+                                <div>
+                                    <dt class="eyebrow">Channel</dt>
+                                    <dd class="text-content mt-1">@strategy.Channel.DisplayName()</dd>
+                                </div>
+                                <div>
+                                    <dt class="eyebrow">Where</dt>
+                                    <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(strategy.TargetArea) ? "—" : strategy.TargetArea)</dd>
+                                </div>
+                                <div>
+                                    <dt class="eyebrow">Since</dt>
+                                    <dd class="text-content mt-1">@DateText(strategy.CreatedAt)</dd>
+                                </div>
+                            </div>
+                        </dl>
+                    </Panel>
+                    <Panel Title="Funnel">
+                        <ol class="space-y-2 text-sm">
+                            @foreach (var step in FunnelSteps)
+                            {
+                                var width = funnel.Leads == 0 ? 0 : (int)Math.Round(100.0 * step.Count / funnel.Leads);
+                                <li>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-content-muted">@step.Label</span>
+                                        <span class="text-content font-medium">@step.Count</span>
+                                    </div>
+                                    <div class="h-1.5 bg-surface-raised rounded overflow-hidden">
+                                        <div class="h-full @(step.Label =="Won" ? "bg-positive" : "bg-info")" style="width: @(width)%"></div>
+                                    </div>
+                                </li>
+                            }
+                        </ol>
+                        @if (funnel.Lost + funnel.Nurture > 0)
+                        {
+                            <p class="text-xs text-content-subtle mt-3">@funnel.Lost lost · @funnel.Nurture in nurture</p>
+                        }
+                    </Panel>
+                </div>
             </div>
         </div>
-    </section>
 
-    <StrategyFormModal IsOpen="@editOpen" Existing="@strategy" OnSaved="OnEditedAsync" OnCancel="() => editOpen = false" />
+        <StrategyFormModal IsOpen="@editOpen" Existing="@strategy" OnSaved="OnEditedAsync" OnCancel="() => editOpen = false" />
 
-    <LeadFormModal IsOpen="@addLeadOpen" Strategies="@StrategyOptionsList" FixedStrategyId="@StrategyId"
-                   OnSaved="OnLeadAddedAsync" OnCancel="() => addLeadOpen = false" />
+        <LeadFormModal IsOpen="@addLeadOpen" Strategies="@StrategyOptionsList" FixedStrategyId="@StrategyId"
+                       OnSaved="OnLeadAddedAsync" OnCancel="() => addLeadOpen = false" />
 
-    <Modal IsOpen="@planEditOpen"
-           Title="Approach plan"
-           ConfirmLabel="@(busy ? "Saving…" : "Save plan")"
-           ConfirmDisabled="@busy"
-           OnCancel="() => planEditOpen = false"
-           OnConfirm="SavePlanAsync"
-           Class="max-w-3xl">
-        <p class="text-xs text-content-subtle mb-3">Markdown: # headings, - bullets, 1. numbered steps, **bold**.</p>
-        <textarea class="field w-full font-mono text-xs" rows="22" value="@planDraft" @oninput="e => planDraft = e.Value?.ToString() ?? string.Empty"></textarea>
-    </Modal>
+        <Modal IsOpen="@planEditOpen"
+               Title="Approach plan"
+               ConfirmLabel="@(busy ? "Saving…" : "Save plan")"
+               ConfirmDisabled="@busy"
+               OnCancel="() => planEditOpen = false"
+               OnConfirm="SavePlanAsync"
+               Class="max-w-3xl">
+            <p class="text-xs text-content-subtle mb-3">Markdown: # headings, - bullets, 1. numbered steps, **bold**.</p>
+            <textarea class="field w-full font-mono text-xs" rows="22" value="@planDraft" @oninput="e => planDraft = e.Value?.ToString() ?? string.Empty"></textarea>
+        </Modal>
 
-    <Modal IsOpen="@generateOpen"
-           Title="@(string.IsNullOrWhiteSpace(strategy.ApproachPlan) ? "Generate the approach plan" : "Regenerate the approach plan")"
-           ConfirmLabel="@(busy ? "Drafting…" : "Draft it")"
-           ConfirmDisabled="@busy"
-           OnCancel="() => generateOpen = false"
-           OnConfirm="GenerateAsync">
-        <p class="text-sm text-content-muted mb-4">
-            Claude drafts the plan from the strategy's own argument — audience, area, hypothesis, evidence, channel,
-            proposition. It does not search the web; put research findings in Evidence first.
-            @if (!string.IsNullOrWhiteSpace(strategy.ApproachPlan))
-            {
-                <text> The current plan is replaced.</text>
-            }
-        </p>
-        <label class="block text-sm font-medium text-content mb-1">Steer (optional)</label>
-        <textarea class="field w-full" rows="3" maxlength="2000" placeholder="e.g. keep it to one mailing and one follow-up call; assume a £3k budget; we have two people for two days a month"
-                  value="@guidance" @oninput="e => guidance = e.Value?.ToString() ?? string.Empty"></textarea>
-    </Modal>
-}
+        <Modal IsOpen="@generateOpen"
+               Title="@(string.IsNullOrWhiteSpace(strategy.ApproachPlan) ? "Generate the approach plan" : "Regenerate the approach plan")"
+               ConfirmLabel="@(busy ? "Drafting…" : "Draft it")"
+               ConfirmDisabled="@busy"
+               OnCancel="() => generateOpen = false"
+               OnConfirm="GenerateAsync">
+            <p class="text-sm text-content-muted mb-4">
+                Claude drafts the plan from the strategy's own argument — audience, area, hypothesis, evidence, channel,
+                proposition. It does not search the web; put research findings in Evidence first.
+                @if (!string.IsNullOrWhiteSpace(strategy.ApproachPlan))
+                {
+                    <text> The current plan is replaced.</text>
+                }
+            </p>
+            <FormField Label="Steer (optional)">
+            <textarea class="field w-full" rows="3" maxlength="2000" placeholder="e.g. keep it to one mailing and one follow-up call; assume a £3k budget; we have two people for two days a month"
+                      value="@guidance" @oninput="e => guidance = e.Value?.ToString() ?? string.Empty"></textarea>
+            </FormField>
+        </Modal>
+    }
+</Page>
 
 @code {
     [Parameter] public string StrategyId { get; set; } = "";

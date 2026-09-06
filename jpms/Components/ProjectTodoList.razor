@@ -36,7 +36,7 @@
             <h2 class="text-sm font-semibold text-content">To-do list</h2>
             @if (items.Count > 0)
             {
-                <span class="text-[11px] text-content-subtle">@items.Count(i => i.IsComplete) of @items.Count done</span>
+                <span class="text-xs text-content-subtle">@items.Count(i => i.IsComplete) of @items.Count done</span>
             }
         </div>
         <div class="flex items-center gap-2">
@@ -62,7 +62,7 @@
 
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+        <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
     }
 
     @if (loading)
@@ -73,8 +73,7 @@
     {
         <div class="flex items-center gap-2 mb-4">
             <div class="relative flex-1">
-                <input type="search" class="field w-full text-sm pr-8" placeholder="Search keywords — filters the list and finds related requests, variations and drawings"
-                       value="@search" @oninput="OnSearchInput" />
+                <SearchInput Value="@search" ValueChanged="OnSearchInput" Placeholder="Search keywords — filters the list and finds related requests, variations and drawings" Width="w-full" />
                 @if (HasQuery)
                 {
                     <button type="button" title="Clear search"
@@ -135,15 +134,15 @@
                     @foreach (var item in open)
                     {
                         <button type="button" @key="item.TodoItemId" title="Open this item"
-                                class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                                class="w-full rounded border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                                 @onclick="() => OpenItem(item)">
                             <p class="truncate text-sm text-content">
                                 <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
                             </p>
-                            <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                            <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
                                 @if (item.DueAt is not null)
                                 {
-                                    <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                                    <span class="whitespace-nowrap @(IsOverdue(item) ?"text-negative font-medium" : "")">Due @DateText(item.DueAt.Value)</span>
                                 }
                                 <TodoAssigneeBadge Item="item" />
                                 @if (!string.IsNullOrWhiteSpace(item.CreatedByEmail))
@@ -158,20 +157,20 @@
 
             @if (!boardView && done.Count > 0)
             {
-                <h3 class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2">Done</h3>
+                <h3 class="eyebrow mb-2">Done</h3>
                 <div class="space-y-2 mb-4">
                     @foreach (var item in done)
                     {
                         <button type="button" @key="item.TodoItemId" title="Open this item"
-                                class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                                class="w-full rounded border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                                 @onclick="() => OpenItem(item)">
                             <p class="truncate text-sm text-content-subtle line-through">
                                 <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
                             </p>
-                            <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                            <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
                                 @if (item.CompletedAt is not null)
                                 {
-                                    <span class="whitespace-nowrap">Done @item.CompletedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                                    <span class="whitespace-nowrap">Done @DateText(item.CompletedAt.Value)</span>
                                 }
                                 <TodoAssigneeBadge Item="item" />
                                 @if (!string.IsNullOrWhiteSpace(item.CreatedByEmail))
@@ -193,7 +192,7 @@
             var anyRelated = matchedRequests.Count + matchedVariations.Count + matchedDrawings.Count > 0;
 
             <div class="border-t border-line pt-4 mt-2">
-                <h3 class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2">Related records</h3>
+                <h3 class="eyebrow mb-2">Related records</h3>
 
                 @if (!anyRelated)
                 {
@@ -210,12 +209,12 @@
                             @foreach (var record in matchedRequests.Take(MaxRelated))
                             {
                                 <button type="button" @key="record.RequestId" title="Open this request"
-                                        class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                                        class="w-full rounded border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                                         @onclick="() => OpenRequest(record)">
                                     <p class="truncate text-sm text-content">
                                         <span class="font-mono text-xs text-content-muted mr-2">@record.Reference</span>@record.Title
                                     </p>
-                                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
                                         <span class="whitespace-nowrap" title="@record.Kind.LongName()">@record.Kind.DisplayName()</span>
                                         <span class="whitespace-nowrap">@RequestStatusLabel(record.Status)</span>
                                     </div>
@@ -224,7 +223,7 @@
                         </div>
                         @if (matchedRequests.Count > MaxRelated)
                         {
-                            <p class="text-[11px] text-content-subtle mb-4">
+                            <p class="text-xs text-content-subtle mb-4">
                                 Showing @MaxRelated of @matchedRequests.Count — refine the keywords, or search from the
                                 <a class="underline underline-offset-2 hover:text-content-muted" href="@($"/projects/{ProjectId}/requests")">Requests tab</a>.
                             </p>
@@ -238,12 +237,12 @@
                             @foreach (var order in matchedVariations.Take(MaxRelated))
                             {
                                 <button type="button" @key="order.VariationOrderId" title="Open this variation order"
-                                        class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                                        class="w-full rounded border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                                         @onclick="() => OpenVariation(order.VariationOrderId)">
                                     <p class="truncate text-sm text-content">
                                         <span class="font-mono text-xs text-content-muted mr-2">@(order.VariationRef ?? order.Reference)</span>@order.Title
                                     </p>
-                                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
                                         <span class="whitespace-nowrap">Variation · @order.Status</span>
                                     </div>
                                 </button>
@@ -258,12 +257,12 @@
                             @foreach (var drawing in matchedDrawings.Take(MaxRelated))
                             {
                                 <button type="button" @key="drawing.DrawingId" title="Open this document"
-                                        class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                                        class="w-full rounded border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                                         @onclick="() => OpenDrawing(drawing)">
                                     <p class="truncate text-sm text-content">
                                         <span class="font-mono text-xs text-content-muted mr-2">@DrawingNaming.Code(drawing)</span>@DrawingNaming.Name(drawing)
                                     </p>
-                                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
                                         <span class="whitespace-nowrap">
                                             @(DrawingNaming.ApprovedRevisionText(drawing) is { } approvedText ? $"{approvedText} approved" : "No approved revision")
                                         </span>
@@ -273,7 +272,7 @@
                         </div>
                         @if (matchedDrawings.Count > MaxRelated)
                         {
-                            <p class="text-[11px] text-content-subtle mb-4">
+                            <p class="text-xs text-content-subtle mb-4">
                                 Showing @MaxRelated of @matchedDrawings.Count — refine the keywords, or use the
                                 <a class="underline underline-offset-2 hover:text-content-muted" href="@($"/projects/{ProjectId}/documents")">Documents tab</a>.
                             </p>
@@ -296,22 +295,24 @@
     <div class="space-y-3">
         @if (addError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@addError</p>
+            <Notice Tone="Tone.Negative">@addError</Notice>
         }
 
         <FormField Label="Title" Value="@newTitle" OnChange="v => newTitle = v" Required="true" />
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
+                <FormField Label="Assigned to">
                 <TodoAssigneeSelect Options="@AssigneeOptions" Value="@newAssignee" ValueChanged="v => newAssignee = v" />
+                </FormField>
             </div>
             <FormField Label="Due" Value="@newDue" OnChange="v => newDue = v" InputType="date" />
         </div>
 
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+            <FormField Label="Notes">
             <textarea class="field" rows="2" value="@newNotes" @oninput="OnNewNotesInput"></textarea>
+            </FormField>
         </div>
     </div>
 </Modal>

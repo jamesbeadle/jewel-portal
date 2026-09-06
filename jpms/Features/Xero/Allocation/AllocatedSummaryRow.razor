@@ -56,12 +56,12 @@
     </td>
     <td class="px-3 py-2.5 text-content-subtle text-xs hidden md:table-cell">
         @(Line.AllocatedBy ?? "—")
-        <span class="block">@(Line.AllocatedAtUtc?.ToLocalTime().ToString("d MMM yyyy") ?? "")</span>
+        <span class="block">@(DateText(Line.AllocatedAtUtc?.ToLocalTime()) ?? "")</span>
     </td>
     <td class="px-3 py-2.5 text-right whitespace-nowrap">
         @if (Mode == XeroAllocationStatus.Allocated && Line.WriteBackStatus == XeroWriteBackStatus.Failed)
         {
-            <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+            <button class="text-xs font-medium rounded px-2.5 py-1 bg-content text-surface disabled:opacity-40"
                     disabled="@Busy" title="@Line.WriteBackError"
                     @onclick="() => OnRetryWriteBack.InvokeAsync()">Retry Xero</button>
         }
@@ -101,7 +101,7 @@
     private BadgeModel? WriteBackBadge => Line.WriteBackStatus switch
     {
         XeroWriteBackStatus.Approved => new("✓ Approved in Xero",
-            Line.WriteBackAtUtc?.ToLocalTime().ToString("d MMM yyyy HH:mm"), "text-positive"),
+            DateTimeText(Line.WriteBackAtUtc?.ToLocalTime()), "text-positive"),
         XeroWriteBackStatus.Failed => new("⚠ Xero write-back failed",
             Line.WriteBackError, "text-negative"),
         _ when IsAwaitingApproval(Line) => new("Draft — approves in Xero once the whole bill is allocated",

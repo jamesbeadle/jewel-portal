@@ -18,18 +18,7 @@
     Report tab; this page only reads.
 *@
 
-@if (!isLoaded)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="valuation-snapshots">
         <div class="mb-4">
             <h2 class="text-lg font-semibold text-content">Valuation Snapshots</h2>
@@ -52,70 +41,67 @@ else
         }
         else
         {
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-                <table class="w-full text-sm border-collapse">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 whitespace-nowrap">Captured</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 min-w-[200px]">Snapshot</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 whitespace-nowrap">Valuation invoice</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Works complete £</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Certified £</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Payment due £</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right w-[120px]"></th>
+            <RecordsTable>
+                <thead>
+                    <tr>
+                        <th class="whitespace-nowrap">Captured</th>
+                        <th class="min-w-[200px]">Snapshot</th>
+                        <th class="whitespace-nowrap">Valuation invoice</th>
+                        <th class="text-right whitespace-nowrap">Works complete £</th>
+                        <th class="text-right whitespace-nowrap">Certified £</th>
+                        <th class="text-right whitespace-nowrap">Payment due £</th>
+                        <th class="text-right w-[120px]"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var snapshot in Snapshots)
+                    {
+                        <tr class="hover:bg-surface-raised cursor-pointer transition @(snapshot.IsSuperseded ?"opacity-60" : "")"
+                            title="View the frozen report"
+                            @onclick="() => viewingSnapshotId = snapshot.ValuationReportSnapshotId">
+                            <td class="whitespace-nowrap">@DateTimeText(snapshot.TakenAt)</td>
+                            <td class="text-content">
+                                @snapshot.Label
+                                @if (snapshot.IsSuperseded)
+                                {
+                                    <Pill Tone="Tone.Muted" Class="ml-1.5" Title="A later snapshot replaced this one (the invoice was amended)">Superseded</Pill>
+                                }
+                            </td>
+                            <td class="whitespace-nowrap">
+                                @* No invoice detail page exists — the reference reads as plain
+                                   text; invoices are managed on the Valuation Report tab. *@
+                                @if (InvoiceFor(snapshot) is { } invoice)
+                                {
+                                    <span class="font-mono text-xs text-content">@invoice.Reference</span>
+                                    <span class="block text-xs text-content-subtle">@invoice.Status · @invoice.PeriodMonth.ToString("MMM yyyy")</span>
+                                }
+                                else if (snapshot.ValuationInvoiceId is not null)
+                                {
+                                    <span class="text-xs text-content-subtle">Invoice deleted</span>
+                                }
+                                else
+                                {
+                                    <span class="text-xs text-content-subtle italic">Period-end capture</span>
+                                }
+                            </td>
+                            <td class="text-right whitespace-nowrap">@Money(snapshot.TotalWorksComplete)</td>
+                            <td class="text-right whitespace-nowrap">@Money(snapshot.CertifiedToDate)</td>
+                            <td class="text-right text-content whitespace-nowrap">@Money(snapshot.PaymentDueExVat)</td>
+                            <td class="text-right whitespace-nowrap" @onclick:stopPropagation="true">
+                                <a href="@($"/api/valuation-report-snapshots/{snapshot.ValuationReportSnapshotId}/pdf")"
+                                   target="_blank" rel="noopener" title="Download the frozen report as the branded PDF"
+                                   class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">PDF</a>
+                                @if (CanEmail)
+                                {
+                                    <button type="button" @onclick="() => OpenSnapshotEmail(snapshot.ValuationReportSnapshotId)"
+                                            title="Draft the report to the client in the shared mailbox — nothing sends from here"
+                                            class="ml-2 text-content-subtle hover:text-content underline underline-offset-2 text-xs">Email</button>
+                                }
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @foreach (var snapshot in Snapshots)
-                        {
-                            <tr class="hover:bg-surface-raised cursor-pointer transition @(snapshot.IsSuperseded ? "opacity-60" : "")"
-                                title="View the frozen report"
-                                @onclick="() => viewingSnapshotId = snapshot.ValuationReportSnapshotId">
-                                <td class="px-4 py-3 text-content-muted whitespace-nowrap">@snapshot.TakenAt.ToString("dd MMM yyyy HH:mm")</td>
-                                <td class="px-4 py-3 text-content">
-                                    @snapshot.Label
-                                    @if (snapshot.IsSuperseded)
-                                    {
-                                        <span class="ml-1.5 inline-flex items-center rounded-full border border-line px-1.5 py-0.5 text-[10px] text-content-subtle"
-                                              title="A later snapshot replaced this one (the invoice was amended)">Superseded</span>
-                                    }
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    @* No invoice detail page exists — the reference reads as plain
-                                       text; invoices are managed on the Valuation Report tab. *@
-                                    @if (InvoiceFor(snapshot) is { } invoice)
-                                    {
-                                        <span class="font-mono text-xs text-content">@invoice.Reference</span>
-                                        <span class="block text-xs text-content-subtle">@invoice.Status · @invoice.PeriodMonth.ToString("MMM yyyy")</span>
-                                    }
-                                    else if (snapshot.ValuationInvoiceId is not null)
-                                    {
-                                        <span class="text-xs text-content-subtle">Invoice deleted</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-xs text-content-subtle italic">Period-end capture</span>
-                                    }
-                                </td>
-                                <td class="px-4 py-3 text-right text-content-muted whitespace-nowrap">@Money(snapshot.TotalWorksComplete)</td>
-                                <td class="px-4 py-3 text-right text-content-muted whitespace-nowrap">@Money(snapshot.CertifiedToDate)</td>
-                                <td class="px-4 py-3 text-right text-content whitespace-nowrap">@Money(snapshot.PaymentDueExVat)</td>
-                                <td class="px-4 py-3 text-right whitespace-nowrap" @onclick:stopPropagation="true">
-                                    <a href="@($"/api/valuation-report-snapshots/{snapshot.ValuationReportSnapshotId}/pdf")"
-                                       target="_blank" rel="noopener" title="Download the frozen report as the branded PDF"
-                                       class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">PDF</a>
-                                    @if (CanEmail)
-                                    {
-                                        <button type="button" @onclick="() => OpenSnapshotEmail(snapshot.ValuationReportSnapshotId)"
-                                                title="Draft the report to the client in the shared mailbox — nothing sends from here"
-                                                class="ml-2 text-content-subtle hover:text-content underline underline-offset-2 text-xs">Email</button>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </RecordsTable>
         }
 
         <Modal IsOpen="@(viewingSnapshotId is not null)"
@@ -130,12 +116,11 @@ else
 
         <ValuationSnapshotEmailModal Snapshot="@emailingSnapshot" OnClose="@(() => emailingSnapshot = null)" />
     </ProjectPageShell>
-}
+</Page>
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
     private string? viewingSnapshotId;
 
     // Email-draft flow — same circle as the register's take/delete gate: the roles that run
@@ -172,7 +157,6 @@ else
         // background reload revalidates them (stale-while-revalidate).
         Store.Refresh(ProjectId);
         try { invoices = await Invoices.ListAsync(ProjectId); } catch { }
-        isLoaded = true;
     }
 
     private void OnStoreChanged() => StateHasChanged();

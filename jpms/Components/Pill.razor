@@ -1,0 +1,59 @@
+@namespace Jewel.JPMS.Components
+
+@*
+    THE status badge. A record's status, a count, a small qualifier ("Draft", "Overdue", "3") —
+    one shape everywhere: 12/Med on a 4px-radius tint, optional leading dot. Tone (Tone.cs) is
+    the only thing that colours it; a view never chooses a colour for a status, it maps its
+    enum to a Tone in StatusTones.cs and that mapping is the status vocabulary.
+
+    With OnClick it renders as a <button> (a status that is also the menu of its transitions —
+    the ▾ says so); unmatched attributes (aria-*, data-*) pass through. Domain badges
+    (ComplianceStatusPill, StatusPill…) are one-line wrappers over this. Class is for placement
+    only (margins, shrink-0).
+*@
+
+@if (OnClick.HasDelegate)
+{
+    <button type="button" class="@Classes hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="@Title" disabled="@Disabled" @onclick="OnClick" @attributes="Attributes">
+        @Body
+    </button>
+}
+else
+{
+    <span class="@Classes" title="@Title" @attributes="Attributes">@Body</span>
+}
+
+@code {
+    [Parameter] public Tone Tone { get; set; } = Tone.Muted;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    /// <summary>A leading 6px dot in the tone colour — for a status beside a name in a list.</summary>
+    [Parameter] public bool Dot { get; set; }
+    [Parameter] public string? Title { get; set; }
+    /// <summary>Placement only — margins, shrink-0. Never colour.</summary>
+    [Parameter] public string Class { get; set; } = "";
+    /// <summary>Makes the pill a button — a status that opens its transition menu.</summary>
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public Dictionary<string, object>? Attributes { get; set; }
+
+    /// <summary>The pill's class string, for the rare host that must style its own element as a
+    /// pill (DropdownMenu's ToggleClass). Everything else renders a Pill.</summary>
+    public static string ClassesFor(Tone tone, string extra = "") =>
+        $"inline-flex items-center gap-1.5 whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium {tone.Badge()} {extra}";
+
+    private string Classes => ClassesFor(Tone, Class);
+
+    private RenderFragment Body => __builder =>
+    {
+        if (Dot)
+        {
+            <span class="inline-block w-1.5 h-1.5 rounded-full shrink-0 @Tone.Dot()" aria-hidden="true"></span>
+        }
+        @ChildContent
+        if (OnClick.HasDelegate)
+        {
+            <span aria-hidden="true" class="leading-none">▾</span>
+        }
+    };
+}

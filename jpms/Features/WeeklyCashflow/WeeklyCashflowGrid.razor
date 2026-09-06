@@ -6,57 +6,55 @@
    and the standing Add item row, then the running answer — net movement, and for directors the
    closing bank balance. The page owns the moves, the exclusions and the dialogs; every band reads
    the same page state and reports to the same page handlers, so Band wires a section once. *@
-<div class="rounded-xl border border-line bg-surface overflow-x-auto mb-6">
-    <table class="w-full text-sm border-collapse">
-        <thead class="bg-surface-raised border-b border-line">
-            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                <th class="px-4 py-3 min-w-[260px]"></th>
-                @for (var index = 0; index < View.WeekStarts.Count; index++)
-                {
-                    <th class="px-3 py-3 text-right whitespace-nowrap">@WeekLabel(View.WeekStarts[index], index)</th>
-                }
-                <th class="px-3 py-3 text-right whitespace-nowrap border-l border-line"
-                    title="Due beyond the visible weeks. Entries here roll into view as the weeks advance.">Later</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr class="border-b border-line">
-                <td colspan="@(View.WeekStarts.Count + 2)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash in</td>
-            </tr>
-            @Band(WeeklyCashflowBand.ClientReceipts, "Client invoices outstanding",
-                  "one line per outstanding sales invoice in Xero, at its due week — or at the Expected date when one is set in Xero",
-                  Array.Empty<GroupSlice>())
-            <tr class="border-b border-line">
-                <td colspan="@(View.WeekStarts.Count + 2)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash out</td>
-            </tr>
-            @Band(WeeklyCashflowBand.SupplierBills, "Supplier bills",
-                  "one line per outstanding bill in Xero — drafts included, as Aged Payables counts them; a Planned date set in Xero picks the week",
-                  SupplierGroups)
-            @foreach (var category in WeeklyCashflowCategories.All.Where(HasLiveItems))
+<RecordsTable MaxHeight="" Class="mb-6">
+    <thead>
+        <tr>
+            <th class="min-w-[260px]"></th>
+            @for (var index = 0; index < View.WeekStarts.Count; index++)
             {
-                @Band(WeeklyCashflowMaths.BandFor(category), WeeklyCashflowCategories.BandLabel(category), "manual items — added on this page", Array.Empty<GroupSlice>())
+                <th class="text-right whitespace-nowrap">@WeekLabel(View.WeekStarts[index], index)</th>
             }
-            <CashflowAddItemRow WeekCellCount="View.WeekStarts.Count + 1" OnAddItem="OnAddItem" />
-            @* ── The running answer ── *@
-            <tr class="border-t-2 border-line border-b border-line font-semibold">
-                <td class="px-4 py-3 text-content">
-                    Net movement
-                    <span class="block text-[11px] text-content-faint font-normal">cash in less cash out, per week</span>
-                </td>
-                @for (var index = 0; index < View.WeekStarts.Count; index++)
-                {
-                    var net = View.Net[index];
-                    <td class="px-3 py-3 text-right whitespace-nowrap @(net < 0m ? "text-negative" : "text-positive")">@Signed(net)</td>
-                }
-                <td class="px-3 py-3 text-right whitespace-nowrap border-l border-line @(View.Net[^1] < 0m ? "text-negative" : "text-positive")">@Signed(View.Net[^1])</td>
-            </tr>
-            @if (IsDirector && View.Closing is not null)
+            <th class="text-right whitespace-nowrap border-l"
+                title="Due beyond the visible weeks. Entries here roll into view as the weeks advance.">Later</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="@(View.WeekStarts.Count + 2)" class="eyebrow">Cash in</td>
+        </tr>
+        @Band(WeeklyCashflowBand.ClientReceipts, "Client invoices outstanding",
+              "one line per outstanding sales invoice in Xero, at its due week — or at the Expected date when one is set in Xero",
+              Array.Empty<GroupSlice>())
+        <tr>
+            <td colspan="@(View.WeekStarts.Count + 2)" class="eyebrow">Cash out</td>
+        </tr>
+        @Band(WeeklyCashflowBand.SupplierBills, "Supplier bills",
+              "one line per outstanding bill in Xero — drafts included, as Aged Payables counts them; a Planned date set in Xero picks the week",
+              SupplierGroups)
+        @foreach (var category in WeeklyCashflowCategories.All.Where(HasLiveItems))
+        {
+            @Band(WeeklyCashflowMaths.BandFor(category), WeeklyCashflowCategories.BandLabel(category), "manual items — added on this page", Array.Empty<GroupSlice>())
+        }
+        <CashflowAddItemRow WeekCellCount="View.WeekStarts.Count + 1" OnAddItem="OnAddItem" />
+        @* ── The running answer ── *@
+        <tr class="border-t-2 font-semibold">
+            <td class="text-content">
+                Net movement
+                <span class="block text-xs text-content-faint font-normal">cash in less cash out, per week</span>
+            </td>
+            @for (var index = 0; index < View.WeekStarts.Count; index++)
             {
-                <WeeklyClosingBalanceRow View="View" />
+                var net = View.Net[index];
+                <td class="text-right whitespace-nowrap @(net < 0m ?"text-negative" : "text-positive")">@Signed(net)</td>
             }
-        </tbody>
-    </table>
-</div>
+            <td class="text-right whitespace-nowrap border-l @(View.Net[^1] < 0m ?"text-negative" : "text-positive")">@Signed(View.Net[^1])</td>
+        </tr>
+        @if (IsDirector && View.Closing is not null)
+        {
+            <WeeklyClosingBalanceRow View="View" />
+        }
+    </tbody>
+</RecordsTable>
 
 @code {
     [Parameter, EditorRequired] public WeeklyCashflowView View { get; set; } = default!;

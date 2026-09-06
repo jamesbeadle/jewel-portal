@@ -12,13 +12,13 @@
     <HeaderActions>
         @if (!loading && failed is null && linked.Count > 0)
         {
-            <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@linked.Count</span>
+            <Pill Tone="Tone.Info">@linked.Count</Pill>
         }
     </HeaderActions>
     <ChildContent>
         @if (failed is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@failed</p>
+            <Notice Tone="Tone.Negative">@failed</Notice>
         }
         else if (linked.Count == 0)
         {
@@ -33,14 +33,14 @@
                 @foreach (var item in linked)
                 {
                     <a href="@($"/todos/{item.TodoItemId}")" @key="item.TodoItemId" title="Open this to-do"
-                       class="block rounded-lg border border-line px-3 py-2 hover:border-line-strong hover:bg-surface-raised">
+                       class="btn-secondary">
                         <div class="flex items-center justify-between gap-2">
-                            <p class="truncate text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">
+                            <p class="truncate text-sm @(item.IsComplete ?"text-content-subtle line-through" : "text-content")">
                                 <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
                             </p>
-                            <span class="@TodoStatus.PillBaseClass @TodoStatus.PillClass(item)">@TodoStatus.Label(item)</span>
+                            <Pill Tone="@TodoStatus.Tone(item)" Class="shrink-0">@TodoStatus.Label(item)</Pill>
                         </div>
-                        <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                        <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
                             <span class="whitespace-nowrap">@ScopeLabel(item)</span>
                             @if (TodoAssigneePicker.Label(item) is string assigneeLabel)
                             {
@@ -48,7 +48,7 @@
                             }
                             @if (item.DueAt is not null)
                             {
-                                <span class="whitespace-nowrap">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                                <span class="whitespace-nowrap">Due @DateText(item.DueAt.Value)</span>
                             }
                         </div>
                     </a>

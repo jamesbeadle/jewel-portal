@@ -14,9 +14,7 @@
    tagged matches in the list's place. While a query is live the pathway/tag controls
    render disabled (never hidden): the search owns the one server-side filter slot. *@
 <div class="relative mb-3 max-w-xl">
-    <input type="search" class="field w-full text-sm pr-8"
-           placeholder="Search tagged emails — subject or sender, or a record reference (WO-0045)"
-           value="@SearchText" @oninput="OnSearchInput" />
+    <SearchInput Value="@SearchText" ValueChanged="OnSearchInput" Placeholder="Search tagged emails — subject or sender, or a record reference (WO-0045)" Width="w-full" />
     @if (SearchText.Trim().Length > 0)
     {
         <button type="button" title="Clear search"
@@ -30,7 +28,7 @@
    composes category filters with OR only, so combining them would show a union, not the
    intersection the combination looks like. *@
 <div class="flex flex-wrap items-center gap-2 mb-3">
-    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Pathway</span>
+    <span class="eyebrow mr-1">Pathway</span>
     <button type="button" class="@PathwayFilterChipClass(null) disabled:opacity-50" disabled="@SearchActive" title="@PathwayDisabledTitle" @onclick="() => OnSetPathwayFilter.InvokeAsync(null)">All</button>
     <button type="button" class="@PathwayFilterChipClass(TriagePathways.ClientBucket) disabled:opacity-50" disabled="@SearchActive" title="@PathwayDisabledTitle" @onclick="() => OnSetPathwayFilter.InvokeAsync(TriagePathways.ClientBucket)">Client</button>
     <button type="button" class="@PathwayFilterChipClass(TriagePathways.SubcontractorBucket) disabled:opacity-50" disabled="@SearchActive" title="@PathwayDisabledTitle" @onclick="() => OnSetPathwayFilter.InvokeAsync(TriagePathways.SubcontractorBucket)">Subcontractor</button>
@@ -43,18 +41,18 @@
 @if (Arrived)
 {
     <div class="flex flex-wrap items-center gap-2 mb-5">
-        <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Filter</span>
+        <span class="eyebrow mr-1">Filter</span>
         <div class="relative">
             <button type="button"
                     class="rounded-full border border-line px-3 py-1 text-xs font-medium text-content-muted hover:text-content hover:border-line-strong transition inline-flex items-center gap-1.5 disabled:opacity-50"
                     disabled="@SearchActive" title="@PathwayDisabledTitle"
                     @onclick="() => OnToggleFilterMenu.InvokeAsync()">
                 @FilterButtonLabel
-                <span class="text-[9px] leading-none">▾</span>
+                <span class="text-xs leading-none">▾</span>
             </button>
             @if (FilterOpen)
             {
-                <div class="absolute z-20 mt-1 w-60 max-h-72 overflow-y-auto rounded-lg border border-line bg-surface-raised shadow-lg p-1">
+                <div class="absolute z-20 mt-1 w-60 max-h-72 overflow-y-auto rounded border border-line bg-surface-raised p-1">
                     <button type="button"
                             class="w-full text-left rounded px-3 py-1.5 text-sm text-content-muted hover:bg-surface hover:text-content"
                             @onclick="() => OnClearTagFilters.InvokeAsync()">
@@ -73,10 +71,10 @@
         </div>
         @foreach (var tag in SelectedTags)
         {
-            <span class="inline-flex items-center gap-1.5 rounded-full border border-accent bg-surface-raised px-2.5 py-1 text-xs text-content">
+            <Pill Tone="Tone.Muted">
                 @TriageEmailDisplay.TagLabel(tag)
                 <button type="button" class="text-content-subtle hover:text-negative disabled:opacity-50" disabled="@SearchActive" @onclick="() => OnToggleTag.InvokeAsync(tag)" title="Remove filter">✕</button>
-            </span>
+            </Pill>
         }
     </div>
 }
@@ -159,7 +157,7 @@ else if (SearchResults is not null)
 @code {
     /// <summary>The live search text; input flows up, the page debounces and reads.</summary>
     [Parameter] public string SearchText { get; set; } = "";
-    [Parameter] public EventCallback<ChangeEventArgs> OnSearchInput { get; set; }
+    [Parameter] public EventCallback<string> OnSearchInput { get; set; }
     [Parameter] public EventCallback OnClearSearch { get; set; }
     /// <summary>True while a search owns the one server-side filter slot — the filters disable.</summary>
     [Parameter] public bool SearchActive { get; set; }
@@ -205,9 +203,8 @@ else if (SearchResults is not null)
 
     private string PathwayFilterChipClass(string? bucket)
     {
-        var baseClass = "rounded-full border px-3 py-1 text-xs font-medium transition";
         return PathwayBucketFilter == bucket
-            ? $"{baseClass} border-accent bg-surface-raised text-content"
-            : $"{baseClass} border-line text-content-muted hover:text-content hover:border-line-strong";
+            ? "chip chip-active"
+            : "chip";
     }
 }

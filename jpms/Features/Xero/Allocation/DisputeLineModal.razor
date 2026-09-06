@@ -12,16 +12,16 @@
         <div class="space-y-4">
             @if (Error is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@Error</p>
+                <Notice Tone="Tone.Negative">@Error</Notice>
             }
             <LedgerLineSummary Line="Line">
                 @(Line.InvoiceNumber ?? "—") · @DateText(Line.Date) · @Money(SignedNet(Line)) net
             </LedgerLineSummary>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1.5">
+                <label class="block eyebrow mb-1.5">
                     Why is this disputed?
                 </label>
-                <textarea class="w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-content placeholder:text-content-subtle"
+                <textarea class="field"
                           rows="4" placeholder="Optional — starts the discussion, e.g. “This isn't ours / wrong site — should this be on Elm Grove?”"
                           value="@Message" @oninput='e => MessageChanged.InvokeAsync(e.Value?.ToString() ?? "")'></textarea>
             </div>

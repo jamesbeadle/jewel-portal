@@ -1,32 +1,30 @@
-<div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-    <table class="w-full text-sm">
-        <thead class="bg-surface-raised border-b border-line">
-            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Trade</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Description</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden md:table-cell">Supplier</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">Unit</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">Rate</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Last priced</th>
+<RecordsTable>
+    <thead>
+        <tr>
+            <th>Trade</th>
+            <th>Description</th>
+            <th class="hidden md:table-cell">Supplier</th>
+            <th class="text-right">Unit</th>
+            <th class="text-right">Rate</th>
+            <th class="hidden lg:table-cell">Last priced</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var rate in Rates)
+        {
+            <tr>
+                <td class="text-content font-medium">@rate.Trade</td>
+                <td>@rate.Description</td>
+                <td class="hidden md:table-cell">@rate.SupplierName</td>
+                <td class="text-right text-content-subtle">@rate.Unit</td>
+                <td class="text-right text-content font-medium">@WholeMoney(rate.Value)</td>
+                <td class="hidden lg:table-cell">
+                    @DateText(rate.LastPricedAt)
+                </td>
             </tr>
-        </thead>
-        <tbody class="divide-y divide-line">
-            @foreach (var rate in Rates)
-            {
-                <tr>
-                    <td class="px-4 py-3 text-content font-medium">@rate.Trade</td>
-                    <td class="px-4 py-3 text-content-muted">@rate.Description</td>
-                    <td class="px-4 py-3 text-content-muted hidden md:table-cell">@rate.SupplierName</td>
-                    <td class="px-4 py-3 text-right text-content-subtle">@rate.Unit</td>
-                    <td class="px-4 py-3 text-right text-content font-medium">@WholeMoney(rate.Value)</td>
-                    <td class="px-4 py-3 text-content-muted hidden lg:table-cell">
-                        @rate.LastPricedAt.LocalDateTime.ToString("d MMM yyyy")
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-</div>
+        }
+    </tbody>
+</RecordsTable>
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<Rate> Rates { get; set; } = Array.Empty<Rate>();

@@ -190,7 +190,7 @@ public partial class ProjectTodoList
 
     private bool HasQuery => !string.IsNullOrWhiteSpace(search);
 
-    private void OnSearchInput(ChangeEventArgs e) => search = e.Value?.ToString() ?? "";
+    private void OnSearchInput(string value) => search = value;
 
     private void ClearSearch() => search = "";
 
@@ -245,8 +245,8 @@ public partial class ProjectTodoList
 
     private string ViewTabClass(bool board) =>
         boardView == board
-            ? "btn-primary text-xs px-2.5 py-1.5"
-            : "btn-secondary text-xs px-2.5 py-1.5";
+            ? "chip chip-active"
+            : "chip";
 
     private async Task SetView(bool board)
     {

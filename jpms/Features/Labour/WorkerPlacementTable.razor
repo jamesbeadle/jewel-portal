@@ -15,16 +15,16 @@
     else
     {
         <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="data-table data-table-dense">
                 <thead>
-                    <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
-                        <th class="px-5 py-3">Name</th>
-                        <th class="px-2 py-3 text-right">Rate</th>
-                        <th class="px-2 py-3 text-right">Contracted</th>
-                        <th class="px-2 py-3 text-right">Worked</th>
-                        <th class="px-2 py-3 text-right">Off</th>
-                        <th class="px-2 py-3">Month</th>
-                        <th class="px-5 py-3 text-right">Projected</th>
+                    <tr>
+                        <th>Name</th>
+                        <th class="text-right">Rate</th>
+                        <th class="text-right">Contracted</th>
+                        <th class="text-right">Worked</th>
+                        <th class="text-right">Off</th>
+                        <th>Month</th>
+                        <th class="text-right">Projected</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -32,18 +32,18 @@
                     {
                         <tr class="border-b border-line/60 hover:bg-surface-raised/40 cursor-pointer"
                             @onclick="() => Toggle(worker.WorkerId)">
-                            <td class="px-5 py-2.5 font-medium text-content whitespace-nowrap">@worker.Name</td>
-                            <td class="px-2 py-2.5 text-right tabular-nums text-content-muted whitespace-nowrap">@Pounds(worker.DayRate)</td>
-                            <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(worker.ContractedDays)</td>
-                            <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(worker.DaysWorked)</td>
-                            <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(worker.DaysOff)</td>
-                            <td class="px-2 py-2.5"><WorkerPlacementStrip Worker="worker" MonthWeekdays="MonthWeekdays" ColourOf="ColourOf" /></td>
-                            <td class="px-5 py-2.5 text-right tabular-nums font-semibold text-content">@Pounds(worker.ProjectedCost)</td>
+                            <td class="font-medium text-content whitespace-nowrap">@worker.Name</td>
+                            <td class="text-right tabular-nums whitespace-nowrap">@Pounds(worker.DayRate)</td>
+                            <td class="text-right tabular-nums">@Days(worker.ContractedDays)</td>
+                            <td class="text-right tabular-nums">@Days(worker.DaysWorked)</td>
+                            <td class="text-right tabular-nums">@Days(worker.DaysOff)</td>
+                            <td><WorkerPlacementStrip Worker="worker" MonthWeekdays="MonthWeekdays" ColourOf="ColourOf" /></td>
+                            <td class="text-right tabular-nums font-semibold text-content">@Pounds(worker.ProjectedCost)</td>
                         </tr>
                         @if (expandedWorkerId == worker.WorkerId)
                         {
-                            <tr class="border-b border-line/60 bg-surface-raised/30">
-                                <td colspan="8" class="px-5 py-4">
+                            <tr class="bg-surface-raised/30">
+                                <td colspan="8">
                                     <WorkerDetailPanel @key="worker.WorkerId" Worker="worker" Year="Year" Month="Month"
                                                        ColourOf="ColourOf" OnRecordAbsence="OnRecordAbsence" />
                                 </td>
@@ -53,7 +53,7 @@
                 </tbody>
             </table>
         </div>
-        <p class="px-5 py-3 text-[11px] text-content-subtle border-t border-line">
+        <p class="px-5 py-3 text-xs text-content-subtle border-t border-line">
             Chips are coloured by site; hatched = recorded absence, hollow = elapsed day with nothing recorded yet.
             Weekdays always show; round chips are weekend days, drawn only when something was recorded on them.
             Select a row for the day-by-day detail, absence recording and contract settings.

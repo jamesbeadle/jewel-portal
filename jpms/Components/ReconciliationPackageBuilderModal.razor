@@ -15,20 +15,19 @@
        Class="max-w-6xl">
     <div class="space-y-4">
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Package name</label>
+            <FormField Label="Package name">
             <input type="text" maxlength="128" placeholder="e.g. BVMH groundworks & civils"
-                   class="w-full md:w-1/2 rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                   class="field"
                    @bind="name" @bind:event="oninput" />
+            </FormField>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             @* ── Cost side: the sub's work orders ─────────────────────────── *@
-            <div class="rounded-lg border border-line bg-surface p-3">
+            <div class="rounded border border-line bg-surface p-3">
                 <div class="flex items-center justify-between gap-2 mb-2">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cost side — work orders</p>
-                    <input type="search" placeholder="Search…"
-                           class="bg-surface border border-line rounded-lg px-2 py-1 text-xs text-content placeholder:text-content-subtle w-36"
-                           @bind="orderSearch" @bind:event="oninput" />
+                    <p class="eyebrow">Cost side — work orders</p>
+                    <SearchInput @bind-Value="orderSearch" Placeholder="Search…" Width="w-36" />
                 </div>
                 <div class="overflow-y-auto max-h-72 space-y-1">
                     @foreach (var detail in FilteredOrders)
@@ -36,12 +35,12 @@
                         var order = detail.Order;
                         var owner = OwnerOf(order.WorkOrderId);
                         var taken = owner is not null;
-                        <label class="flex items-center gap-2 text-sm @(taken ? "opacity-50" : "cursor-pointer")"
+                        <label class="flex items-center gap-2 text-sm @(taken ?"opacity-50" : "cursor-pointer")"
                                title="@(taken ? $"Already in \"{owner}\" — a work order has one home" : detail.Order.Title)">
                             <input type="checkbox" class="cursor-pointer" disabled="@taken"
                                    checked="@selectedOrderIds.Contains(order.WorkOrderId)"
                                    @onchange="() => ToggleOrder(order.WorkOrderId)" />
-                            <span class="font-mono text-[11px] text-content-subtle">@($"WO-{order.Number:0000}")</span>
+                            <span class="font-mono text-xs text-content-subtle">@($"WO-{order.Number:0000}")</span>
                             <span class="text-content truncate">@detail.SubcontractorName</span>
                             <span class="ml-auto text-content-muted whitespace-nowrap">@Money(CommittedOf(detail))</span>
                         </label>
@@ -50,15 +49,13 @@
             </div>
 
             @* ── Sales side: the valuation lines that priced the scope ─────── *@
-            <div class="rounded-lg border border-line bg-surface p-3">
+            <div class="rounded border border-line bg-surface p-3">
                 <div class="flex items-center justify-between gap-2 mb-2">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                    <p class="eyebrow"
                        title="Tick a line to take its full remaining value; edit the amount for a partial share when a client line covers more than one sub">
                         Sales side — valuation lines
                     </p>
-                    <input type="search" placeholder="Search…"
-                           class="bg-surface border border-line rounded-lg px-2 py-1 text-xs text-content placeholder:text-content-subtle w-36"
-                           @bind="lineSearch" @bind:event="oninput" />
+                    <SearchInput @bind-Value="lineSearch" Placeholder="Search…" Width="w-36" />
                 </div>
                 <div class="overflow-y-auto max-h-72 space-y-1">
                     @foreach (var entry in FilteredLines)
@@ -66,18 +63,18 @@
                         var line = entry.Line;
                         var picked = pickedAmounts.ContainsKey(line.ValuationLineItemId);
                         var exhausted = !picked && entry.AvailableElsewhere == 0m;
-                        <div class="flex items-center gap-2 text-sm @(exhausted ? "opacity-50" : "")">
+                        <div class="flex items-center gap-2 text-sm @(exhausted ?"opacity-50" : "")">
                             <input type="checkbox" class="cursor-pointer" disabled="@exhausted"
                                    title="@(exhausted ? "Fully assigned to other packages" : "")"
                                    checked="@picked"
                                    @onchange="() => ToggleLine(entry)" />
-                            <span class="font-mono text-[11px] text-content-subtle whitespace-nowrap">@line.CostCode</span>
+                            <span class="font-mono text-xs text-content-subtle whitespace-nowrap">@line.CostCode</span>
                             <span class="text-content-muted truncate" title="@line.Description">@line.Description</span>
                             <span class="ml-auto flex items-center gap-1.5 whitespace-nowrap">
                                 @if (picked)
                                 {
                                     <input type="number" step="any"
-                                           class="bg-surface border border-line rounded-lg px-2 py-0.5 text-right text-content text-xs w-24"
+                                           class="field text-right text-xs w-24"
                                            title="@($"This package's share — {Money(entry.AvailableElsewhere)} of the line's {Money(line.LineAmount)} is available")"
                                            value="@pickedAmounts[line.ValuationLineItemId]"
                                            @onchange="e => SetLineAmount(line.ValuationLineItemId, e.Value?.ToString())" />
@@ -96,15 +93,13 @@
         @* ── Cost side, part two: direct purchase invoices — allocated Xero lines not
              paying any work order (materials bought straight for the packaged scope,
              e.g. roofing supplies alongside the roofer's labour-only order). ───── *@
-        <div class="rounded-lg border border-line bg-surface p-3">
+        <div class="rounded border border-line bg-surface p-3">
             <div class="flex items-center justify-between gap-2 mb-2">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                <p class="eyebrow"
                    title="Tick an invoice line to take its full non-work-order remainder; edit the amount for a partial share. Spend already linked to a work order arrives through the order — only the unlinked remainder is offered here.">
                     Cost side — direct purchase invoices (not linked to a work order)
                 </p>
-                <input type="search" placeholder="Search…"
-                       class="bg-surface border border-line rounded-lg px-2 py-1 text-xs text-content placeholder:text-content-subtle w-36"
-                       @bind="costSearch" @bind:event="oninput" />
+                <SearchInput @bind-Value="costSearch" Placeholder="Search…" Width="w-36" />
             </div>
             @if (costLinesLoading)
             {
@@ -112,7 +107,7 @@
             }
             else if (FilteredCostLines.Count == 0)
             {
-                <p class="text-sm text-content-subtle italic">No unlinked purchase spend to offer — everything is either paying a work order or already packaged.</p>
+                <EmptyState Message="No unlinked purchase spend to offer — everything is either paying a work order or already packaged." />
             }
             else
             {
@@ -122,20 +117,20 @@
                         var costLine = entry.Line;
                         var picked = pickedCostAmounts.ContainsKey(costLine.XeroLedgerLineId);
                         var exhausted = !picked && entry.Available == 0m;
-                        <div class="flex items-center gap-2 text-sm @(exhausted ? "opacity-50" : "")">
+                        <div class="flex items-center gap-2 text-sm @(exhausted ?"opacity-50" : "")">
                             <input type="checkbox" class="cursor-pointer" disabled="@exhausted"
                                    title="@(exhausted ? "Fully linked to work orders or assigned to other packages" : "")"
                                    checked="@picked"
                                    @onchange="() => ToggleCostLine(entry)" />
                             <span class="text-content-subtle text-xs whitespace-nowrap">@(costLine.Date?.ToString("dd MMM yy") ?? "—")</span>
-                            <span class="font-mono text-[11px] text-content-subtle whitespace-nowrap">@costLine.CostCode</span>
+                            <span class="font-mono text-xs text-content-subtle whitespace-nowrap">@costLine.CostCode</span>
                             <span class="text-content truncate whitespace-nowrap">@costLine.Supplier</span>
                             <span class="text-content-muted truncate" title="@costLine.Description">@costLine.InvoiceNumber</span>
                             <span class="ml-auto flex items-center gap-1.5 whitespace-nowrap">
                                 @if (picked)
                                 {
                                     <input type="number" step="any"
-                                           class="bg-surface border border-line rounded-lg px-2 py-0.5 text-right text-content text-xs w-24"
+                                           class="field text-right text-xs w-24"
                                            title="@($"This package's share — {Money(entry.Available)} of the line's {Money(costLine.Net)} net is not paying a work order or in another package")"
                                            value="@pickedCostAmounts[costLine.XeroLedgerLineId]"
                                            @onchange="e => SetCostAmount(costLine.XeroLedgerLineId, e.Value?.ToString())" />
@@ -152,12 +147,12 @@
         </div>
 
         @* ── Running totals: mismatched scope is visible before saving ─────── *@
-        <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 text-sm flex flex-wrap items-center gap-x-6 gap-y-1">
+        <div class="rounded border border-line bg-surface-raised px-4 py-3 text-sm flex flex-wrap items-center gap-x-6 gap-y-1">
             <span class="text-content-muted">Sales <span class="text-content font-medium">@Money(SalesTotal)</span></span>
             <span class="text-content-muted">Target cost (÷@DivisorText) <span class="text-content font-medium">@Money(TargetTotal)</span></span>
             <span class="text-content-muted">WO committed <span class="text-content font-medium">@Money(CommittedTotal)</span></span>
             <span class="text-content-muted">Direct invoices <span class="text-content font-medium">@Money(DirectCostTotal)</span></span>
-            <span class="@(Difference < 0m ? "text-negative" : "text-content-muted")"
+            <span class="@(Difference < 0m ?"text-negative" : "text-content-muted")"
                   title="Target cost less WO committed and direct invoices — a large gap either way suggests the scope on the two sides doesn't match yet">
                 Difference <span class="font-medium">@Money(Difference)</span>
             </span>

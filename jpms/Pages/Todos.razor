@@ -40,49 +40,35 @@
     reassign, move and delete actions. The board's drag-to-complete stays here.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!HasInternalRole)
-{
-    <section class="px-6 md:px-8 py-12">
-        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+<Page>
+    @if (!HasInternalRole)
+    {
+        <PageHeader Title="Not available" />
         <p class="text-content-muted">The to-do list is an internal Jewel surface.</p>
-    </section>
-}
-else
-{
-    <section class="px-6 py-6 md:px-8">
+    }
+    else
+    {
 
-        <header class="mb-6 flex flex-wrap items-end justify-between gap-3">
-            <div>
-                <p class="eyebrow mb-1">JPMS</p>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">To-dos</h1>
-                <p class="text-sm text-content-muted mt-1">
-                    @(CanSeeAll
-                        ? "The master list: every to-do item — company-wide and project items alike. Each project's To-do tab shows just its own."
-                        : "The items assigned to your roles or to you by name — company-wide and project items alike.")
-                </p>
-            </div>
-            @* One button, not two: the project picker inside decides whether the item lands on a
-               project or company-wide, so "Add to-do" is honest for both. Gated on CanManage, the
-               wider add gate — a PM raising a project item is the common case. *@
-            @if (CanManage)
-            {
-                <button type="button" class="btn-primary text-xs px-3 py-2" @onclick="OpenAdd">Add to-do</button>
-            }
-        </header>
+        <PageHeader>
+            <SubtitleContent>
+                @(CanSeeAll
+                    ? "The master list: every to-do item — company-wide and project items alike. Each project's To-do tab shows just its own."
+                    : "The items assigned to your roles or to you by name — company-wide and project items alike.")
+            </SubtitleContent>
+            <Actions>
+                @* One button, not two: the project picker inside decides whether the item lands on a
+                   project or company-wide, so "Add to-do" is honest for both. Gated on CanManage, the
+                   wider add gate — a PM raising a project item is the common case. *@
+                @if (CanManage)
+                {
+                    <button type="button" class="btn-primary text-xs px-3 py-2" @onclick="OpenAdd">Add to-do</button>
+                }
+            </Actions>
+        </PageHeader>
 
         @if (error is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+            <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
         }
 
         <div class="flex flex-wrap items-center gap-2 mb-4">
@@ -92,8 +78,7 @@ else
                status — the whole point of searching is finding the thing wherever it is filed —
                so the status tabs stand down while one is typed. *@
             <div class="relative flex-1 min-w-[220px]">
-                <input type="search" class="field w-full text-sm pr-8" placeholder="Search to-dos — reference (TODO-0011), title or notes"
-                       value="@search" @oninput="OnSearchInput" />
+                <SearchInput Value="@search" ValueChanged="OnSearchInput" Placeholder="Search to-dos — reference (TODO-0011), title or notes" Width="w-full" />
                 @if (HasQuery)
                 {
                     <button type="button" title="Clear search"
@@ -190,7 +175,7 @@ else
 
         @if (addedNote is not null)
         {
-            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-sm text-content-muted mb-3">
+            <p class="rounded bg-surface-raised border border-line px-3 py-2 text-sm text-content-muted mb-3">
                 @addedNote
                 @if (addedNoteHref is not null)
                 {
@@ -212,7 +197,7 @@ else
                     <h2 class="text-sm font-semibold text-content">@(boardView ? "To-do board" : "To-do list")</h2>
                     @if (items.Count > 0)
                     {
-                        <span class="text-[11px] text-content-subtle">@items.Count(i => i.IsComplete) of @items.Count done</span>
+                        <span class="text-xs text-content-subtle">@items.Count(i => i.IsComplete) of @items.Count done</span>
                     }
                 </div>
                 <p class="text-xs text-content-subtle mb-4">
@@ -247,25 +232,25 @@ else
                         @foreach (var item in visible)
                         {
                             <button type="button" @key="item.TodoItemId" title="Open this item"
-                                    class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                                    class="w-full rounded border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                                     @onclick="() => OpenItem(item)">
-                                <p class="truncate text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">
+                                <p class="truncate text-sm @(item.IsComplete ?"text-content-subtle line-through" : "text-content")">
                                     <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
                                 </p>
-                                <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
-                                    <span class="whitespace-nowrap @(IsGeneral(item) ? "text-accent font-medium" : "")">@ScopeLabel(item)</span>
+                                <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
+                                    <span class="whitespace-nowrap @(IsGeneral(item) ?"text-accent font-medium" : "")">@ScopeLabel(item)</span>
                                     @if (item.IsInProgress)
                                     {
-                                        <span class="inline-flex items-center rounded border border-amber-400/30 bg-amber-400/10 px-1.5 text-[10px] font-medium leading-4 whitespace-nowrap text-amber-400" title="Started — still open until it's marked done">In progress</span>
+                                        <Pill Tone="Tone.Warning" Title="Started — still open until it's marked done">In progress</Pill>
                                     }
                                     @if (item.DueAt is not null)
                                     {
-                                        <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                                        <span class="whitespace-nowrap @(IsOverdue(item) ?"text-negative font-medium" : "")">Due @DateText(item.DueAt.Value)</span>
                                     }
                                     <TodoAssigneeBadge Item="item" />
                                     @if (item.CompletedAt is not null)
                                     {
-                                        <span class="whitespace-nowrap">Done @item.CompletedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                                        <span class="whitespace-nowrap">Done @DateText(item.CompletedAt.Value)</span>
                                     }
                                     @if (!string.IsNullOrWhiteSpace(item.CreatedByEmail))
                                     {
@@ -282,7 +267,7 @@ else
                    rather than silently overriding the filters: they were picked on purpose. *@
                 @if (HiddenMatchCount > 0)
                 {
-                    <p class="text-[11px] text-content-subtle mt-2">
+                    <p class="text-xs text-content-subtle mt-2">
                         @HiddenMatchCount matching to-do@(HiddenMatchCount == 1 ? " is" : "s are") hidden by the project/assignee filters.
                     </p>
                 }
@@ -297,15 +282,15 @@ else
         }
         </LoadGate>
 
-    </section>
-}
+    }
+</Page>
 
 <Modal IsOpen="@addOpen" Title="Add a to-do" ConfirmLabel="Add to-do item" CancelLabel="Cancel"
        OnConfirm="Add" OnCancel="CloseAdd">
     <div class="space-y-3">
         @if (addError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@addError</p>
+            <Notice Tone="Tone.Negative">@addError</Notice>
         }
 
         @* The first question, because it decides what the item IS. Defaulted from the scope
@@ -313,10 +298,11 @@ else
            lands rather than gated behind a spinner. SearchSelect's own blank row IS the
            company-wide/"pick one" entry — nothing is prepended to the options. *@
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project</label>
+            <FormField Label="Project">
             <SearchSelect Options="@ProjectOptions" Value="@newProject" ValueChanged="v => newProject = v"
                           Placeholder="@ProjectPickerPlaceholder" WidthClass="w-full"
                           Disabled="@(!filtersReady || projectsFailed)" />
+            </FormField>
         </div>
 
         <p class="text-xs text-content-subtle">
@@ -331,15 +317,17 @@ else
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
+                <FormField Label="Assigned to">
                 <TodoAssigneeSelect Options="@assigneeOptions" Value="@newAssignee" ValueChanged="v => newAssignee = v" />
+                </FormField>
             </div>
             <FormField Label="Due" Value="@newDue" OnChange="v => newDue = v" InputType="date" />
         </div>
 
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+            <FormField Label="Notes">
             <textarea class="field" rows="2" value="@newNotes" @oninput="OnNewNotesInput"></textarea>
+            </FormField>
         </div>
     </div>
 </Modal>

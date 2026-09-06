@@ -16,9 +16,9 @@ else if (Xero.Snapshot() is not { } snapshot)
 {
     @if (loadFailed)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">
+        <Notice Tone="Tone.Negative">
             Couldn't read Xero. The reason is in the red bar above — reload to try again.
-        </p>
+        </Notice>
     }
     else
     {
@@ -34,11 +34,10 @@ else
     <div class="space-y-3">
         @if (snapshot.Error is { } error)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+            <Notice Tone="Tone.Negative">@error</Notice>
         }
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <input class="field" type="search" placeholder="Search contact, number or reference…"
-                   value="@search" @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
+            <SearchInput @bind-Value="search" Placeholder="Search contact, number or reference…" />
             <select class="field" @bind="typeFilter">
                 <option value="">All transaction types</option>
                 <option value="ACCPAY">Purchase invoices (bills)</option>
@@ -49,7 +48,7 @@ else
 
         @if (FilteredTransactions.Count == 0)
         {
-            <p class="text-sm text-content-subtle">No Xero transactions match.</p>
+            <EmptyState Message="No Xero transactions match." />
         }
         else
         {
@@ -57,20 +56,20 @@ else
                 @foreach (var row in FilteredTransactions)
                 {
                     <button type="button" @key="row.TransactionId" @onclick="() => openTransaction = row"
-                            class="w-full text-left rounded-lg border border-line hover:border-line-strong hover:bg-surface-raised transition px-3 py-2">
+                            class="w-full text-left rounded border border-line hover:border-line-strong hover:bg-surface-raised transition px-3 py-2">
                         <div class="flex items-baseline justify-between gap-2">
                             <span class="text-sm text-content truncate">@(row.ContactName ?? "(no contact)")</span>
                             <span class="text-sm text-content tabular-nums shrink-0">@row.Total.ToString("N2")</span>
                         </div>
                         <div class="flex items-baseline justify-between gap-2 mt-0.5">
                             <span class="text-xs text-content-subtle truncate">@(row.Number ?? row.Reference ?? row.TransactionId) · @TypeLabel(row.Type)</span>
-                            <span class="text-[11px] text-content-subtle shrink-0">@(row.Date?.ToString("d MMM yyyy") ?? "—") · @row.Status</span>
+                            <span class="text-xs text-content-subtle shrink-0">@(row.Date?.ToString("d MMM yyyy") ?? "—") · @row.Status</span>
                         </div>
                     </button>
                 }
                 @if (FilteredTransactions.Count == ResultCap)
                 {
-                    <p class="text-[11px] text-content-subtle px-1">Showing the first @ResultCap matches — narrow the search for the rest.</p>
+                    <p class="text-xs text-content-subtle px-1">Showing the first @ResultCap matches — narrow the search for the rest.</p>
                 }
             </div>
         }

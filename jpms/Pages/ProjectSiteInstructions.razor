@@ -21,55 +21,48 @@
     an inventory item.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="site-instructions">
-        <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-content">Site Instructions</h2>
-            <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition"
+        <SectionHeader Title="Site Instructions">
+            <Actions>
+            <button type="button" class="btn-primary"
                     @onclick="ToggleForm">
                 @(formOpen ? "Close" : "Raise instruction")
             </button>
-        </div>
+            </Actions>
+        </SectionHeader>
 
         @if (actionError is { } error)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/40 px-3 py-2 text-sm text-content mb-4">@error</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
         }
 
         @if (formOpen)
         {
-            <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+            <section class="panel p-5 mb-5">
                 <h3 class="text-sm font-medium text-content-muted mb-3">@(editingId is null ? "Raise a site instruction" : $"Edit {EditingReference}")</h3>
                 <div class="space-y-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title *</label>
+                            <FormField Label="Title" Required>
                             <input type="text" class="field" maxlength="256" placeholder="What the instruction is about"
                                    value="@formTitle" @oninput="e => formTitle = e.Value?.ToString() ?? string.Empty" />
+                            </FormField>
                         </div>
                         <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Location</label>
+                            <FormField Label="Location">
                             <input type="text" class="field" maxlength="256" placeholder="Where on site it applies — room, area, level, elevation"
                                    value="@formLocation" @oninput="e => formLocation = e.Value?.ToString() ?? string.Empty" />
+                            </FormField>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Instruction *</label>
+                        <FormField Label="Instruction" Required>
                         <textarea class="field" rows="6" maxlength="4000" placeholder="What site is to do — as the instruction should read on site"
                                   value="@formInstruction" @oninput="e => formInstruction = e.Value?.ToString() ?? string.Empty"></textarea>
+                        </FormField>
                     </div>
-                    <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition disabled:opacity-50"
+                    <button type="button" class="btn-primary"
                             disabled="@(!FormReady || busy)"
                             @onclick="SaveAsync">
                         @(editingId is null ? "Raise instruction" : "Save changes")
@@ -88,61 +81,59 @@ else
         }
         else if (Rows.Count == 0)
         {
-            <p class="text-sm text-content-subtle italic">No site instructions on this project. Raise one here, or write one from an email in the Control Centre (Internal pathway → Raise Site Instruction).</p>
+            <EmptyState Message="No site instructions on this project. Raise one here, or write one from an email in the Control Centre (Internal pathway → Raise Site Instruction)." />
         }
         else
         {
-            <div class="rounded-xl border border-line bg-surface overflow-hidden">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="border-b border-line text-left">
-                            <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Ref</th>
-                            <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Title</th>
-                            <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Instruction</th>
-                            <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Location</th>
-                            <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Raised</th>
-                            <th class="px-4 py-2.5"></th>
+            <RecordsTable Dense="true" MaxHeight="">
+                <thead>
+                    <tr>
+                        <th>Ref</th>
+                        <th>Title</th>
+                        <th>Instruction</th>
+                        <th>Location</th>
+                        <th>Raised</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Rows)
+                    {
+                        var isExpanded = expandedId == row.SiteInstructionId;
+                        <tr @key="row.SiteInstructionId" class="border-b border-line last:border-0 align-top">
+                            <td class="font-mono text-xs whitespace-nowrap">@row.Reference</td>
+                            <td class="text-content">@row.Title</td>
+                            <td class="max-w-lg whitespace-pre-wrap">@row.Instruction</td>
+                            <td class="max-w-xs">@row.Location</td>
+                            <td class="whitespace-nowrap" title="@DateTimeText(row.CreatedAt.ToLocalTime())">
+                                @DateText(row.CreatedAt)
+                            </td>
+                            <td class="whitespace-nowrap text-right">
+                                <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4 mr-3"
+                                        @onclick="() => StartEdit(row)">
+                                    Edit
+                                </button>
+                                <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                        @onclick="() => ToggleEmailsAsync(row.SiteInstructionId)">
+                                    @(isExpanded ? "Hide emails" : "Emails")
+                                </button>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var row in Rows)
+                        @if (isExpanded)
                         {
-                            var isExpanded = expandedId == row.SiteInstructionId;
-                            <tr @key="row.SiteInstructionId" class="border-b border-line last:border-0 align-top">
-                                <td class="px-4 py-2.5 font-mono text-xs text-content-muted whitespace-nowrap">@row.Reference</td>
-                                <td class="px-4 py-2.5 text-content">@row.Title</td>
-                                <td class="px-4 py-2.5 text-content-muted max-w-lg whitespace-pre-wrap">@row.Instruction</td>
-                                <td class="px-4 py-2.5 text-content-muted max-w-xs">@row.Location</td>
-                                <td class="px-4 py-2.5 text-content-muted whitespace-nowrap" title="@row.CreatedAt.ToLocalTime().ToString("d MMM yyyy HH:mm")">
-                                    @row.CreatedAt.ToLocalTime().ToString("d MMM yyyy")
-                                </td>
-                                <td class="px-4 py-2.5 whitespace-nowrap text-right">
-                                    <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4 mr-3"
-                                            @onclick="() => StartEdit(row)">
-                                        Edit
-                                    </button>
-                                    <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                            @onclick="() => ToggleEmailsAsync(row.SiteInstructionId)">
-                                        @(isExpanded ? "Hide emails" : "Emails")
-                                    </button>
+                            <tr class="bg-surface-raised/50">
+                                <td colspan="6">
+                                    <FiledEmailList Emails="@(emailsByRow.TryGetValue(row.SiteInstructionId, out var filedEmails) ? filedEmails : null)"
+                                        EmptyMessage="@($"No emails filed to {row.Reference} yet — file one from the Control Centre (Internal pathway → Site instructions).")" />
                                 </td>
                             </tr>
-                            @if (isExpanded)
-                            {
-                                <tr class="border-b border-line last:border-0 bg-surface-raised/50">
-                                    <td colspan="6" class="px-4 py-3">
-                                        <FiledEmailList Emails="@(emailsByRow.TryGetValue(row.SiteInstructionId, out var filedEmails) ? filedEmails : null)"
-                                            EmptyMessage="@($"No emails filed to {row.Reference} yet — file one from the Control Centre (Internal pathway → Site instructions).")" />
-                                    </td>
-                                </tr>
-                            }
                         }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </RecordsTable>
         }
     </ProjectPageShell>
-}
+</Page>
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";

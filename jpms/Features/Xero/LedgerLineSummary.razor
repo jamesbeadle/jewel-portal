@@ -3,7 +3,7 @@
 @* The one-line card naming a ledger line — supplier · description, with the caller's own
    detail line under it (invoice number, date, net… whatever the dialog needs). Every modal
    that acts on a line opens with this card, defined once. *@
-<div class="rounded-lg border border-line bg-surface-raised px-4 py-3 text-sm">
+<div class="rounded border border-line bg-surface-raised px-4 py-3 text-sm">
     <span class="text-content font-medium">@(Line.ContactName ?? "—")</span>
     <span class="text-content-muted"> · @(Line.Description ?? "—")</span>
     <span class="block text-xs text-content-subtle mt-0.5">@ChildContent</span>

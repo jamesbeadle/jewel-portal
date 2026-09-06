@@ -18,39 +18,37 @@
        Class="max-w-3xl w-full">
     @if (Snapshot is { } snapshot)
     {
-        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+        <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
             Nothing sends from here — this creates a draft in the shared mailbox with the frozen
             report attached as a PDF, addressed to the project's client and architect contacts,
             for you to review and send from Outlook. The snapshot is immutable, so the attachment
-            shows the report exactly as it stood on @snapshot.TakenAt.ToString("dd MMM yyyy HH:mm").
+            shows the report exactly as it stood on @DateTimeText(snapshot.TakenAt).
         </p>
 
         @if (snapshot.IsSuperseded)
         {
-            <p class="rounded-lg bg-warning/10 border border-warning/30 px-3 py-2 text-xs text-content mb-3">
+            <p class="rounded bg-warning/10 border border-warning/30 px-3 py-2 text-xs text-content mb-3">
                 A later snapshot has superseded this one — check you're not sending figures the
                 client has already had corrected.
             </p>
         }
 
-        <div class="rounded-xl border border-line bg-surface mb-3 overflow-x-auto">
-            <table class="w-full text-sm">
-                <tbody class="divide-y divide-line">
-                    <tr>
-                        <td class="px-3 py-2 text-content-subtle whitespace-nowrap">Revised contract sum</td>
-                        <td class="px-3 py-2 text-right text-content">@Money(snapshot.RevisedContractSum)</td>
-                        <td class="px-3 py-2 text-content-subtle whitespace-nowrap">Total works complete</td>
-                        <td class="px-3 py-2 text-right text-content">@Money(snapshot.TotalWorksComplete)</td>
-                    </tr>
-                    <tr>
-                        <td class="px-3 py-2 text-content-subtle whitespace-nowrap">Certified to date</td>
-                        <td class="px-3 py-2 text-right text-content">@Money(snapshot.CertifiedToDate)</td>
-                        <td class="px-3 py-2 text-content-subtle whitespace-nowrap">Payment due (ex VAT)</td>
-                        <td class="px-3 py-2 text-right font-semibold text-content">@Money(snapshot.PaymentDueExVat)</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+        <RecordsTable Dense="true" MaxHeight="" Class="mb-3">
+            <tbody>
+                <tr>
+                    <td class="text-content-subtle whitespace-nowrap">Revised contract sum</td>
+                    <td class="text-right text-content">@Money(snapshot.RevisedContractSum)</td>
+                    <td class="text-content-subtle whitespace-nowrap">Total works complete</td>
+                    <td class="text-right text-content">@Money(snapshot.TotalWorksComplete)</td>
+                </tr>
+                <tr>
+                    <td class="text-content-subtle whitespace-nowrap">Certified to date</td>
+                    <td class="text-right text-content">@Money(snapshot.CertifiedToDate)</td>
+                    <td class="text-content-subtle whitespace-nowrap">Payment due (ex VAT)</td>
+                    <td class="text-right font-semibold text-content">@Money(snapshot.PaymentDueExVat)</td>
+                </tr>
+            </tbody>
+        </RecordsTable>
 
         <div class="flex items-center justify-between gap-3 mb-3">
             <a class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
@@ -62,7 +60,7 @@
 
         @if (drafted)
         {
-            <div class="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-900">
+            <Notice Tone="Tone.Positive">
                 <p class="mb-1">
                     Draft created in the shared mailbox to <span class="font-medium">@draftRecipients</span>,
                     with the report PDF attached. Review and send it from the mailbox's Drafts folder.
@@ -71,20 +69,22 @@
                 {
                     <a class="underline underline-offset-4 font-medium" href="@draftLink" target="_blank" rel="noopener">Open the draft in Outlook on the web</a>
                 }
-            </div>
+            </Notice>
         }
         else
         {
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subject</label>
+            <FormField Label="Subject">
             <input class="field mb-3" @bind="subject" />
+            </FormField>
 
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Cover note (HTML) — the report itself travels as the attached PDF</label>
+            <FormField Label="Cover note (HTML) — the report itself travels as the attached PDF">
             <textarea class="field font-mono text-xs" rows="10" @bind="htmlBody"></textarea>
+            </FormField>
         }
 
         @if (error is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-3">@error</p>
+            <Notice Tone="Tone.Negative" Class="mt-3">@error</Notice>
         }
     }
 </Modal>

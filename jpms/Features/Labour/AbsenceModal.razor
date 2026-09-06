@@ -12,38 +12,38 @@
     <div class="space-y-3">
         @if (error is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+            <Notice Tone="Tone.Negative">@error</Notice>
         }
-        <label class="block text-sm text-content-muted">Worker
-            <select class="field mt-1" @bind="workerId" @bind:after="WorkerChanged">
+        <FormField Label="Worker">
+            <select class="field" @bind="workerId" @bind:after="WorkerChanged">
                 <option value="">Worker…</option>
                 @foreach (var worker in Labour.Workers().Where(worker => worker.IsActive).OrderBy(worker => worker.Name))
                 {
                     <option value="@worker.WorkerId">@worker.Name</option>
                 }
             </select>
-        </label>
+        </FormField>
         <div class="grid grid-cols-2 gap-3">
-            <label class="block text-sm text-content-muted">From
-                <input class="field mt-1" type="date" @bind="date" />
-            </label>
-            <label class="block text-sm text-content-muted">To
-                <input class="field mt-1" type="date" @bind="endDate" />
-            </label>
+            <FormField Label="From">
+                <input class="field" type="date" @bind="date" />
+            </FormField>
+            <FormField Label="To">
+                <input class="field" type="date" @bind="endDate" />
+            </FormField>
         </div>
         <p class="text-xs text-content-subtle">Leave To as the same day for a single day off. A longer
             range records each weekday in it — "off all week" is one entry, Monday to Friday.</p>
-        <label class="block text-sm text-content-muted">Kind
-            <select class="field mt-1" @bind="kind">
+        <FormField Label="Kind">
+            <select class="field" @bind="kind">
                 <option value="@AbsenceKind.Holiday">Holiday</option>
                 <option value="@AbsenceKind.HalfDay">Half day</option>
                 <option value="@AbsenceKind.NotWorked">Not worked</option>
                 <option value="@AbsenceKind.Sick">Sick</option>
             </select>
-        </label>
-        <label class="block text-sm text-content-muted">Note (optional)
-            <input class="field mt-1" @bind="note" placeholder="e.g. booked leave" />
-        </label>
+        </FormField>
+        <FormField Label="Note (optional)">
+            <input class="field" @bind="note" placeholder="e.g. booked leave" />
+        </FormField>
     </div>
 </Modal>
 

@@ -29,7 +29,7 @@
 
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+        <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
     }
 
     @if (notes is null)
@@ -38,15 +38,14 @@
     }
     else if (notes.Count == 0)
     {
-        <p class="text-sm text-content-subtle italic">No useful information on this project yet — add the first note.</p>
+        <EmptyState Message="No useful information on this project yet — add the first note." />
     }
     else
     {
         @if (notes.Count > FilterThreshold)
         {
             <div class="relative mb-4">
-                <input type="search" class="field w-full text-sm pr-8" placeholder="Filter notes by keyword"
-                       value="@filter" @oninput="OnFilterInput" />
+                <SearchInput Value="@filter" ValueChanged="OnFilterInput" Placeholder="Filter notes by keyword" Width="w-full" />
                 @if (HasFilter)
                 {
                     <button type="button" title="Clear filter"
@@ -68,18 +67,18 @@
                 @foreach (var note in visible)
                 {
                     <button type="button" @key="note.UsefulInformationNoteId" title="Open this note to read or edit it"
-                            class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                            class="w-full rounded border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                             @onclick="() => OpenEdit(note)">
                         <p class="truncate text-sm font-medium text-content">@note.Title</p>
                         <p class="mt-0.5 text-sm text-content-muted whitespace-pre-wrap line-clamp-3">@note.Body</p>
-                        <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                        <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
                             @if (note.UpdatedAt is not null)
                             {
-                                <span class="truncate">Updated @note.UpdatedAt.Value.LocalDateTime.ToString("d MMM yyyy") by @(note.UpdatedByEmail ?? "")</span>
+                                <span class="truncate">Updated @DateText(note.UpdatedAt.Value) by @(note.UpdatedByEmail ?? "")</span>
                             }
                             else
                             {
-                                <span class="truncate">Added @note.CreatedAt.LocalDateTime.ToString("d MMM yyyy") by @note.CreatedByEmail</span>
+                                <span class="truncate">Added @DateText(note.CreatedAt) by @note.CreatedByEmail</span>
                             }
                         </div>
                     </button>
@@ -97,15 +96,16 @@
     <div class="space-y-3">
         @if (dialogError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@dialogError</p>
+            <Notice Tone="Tone.Negative">@dialogError</Notice>
         }
 
         <FormField Label="Title" Value="@draftTitle" OnChange="v => draftTitle = v" Required="true" />
 
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Note *</label>
+            <FormField Label="Note" Required>
             <textarea class="field" rows="6" placeholder="The information itself — e.g. Front gate code 4482#, changes first Monday of the month."
                       value="@draftBody" @oninput="OnDraftBodyInput"></textarea>
+            </FormField>
         </div>
     </div>
 
@@ -150,7 +150,7 @@
 
     private bool HasFilter => !string.IsNullOrWhiteSpace(filter);
 
-    private void OnFilterInput(ChangeEventArgs e) => filter = e.Value?.ToString() ?? "";
+    private void OnFilterInput(string value) => filter = value;
 
     private void ClearFilter() => filter = "";
 

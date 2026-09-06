@@ -6,7 +6,7 @@
    bill offers the exclude toggle instead), the due/expected small print, and the amount sitting
    in its week's cell with the ‹ ↺ › movement controls beside it. *@
 <tr class="border-b border-line/50 text-[13px]">
-    <td class="@(InGroup ? "pl-14" : "pl-9") pr-4 py-1.5">
+    <td class="@(InGroup ?"pl-14" : "pl-9") pr-4 py-1.5">
         @if (Entry.ItemId is { } itemId)
         {
             <button type="button" class="text-content-muted hover:text-content underline-offset-2 hover:underline text-left"
@@ -15,19 +15,19 @@
         else
         {
             <span class="text-content-muted">@Entry.Label</span>
-            <button type="button" class="ml-1.5 text-[11px] text-content-faint hover:text-negative align-middle disabled:opacity-30"
+            <button type="button" class="ml-1.5 text-xs text-content-faint hover:text-negative align-middle disabled:opacity-30"
                     title="Don't count this entry — a direct debit or manual item already covers it. It parks, struck through, at the foot of this band."
                     disabled="@Excluding"
                     @onclick="() => OnExclude.InvokeAsync(Entry)">⊘</button>
         }
-        <span class="block text-[11px] text-content-faint">
+        <span class="block text-xs text-content-faint">
             @Entry.Detail@(Entry.NaturalDueOn is { } due ? $" · due {due.UtcDateTime:d MMM}" : " · no due date")@(Entry.ExpectedOn is { } expected ? $" · expected {expected.UtcDateTime:d MMM}" : "")
         </span>
     </td>
     @for (var index = 0; index <= View.WeekStarts.Count; index++)
     {
         var cellIndex = index;
-        <td class="px-1 py-1.5 text-right whitespace-nowrap @(cellIndex == View.WeekStarts.Count ? "border-l border-line" : "")">
+        <td class="px-1 py-1.5 text-right whitespace-nowrap @(cellIndex == View.WeekStarts.Count ?"border-l border-line" : "")">
             @if (Entry.WeekIndex == cellIndex)
             {
                 <span class="inline-flex items-center gap-0.5">
@@ -40,7 +40,7 @@
                     <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
                             title="Pay a week earlier" disabled="@(Busy || cellIndex == 0)"
                             @onclick="() => OnMove.InvokeAsync((Entry, Math.Min(cellIndex, View.WeekStarts.Count) - 1))">‹</button>
-                    <span class="@(Entry.Moved ? "text-accent font-medium" : "text-content")"
+                    <span class="@(Entry.Moved ?"text-accent font-medium" : "text-content")"
                           title="@(Entry.Moved ? "Moved here — the " + (Entry.ExpectedOn is null ? "due" : "Xero expected") + " week is " + (Entry.NaturalOn is { } naturalOn ? naturalOn.UtcDateTime.ToString("d MMM") : "unknown") : null)">@(Entry.Moved ? "‣ " : "")@CellAmount(Entry.Amount)</span>
                     <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
                             title="Pay a week later" disabled="@(Busy || cellIndex >= View.WeekStarts.Count - 1)"

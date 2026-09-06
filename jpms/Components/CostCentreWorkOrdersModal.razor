@@ -10,55 +10,53 @@
        Class="max-w-6xl">
     @if (Entries.Count == 0)
     {
-        <p class="text-sm text-content-subtle italic">
-            No work-order lines are coded to this report line.
-        </p>
+        <EmptyState Message="No work-order lines are coded to this report line." />
     }
     else
     {
         <div class="space-y-4">
-            <div class="rounded-lg border border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
-                <table class="w-full text-sm border-collapse">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Order</th>
+            <div class="rounded border border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
+                <table class="data-table data-table-dense">
+                    <thead>
+                        <tr>
+                            <th class="whitespace-nowrap">Order</th>
                             @if (ShowCentreColumn)
                             {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Centre</th>
+                                <th class="whitespace-nowrap">Centre</th>
                             }
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Supplier</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Line</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Status</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Committed</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Paid</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Remaining</th>
+                            <th>Supplier</th>
+                            <th>Line</th>
+                            <th class="whitespace-nowrap">Status</th>
+                            <th class="text-right whitespace-nowrap">Committed</th>
+                            <th class="text-right whitespace-nowrap">Paid</th>
+                            <th class="text-right whitespace-nowrap">Remaining</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-line">
+                    <tbody>
                         @foreach (var entry in Entries)
                         {
                             var remaining = entry.Line.LineTotal - entry.Line.PaidToDate;
                             <tr>
-                                <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@entry.Order.Title">@entry.Order.Reference</td>
+                                <td class="font-mono text-xs text-content-subtle whitespace-nowrap" title="@entry.Order.Title">@entry.Order.Reference</td>
                                 @if (ShowCentreColumn)
                                 {
-                                    <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">@entry.Line.CostCode</td>
+                                    <td class="font-mono text-xs text-content-subtle whitespace-nowrap">@entry.Line.CostCode</td>
                                 }
-                                <td class="px-4 py-2.5 text-content whitespace-nowrap">@entry.SupplierName</td>
-                                <td class="px-4 py-2.5 text-content-muted" title="@entry.Line.Description">@entry.Line.Title</td>
-                                <td class="px-4 py-2.5 whitespace-nowrap"><span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@entry.Order.Status</span></td>
-                                <td class="px-4 py-2.5 text-right whitespace-nowrap text-content">@Money(entry.Line.LineTotal)</td>
-                                <td class="px-4 py-2.5 text-right whitespace-nowrap text-content-muted">@Money(entry.Line.PaidToDate)</td>
-                                <td class="px-4 py-2.5 text-right whitespace-nowrap @(remaining == 0m ? "text-content-muted" : "text-content font-medium")">@Money(remaining)</td>
+                                <td class="text-content whitespace-nowrap">@entry.SupplierName</td>
+                                <td title="@entry.Line.Description">@entry.Line.Title</td>
+                                <td class="whitespace-nowrap"><Pill Tone="Tone.Muted">@entry.Order.Status</Pill></td>
+                                <td class="text-right whitespace-nowrap text-content">@Money(entry.Line.LineTotal)</td>
+                                <td class="text-right whitespace-nowrap">@Money(entry.Line.PaidToDate)</td>
+                                <td class="text-right whitespace-nowrap @(remaining == 0m ?"text-content-muted" : "text-content font-medium")">@Money(remaining)</td>
                             </tr>
                         }
                     </tbody>
                     <tfoot class="border-t-2 border-line-strong bg-surface-raised">
                         <tr class="font-semibold text-content">
-                            <td class="px-4 py-2.5" colspan="@(ShowCentreColumn ? 5 : 4)">Total</td>
-                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(Entries.Sum(entry => entry.Line.LineTotal))</td>
-                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(Entries.Sum(entry => entry.Line.PaidToDate))</td>
-                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(Entries.Sum(entry => entry.Line.LineTotal - entry.Line.PaidToDate))</td>
+                            <td colspan="@(ShowCentreColumn ? 5 : 4)">Total</td>
+                            <td class="text-right whitespace-nowrap">@Money(Entries.Sum(entry => entry.Line.LineTotal))</td>
+                            <td class="text-right whitespace-nowrap">@Money(Entries.Sum(entry => entry.Line.PaidToDate))</td>
+                            <td class="text-right whitespace-nowrap">@Money(Entries.Sum(entry => entry.Line.LineTotal - entry.Line.PaidToDate))</td>
                         </tr>
                     </tfoot>
                 </table>

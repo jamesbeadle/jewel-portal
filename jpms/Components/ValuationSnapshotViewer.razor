@@ -17,7 +17,7 @@
 {
     @if (loadFailed)
     {
-        <p class="rounded-lg bg-negative/10 px-4 py-3 text-sm text-negative">Couldn't load the snapshot. Close and try again.</p>
+        <p class="rounded bg-negative/10 px-4 py-3 text-sm text-negative">Couldn't load the snapshot. Close and try again.</p>
     }
     else
     {
@@ -27,15 +27,15 @@
 else
 {
     var snapshot = detail.Snapshot;
-    <div class="mb-4 rounded-lg bg-info/10 border border-info/30 px-4 py-2.5 text-sm text-content">
-        <span class="font-medium">Snapshot taken @snapshot.TakenAt.ToString("dd MMM yyyy HH:mm")</span>
+    <Notice Tone="Tone.Info" Class="mb-4">
+        <span class="font-medium">Snapshot taken @DateTimeText(snapshot.TakenAt)</span>
         <span class="text-content-muted"> — @snapshot.Label.</span>
         @if (snapshot.IsSuperseded)
         {
             <span class="text-content-muted"> Superseded by a later snapshot.</span>
         }
         <span class="text-content-subtle"> Read-only: this is the report exactly as it stood; live changes never alter it.</span>
-    </div>
+    </Notice>
 
     <div class="mb-4">
         <Toolbar>
@@ -63,7 +63,7 @@ else
         {
             @if (valuationSection.Lines.Count > 0)
             {
-                <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                <div class="panel overflow-hidden">
                     <div class="flex items-center gap-3 px-4 py-3 bg-surface-raised/60">
                         <span class="font-semibold text-content whitespace-nowrap">@valuationSection.Title</span>
                         <span class="text-xs text-content-subtle whitespace-nowrap">
@@ -71,29 +71,29 @@ else
                         </span>
                         <span class="ml-auto flex items-baseline gap-6 whitespace-nowrap">
                             <span class="text-sm">
-                                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Claimed</span>
+                                <span class="eyebrow mr-1.5">Claimed</span>
                                 <span class="text-content-muted">@Money(valuationSection.Claimed)</span>
                             </span>
                             <span class="text-sm">
-                                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Total</span>
+                                <span class="eyebrow mr-1.5">Total</span>
                                 <span class="text-content font-medium">@Money(valuationSection.Amount)</span>
                             </span>
                         </span>
                     </div>
                     <div class="border-t border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
-                        <table class="w-full text-sm border-collapse">
-                            <thead class="bg-surface-raised border-b border-line">
-                                <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                    <th class="px-3 py-3 w-[72px]">Code</th>
-                                    <th class="px-3 py-3 min-w-[220px]">Description</th>
-                                    <th class="px-3 py-3 text-right whitespace-nowrap">Qty</th>
-                                    <th class="px-3 py-3 text-right whitespace-nowrap">Rate £</th>
-                                    <th class="px-3 py-3 text-right whitespace-nowrap">Amount £</th>
-                                    <th class="px-3 py-3 text-right whitespace-nowrap">% Complete</th>
-                                    <th class="px-3 py-3 text-right whitespace-nowrap">Claimed £</th>
+                        <table class="data-table data-table-dense">
+                            <thead>
+                                <tr>
+                                    <th class="w-[72px]">Code</th>
+                                    <th class="min-w-[220px]">Description</th>
+                                    <th class="text-right whitespace-nowrap">Qty</th>
+                                    <th class="text-right whitespace-nowrap">Rate £</th>
+                                    <th class="text-right whitespace-nowrap">Amount £</th>
+                                    <th class="text-right whitespace-nowrap">% Complete</th>
+                                    <th class="text-right whitespace-nowrap">Claimed £</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-line">
+                            <tbody>
                                 @{ var currentArea = ""; }
                                 @foreach (var row in RowsFor(valuationSection))
                                 {
@@ -103,28 +103,28 @@ else
                                     @if (row.RollUp is { } rollUp)
                                     {
                                         var isRollUpOpen = IsRollUpOpen(rollUp);
-                                        <tr class="@(rollUp.CountsTowardTotals ? "bg-surface-raised" : "bg-surface-raised opacity-60")">
-                                            <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@rollUp.VariationRef</td>
-                                            <td class="px-3 py-2 text-content">
+                                        <tr class="@(rollUp.CountsTowardTotals ?"bg-surface-raised" : "bg-surface-raised opacity-60")">
+                                            <td class="font-mono text-xs text-content-subtle whitespace-nowrap">@rollUp.VariationRef</td>
+                                            <td class="text-content">
                                                 <button type="button" @onclick="() => ToggleRollUp(rollUp)" aria-expanded="@isRollUpOpen"
                                                         title="@(isRollUpOpen ? "Hide this row's lines" : "Show this row's lines")"
                                                         class="flex items-start gap-1.5 text-left">
-                                                    <svg class="@(isRollUpOpen ? "w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle transition-transform")"
+                                                    <svg class="@(isRollUpOpen ?"w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle transition-transform")"
                                                          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                                          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                                         <path d="M9 6l6 6-6 6" />
                                                     </svg>
                                                     <span>
                                                         <span class="font-medium">@rollUp.VariationTitle</span>
-                                                        <span class="block text-[11px] text-content-subtle">@RollUpSubtitle(rollUp)</span>
+                                                        <span class="block text-xs text-content-subtle">@RollUpSubtitle(rollUp)</span>
                                                     </span>
                                                 </button>
                                             </td>
-                                            <td class="px-3 py-2 text-right text-content-subtle whitespace-nowrap">—</td>
-                                            <td class="px-3 py-2 text-right text-content-subtle whitespace-nowrap">—</td>
-                                            <td class="px-3 py-2 text-right text-content font-medium whitespace-nowrap">@Money(rollUp.Amount)</td>
-                                            <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@(rollUp.CountsTowardTotals ? Pct(RollUpPercent(rollUp)) : "—")</td>
-                                            <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@(rollUp.CountsTowardTotals ? Money(RollUpClaimed(rollUp)) : "—")</td>
+                                            <td class="text-right text-content-subtle whitespace-nowrap">—</td>
+                                            <td class="text-right text-content-subtle whitespace-nowrap">—</td>
+                                            <td class="text-right text-content font-medium whitespace-nowrap">@Money(rollUp.Amount)</td>
+                                            <td class="text-right whitespace-nowrap">@(rollUp.CountsTowardTotals ? Pct(RollUpPercent(rollUp)) : "—")</td>
+                                            <td class="text-right whitespace-nowrap">@(rollUp.CountsTowardTotals ? Money(RollUpClaimed(rollUp)) : "—")</td>
                                         </tr>
                                         continue;
                                     }
@@ -138,35 +138,35 @@ else
                                         {
                                             currentArea = area;
                                             <tr>
-                                                <td colspan="7" class="bg-surface-raised px-3 pt-3 pb-1.5 text-[11px] uppercase tracking-wider font-semibold text-content-muted whitespace-nowrap">@area</td>
+                                                <td colspan="7" class="pb-1.5 text-xs font-semibold whitespace-nowrap">@area</td>
                                             </tr>
                                         }
                                     }
-                                    <tr class="@(line.CountsTowardTotals ? "" : "opacity-60")">
-                                        <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">
+                                    <tr class="@(line.CountsTowardTotals ?"" : "opacity-60")">
+                                        <td class="font-mono text-xs text-content-subtle whitespace-nowrap">
                                             <div>@(row.IsDetail ? "↳ " : "")@CodeFor(line)</div>
                                             @* The client's item number frozen at capture — how the contract document reads. *@
                                             @if (!string.IsNullOrWhiteSpace(line.ClientReference))
                                             {
-                                                <div class="text-[10px] text-content-muted">@line.ClientReference</div>
+                                                <div class="text-xs text-content-muted">@line.ClientReference</div>
                                             }
                                         </td>
-                                        <td class="px-3 py-2 text-content @(row.IsDetail ? "pl-7" : "")">
+                                        <td class="text-content @(row.IsDetail ?"pl-7" : "")">
                                             <div class="font-medium">@TitleFor(line)</div>
                                             @if (!string.IsNullOrWhiteSpace(line.Comments))
                                             {
-                                                <div class="text-[11px] text-content-subtle">@line.Comments</div>
+                                                <div class="text-xs text-content-subtle">@line.Comments</div>
                                             }
                                             @if (!line.CountsTowardTotals)
                                             {
-                                                <span class="inline-block mt-0.5 text-[10px] uppercase tracking-wide text-content-subtle">@line.LineType</span>
+                                                <span class="inline-block mt-0.5 eyebrow">@line.LineType</span>
                                             }
                                         </td>
-                                        <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Quantity)</td>
-                                        <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Rate)</td>
-                                        <td class="px-3 py-2 text-right text-content whitespace-nowrap">@Money(line.LineAmount)</td>
-                                        <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@(line.CountsTowardTotals ? Pct(line.PercentComplete) : "—")</td>
-                                        <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@(line.CountsTowardTotals ? Money(line.CumulativeClaimed) : "—")</td>
+                                        <td class="text-right whitespace-nowrap">@Num(line.Quantity)</td>
+                                        <td class="text-right whitespace-nowrap">@Num(line.Rate)</td>
+                                        <td class="text-right text-content whitespace-nowrap">@Money(line.LineAmount)</td>
+                                        <td class="text-right whitespace-nowrap">@(line.CountsTowardTotals ? Pct(line.PercentComplete) : "—")</td>
+                                        <td class="text-right whitespace-nowrap">@(line.CountsTowardTotals ? Money(line.CumulativeClaimed) : "—")</td>
                                     </tr>
                                 }
                             </tbody>
@@ -177,7 +177,7 @@ else
         }
     </div>
 
-    <div class="mt-4 rounded-xl border border-line bg-surface-raised p-5">
+    <div class="mt-4 panel-raised p-5">
         <h3 class="text-sm font-semibold text-content mb-3">Valuation summary — @snapshot.Label</h3>
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-sm max-w-2xl">
             <SummaryRow Label="Original contract sum" Value="@Money(snapshot.ContractSum)" />
@@ -200,13 +200,13 @@ else
        claim it was frozen from, read back live from the mailbox — the same record-agnostic
        mechanism as the variation page's Communications. Reading only: tagging (and replying
        from a record) stays in the Control Centre, where the pathway guards live. *@
-    <div class="mt-4 rounded-xl border border-line bg-surface p-5">
+    <div class="mt-4 panel p-5">
         <h3 class="text-sm font-semibold text-content mb-3">Correspondence</h3>
         @* One gate for the region; a failed fetch opens it and says so (never pulses forever). *@
         <LoadGate IsLoading="@(emails is null && emailsError is null)" Label="Loading correspondence">
             @if (emailsError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@emailsError</p>
+                <Notice Tone="Tone.Negative">@emailsError</Notice>
             }
             else if (emails is { Count: 0 })
             {

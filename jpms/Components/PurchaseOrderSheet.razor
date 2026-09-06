@@ -21,17 +21,17 @@
             <img class="po-logo" src="/branding/jewel-bespoke-build-logo.svg" alt="Jewel Bespoke Build Ltd" />
             <h1 class="po-title">Purchase Order</h1>
             <dl class="po-meta">
-                <dt>Date Created</dt><dd>@Order.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</dd>
+                <dt>Date Created</dt><dd>@DateText(Order.CreatedAt)</dd>
                 @* A draft has not been released — AwardedAt still holds the drafting stamp until
                    approval re-stamps it, so printing it here would date a release that hasn't
                    happened. *@
-                <dt>Date Released</dt><dd>@(Order.IsDraft ? "— on approval" : Order.AwardedAt.LocalDateTime.ToString("d MMM yyyy"))</dd>
+                <dt>Date Released</dt><dd>@(Order.IsDraft ? "— on approval" : DateText(Order.AwardedAt))</dd>
                 <dt>Purchase Order #</dt><dd>@Reference</dd>
             </dl>
         </div>
         <div class="po-company">
             <p class="po-company-name">Jewel Bespoke Build Ltd</p>
-            <p>Printed: @DateTime.Now.ToString("d MMM yyyy")</p>
+            <p>Printed: @DateText(DateTime.Now)</p>
             <p>Argent House, 175 Hook Rise South,</p>
             <p>Surbiton, Greater London, KT6 7LD</p>
             <p>Phone: 0208 109 1014</p>
@@ -73,7 +73,7 @@
         <tbody>
             <tr>
                 <td>@(string.IsNullOrWhiteSpace(Order.Title) ? SupplierName : Order.Title)</td>
-                <td>@(Order.ScheduledCompletion is null ? "—" : Order.ScheduledCompletion.Value.LocalDateTime.ToString("d MMM yyyy"))</td>
+                <td>@(Order.ScheduledCompletion is null ? "—" : DateText(Order.ScheduledCompletion.Value))</td>
                 <td class="po-right">@Money(Order.Value)</td>
             </tr>
         </tbody>
@@ -106,11 +106,11 @@
                 <p class="po-heading">Programme</p>
                 @if (Order.ProgrammeStart is not null)
                 {
-                    <p>Start Date — @Order.ProgrammeStart.Value.LocalDateTime.ToString("d MMM yyyy")</p>
+                    <p>Start Date — @DateText(Order.ProgrammeStart.Value)</p>
                 }
                 @if (Order.ScheduledCompletion is not null)
                 {
-                    <p>Completion Date — @Order.ScheduledCompletion.Value.LocalDateTime.ToString("d MMM yyyy")</p>
+                    <p>Completion Date — @DateText(Order.ScheduledCompletion.Value)</p>
                 }
                 @if (!string.IsNullOrWhiteSpace(Order.ProgrammeNotes))
                 {
@@ -216,7 +216,7 @@
             {
                 <p class="po-sign-name">@SignatureName(ApprovedByName, Order.AwardedByEmail)</p>
                 <p class="po-sign-line">Approved by</p>
-                <p class="po-sign-date">@Order.AwardedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</p>
+                <p class="po-sign-date">@DateTimeText(Order.AwardedAt)</p>
             }
         </div>
         <div class="po-signature">
@@ -224,7 +224,7 @@
             {
                 <p class="po-sign-name">@SignatureName(Order.AcceptedByName, Order.AcceptedByEmail)</p>
                 <p class="po-sign-line">Electronically accepted by</p>
-                <p class="po-sign-date">@Order.AcceptedAt!.Value.LocalDateTime.ToString("d MMM yyyy, HH:mm")</p>
+                <p class="po-sign-date">@DateTimeText(Order.AcceptedAt!.Value)</p>
             }
             else
             {

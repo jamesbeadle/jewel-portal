@@ -19,7 +19,7 @@
         <div class="flex items-center gap-3 shrink-0">
             @if (busy)
             {
-                <span class="inline-flex items-center gap-1.5 text-[11px] text-content-subtle">
+                <span class="inline-flex items-center gap-1.5 text-xs text-content-subtle">
                     <JewelIcon Class="w-3 h-3 animate-jewel-pulse" />
                     @(restoring ? "Restoring" : "Deleting")
                 </span>
@@ -43,13 +43,13 @@
     <div class="mt-2 flex flex-wrap items-center gap-1.5">
         @foreach (var role in User.Roles)
         {
-            <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-field px-2 py-0.5 text-[11px] text-content-faint">
-                <span class="w-1.5 h-1.5 rounded-full bg-slate-400/50"></span>
+            <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-field px-2 py-0.5 text-xs text-content-faint">
+                <span class="w-1.5 h-1.5 rounded-full bg-content-faint"></span>
                 @role.DisplayName()
             </span>
         }
-        <span class="text-[11px] text-content-faint">
-            Revoked @User.RevokedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")@(string.IsNullOrEmpty(User.RevokedBy) ? "" : $" by {User.RevokedBy}")
+        <span class="text-xs text-content-faint">
+            Revoked @DateTimeText(User.RevokedAt.ToLocalTime())@(string.IsNullOrEmpty(User.RevokedBy) ? "" : $" by {User.RevokedBy}")
         </span>
     </div>
 

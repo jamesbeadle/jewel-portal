@@ -19,47 +19,45 @@
 
 <PageTitle>Work Orders · JPMS</PageTitle>
 
-<ApprovedSessionGate>
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="work-orders">
-        <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
-            <h2 class="text-lg font-semibold text-content">Work orders by @(groupBySupplier ? "supplier" : "cost centre")</h2>
-            <div class="flex items-center gap-2">
-                <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5"
-                     title="Group the table by cost centre or by supplier — your choice is remembered">
-                    <button type="button" @onclick="() => SetGroupingAsync(bySupplier: false)"
-                            class="rounded-md text-xs px-2.5 py-1.5 transition @(!groupBySupplier ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
-                        Cost centre
-                    </button>
-                    <button type="button" @onclick="() => SetGroupingAsync(bySupplier: true)"
-                            class="rounded-md text-xs px-2.5 py-1.5 transition @(groupBySupplier ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
-                        Supplier
-                    </button>
-                </div>
-                <input type="search" placeholder="Search by supplier…"
-                       class="bg-surface border border-line rounded-lg px-3 py-1.5 text-sm text-content placeholder:text-content-subtle w-52 focus:outline-none focus:border-accent"
-                       @bind="supplierSearch" @bind:event="oninput" />
-                <ExportToExcelButton FileName="Work orders"
-                                     Disabled="@(LiveOrders.Count == 0)"
-                                     ShowIncludeAllRows="@Searching"
-                                     IncludeAllLabel="Ignore search"
-                                     BuildWorkbook="BuildExportWorkbook" />
-                <button type="button" class="btn-secondary text-sm"
-                        title="Raise a work order directly — no bid package — and optionally package it against the valuation lines that priced its scope"
-                        @onclick="OpenAdd">
-                    Add work order
+        <SectionHeader>
+            <TitleContent>Work orders by @(groupBySupplier ? "supplier" : "cost centre")</TitleContent>
+            <Actions>
+            <div class="inline-flex gap-2"
+                 title="Group the table by cost centre or by supplier — your choice is remembered">
+                <button type="button" @onclick="() => SetGroupingAsync(bySupplier: false)"
+                        class="chip @(!groupBySupplier ?"chip-active" : "")">
+                    Cost centre
+                </button>
+                <button type="button" @onclick="() => SetGroupingAsync(bySupplier: true)"
+                        class="chip @(groupBySupplier ?"chip-active" : "")">
+                    Supplier
                 </button>
             </div>
-        </div>
+            <SearchInput @bind-Value="supplierSearch" Placeholder="Search by supplier…" Width="w-52" />
+            <ExportToExcelButton FileName="Work orders"
+                                 Disabled="@(LiveOrders.Count == 0)"
+                                 ShowIncludeAllRows="@Searching"
+                                 IncludeAllLabel="Ignore search"
+                                 BuildWorkbook="BuildExportWorkbook" />
+            <button type="button" class="btn-secondary text-sm"
+                    title="Raise a work order directly — no bid package — and optionally package it against the valuation lines that priced its scope"
+                    @onclick="OpenAdd">
+                Add work order
+            </button>
+            </Actions>
+        </SectionHeader>
 
         @* What happened to the automatic purchase-order email after a release (creation or
            approval) — sent, saved as a mailbox draft, or skipped and why. *@
         @if (poEmailNote is not null)
         {
-            <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">
+            <Notice Tone="Tone.Positive" Class="mb-3">
                 @poEmailNote
                 <button type="button" class="text-xs text-content-subtle underline underline-offset-4 ml-2"
                         @onclick="() => poEmailNote = null">Dismiss</button>
-            </p>
+            </Notice>
         }
 
         @* One panel. The summary line, the table and its footer are the same arithmetic over the
@@ -72,7 +70,7 @@
         }
         else if (Orders.Count == 0)
         {
-            <p class="text-sm text-content-subtle italic">No work orders recorded for this project yet.</p>
+            <EmptyState Message="No work orders recorded for this project yet." />
         }
         else
         {
@@ -189,5 +187,5 @@
 
         <DeleteWorkOrderModal @ref="deleteModal" ProjectId="@ProjectId" BusyChanged="busy => deleteBusy = busy" />
     </ProjectPageShell>
-</ApprovedSessionGate>
+</Page>
 

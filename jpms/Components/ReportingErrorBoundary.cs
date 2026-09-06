@@ -71,7 +71,7 @@ public sealed class ReportingErrorBoundary : ErrorBoundaryBase
         builder.OpenElement(12, "button");
         builder.AddAttribute(13, "type", "button");
         builder.AddAttribute(14, "class",
-            "rounded-lg bg-accent text-accent-ink font-medium px-4 py-2.5 hover:bg-accent-hover transition");
+            "rounded bg-accent text-accent-ink font-medium px-4 py-2.5 hover:bg-accent-hover transition");
         builder.AddAttribute(15, "onclick", EventCallback.Factory.Create(this, Recover));
         builder.AddContent(16, "Try again");
         builder.CloseElement();
@@ -82,7 +82,7 @@ public sealed class ReportingErrorBoundary : ErrorBoundaryBase
         {
             builder.OpenElement(17, "div");
             builder.AddAttribute(18, "class",
-                "max-w-2xl mx-auto mt-8 rounded-lg border border-line bg-surface-raised overflow-hidden text-left");
+                "max-w-2xl mx-auto mt-8 rounded border border-line bg-surface-raised overflow-hidden text-left");
 
             builder.OpenElement(19, "div");
             builder.AddAttribute(20, "class",

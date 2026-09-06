@@ -26,9 +26,9 @@
                done facts, not staged work — green, with the minted reference. *@
             @foreach (var created in CreatedRecords)
             {
-                <div class="flex items-center gap-3 rounded-lg border border-positive/40 bg-positive/5 px-3 py-2">
+                <div class="flex items-center gap-3 rounded border border-positive/40 bg-positive/5 px-3 py-2">
                     <p class="text-sm text-content min-w-0">
-                        <span class="text-xs uppercase tracking-wider text-positive font-semibold mr-2">✓ @created.Reference</span>
+                        <span class="text-sm font-medium text-positive mr-2">✓ @created.Reference</span>
                         <span class="text-content-muted truncate">@created.Label@(string.IsNullOrWhiteSpace(created.Title) ? "" : $" — {created.Title}") — raised; this email is tagged to it.</span>
                     </p>
                 </div>
@@ -36,9 +36,9 @@
             @foreach (var staged in StagedActions.ToList())
             {
                 var action = staged;
-                <div class="flex items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/5 px-3 py-2">
+                <div class="flex items-center justify-between gap-3 rounded border border-accent/40 bg-accent/5 px-3 py-2">
                     <p class="text-sm text-content min-w-0">
-                        <span class="text-xs uppercase tracking-wider text-accent font-semibold mr-2">@SystemActionKinds.Label(action.Kind)</span>
+                        <span class="text-sm font-medium text-accent mr-2">@SystemActionKinds.Label(action.Kind)</span>
                         <span class="text-content-muted">Will @action.Summary.@(TargetIsTagged(action) ? " This email is tagged to it." : "")</span>
                     </p>
                     <button type="button" class="text-xs text-content-subtle hover:text-negative shrink-0"
@@ -47,9 +47,9 @@
             }
             @if (StagedCreate is { } stagedRecord)
             {
-                <div class="flex items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/5 px-3 py-2">
+                <div class="flex items-center justify-between gap-3 rounded border border-accent/40 bg-accent/5 px-3 py-2">
                     <p class="text-sm text-content min-w-0">
-                        <span class="text-xs uppercase tracking-wider text-accent font-semibold mr-2">✚ @stagedRecord.Label</span>
+                        <span class="text-sm font-medium text-accent mr-2">✚ @stagedRecord.Label</span>
                         <span class="text-content-muted truncate">@(string.IsNullOrWhiteSpace(stagedRecord.DisplayTitle) ? "(untitled)" : stagedRecord.DisplayTitle) — this email is tagged to it.</span>
                     </p>
                     <div class="flex items-center gap-3 shrink-0">
@@ -69,9 +69,9 @@
             @foreach (var todoChipRow in TitledTodoRows)
             {
                 var chipRow = todoChipRow;
-                <div @key="chipRow" class="flex items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/5 px-3 py-2">
+                <div @key="chipRow" class="flex items-center justify-between gap-3 rounded border border-accent/40 bg-accent/5 px-3 py-2">
                     <p class="text-sm text-content min-w-0">
-                        <span class="text-xs uppercase tracking-wider text-accent font-semibold mr-2">✚ to-do</span>
+                        <span class="text-sm font-medium text-accent mr-2">✚ to-do</span>
                         <span class="text-content-muted truncate" title="@chipRow.Title">@chipRow.Title</span>
                     </p>
                     <button type="button" class="text-xs text-content-subtle hover:text-negative shrink-0"
@@ -82,7 +82,7 @@
     }
 
     <div class="flex flex-wrap items-center gap-2">
-        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Action</label>
+        <label class="eyebrow shrink-0">Action</label>
         <select class="field max-w-xs" value="@((int)kind)" @onchange="OnKindChanged">
             @foreach (var group in EffectiveGroups)
             {
@@ -105,9 +105,9 @@
            aimed — its Assigned-to prefilled with the sender's address — puts the keyboard in a
            field the triager never chose. The form renders from the start, the layout holds still,
            and raising without a project is still refused at stage/apply time. *@
-        <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-sm text-content">
+        <Notice Tone="Tone.Warning">
             Pick the email's project in the bar above — system actions are raised on it.
-        </p>
+        </Notice>
     }
     @switch (kind)
     {

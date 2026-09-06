@@ -10,9 +10,9 @@
 
 @if (replies.Count > 0)
 {
-    <div class="rounded-lg bg-amber-400/10 border border-amber-400/30 px-3 py-2 mb-3 space-y-2">
+    <div class="rounded bg-warning/10 border border-warning/30 px-3 py-2 mb-3 space-y-2">
         <div class="flex flex-wrap items-center justify-between gap-2">
-            <p class="text-sm font-medium text-amber-400">
+            <p class="text-sm font-medium text-warning">
                 @replies.Count newer @(replies.Count == 1 ? "reply" : "replies") on this thread @(replies.Count == 1 ? "isn't" : "aren't") filed to this to-do yet.
             </p>
             @if (CanFile)
@@ -27,7 +27,7 @@
             {
                 <li class="flex flex-wrap items-baseline gap-x-2 text-xs text-content-muted">
                     <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(reply.FromName) ? reply.FromEmail : reply.FromName)</span>
-                    <span>@reply.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                    <span>@DateTimeText(reply.ReceivedAt)</span>
                     <span class="italic truncate max-w-[24rem]">@reply.Subject</span>
                 </li>
             }
@@ -36,7 +36,7 @@
         {
             <p class="text-xs text-negative">@error</p>
         }
-        <p class="text-[11px] text-content-subtle">
+        <p class="text-xs text-content-subtle">
             Filing tags the email <span class="font-mono">JPMS/@Reference</span> so it appears in the list below — the same as tagging it in the Control Centre.
         </p>
     </div>

@@ -1,39 +1,37 @@
 @inject NavigationManager Nav
 @inject ISubcontractorStore SubcontractorStore
 
-<div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-    <table class="w-full text-sm">
-        <thead class="bg-surface-raised border-b border-line">
-            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Company</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden sm:table-cell">Trade</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden md:table-cell">Primary contact</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">CIS</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Compliance</th>
+<RecordsTable>
+    <thead>
+        <tr>
+            <th>Company</th>
+            <th class="hidden sm:table-cell">Trade</th>
+            <th class="hidden md:table-cell">Primary contact</th>
+            <th class="hidden lg:table-cell">CIS</th>
+            <th>Compliance</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var sub in Subcontractors)
+        {
+            <tr class="hover:bg-surface-raised cursor-pointer transition"
+                @onclick="() => Open(sub.SubcontractorId)">
+                <td class="text-content font-medium">@sub.CompanyName</td>
+                <td class="hidden sm:table-cell">
+                    <span class="flex flex-wrap gap-1">
+                        @foreach (var trade in sub.Trades)
+                        {
+                            <Pill Tone="Tone.Muted">@trade.Name</Pill>
+                        }
+                    </span>
+                </td>
+                <td class="hidden md:table-cell">@sub.ContactName</td>
+                <td class="hidden lg:table-cell">@sub.CisStatus</td>
+                <td><ComplianceStatusPill Status="@WorstStatus(sub)" /></td>
             </tr>
-        </thead>
-        <tbody class="divide-y divide-line">
-            @foreach (var sub in Subcontractors)
-            {
-                <tr class="hover:bg-surface-raised cursor-pointer transition"
-                    @onclick="() => Open(sub.SubcontractorId)">
-                    <td class="px-4 py-3 text-content font-medium">@sub.CompanyName</td>
-                    <td class="px-4 py-3 hidden sm:table-cell">
-                        <span class="flex flex-wrap gap-1">
-                            @foreach (var trade in sub.Trades)
-                            {
-                                <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@trade.Name</span>
-                            }
-                        </span>
-                    </td>
-                    <td class="px-4 py-3 text-content-muted hidden md:table-cell">@sub.ContactName</td>
-                    <td class="px-4 py-3 text-content-muted hidden lg:table-cell">@sub.CisStatus</td>
-                    <td class="px-4 py-3"><ComplianceStatusPill Status="@WorstStatus(sub)" /></td>
-                </tr>
-            }
-        </tbody>
-    </table>
-</div>
+        }
+    </tbody>
+</RecordsTable>
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<Subcontractor> Subcontractors { get; set; } = Array.Empty<Subcontractor>();

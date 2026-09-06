@@ -18,11 +18,11 @@
     number and issues it like any other order; rejecting ends it and its value
     stops counting.
 </p>
-<ul class="text-sm divide-y divide-line rounded-xl border border-line bg-surface mb-6">
+<ul class="text-sm divide-y divide-line panel mb-6">
     @foreach (var detail in Drafts)
     {
         <li class="px-4 py-2 flex items-center gap-3">
-            <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">Draft</span>
+            <Pill Tone="Tone.Muted">Draft</Pill>
             <span class="text-content font-medium">@detail.Order.Title</span>
             <span class="text-content-subtle">@detail.SubcontractorName</span>
             <span class="ml-auto">@Money(detail.Order.Value)</span>
@@ -31,7 +31,7 @@
                 @* The approve warning: releasing the draft emails its purchase order there and then. *@
                 @if (pending == DraftDecision.Approve)
                 {
-                    <span class="text-[11px] @(SupplierEmailFor(detail) is null ? "text-amber-700" : "text-content-subtle")"
+                    <span class="text-xs @(SupplierEmailFor(detail) is null ?"text-warning" : "text-content-subtle")"
                           title="Approving releases the order — the purchase-order email is sent from the projects mailbox the moment the number is minted">
                         @(SupplierEmailFor(detail) is { } supplierEmail
                             ? $"PO will be emailed to {supplierEmail}"
@@ -43,7 +43,7 @@
                    href="@PurchaseOrderPath(ProjectId, detail.Order.WorkOrderId)">
                     Preview PO
                 </a>
-                <button type="button" class="text-xs font-medium @(pending == DraftDecision.Approve ? "text-accent" : "text-negative") underline underline-offset-4"
+                <button type="button" class="text-xs font-medium @(pending == DraftDecision.Approve ?"text-accent" : "text-negative") underline underline-offset-4"
                         title="@(pending == DraftDecision.Approve ? "Mint the next order number, issue this order and email the purchase order to the supplier" : "End this draft — its value stops counting and there is no undo")"
                         disabled="@decisionBusy"
                         @onclick="() => DecideAsync(detail, pending)">
@@ -62,7 +62,7 @@
                    their inline confirm step (the branch above); Delete gets a modal,
                    because it is the only choice that leaves no record behind. *@
                 <DropdownMenu Label="Actions" WidthClass="w-72" Disabled="@decisionBusy"
-                              ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
+                              ToggleClass="inline-flex items-center gap-1 rounded border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
                               Class="inline-block text-left"
                               Items="MenuItems(detail)" />
             }

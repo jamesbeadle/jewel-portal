@@ -14,29 +14,29 @@
     else
     {
         var maxCodeCost = Snapshot.CostCodes.Max(code => code.CostRecorded);
-        <table class="w-full text-sm">
+        <table class="data-table data-table-dense">
             <thead>
-                <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
-                    <th class="px-5 py-3">Cost code</th>
-                    <th class="px-2 py-3">Trade</th>
-                    <th class="px-2 py-3 w-1/3"></th>
-                    <th class="px-2 py-3 text-right">Days</th>
-                    <th class="px-5 py-3 text-right">Cost</th>
+                <tr>
+                    <th>Cost code</th>
+                    <th>Trade</th>
+                    <th class="w-1/3"></th>
+                    <th class="text-right">Days</th>
+                    <th class="text-right">Cost</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var centre in Snapshot.CostCodes)
                 {
-                    <tr class="border-b border-line/60">
-                        <td class="px-5 py-2.5 font-medium text-content tabular-nums">@centre.CostCode</td>
-                        <td class="px-2 py-2.5 text-content-muted">@centre.Trade</td>
-                        <td class="px-2 py-2.5">
+                    <tr>
+                        <td class="font-medium text-content tabular-nums">@centre.CostCode</td>
+                        <td>@centre.Trade</td>
+                        <td>
                             <div class="h-1.5 rounded-full bg-surface-field overflow-hidden">
                                 <div class="h-full bg-accent/70" style="width:@BarWidth(centre.CostRecorded, maxCodeCost)"></div>
                             </div>
                         </td>
-                        <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(centre.DaysRecorded)</td>
-                        <td class="px-5 py-2.5 text-right tabular-nums font-semibold text-content">@Pounds(centre.CostRecorded)</td>
+                        <td class="text-right tabular-nums">@Days(centre.DaysRecorded)</td>
+                        <td class="text-right tabular-nums font-semibold text-content">@Pounds(centre.CostRecorded)</td>
                     </tr>
                 }
             </tbody>

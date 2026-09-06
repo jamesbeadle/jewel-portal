@@ -5,7 +5,7 @@
    (Client → Valuation claims), read back live by the claim's own tag — the snapshot viewer's
    Correspondence mechanism, and every snapshot frozen from this claim shows the same mail beside
    its own. Reading only: tagging and replying stay in the Control Centre. *@
-<div class="rounded-xl border border-line bg-surface overflow-hidden">
+<div class="panel overflow-hidden">
     <button type="button" @onclick="Toggle" aria-expanded="@isOpen"
             class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-raised/60 transition">
         <svg class="@ChevronClass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -29,14 +29,14 @@
         <div class="border-t border-line px-4 py-4">
             @if (Claim is null)
             {
-                <p class="text-sm text-content-subtle italic">No claim selected.</p>
+                <EmptyState Message="No claim selected." />
             }
             else
             {
                 <LoadGate IsLoading="@(emails is null && loadError is null)" Label="Loading correspondence">
                     @if (loadError is not null)
                     {
-                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@loadError</p>
+                        <Notice Tone="Tone.Negative">@loadError</Notice>
                     }
                     else if (emails is { Count: 0 })
                     {

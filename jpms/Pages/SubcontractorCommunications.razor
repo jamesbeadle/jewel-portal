@@ -31,29 +31,20 @@
     page opens with that category's chip preselected.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
-    <section class="px-6 md:px-8 py-8 md:py-12">
-        <header class="mb-6">
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">@family.Pathway</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Communications</h1>
-            @if (loaded && total > 0)
-            {
-                <p class="text-sm text-content-muted mt-2">
-                    @total email@(total == 1 ? "" : "s") @(categoryTagFilter is null ? $"tagged as {family.Label.ToLowerInvariant()}" : $"tagged {ActiveFilterLabel}").
-                </p>
-            }
-        </header>
+<Page>
+        <PageHeader>
+            <EyebrowContent>
+                @family.Pathway
+            </EyebrowContent>
+            <SubtitleContent>
+                @if (loaded && total > 0)
+                {
+                    <p>
+                        @total email@(total == 1 ? "" : "s") @(categoryTagFilter is null ? $"tagged as {family.Label.ToLowerInvariant()}" : $"tagged {ActiveFilterLabel}").
+                    </p>
+                }
+            </SubtitleContent>
+        </PageHeader>
 
         @* The category chips — a filter control, so never gated: they render from the contracts
            constant alone, usable before the first page lands, and stay put when a category comes
@@ -71,7 +62,7 @@ else
 
         @if (loadError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@loadError</Notice>
         }
 
         <LoadGate IsLoading="@(!loaded)" Prominent="true" Label="Loading communications">
@@ -93,7 +84,7 @@ else
         {
             @if (replySent is not null)
             {
-                <div class="rounded-lg border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
+                <div class="rounded border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
                     <p class="text-sm text-content">@replySent</p>
                     <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
                             @onclick="() => replySent = null">✕</button>
@@ -128,5 +119,4 @@ else
             }
         }
         </LoadGate>
-    </section>
-}
+</Page>

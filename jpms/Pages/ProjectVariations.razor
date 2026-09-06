@@ -22,18 +22,7 @@
     RecordTabBar), and the Request column below links straight through.
 *@
 
-@if (!isLoaded)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="variations">
         <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
             <div>
@@ -59,7 +48,7 @@ else
 
         @* ---- Document-type explainer ----------------------------------------------------------
            Red is reserved for what can genuinely hurt: quoting-stage money treated as approved. *@
-        <div class="rounded-xl border border-line bg-surface px-4 py-3 mb-4">
+        <div class="panel px-4 py-3 mb-4">
             <p class="text-sm font-medium text-content mb-1">Variation — one document, four stages</p>
             <p class="text-sm text-content-muted">
                 When every requirement of a specific group has been identified and costed, the request becomes a
@@ -71,13 +60,13 @@ else
                 <span class="text-content font-medium">Rejected</span>. Approval is what writes its value onto
                 the project valuation report.
             </p>
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-2">
+            <Notice Tone="Tone.Negative" Class="mt-2">
                 A variation is not approved money until it is Approved — nothing on it appears on the valuation
                 report or can be billed before then.
-            </p>
+            </Notice>
             @if (UnlinkedRows.Count > 0)
             {
-                <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-sm text-content-muted mt-2">
+                <p class="rounded bg-surface-raised border border-line px-3 py-2 text-sm text-content-muted mt-2">
                     @UnlinkedRows.Count historic variation@(UnlinkedRows.Count == 1 ? " isn't" : "s aren't") linked back
                     to a request yet — open a variation and attach the RFI it was raised from in its
                     <span class="font-medium text-content">Originating request</span> panel, or open the RFI
@@ -90,9 +79,7 @@ else
            description, cost code and the originating request's own text. *@
         <div class="flex flex-wrap items-center gap-2 mb-5 text-sm">
             <div class="relative ml-auto w-full sm:w-80">
-                <input type="search" placeholder="Search text in variations…"
-                       class="bg-surface border border-line rounded-lg pl-3 pr-8 py-1.5 text-sm text-content placeholder:text-content-subtle w-full focus:outline-none focus:border-accent"
-                       value="@search" @oninput="OnSearchInput" />
+                <SearchInput Value="@search" ValueChanged="OnSearchInput" Placeholder="Search text in variations…" />
                 @if (Searching)
                 {
                     <button type="button" title="Clear search"
@@ -112,7 +99,7 @@ else
 
         @if (variationsError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@variationsError</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@variationsError</Notice>
         }
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -131,14 +118,14 @@ else
            normal approve step then writes the VO to the valuation and CVR. *@
         @if (OpenRequests.Count > 0 || ReviewedRequests.Count > 0)
         {
-            <div class="rounded-xl border border-line bg-surface overflow-hidden mb-6">
+            <div class="panel overflow-hidden mb-6">
                 <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between">
                     <h3 class="text-sm font-medium text-content-muted">Subcontractor variation requests</h3>
                     <span class="text-xs text-content-subtle">@OpenRequests.Count awaiting review</span>
                 </header>
                 @if (requestError is not null)
                 {
-                    <p class="mx-5 mt-3 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@requestError</p>
+                    <Notice Tone="Tone.Negative" Class="mx-5 mt-3">@requestError</Notice>
                 }
                 @if (OpenRequests.Count == 0)
                 {
@@ -154,7 +141,7 @@ else
                                     <div>
                                         <p class="font-medium text-content">@variationRequest.Title</p>
                                         <p class="text-xs text-content-subtle mt-1">
-                                            @variationRequest.SubcontractorName · against WO-@variationRequest.WorkOrderNumber.ToString("0000") · raised @variationRequest.SubmittedAt.LocalDateTime.ToString("d MMM yyyy")
+                                            @variationRequest.SubcontractorName · against WO-@variationRequest.WorkOrderNumber.ToString("0000") · raised @DateText(variationRequest.SubmittedAt)
                                         </p>
                                         <p class="text-sm text-content-muted mt-2 whitespace-pre-line">@variationRequest.Description</p>
                                     </div>
@@ -163,11 +150,11 @@ else
                                         @if (CanManageVariations)
                                         {
                                             <div class="flex gap-2 mt-2 justify-end">
-                                                <button type="button" class="rounded-lg bg-accent text-accent-ink text-xs font-medium px-2.5 py-1 hover:bg-accent-hover transition disabled:opacity-60"
+                                                <button type="button" class="btn-primary"
                                                         disabled="@requestBusy" @onclick="() => AcceptRequest(variationRequest.VariationRequestId)">
                                                     Accept → variation
                                                 </button>
-                                                <button type="button" class="rounded-lg border border-line text-xs font-medium px-2.5 py-1 text-content-muted hover:text-content transition disabled:opacity-60"
+                                                <button type="button" class="btn-secondary"
                                                         disabled="@requestBusy" @onclick="() => StartReject(variationRequest.VariationRequestId)">
                                                     Reject
                                                 </button>
@@ -214,7 +201,7 @@ else
         @* Issue-WO / accept-reject errors need a home even when the review section above is not rendered. *@
         @if (requestError is not null && OpenRequests.Count == 0 && ReviewedRequests.Count == 0)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@requestError</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@requestError</Notice>
         }
 
         @if (FilteredRows.Count == 0)
@@ -237,133 +224,131 @@ else
         {
             @if (variationStatusError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@variationStatusError</p>
+                <Notice Tone="Tone.Negative" Class="mb-3">@variationStatusError</Notice>
             }
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-                <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Ref</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Title</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Request</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Status</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">Value</th>
-                            @* Issued is the official date the client was notified (stamped when
-                               the variation enters Issued) — a dash while it is still being
-                               quoted. The system's Created stamp travels on the export only. *@
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Issued</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Approved</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Work order</th>
+            <RecordsTable>
+                <thead>
+                    <tr>
+                        <th>Ref</th>
+                        <th>Title</th>
+                        <th>Request</th>
+                        <th>Status</th>
+                        <th class="text-right">Value</th>
+                        @* Issued is the official date the client was notified (stamped when
+                           the variation enters Issued) — a dash while it is still being
+                           quoted. The system's Created stamp travels on the export only. *@
+                        <th class="hidden lg:table-cell">Issued</th>
+                        <th class="hidden lg:table-cell">Approved</th>
+                        <th>Work order</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in FilteredRows)
+                    {
+                        <tr class="hover:bg-surface-raised">
+                            <td class="font-mono text-[12px] whitespace-nowrap">
+                                <a class="text-content hover:underline underline-offset-4"
+                                   href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">@RowReference(order)</a>
+                            </td>
+                            <td>
+                                <a class="text-content font-medium hover:underline underline-offset-4"
+                                   href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">@order.Title</a>
+                                @* Recent triage activity — the api coalesces the historic
+                                   VOQ-typed rows onto Variation, so one lookup covers the
+                                   variation's whole correspondence. *@
+                                <ActivityBadge Activity="@Activity.For(ProjectId, RecordType.Variation, order.VariationOrderId)" Class="ml-1.5" />
+                            </td>
+                            <td class="whitespace-nowrap">
+                                @{ var sourceRequest = RequestFor(order); }
+                                @if (sourceRequest is not null)
+                                {
+                                    @* The trace back up the lifecycle: the variation → the RFI/request it prices. *@
+                                    <a class="font-mono text-xs text-content-muted hover:text-content hover:underline underline-offset-4"
+                                       title="@sourceRequest.Title"
+                                       href="@($"/projects/{ProjectId}/requests/view/{sourceRequest.RequestId}")">@RefLabel(sourceRequest)</a>
+                                }
+                                else
+                                {
+                                    @* Seeded rows predate the variation→request link. Kept quiet here — repairing
+                                       the link is done deliberately on the variation itself, so the badge
+                                       links through to the variation page's Originating-request panel. *@
+                                    <a class="btn-secondary"
+                                       title="No request behind this variation yet — open it to link the RFI it was raised from"
+                                       href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">No request</a>
+                                }
+                            </td>
+                            <td class="whitespace-nowrap">
+                                @{ var statusChoices = CanManageVariations ? VariationStatusChoices(order) : new List<VariationStatusChoice>(); }
+                                @if (statusChoices.Count > 0)
+                                {
+                                    @* The chip doubles as the status control. Direct moves cover the
+                                       side-effect-free stages; the commercial transitions (approve,
+                                       un-approve, reject) link through to the variation, where their
+                                       real flows — cost code, confirms, reversals — live. *@
+                                    <div class="relative">
+                                        <Pill Tone="@order.Status.ToTone()"
+                                              Title="Change status"
+                                              Disabled="@(variationStatusBusyId == order.VariationOrderId)"
+                                              OnClick="() => ToggleVariationStatusMenu(order.VariationOrderId)">
+                                            @VariationStatusLabel(order)
+                                        </Pill>
+                                        @if (variationStatusMenuId == order.VariationOrderId)
+                                        {
+                                            <div class="absolute left-0 mt-2 w-64 rounded border border-line bg-surface z-30 overflow-hidden">
+                                                <ul class="divide-y divide-line">
+                                                    @foreach (var choice in statusChoices)
+                                                    {
+                                                        var pick = choice;
+                                                        <li>
+                                                            <button type="button"
+                                                                    class="w-full text-left px-3 py-2 text-sm transition @(pick.IsCurrent ?"text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
+                                                                    disabled="@pick.IsCurrent"
+                                                                    title="@pick.Hint"
+                                                                    @onclick="() => PickVariationStatus(pick)">
+                                                                @pick.Label@(pick.IsCurrent ? " ✓" : "")
+                                                            </button>
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <Pill Tone="@order.Status.ToTone()">@VariationStatusLabel(order)</Pill>
+                                }
+                            </td>
+                            <td class="text-right whitespace-nowrap @(order.Status == VariationOrderStatus.Rejected ?"text-content-subtle line-through" : "text-content")">
+                                @(RowValue(order) is { } v ? Money(v) : "—")
+                            </td>
+                            <td class="text-content-subtle hidden lg:table-cell whitespace-nowrap">@(DateText(order.IssuedAt?.LocalDateTime) ?? "—")</td>
+                            <td class="text-content-subtle hidden lg:table-cell whitespace-nowrap">
+                                @(order.Status == VariationOrderStatus.Approved ? DateText(order.ApprovedAt?.LocalDateTime) ?? "—" : "—")
+                            </td>
+                            <td class="whitespace-nowrap">
+                                @{ var issued = IssuedWorkOrdersFor(order); }
+                                @if (issued.Count > 0)
+                                {
+                                    <span class="text-xs text-content-muted">@string.Join(", ", issued.Select(wo => $"WO-{wo.Number:0000}"))</span>
+                                }
+                                @if (CanIssueWorkOrder(order))
+                                {
+                                    <button type="button" class="@(issued.Count > 0 ?"block " : "")text-xs text-accent underline underline-offset-2 disabled:opacity-60"
+                                            title="@(issued.Count > 0 ? "Issue a further work order for this variation" : "Issue the work order instructing this variation")"
+                                            disabled="@requestBusy" @onclick="() => IssueWorkOrder(order.VariationOrderId)">
+                                        @(issued.Count > 0 ? "Issue another" : "Issue WO")
+                                    </button>
+                                }
+                                else if (issued.Count == 0)
+                                {
+                                    <span class="text-content-subtle">—</span>
+                                }
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @foreach (var order in FilteredRows)
-                        {
-                            <tr class="hover:bg-surface-raised">
-                                <td class="px-4 py-3 font-mono text-[12px] whitespace-nowrap">
-                                    <a class="text-content hover:underline underline-offset-4"
-                                       href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">@RowReference(order)</a>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <a class="text-content font-medium hover:underline underline-offset-4"
-                                       href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">@order.Title</a>
-                                    @* Recent triage activity — the api coalesces the historic
-                                       VOQ-typed rows onto Variation, so one lookup covers the
-                                       variation's whole correspondence. *@
-                                    <ActivityBadge Activity="@Activity.For(ProjectId, RecordType.Variation, order.VariationOrderId)" Class="ml-1.5" />
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    @{ var sourceRequest = RequestFor(order); }
-                                    @if (sourceRequest is not null)
-                                    {
-                                        @* The trace back up the lifecycle: the variation → the RFI/request it prices. *@
-                                        <a class="font-mono text-xs text-content-muted hover:text-content hover:underline underline-offset-4"
-                                           title="@sourceRequest.Title"
-                                           href="@($"/projects/{ProjectId}/requests/view/{sourceRequest.RequestId}")">@RefLabel(sourceRequest)</a>
-                                    }
-                                    else
-                                    {
-                                        @* Seeded rows predate the variation→request link. Kept quiet here — repairing
-                                           the link is done deliberately on the variation itself, so the badge
-                                           links through to the variation page's Originating-request panel. *@
-                                        <a class="inline-flex items-center rounded border border-line bg-surface-raised px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-content-subtle hover:text-content hover:border-content-subtle transition-colors"
-                                           title="No request behind this variation yet — open it to link the RFI it was raised from"
-                                           href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">No request</a>
-                                    }
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    @{ var statusChoices = CanManageVariations ? VariationStatusChoices(order) : new List<VariationStatusChoice>(); }
-                                    @if (statusChoices.Count > 0)
-                                    {
-                                        @* The chip doubles as the status control. Direct moves cover the
-                                           side-effect-free stages; the commercial transitions (approve,
-                                           un-approve, reject) link through to the variation, where their
-                                           real flows — cost code, confirms, reversals — live. *@
-                                        <div class="relative">
-                                            <button type="button" class="@BadgeClass(order) gap-1"
-                                                    title="Change status"
-                                                    disabled="@(variationStatusBusyId == order.VariationOrderId)"
-                                                    @onclick="() => ToggleVariationStatusMenu(order.VariationOrderId)">
-                                                @VariationStatusLabel(order) <span class="text-[9px]" aria-hidden="true">▾</span>
-                                            </button>
-                                            @if (variationStatusMenuId == order.VariationOrderId)
-                                            {
-                                                <div class="absolute left-0 mt-2 w-64 rounded-lg border border-line bg-surface shadow-lg z-30 overflow-hidden">
-                                                    <ul class="divide-y divide-line">
-                                                        @foreach (var choice in statusChoices)
-                                                        {
-                                                            var pick = choice;
-                                                            <li>
-                                                                <button type="button"
-                                                                        class="w-full text-left px-3 py-2 text-sm transition @(pick.IsCurrent ? "text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
-                                                                        disabled="@pick.IsCurrent"
-                                                                        title="@pick.Hint"
-                                                                        @onclick="() => PickVariationStatus(pick)">
-                                                                    @pick.Label@(pick.IsCurrent ? " ✓" : "")
-                                                                </button>
-                                                            </li>
-                                                        }
-                                                    </ul>
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <span class="@BadgeClass(order)">@VariationStatusLabel(order)</span>
-                                    }
-                                </td>
-                                <td class="px-4 py-3 text-right whitespace-nowrap @(order.Status == VariationOrderStatus.Rejected ? "text-content-subtle line-through" : "text-content")">
-                                    @(RowValue(order) is { } v ? Money(v) : "—")
-                                </td>
-                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@(order.IssuedAt?.LocalDateTime.ToString("d MMM yyyy") ?? "—")</td>
-                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">
-                                    @(order.Status == VariationOrderStatus.Approved ? order.ApprovedAt?.LocalDateTime.ToString("d MMM yyyy") ?? "—" : "—")
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    @{ var issued = IssuedWorkOrdersFor(order); }
-                                    @if (issued.Count > 0)
-                                    {
-                                        <span class="text-xs text-content-muted">@string.Join(", ", issued.Select(wo => $"WO-{wo.Number:0000}"))</span>
-                                    }
-                                    @if (CanIssueWorkOrder(order))
-                                    {
-                                        <button type="button" class="@(issued.Count > 0 ? "block " : "")text-xs text-accent underline underline-offset-2 disabled:opacity-60"
-                                                title="@(issued.Count > 0 ? "Issue a further work order for this variation" : "Issue the work order instructing this variation")"
-                                                disabled="@requestBusy" @onclick="() => IssueWorkOrder(order.VariationOrderId)">
-                                            @(issued.Count > 0 ? "Issue another" : "Issue WO")
-                                        </button>
-                                    }
-                                    else if (issued.Count == 0)
-                                    {
-                                        <span class="text-content-subtle">—</span>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </RecordsTable>
             <p class="text-xs text-content-subtle mt-3">
                 Only approved variations are included on the valuation report; the rest stay here until they are.
             </p>
@@ -394,7 +379,7 @@ else
             <div class="space-y-3">
                 @if (variationStatusError is not null)
                 {
-                    <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@variationStatusError</div>
+                    <Notice Tone="Tone.Negative">@variationStatusError</Notice>
                 }
                 <p class="text-sm text-content">
                     <span class="font-mono">@declining.DisplayNumber</span> — @declining.Title
@@ -407,5 +392,5 @@ else
             </div>
         </Modal>
     }
-}
+</Page>
 

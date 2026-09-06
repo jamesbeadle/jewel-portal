@@ -97,6 +97,10 @@ module.exports = {
         },
         // Status/Neutral — neutral status AND the link colour inside tables. Never an action.
         info: '#3CA1FF',
+        // Not a Figma style: the file has no amber. jpms's "needs a look" tone (Tone.Warning) —
+        // chosen to sit between positive and negative on the dark canvas. Replaces the raw
+        // amber-* Tailwind colours that used to be typed into views.
+        warning: '#F2B544',
         // Brand/Main — the logo / brand mark only. It is NOT the action colour.
         brand: '#4CDBEE'
       }

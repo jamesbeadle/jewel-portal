@@ -28,7 +28,7 @@
 
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+        <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
     }
 
     @if (Project is null)
@@ -51,13 +51,13 @@
 
             @if (partyContacts.Count > 0)
             {
-                <div class="border border-line rounded-lg overflow-hidden mb-4">
-                    <table class="w-full text-sm">
+                <div class="border border-line rounded overflow-hidden mb-4">
+                    <table class="data-table data-table-dense">
                         <thead>
-                            <tr class="text-left text-content-subtle border-b border-line">
-                                <th class="px-3 py-2 font-medium">Contact</th>
-                                <th class="px-3 py-2 font-medium">Email</th>
-                                <th class="px-3 py-2 font-medium">On this project</th>
+                            <tr>
+                                <th>Contact</th>
+                                <th>Email</th>
+                                <th>On this project</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -65,16 +65,16 @@
                             {
                                 var effective = EffectiveRouting(contact);
                                 var overridden = OverrideFor(contact.PartyContactId) is not null;
-                                <tr class="border-b border-line last:border-0">
-                                    <td class="px-3 py-2 text-content">
+                                <tr>
+                                    <td class="text-content">
                                         @contact.Name
                                         @if (contact.IsPrimary)
                                         {
-                                            <span class="ml-2 inline-flex items-center rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">Primary</span>
+                                            <Pill Tone="Tone.Info" Class="ml-2">Primary</Pill>
                                         }
                                     </td>
-                                    <td class="px-3 py-2 text-content-muted">@contact.Email</td>
-                                    <td class="px-3 py-2 whitespace-nowrap">
+                                    <td>@contact.Email</td>
+                                    <td class="whitespace-nowrap">
                                         <select class="field text-xs py-1 inline-block w-auto" value="@((int)effective)" disabled="@(busy || !CanManage)"
                                                 @onchange="e => SetPartyContactRoutingAsync(contact, e)">
                                             <option value="@((int)CorrespondenceRouting.To)">To</option>
@@ -84,7 +84,7 @@
                                         </select>
                                         @if (overridden)
                                         {
-                                            <span class="ml-2 text-[10px] uppercase tracking-wide text-content-subtle" title="This project overrides the contact's default routing">overridden</span>
+                                            <span class="ml-2 eyebrow" title="This project overrides the contact's default routing">overridden</span>
                                         }
                                     </td>
                                 </tr>
@@ -106,27 +106,27 @@
         }
         else
         {
-            <div class="border border-line rounded-lg overflow-hidden mb-3">
-                <table class="w-full text-sm">
+            <div class="border border-line rounded overflow-hidden mb-3">
+                <table class="data-table data-table-dense">
                     <thead>
-                        <tr class="text-left text-content-subtle border-b border-line">
-                            <th class="px-3 py-2 font-medium">Contact</th>
-                            <th class="px-3 py-2 font-medium">Email</th>
-                            <th class="px-3 py-2 font-medium">Organisation</th>
-                            <th class="px-3 py-2 font-medium">Role</th>
-                            <th class="px-3 py-2 font-medium">Routing</th>
-                            <th class="px-3 py-2"></th>
+                        <tr>
+                            <th>Contact</th>
+                            <th>Email</th>
+                            <th>Organisation</th>
+                            <th>Role</th>
+                            <th>Routing</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var contact in adHocContacts)
                         {
-                            <tr class="border-b border-line last:border-0 @(contact.ContactId == editingContactId ? "bg-surface-raised" : null)">
-                                <td class="px-3 py-2 text-content">@contact.Name</td>
-                                <td class="px-3 py-2 text-content-muted">@contact.Email</td>
-                                <td class="px-3 py-2 text-content-muted">@(contact.Organisation ?? "—")</td>
-                                <td class="px-3 py-2 text-content-muted">@contact.Role.DisplayName()</td>
-                                <td class="px-3 py-2 whitespace-nowrap">
+                            <tr class="border-b border-line last:border-0 @(contact.ContactId == editingContactId ?"bg-surface-raised" : null)">
+                                <td class="text-content">@contact.Name</td>
+                                <td>@contact.Email</td>
+                                <td>@(contact.Organisation ?? "—")</td>
+                                <td>@contact.Role.DisplayName()</td>
+                                <td class="whitespace-nowrap">
                                     <select class="field text-xs py-1 inline-block w-auto" value="@((int)contact.Routing)" disabled="@(busy || !CanManage)"
                                             @onchange="e => SetAdHocRoutingAsync(contact, e)">
                                         <option value="@((int)CorrespondenceRouting.None)">Off</option>
@@ -135,7 +135,7 @@
                                         <option value="@((int)CorrespondenceRouting.Bcc)">BCC</option>
                                     </select>
                                 </td>
-                                <td class="px-3 py-2 text-right whitespace-nowrap">
+                                <td class="text-right whitespace-nowrap">
                                     @if (CanManage)
                                     {
                                         <button type="button" class="text-xs font-medium text-content-muted hover:text-content mr-3"
@@ -161,22 +161,24 @@
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Role</label>
+                        <FormField Label="Role">
                         <select class="field" @bind="formRole">
                             @foreach (var role in RoleOptions)
                             {
                                 <option value="@((int)role)">@role.DisplayName()</option>
                             }
                         </select>
+                        </FormField>
                     </div>
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Routing</label>
+                        <FormField Label="Routing">
                         <select class="field" @bind="formRouting">
                             <option value="@((int)CorrespondenceRouting.None)">Off — contact list only</option>
                             <option value="@((int)CorrespondenceRouting.To)">To</option>
                             <option value="@((int)CorrespondenceRouting.Cc)">CC</option>
                             <option value="@((int)CorrespondenceRouting.Bcc)">BCC</option>
                         </select>
+                        </FormField>
                     </div>
                     <div class="flex gap-2">
                         <button type="button" class="btn-secondary" disabled="@busy" @onclick="SaveContactAsync">

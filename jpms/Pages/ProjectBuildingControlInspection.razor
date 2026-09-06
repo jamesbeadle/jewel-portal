@@ -23,7 +23,7 @@
     mailbox and files itself back into this list.
 *@
 
-<ApprovedSessionGate>
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="building-control">
         @if (!BuildingControl.LoadedFor(ProjectId) && !dataFailed)
         {
@@ -57,62 +57,67 @@
 
             @if (actionError is { } error)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/40 px-3 py-2 text-sm text-content mb-4">@error</p>
+                <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
             }
 
             @* ---- Details: the official dates lead; Created is a secondary fact. ---- *@
-            <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+            <section class="panel p-5 mb-5">
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Booked for</label>
+                        <FormField Label="Booked for">
                         <input type="date" class="field" value="@editBookedFor" disabled="@busy"
                                @onchange="e => editBookedFor = e.Value?.ToString() ?? string.Empty" />
+                        </FormField>
                     </div>
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Inspected</label>
+                        <FormField Label="Inspected">
                         <input type="date" class="field" value="@editInspectedAt" disabled="@busy"
                                @onchange="e => editInspectedAt = e.Value?.ToString() ?? string.Empty" />
+                        </FormField>
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Inspector</label>
+                        <FormField Label="Inspector">
                         <input type="text" class="field" maxlength="256" placeholder="Who carried out the visit"
                                value="@editInspectorName" @oninput="e => editInspectorName = e.Value?.ToString() ?? string.Empty" />
+                        </FormField>
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Outcome / actions required</label>
+                    <FormField Label="Outcome / actions required">
                     <textarea class="field" rows="2" maxlength="2048" placeholder="The inspector's outcome — passed subject to…, actions before re-inspection…"
                               value="@editOutcomeNotes" @oninput="e => editOutcomeNotes = e.Value?.ToString() ?? string.Empty"></textarea>
+                    </FormField>
                 </div>
                 <div class="mb-3">
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Stage name</label>
+                    <FormField Label="Stage name">
                     <input type="text" class="field" maxlength="256"
                            value="@editStageName" @oninput="e => editStageName = e.Value?.ToString() ?? string.Empty" />
+                    </FormField>
                 </div>
                 <div class="flex items-center justify-between">
-                    <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition disabled:opacity-50"
+                    <button type="button" class="btn-primary"
                             disabled="@(string.IsNullOrWhiteSpace(editStageName) || busy || !HasEdits(inspection))"
                             @onclick="() => SaveAsync(inspection)">
                         Save changes
                     </button>
                     <p class="text-xs text-content-subtle" title="System stamp — the official dates above are what matters">
-                        Created @inspection.RaisedAt.ToLocalTime().ToString("d MMM yyyy")@(string.IsNullOrWhiteSpace(inspection.RaisedByEmail) ? "" : $" by {inspection.RaisedByEmail}")
+                        Created @DateText(inspection.RaisedAt)@(string.IsNullOrWhiteSpace(inspection.RaisedByEmail) ? "" : $" by {inspection.RaisedByEmail}")
                     </p>
                 </div>
             </section>
 
             @* ---- Photos. ---- *@
-            <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+            <section class="panel p-5 mb-5">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Photos</h3>
-                    <label class="text-xs text-accent hover:underline cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
+                    <label class="text-xs text-accent hover:underline cursor-pointer @(busy ?"opacity-50 pointer-events-none" : "")">
                         + Add photos
                         <InputFile OnChange="e => UploadAsync(inspection, e, BuildingControlAttachmentKind.Photo)" multiple accept="image/*" class="hidden" />
                     </label>
                 </div>
                 @if (Photos.Count == 0)
                 {
-                    <p class="text-sm text-content-subtle italic">No photos on this stage yet — on site, this page on the phone uploads straight from the camera.</p>
+                    <EmptyState Message="No photos on this stage yet — on site, this page on the phone uploads straight from the camera." />
                 }
                 else
                 {
@@ -122,7 +127,7 @@
                             <figure @key="photo.BuildingControlAttachmentId" class="group relative">
                                 <a href="@Attachments.FileUrl(photo.BuildingControlAttachmentId, isInline: true)" target="_blank" rel="noopener">
                                     <img src="@Attachments.FileUrl(photo.BuildingControlAttachmentId, isInline: true)" alt="@photo.DisplayName"
-                                         class="w-full h-28 object-cover rounded-lg border border-line" loading="lazy" />
+                                         class="w-full h-28 object-cover rounded border border-line" loading="lazy" />
                                 </a>
                                 <button type="button" title="Remove photo"
                                         class="absolute top-1 right-1 hidden group-hover:flex items-center justify-center w-6 h-6 rounded-full bg-surface/90 text-content-subtle hover:text-negative text-xs"
@@ -134,10 +139,10 @@
             </section>
 
             @* ---- Documents: the inspector's site report and anything else that isn't a photo. ---- *@
-            <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+            <section class="panel p-5 mb-5">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Documents</h3>
-                    <label class="text-xs text-accent hover:underline cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
+                    <label class="text-xs text-accent hover:underline cursor-pointer @(busy ?"opacity-50 pointer-events-none" : "")">
                         + Add files
                         <InputFile OnChange="e => UploadAsync(inspection, e, kind: null)" multiple class="hidden" />
                     </label>
@@ -154,12 +159,12 @@
                     <ul class="space-y-2">
                         @foreach (var file in Documents)
                         {
-                            <li class="rounded-lg border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                            <li class="rounded border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
                                 <div class="min-w-0">
                                     <a class="text-sm font-medium text-content hover:underline"
                                        href="@Attachments.FileUrl(file.BuildingControlAttachmentId)" download>@file.DisplayName</a>
                                     <span class="text-xs text-content-subtle ml-2">@file.Kind.Label() · @FormatSize(file.FileSizeBytes)</span>
-                                    <span class="text-xs text-content-subtle ml-2">· @SourceLabel(file.Source) @file.AddedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                                    <span class="text-xs text-content-subtle ml-2">· @SourceLabel(file.Source) @DateText(file.AddedAt)</span>
                                 </div>
                                 <button type="button" class="text-xs text-content-muted hover:text-negative" disabled="@busy"
                                         @onclick="() => RemoveFileAsync(file.BuildingControlAttachmentId)">Remove</button>
@@ -170,13 +175,13 @@
             </section>
 
             @* ---- Correspondence, read live by the JPMS/BCI-#### tag. ---- *@
-            <section class="rounded-xl border border-line bg-surface p-5">
+            <section class="panel p-5">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Correspondence</h3>
                     <div class="flex items-center gap-3">
                         @if (emails is not null && Emails.Count > 0)
                         {
-                            <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@Emails.Count</span>
+                            <Pill Tone="Tone.Info">@Emails.Count</Pill>
                         }
                         <EmailFinder Type="RecordType.BuildingControlInspection" RecordId="@inspection.BuildingControlInspectionId"
                                      RecordReference="@inspection.Reference" ExcludeTag="@OwnTag" OnLinked="ReloadEmailsAsync" />
@@ -185,7 +190,7 @@
                 <LoadGate IsLoading="@(emails is null && !emailsFailed)" Prominent="true" Label="Loading correspondence">
                 @if (sentNote is not null)
                 {
-                    <div class="rounded-lg border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
+                    <div class="rounded border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
                         <p class="text-sm text-content">@sentNote</p>
                         <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss" @onclick="() => sentNote = null">✕</button>
                     </div>
@@ -238,5 +243,5 @@
             </section>
         }
     </ProjectPageShell>
-</ApprovedSessionGate>
+</Page>
 

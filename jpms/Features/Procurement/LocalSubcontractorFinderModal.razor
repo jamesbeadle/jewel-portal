@@ -35,7 +35,7 @@
     }
     else if (notReadyReason is not null)
     {
-        <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800 mb-3">@notReadyReason</p>
+        <Notice Tone="Tone.Warning" Class="mb-3">@notReadyReason</Notice>
     }
     else
     {
@@ -60,7 +60,7 @@
 
     @if (searchError is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@searchError</p>
+        <Notice Tone="Tone.Negative" Class="mb-3">@searchError</Notice>
     }
 
     @if (results.Count > 0)
@@ -68,7 +68,7 @@
         <div class="space-y-1 max-h-96 overflow-y-auto">
             @foreach (var place in results)
             {
-                <label class="flex items-start gap-2.5 rounded-lg border border-line bg-surface px-3 py-2.5 cursor-pointer hover:border-line-strong">
+                <label class="flex items-start gap-2.5 rounded border border-line bg-surface px-3 py-2.5 cursor-pointer hover:border-line-strong">
                     <input type="checkbox" class="mt-1" checked="@selection.ContainsKey(place.PlaceId)"
                            @onchange="e => TogglePlace(place, e)" />
                     <span class="min-w-0">
@@ -76,7 +76,7 @@
                             <span class="text-sm font-medium text-content">@place.Name</span>
                             @if (place.ExistingSubcontractorId is not null)
                             {
-                                <span class="inline-flex items-center rounded-full bg-accent/10 border border-accent/30 px-1.5 py-0.5 text-[10px] font-medium text-accent">Already in directory</span>
+                                <Pill Tone="Tone.Info">Already in directory</Pill>
                             }
                             @if (place.Rating is not null)
                             {
@@ -109,6 +109,6 @@
     }
     else if (hasSearched && !searchBusy && searchError is null)
     {
-        <p class="text-sm text-content-subtle italic">No companies with a findable email address for that trade near the project. Try a broader trade name.</p>
+        <EmptyState Message="No companies with a findable email address for that trade near the project. Try a broader trade name." />
     }
 </Modal>

@@ -20,18 +20,7 @@
     an RFI's Variation panel, a variation's Originating request panel, and the RecordTabBar.
 *@
 
-@if (!isLoaded)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
         <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
             <div>
@@ -66,7 +55,7 @@ else
         @* ---- Document-type explainer — follows the active tab ---------------------------------
            Each type says what it is; red is reserved for what can genuinely hurt: unanswered
            RFIs (programme impact). *@
-        <div class="rounded-xl border border-line bg-surface px-4 py-3 mb-4">
+        <div class="panel px-4 py-3 mb-4">
             <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1.5">
                 <p class="eyebrow">Document type</p>
                 <span class="text-xs text-content-subtle">·</span>
@@ -93,7 +82,7 @@ else
                     project needs. An RFI carries an issue date and a contractual response-due date, and its
                     official document can be drafted to the projects mailbox from here.
                 </p>
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-2">
+                <Notice Tone="Tone.Negative" Class="mt-2">
                     While an RFI is unanswered the project may be waiting on information — that wait can have a
                     material impact on the programme.
                     @if (OverdueRfiCount > 0)
@@ -101,7 +90,7 @@ else
                         <span class="font-semibold">@OverdueRfiCount RFI@(OverdueRfiCount == 1 ? " is" : "s are") past
                         @(OverdueRfiCount == 1 ? "its" : "their") response-due date — chase before the programme slips.</span>
                     }
-                </p>
+                </Notice>
             }
         </div>
 
@@ -122,9 +111,7 @@ else
                follow the search, so a match sitting under Closed announces itself rather than
                reading as "nothing found". *@
             <div class="relative ml-auto w-full sm:w-80">
-                <input type="search" placeholder="@SearchPlaceholder"
-                       class="bg-surface border border-line rounded-lg pl-3 pr-8 py-1.5 text-sm text-content placeholder:text-content-subtle w-full focus:outline-none focus:border-accent"
-                       value="@search" @oninput="OnSearchInput" />
+                <SearchInput Value="@search" ValueChanged="OnSearchInput" Placeholder="@SearchPlaceholder" />
                 @if (Searching)
                 {
                     <button type="button" title="Clear search"
@@ -151,7 +138,7 @@ else
 
         @if (CanDraftEmail && SelectedRfis.Count > 0)
         {
-            <div class="rounded-xl border border-line bg-surface px-4 py-3 mb-4">
+            <div class="panel px-4 py-3 mb-4">
                 <div class="flex flex-wrap items-center gap-3">
                     <span class="text-sm font-medium text-content">@SelectedRfis.Count RFI@(SelectedRfis.Count == 1 ? "" : "s") selected</span>
                     <button type="button" class="btn-primary" disabled="@preparingDrafts" @onclick="PrepareSelectedDrafts">
@@ -165,7 +152,7 @@ else
 
         @if (CanMerge && SelectedGenerals.Count > 0)
         {
-            <div class="rounded-xl border border-line bg-surface px-4 py-3 mb-4">
+            <div class="panel px-4 py-3 mb-4">
                 @if (SelectedGenerals.Count == 2)
                 {
                     <div class="flex flex-wrap items-center gap-3">
@@ -195,21 +182,21 @@ else
 
         @if (mergeError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@mergeError</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@mergeError</Notice>
         }
         @if (mergeResult is not null)
         {
-            <p class="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-emerald-600 mb-4">@mergeResult</p>
+            <p class="rounded border border-line bg-surface px-3 py-2 text-sm text-positive mb-4">@mergeResult</p>
         }
 
         @if (draftBatchError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@draftBatchError</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@draftBatchError</Notice>
         }
         @if (draftBatch is not null)
         {
-            <div class="rounded-xl border border-line bg-surface px-4 py-3 mb-4 space-y-2">
-                <p class="text-sm font-medium @(draftBatch.FailedCount == 0 ? "text-emerald-600" : "text-content")">
+            <div class="panel px-4 py-3 mb-4 space-y-2">
+                <p class="text-sm font-medium @(draftBatch.FailedCount == 0 ?"text-positive" : "text-content")">
                     @draftBatch.PreparedCount of @draftBatch.Outcomes.Count draft@(draftBatch.Outcomes.Count == 1 ? "" : "s") created in the projects mailbox.
                     @if (draftBatch.FailedCount > 0)
                     {
@@ -223,7 +210,7 @@ else
                             <span class="font-mono text-xs text-content-muted">@LabelFor(outcome)</span>
                             @if (outcome.Succeeded)
                             {
-                                <span class="text-emerald-600">Draft created</span>
+                                <span class="text-positive">Draft created</span>
                                 <span class="text-xs text-content-subtle">To: @string.Join(", ", outcome.Draft!.Recipients)</span>
                                 @if (!string.IsNullOrWhiteSpace(outcome.Draft.WebLink))
                                 {
@@ -253,7 +240,7 @@ else
         {
             @if (statusError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@statusError</p>
+                <Notice Tone="Tone.Negative" Class="mb-3">@statusError</Notice>
             }
             <div class="mb-6">
                 <RequestTable Records="FilteredRecords" ProjectId="@ProjectId"
@@ -275,5 +262,5 @@ else
                         IsOpen="raiseDialogOpen"
                         OnClose="CloseRaiseDialog"
                         OnRaised="OnRaised" />
-}
+</Page>
 

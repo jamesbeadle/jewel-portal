@@ -8,11 +8,11 @@
 <div class="space-y-4">
     @if (Error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@Error</p>
+        <Notice Tone="Tone.Negative">@Error</Notice>
     }
 
     <div class="space-y-2">
-        <div class="flex items-center gap-2 text-xs uppercase tracking-wider text-content-subtle font-semibold">
+        <div class="flex items-center gap-2 eyebrow">
             <span class="w-56">Project</span>
             <span class="grow">Cost centre</span>
             <span class="w-32 text-right">Net £</span>
@@ -27,12 +27,12 @@
                 <SearchSelect Options="@CostCenterOptions" WidthClass="grow min-w-0"
                               Value="@row.Code"
                               ValueChanged="value => row.Code = value ?? string.Empty" />
-                <input class="w-32 bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm text-right"
+                <input class="field w-32 text-right"
                        type="number" step="0.01" min="0" placeholder="0.00"
                        value="@(row.Amount?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))"
                        @onchange="e => SetAmount(row, e.Value?.ToString())" />
                 <button type="button" aria-label="Remove row" disabled="@(Rows.Count <= 2)"
-                        class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-40"
+                        class="inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-40"
                         @onclick="() => { if (Rows.Count > 2) Rows.Remove(row); }">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                          stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -45,7 +45,7 @@
                 @onclick="() => Rows.Add(new XeroSplitDraft { ProjectId = Rows.LastOrDefault()?.ProjectId ?? string.Empty })">+ Add row</button>
     </div>
 
-    <p class="text-sm @(Remaining == 0m ? "text-content-muted" : "text-negative")">
+    <p class="text-sm @(Remaining == 0m ?"text-content-muted" : "text-negative")">
         @Money(Assigned) of @Money(Net) assigned
         @(Remaining == 0m ? "— fully assigned." : $"— {Money(Remaining)} remaining.")
     </p>

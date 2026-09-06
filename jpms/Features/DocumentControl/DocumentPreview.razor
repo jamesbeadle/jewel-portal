@@ -9,13 +9,13 @@
 }
 else if (IsImage(Item))
 {
-    <div class="rounded-xl border border-line bg-surface overflow-hidden">
+    <div class="panel overflow-hidden">
         <img src="@InlineUrl" alt="@Item.FileName" class="max-h-[50vh] w-auto mx-auto" />
     </div>
 }
 else if (IsZip(Item) && Item.Status == DocumentControlStatus.Pending)
 {
-    <div class="rounded-xl border border-line bg-surface-raised p-4 space-y-2">
+    <div class="panel-raised p-4 space-y-2">
         <p class="text-sm text-content">
             This is a zip archive. Extract it to split its contents into separate
             queue items — each file can then be previewed and filed on its own.

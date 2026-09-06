@@ -131,16 +131,16 @@ public partial class ProjectCommunications
 
     private string BucketTabClass(string? bucket) =>
         bucketFilter == bucket
-            ? "btn-primary text-xs px-2.5 py-1.5"
-            : "btn-secondary text-xs px-2.5 py-1.5";
+            ? "chip chip-active"
+            : "chip";
 
     private Task LoadMoreAsync() => LoadAsync(reset: false);
 
     // ---- Search ------------------------------------------------------------------------------
 
-    private void OnSearchInput(ChangeEventArgs e)
+    private void OnSearchInput(string value)
     {
-        searchText = e.Value?.ToString() ?? "";
+        searchText = value;
         var query = searchText.Trim();
         if (query == searchPending) return;
         searchPending = query;
@@ -325,17 +325,6 @@ public partial class ProjectCommunications
         : bucket.StartsWith("JPMS/", StringComparison.OrdinalIgnoreCase) ? bucket["JPMS/".Length..]
         : bucket;
 
-    private static string BucketChipClass(string pathway)
-    {
-        const string baseClass = "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 ";
-        return pathway switch
-        {
-            "Client"        => baseClass + "bg-accent/10 text-accent",
-            "Subcontractor" => baseClass + "bg-positive/10 text-positive",
-            "Supplier"      => baseClass + "bg-sky-500/10 text-sky-600",
-            _               => baseClass + "bg-surface-raised border border-line text-content-muted"
-        };
-    }
 
     // Chip label per record type — singular, canonical UI terms.
     private static string TypeLabel(RecordType type) => type switch

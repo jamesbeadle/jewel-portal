@@ -16,14 +16,14 @@
 <div class="space-y-4">
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        <Notice Tone="Tone.Negative">@error</Notice>
     }
 
     @if (LockToRfi)
     {
         @* General requests are sunset (2026-08-14): hosts that lock the form to RFI never offer
            the kind toggle — the manual entry is an official RFI, full stop. *@
-        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+        <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
             Raised as an official <span class="font-medium text-content">RFI</span> — takes the project's
             next RFI number automatically; edit the reference only to back-fill a legacy RFI.
         </p>
@@ -31,7 +31,7 @@
     else
     {
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Raise as</label>
+            <label class="block text-sm font-medium text-content mb-1">Raise as</label>
             <div class="flex gap-2">
                 <button type="button"
                         class="@KindButtonClass(RequestType.General)"
@@ -40,7 +40,7 @@
                         class="@KindButtonClass(RequestType.Rfi)"
                         @onclick="() => SetKind(RequestType.Rfi)">Official RFI</button>
             </div>
-            <p class="mt-2 rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+            <p class="mt-2 rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
                 @if (kind == RequestType.General)
                 {
                     <text>Auto-numbered REQ-####. Promote it to an official RFI from the request once it's created.</text>
@@ -61,9 +61,10 @@
     <FormField Label="Subject" Value="@title" OnChange="v => title = v" Required="true" />
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+        <FormField Label="Detail">
         <textarea class="field" rows="4" value="@description" @oninput="OnDescriptionInput"
                   placeholder="Describe the information being requested…"></textarea>
+        </FormField>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -81,12 +82,12 @@
            the request has no id until it is raised, so nothing can be attached before then. *@
         <div class="pt-1 border-t border-line">
             <div class="flex items-center justify-between gap-3 mt-3">
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold">Attachments</label>
+                <label class="block eyebrow">Attachments</label>
                 <div class="flex items-center gap-2">
                     <button type="button" class="btn-secondary text-xs" disabled="@Busy" @onclick="OpenDrawingPicker">
                         Attach drawings@(selectedRevisions.Count > 0 ? $" ({selectedRevisions.Count})" : "")
                     </button>
-                    <label class="btn-secondary text-xs cursor-pointer @(Busy ? "opacity-50 pointer-events-none" : "")">
+                    <label class="btn-secondary text-xs cursor-pointer @(Busy ?"opacity-50 pointer-events-none" : "")">
                         Attach images@(pendingFiles.Count > 0 ? $" ({pendingFiles.Count})" : "")
                         @* Deliberately no `capture`: forcing the camera on mobile removes the photo
                            library, and site photos are as often taken earlier as taken now. *@
@@ -131,20 +132,22 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField Label="Date issued" Value="@raisedAt" OnChange="v => raisedAt = v" InputType="date" />
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Status</label>
+                    <FormField Label="Status">
                     <select class="field" value="@((int)status)" @onchange="OnStatusChanged">
                         @foreach (var option in StatusOptions)
                         {
                             <option value="@((int)option)">@option.DisplayName()</option>
                         }
                     </select>
+                    </FormField>
                 </div>
             </div>
             <FormField Label="Response date" Value="@respondedAt" OnChange="v => respondedAt = v" InputType="date" />
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Response</label>
+                <FormField Label="Response">
                 <textarea class="field" rows="3" value="@responseText" @oninput="OnResponseTextInput"
                           placeholder="The answer received, if already closed…"></textarea>
+                </FormField>
             </div>
         </div>
     }

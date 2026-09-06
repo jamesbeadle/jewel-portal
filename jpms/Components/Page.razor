@@ -1,0 +1,40 @@
+@namespace Jewel.JPMS.Components
+
+@*
+    THE page shell. Every routed view except the landing page is a <Page>: the signed-in +
+    approved gate (ApprovedSessionGate), then the one content gutter — 32px at desktop, the
+    Figma's content inset — so no page types its own <section class="px-… py-…"> again.
+
+    CanAccess is the page's own role check (CanManage, IsFinance…): false renders the quiet
+    "you don't have access" line inside the gutter instead of the page. MaxWidth is the
+    narrow-form case ("max-w-2xl"); Class is for anything else about the container.
+*@
+
+<ApprovedSessionGate>
+    @if (!CanAccess)
+    {
+        <section class="px-4 md:px-8 py-6 text-sm text-content-subtle">@AccessDeniedMessage</section>
+    }
+    else if (Bare)
+    {
+        @ChildContent
+    }
+    else
+    {
+        <section class="px-4 md:px-8 py-6 @MaxWidth @Class">
+            @ChildContent
+        </section>
+    }
+</ApprovedSessionGate>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    /// <summary>The page's own role/permission check. False shows AccessDeniedMessage in place of the page.</summary>
+    [Parameter] public bool CanAccess { get; set; } = true;
+    [Parameter] public string AccessDeniedMessage { get; set; } = "You don't have access to this page.";
+    /// <summary>A max-width class for narrow pages (forms, settings) — e.g. "max-w-2xl".</summary>
+    [Parameter] public string MaxWidth { get; set; } = "";
+    [Parameter] public string Class { get; set; } = "";
+    /// <summary>No gutter at all — for a full-bleed workspace (the Control Centre) that lays itself out edge to edge.</summary>
+    [Parameter] public bool Bare { get; set; }
+}

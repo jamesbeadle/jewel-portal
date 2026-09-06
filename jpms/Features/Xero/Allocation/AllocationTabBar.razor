@@ -4,7 +4,7 @@
    suggested by its Xero tracking — sits in that project's tab, so people working a specific
    project approve just their own costs. Dropdown picks alone don't move rows; Set/Allocate
    do. "Unallocated" keeps only the lines nothing points at a project yet. *@
-<div class="inline-flex flex-wrap rounded-lg border border-line overflow-hidden">
+<div class="inline-flex flex-wrap rounded border border-line overflow-hidden">
     <button class="@StatusClass(XeroAllocationStatus.Unallocated)" @onclick="() => OnSwitchStatus.InvokeAsync(XeroAllocationStatus.Unallocated)">
         Unallocated (@UnassignedCount)
     </button>
@@ -71,6 +71,5 @@
         TabCss(Active == XeroAllocationStatus.Unallocated && LabourTab);
 
     private static string TabCss(bool active) =>
-        (active ? "bg-content text-surface" : "bg-surface text-content-muted hover:text-content")
-        + " text-sm font-medium px-4 py-1.5 transition-colors";
+        (active ? "chip chip-active" : "chip");
 }

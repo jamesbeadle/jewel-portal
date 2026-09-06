@@ -10,7 +10,6 @@ public partial class CostCodes
 
     // Session checked and the user signed in. This is NOT "the data is here" — keeping the two
     // apart is what lets the page show its chrome at once and hold the table until the list lands.
-    private bool sessionReady;
     private bool busy;
     private string? loadError;
     private string? formError;
@@ -66,7 +65,6 @@ public partial class CostCodes
         CostCenters.OnChange += StateHasChanged;
         XeroTracking.OnChange += StateHasChanged;
         Projects.OnChanged += StateHasChanged;
-        sessionReady = true;
         // Paint the chrome before the fetch: Blazor re-renders OnInitializedAsync only at its
         // FIRST await, which has already passed, so without this the page waits on the list.
         StateHasChanged();
@@ -86,8 +84,7 @@ public partial class CostCodes
     }
 
     private static string TabCss(bool active) =>
-        (active ? "bg-content text-surface" : "bg-surface text-content-muted hover:text-content")
-        + " text-sm font-medium px-4 py-1.5 transition-colors";
+        (active ? "chip chip-active" : "chip");
 
     private void EnsureProjectsRequested()
     {

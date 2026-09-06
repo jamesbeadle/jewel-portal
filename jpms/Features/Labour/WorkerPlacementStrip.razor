@@ -22,7 +22,7 @@
         }
         else if (sheet is not null)
         {
-            <span class="inline-block w-3 h-3 @shape @(sheet.Status == TimesheetStatus.Rejected ? "ring-1 ring-negative" : "")"
+            <span class="inline-block w-3 h-3 @shape @(sheet.Status == TimesheetStatus.Rejected ?"ring-1 ring-negative" : "")"
                   title="@($"{date:ddd dd MMM} — {sheet.ProjectName}, {sheet.Hours:0.#} h ({StatusLabel(sheet.Status!.Value)})")"
                   style="background:@ColourOf(sheet.ProjectId)"></span>
         }

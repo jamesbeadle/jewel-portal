@@ -1,7 +1,7 @@
 @namespace Jewel.JPMS.Features.Triage.Queue
 
 <header>
-    <p class="text-xs uppercase tracking-wider text-content-subtle font-medium">JPMS · projects@@jewelbb.co.uk</p>
+    <p class="eyebrow">JPMS · projects@@jewelbb.co.uk</p>
     @* Each strapline is a count, not a description, so it waits for its own list — it
        simply does not render until the count is known (see the loading-states notes). *@
     @if (Strapline is { } strapline)
@@ -19,7 +19,7 @@
 
 @if (LoadError is not null)
 {
-    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@LoadError</p>
+    <Notice Tone="Tone.Negative">@LoadError</Notice>
 }
 
 @code {
@@ -41,9 +41,8 @@
 
     private string TabClass(QueueView tab)
     {
-        var baseClass = "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition";
         return View == tab
-            ? $"{baseClass} border-accent text-content"
-            : $"{baseClass} border-transparent text-content-muted hover:text-content";
+            ? "tab tab-active"
+            : "tab";
     }
 }

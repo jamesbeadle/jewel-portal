@@ -50,7 +50,7 @@
                     (@Auth.CurrentUser?.Email).
                 </p>
 
-                <div class="rounded-lg bg-surface-raised border border-line px-4 py-3 text-xs text-content-subtle leading-relaxed mb-5">
+                <div class="rounded bg-surface-raised border border-line px-4 py-3 text-xs text-content-subtle leading-relaxed mb-5">
                     It will be able to read what you can see in the portal and take the small set of
                     actions the connector allows (posting request messages, managing to-dos, saving
                     AI skills) — always as you, with every call recorded in the activity log. You can
@@ -59,7 +59,7 @@
 
                 @if (approveError is not null)
                 {
-                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@approveError</p>
+                    <Notice Tone="Tone.Negative" Class="mb-3">@approveError</Notice>
                 }
 
                 <div class="flex gap-3">

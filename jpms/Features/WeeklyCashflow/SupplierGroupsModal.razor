@@ -20,7 +20,7 @@
             </p>
             @if (Plan.Current is { SupplierGroups.Count: > 0 } plan)
             {
-                <ul class="divide-y divide-line rounded-lg border border-line">
+                <ul class="divide-y divide-line rounded border border-line">
                     @foreach (var group in plan.SupplierGroups)
                     {
                         <li class="flex items-center gap-3 px-3 py-2">
@@ -35,7 +35,7 @@
             }
             else
             {
-                <p class="text-sm text-content-faint">No groups yet.</p>
+                <EmptyState Message="No groups yet." />
             }
         </div>
     }
@@ -44,11 +44,12 @@
         <div class="space-y-4">
             <FormField Label="Group name" Value="@formName" OnChange="value => formName = value" Required="true" />
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Suppliers in this group *</label>
+                <FormField Label="Suppliers in this group" Required>
                 <input type="text" placeholder="Filter suppliers…" value="@memberFilter"
                        @oninput="args => memberFilter = (string)args.Value!"
-                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content mb-2" />
-                <div class="max-h-64 overflow-y-auto rounded-lg border border-line divide-y divide-line/50">
+                       class="field mb-2" />
+                </FormField>
+                <div class="max-h-64 overflow-y-auto rounded border border-line divide-y divide-line/50">
                     @foreach (var supplierName in SupplierNameChoices())
                     {
                         if (memberFilter.Trim() is { Length: > 0 } filter
@@ -58,18 +59,18 @@
                         }
                         var holder = GroupHolding(supplierName);
                         var name = supplierName;
-                        <label class="flex items-center gap-2 px-3 py-1.5 text-sm @(holder is null ? "text-content cursor-pointer hover:bg-surface-raised" : "text-content-faint")">
+                        <label class="flex items-center gap-2 px-3 py-1.5 text-sm @(holder is null ?"text-content cursor-pointer hover:bg-surface-raised" : "text-content-faint")">
                             <input type="checkbox" checked="@formMembers.Contains(name)" disabled="@(holder is not null)"
                                    @onchange="() => ToggleMember(name)" />
                             <span class="min-w-0 flex-1 truncate">@name</span>
                             @if (holder is not null)
                             {
-                                <span class="text-[11px] text-content-faint whitespace-nowrap">in @holder</span>
+                                <span class="text-xs text-content-faint whitespace-nowrap">in @holder</span>
                             }
                         </label>
                     }
                 </div>
-                <p class="text-[11px] text-content-faint mt-1">
+                <p class="text-xs text-content-faint mt-1">
                     Every supplier with an outstanding bill, plus this group's members. A supplier lives in one group at a time.
                 </p>
             </div>

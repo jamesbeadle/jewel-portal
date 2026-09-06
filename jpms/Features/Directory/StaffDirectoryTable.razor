@@ -8,39 +8,37 @@
 else if (Staff.Count == 0)
 {
     <LoadGate IsLoading="@(!Loaded)" Label="Loading">
-        <p class="text-sm text-content-subtle italic">No internal staff recorded.</p>
+        <EmptyState Message="No internal staff recorded." />
     </LoadGate>
 }
 else
 {
-    <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="text-left text-content-subtle border-b border-line">
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Name</th>
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Email</th>
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Roles</th>
+    <RecordsTable>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Roles</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in Staff)
+            {
+                <tr>
+                    <td class="font-medium text-content">@user.DisplayName</td>
+                    <td>@user.Email</td>
+                    <td>
+                        <span class="flex flex-wrap gap-1">
+                            @foreach (var role in user.Roles)
+                            {
+                                <RoleBadge Role="role" />
+                            }
+                        </span>
+                    </td>
                 </tr>
-            </thead>
-            <tbody>
-                @foreach (var user in Staff)
-                {
-                    <tr class="border-b border-line last:border-0">
-                        <td class="px-4 py-3 font-medium text-content">@user.DisplayName</td>
-                        <td class="px-4 py-3 text-content-muted">@user.Email</td>
-                        <td class="px-4 py-3">
-                            <span class="flex flex-wrap gap-1">
-                                @foreach (var role in user.Roles)
-                                {
-                                    <RoleBadge Role="role" />
-                                }
-                            </span>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+            }
+        </tbody>
+    </RecordsTable>
 }
 
 @code {

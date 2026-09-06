@@ -11,42 +11,47 @@
 <div class="panel p-5">
     <h2 class="text-base font-semibold text-content mb-4">New email</h2>
     <div class="space-y-3">
-    <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+    <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
         Sends from the <span class="font-medium text-content">projects mailbox</span>. Optionally file it to a record so the sent copy shows in that record's correspondence — replies will arrive in the queue either way.
     </p>
 
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        <Notice Tone="Tone.Negative">@error</Notice>
     }
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
+        <FormField Label="To" Required>
         <RecipientInput Value="@toField" ValueChanged="value => toField = value" />
+        </FormField>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
+            <FormField Label="Cc">
             <RecipientInput Value="@ccField" ValueChanged="value => ccField = value" Placeholder="Copied recipients" />
+            </FormField>
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
+            <FormField Label="Bcc">
             <RecipientInput Value="@bccField" ValueChanged="value => bccField = value" Placeholder="Blind-copied recipients" />
+            </FormField>
         </div>
     </div>
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
+        <FormField Label="Subject" Required>
         <input class="field" type="text" value="@subject" @oninput="e => subject = e.Value?.ToString() ?? string.Empty" />
+        </FormField>
     </div>
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Message *</label>
+        <FormField Label="Message" Required>
         <RichTextEditor @bind-Value="body" MinHeight="200" Placeholder="Write the email…" />
+        </FormField>
     </div>
 
     <AttachmentPicker Attachments="attachments" AttachmentsChanged="picked => attachments = picked"
                       Projects="ProjectOptionsFor(projectId)" ProjectId="@projectId" />
 
-    <div class="rounded-lg border border-line p-3 space-y-2">
+    <div class="rounded border border-line p-3 space-y-2">
         <label class="flex items-center gap-2 text-sm text-content">
             <input type="checkbox" checked="@fileToRecord" @onchange="OnFileToggled" />
             File this email to a record (the sent copy shows in its correspondence)

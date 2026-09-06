@@ -8,50 +8,37 @@
 
 <PageTitle>My projects · JPMS</PageTitle>
 
-@if (!sessionReady)
-{
-    <section class="px-4 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!CanAccess)
-{
-    <section class="px-4 md:px-8 py-12">
-        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+<Page>
+    @if (!CanAccess)
+    {
+        <PageHeader Title="Not available" />
         <p class="text-content-muted">This page is for client accounts.</p>
-    </section>
-}
-else if (!HasLinkedRecord)
-{
-    @* The session has the Client role but no linked account (typically an admin or internal
-       user browsing here) — say so immediately instead of firing calls that will 403. *@
-    <section class="px-4 md:px-8 py-12">
-        <h1 class="text-2xl font-semibold text-content mb-2">No account linked</h1>
-        <p class="text-content-muted">
-            This page shows a client their projects' requests for information and variation orders.
-            Your login isn't linked to a client account — clients are invited from their account on
-            the Clients page, which links their login and scopes everything here to their projects.
-        </p>
-    </section>
-}
-else
-{
-    <section class="px-4 md:px-8 py-8 md:py-12 max-w-5xl space-y-8">
-        <header>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content">Your projects</h1>
-            <p class="text-sm text-content-muted mt-1">
+    }
+    else if (!HasLinkedRecord)
+    {
+        @* The session has the Client role but no linked account (typically an admin or internal
+           user browsing here) — say so immediately instead of firing calls that will 403. *@
+        <div>
+            <PageHeader Title="No account linked" />
+            <p class="text-content-muted">
+                This page shows a client their projects' requests for information and variation orders.
+                Your login isn't linked to a client account — clients are invited from their account on
+                the Clients page, which links their login and scopes everything here to their projects.
+            </p>
+        </div>
+    }
+    else
+    {
+        <PageHeader>
+            <SubtitleContent>
                 Requests for information and variation orders on your projects. Open one to read
                 the thread and add your comments — the project team sees them straight away.
-            </p>
-        </header>
+            </SubtitleContent>
+        </PageHeader>
 
         @if (loadError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@loadError</p>
+            <Notice Tone="Tone.Negative">@loadError</Notice>
         }
 
         <div>
@@ -67,11 +54,10 @@ else
                 <ClientVariationList Orders="@(orders ?? Array.Empty<ClientPortalVariationOrder>())" />
             </LoadGate>
         </div>
-    </section>
-}
+    }
+</Page>
 
 @code {
-    private bool sessionReady;
     private string? loadError;
     private IReadOnlyList<ClientPortalRequest>? requests;
     private IReadOnlyList<ClientPortalVariationOrder>? orders;
@@ -83,7 +69,6 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         if (!Session.IsApproved || !CanAccess || !HasLinkedRecord) return;
         StateHasChanged();
         try

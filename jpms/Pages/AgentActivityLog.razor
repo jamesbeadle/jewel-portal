@@ -17,31 +17,13 @@
     should see it, mirroring the API's AiRoles.AllowedToUseAssistant.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!CanSee)
-{
-    <section class="px-6 md:px-8 py-12">
-        <p class="text-sm text-content-muted">You do not have access to the agent activity log.</p>
-    </section>
-}
-else
-{
-    <section class="px-6 py-6 md:px-8">
-        <p class="eyebrow mb-1">Assistant</p>
-        <h1 class="text-2xl font-semibold text-content mb-1">Agent activity</h1>
-        <p class="text-sm text-content-muted mb-6">
-            Every run the assistant has made, newest first. Rows marked
-            <span class="text-content">unattended</span> ran with nobody watching.
-        </p>
+<Page CanAccess="CanSee" AccessDeniedMessage="You do not have access to the agent activity log.">
+        <PageHeader>
+            <SubtitleContent>
+                Every run the assistant has made, newest first. Rows marked
+                <span class="text-content">unattended</span> ran with nobody watching.
+            </SubtitleContent>
+        </PageHeader>
 
         <div class="flex flex-wrap items-center gap-2 mb-4">
             <button type="button" @onclick="() => SetFilter(false)" class="@FilterClass(false)">All runs</button>
@@ -91,7 +73,7 @@ else
                         <tbody>
                             @foreach (var row in rows)
                             {
-                                <tr class="@(string.IsNullOrWhiteSpace(row.Route) ? "" : "is-clickable")"
+                                <tr class="@(string.IsNullOrWhiteSpace(row.Route) ?"" : "is-clickable")"
                                     @onclick="() => Open(row)">
                                     <td class="whitespace-nowrap">@row.OccurredAt.ToLocalTime().ToString("dd MMM HH:mm")</td>
                                     <td class="text-content">@row.AgentKey</td>
@@ -99,7 +81,7 @@ else
                                         <span class="block truncate max-w-[14rem]" title="@row.ActorEmail">@row.ActorEmail</span>
                                         @if (row.IsAutonomous)
                                         {
-                                            <span class="mt-0.5 inline-block rounded-md bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">unattended</span>
+                                            <span class="mt-0.5 inline-block rounded bg-surface-raised border border-line px-1.5 py-0.5 text-xs text-content-subtle">unattended</span>
                                         }
                                     </td>
                                     <td>
@@ -137,11 +119,9 @@ else
                 }
             </div>
         }
-    </section>
-}
+</Page>
 
 @code {
-    private bool sessionReady;
     private bool dataFailed;
     private bool autonomousOnly;
 
@@ -154,7 +134,6 @@ else
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
-        sessionReady = true;
         if (CanSee) await LoadAsync();
     }
 
@@ -183,8 +162,8 @@ else
 
     private string FilterClass(bool value) =>
         autonomousOnly == value
-            ? "rounded-md border border-line-strong bg-surface-raised px-3 py-1.5 text-xs font-medium text-content"
-            : "rounded-md border border-line bg-surface px-3 py-1.5 text-xs text-content-subtle hover:text-content hover:border-line-strong transition";
+            ? "chip"
+            : "chip";
 
     private void Open(AgentActivity row)
     {
@@ -203,7 +182,7 @@ else
 
     private static string OutcomeClass(AgentOutcome outcome)
     {
-        var baseClass = "inline-block rounded-md px-2 py-0.5 text-[11px] font-medium";
+        var baseClass = "inline-block rounded px-2 py-0.5 text-xs font-medium";
         return outcome switch
         {
             AgentOutcome.Ok => $"{baseClass} bg-accent/10 text-accent",

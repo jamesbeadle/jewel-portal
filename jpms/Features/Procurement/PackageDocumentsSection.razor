@@ -10,7 +10,7 @@
         @if (CanEdit)
         {
             <div class="flex items-center gap-4">
-                <label class="text-xs text-accent hover:underline cursor-pointer @(Busy ? "opacity-50 pointer-events-none" : "")">
+                <label class="text-xs text-accent hover:underline cursor-pointer @(Busy ?"opacity-50 pointer-events-none" : "")">
                     + Add files
                     <InputFile OnChange="OnFilesSelected" multiple class="hidden" />
                 </label>
@@ -25,7 +25,7 @@
         <ul class="space-y-2 mb-3">
             @foreach (var attachment in Attachments)
             {
-                <li class="rounded-lg border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                <li class="rounded border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
                     <div>
                         <a class="text-sm font-medium text-content hover:underline"
                            href="@PackageAttachments.FileUrl(BidPackageId, attachment.BidPackageAttachmentId)" download>@attachment.DisplayName</a>
@@ -45,7 +45,7 @@
         @* Only once the fetch has answered — the page's banner carries a failure. *@
         @if (Fetched)
         {
-            <div class="rounded-xl border border-dashed border-line bg-surface-raised px-4 py-5 text-sm text-content-subtle">
+            <div class="border border-dashed border-line bg-surface-raised px-4 py-5 text-sm text-content-subtle">
                 No tender documents yet. Upload files with “+ Add files”, or link documents from the
                 project's Documents section — everything here is attached to the invite email when it's
                 drafted, along with the generated pricing schedule (files too large for one email go
@@ -58,15 +58,15 @@
         <ul class="space-y-2">
             @foreach (var drawing in Drawings)
             {
-                <li class="rounded-lg border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                <li class="rounded border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
                     <div>
                         <span class="text-sm font-medium text-content">@DrawingNaming.Code(drawing)</span>
                         <span class="text-sm text-content-muted ml-2">@DrawingNaming.Name(drawing)</span>
                     </div>
                     <div class="flex items-center gap-3">
-                        <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium @(drawing.HasApprovedRevision ? "border-line bg-surface-raised text-content-muted" : "border-amber-200 bg-amber-50 text-amber-800")">
+                        <Pill Tone="@(drawing.HasApprovedRevision ? Tone.Muted : Tone.Warning)">
                             @(DrawingNaming.ApprovedRevisionText(drawing) ?? "No approved revision")
-                        </span>
+                        </Pill>
                         <a class="text-xs text-accent hover:underline" href="@($"/projects/{ProjectId}/documents/{drawing.DrawingId}")">Open</a>
                     </div>
                 </li>

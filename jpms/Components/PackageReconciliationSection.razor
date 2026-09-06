@@ -8,23 +8,22 @@
    same scope on differently-shaped lines. Whole sales lines tick in by default; a
    partial £ slice covers client lines shared between subs. Presentation only. *@
 <section class="mt-8">
-    <div class="flex items-center justify-between gap-3 mb-1 flex-wrap">
-        <h2 class="text-lg font-semibold text-content">Packages</h2>
-        <div class="flex items-center gap-2">
-            <ExportToExcelButton FileName="Reconciliation packages"
-                                 Disabled="@(rows.Count == 0)"
-                                 BuildWorkbook="BuildExportWorkbook" />
-            @if (CanManage)
-            {
-                <button type="button" class="btn-secondary text-sm"
-                        title="Raise a work order directly and package it against the valuation lines that priced its scope, in one go"
-                        @onclick="() => manualOrderOpen = true">
-                    New work order + package
-                </button>
-                <button type="button" class="btn-secondary text-sm" @onclick="OpenCreate">New package</button>
-            }
-        </div>
-    </div>
+    <SectionHeader Title="Packages">
+        <Actions>
+        <ExportToExcelButton FileName="Reconciliation packages"
+                             Disabled="@(rows.Count == 0)"
+                             BuildWorkbook="BuildExportWorkbook" />
+        @if (CanManage)
+        {
+            <button type="button" class="btn-secondary text-sm"
+                    title="Raise a work order directly and package it against the valuation lines that priced its scope, in one go"
+                    @onclick="() => manualOrderOpen = true">
+                New work order + package
+            </button>
+            <button type="button" class="btn-secondary text-sm" @onclick="OpenCreate">New package</button>
+        }
+        </Actions>
+    </SectionHeader>
     <p class="text-sm text-content-subtle mb-3">
         Match a sub's work orders — and any purchase invoices bought directly for the same scope —
         against the valuation lines that priced it, and read the true position at package level:
@@ -33,7 +32,7 @@
 
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+        <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
     }
 
     @if (loading)
@@ -42,98 +41,93 @@
     }
     else if (rows.Count == 0)
     {
-        <p class="text-sm text-content-subtle italic">
-            No packages yet. Create one to reconcile a subcontractor's orders against the sales that cover their scope.
-        </p>
+        <EmptyState Message="No packages yet. Create one to reconcile a subcontractor's orders against the sales that cover their scope." />
     }
     else
     {
-        <div class="rounded-xl border border-line bg-surface overflow-x-auto">
-            <table class="w-full text-sm border-collapse">
-                <thead class="bg-surface-raised border-b border-line">
-                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                        <th class="px-4 py-3 min-w-[180px]">Package</th>
-                        <th class="px-4 py-3 text-right whitespace-nowrap">Sales Value</th>
-                        <th class="px-4 py-3 text-right whitespace-nowrap">Claimed</th>
-                        <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line">Target Cost</th>
-                        <th class="px-4 py-3 text-right whitespace-nowrap">WO Committed</th>
-                        <th class="px-4 py-3 text-right whitespace-nowrap">Invoiced</th>
-                        <th class="px-4 py-3 text-right whitespace-nowrap">Drawdown</th>
-                        <th class="px-4 py-3 text-right whitespace-nowrap" title="Open packages: forecast buying gain — target cost less the higher of committed and invoiced. Locked packages: realised profit / loss — sales value less actual invoiced cost.">Margin / P&L</th>
-                        <th class="px-4 py-3 w-[190px]"><span class="sr-only">Actions</span></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-line">
-                    @foreach (var row in rows)
-                    {
-                        <tr>
-                            <td class="px-4 py-3 whitespace-nowrap">
-                                <span class="text-content font-medium">@row.Name</span>
-                                <span class="ml-2 text-[11px] text-content-subtle">@row.WorkOrderCount WO · @row.SalesLineCount lines@(row.CostLineCount > 0 ? $" · {row.CostLineCount} invoices" : "")</span>
-                                @if (row.IsLocked)
-                                {
-                                    <span class="ml-2 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle"
-                                          title="@($"Locked {row.LockedAt?.ToString("dd MMM yyyy")} — figures frozen; profit / loss realised against actual invoiced cost")">Locked</span>
-                                }
-                            </td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap text-content">@WholeMoney(row.SalesValue)</td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted"
-                                title="@(row.SalesValue == 0m ? "" : $"{Math.Round(row.ClaimedToDate / row.SalesValue * 100m, 1)}% of the package's sales value claimed")">
-                                @WholeMoney(row.ClaimedToDate)
-                            </td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap border-l border-line text-content">@WholeMoney(row.TargetCost)</td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap text-content">@WholeMoney(row.WoCommitted)</td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted"
-                                title="@(row.WoCommitted == 0m ? "" : $"{Math.Round(row.InvoicedToDate / row.WoCommitted * 100m, 1)}% of committed orders invoiced")">
-                                @WholeMoney(row.InvoicedToDate)
-                            </td>
+        <RecordsTable MaxHeight="">
+            <thead>
+                <tr>
+                    <th class="min-w-[180px]">Package</th>
+                    <th class="text-right whitespace-nowrap">Sales Value</th>
+                    <th class="text-right whitespace-nowrap">Claimed</th>
+                    <th class="text-right whitespace-nowrap border-l">Target Cost</th>
+                    <th class="text-right whitespace-nowrap">WO Committed</th>
+                    <th class="text-right whitespace-nowrap">Invoiced</th>
+                    <th class="text-right whitespace-nowrap">Drawdown</th>
+                    <th class="text-right whitespace-nowrap" title="Open packages: forecast buying gain — target cost less the higher of committed and invoiced. Locked packages: realised profit / loss — sales value less actual invoiced cost.">Margin / P&L</th>
+                    <th class="w-[190px]"><span class="sr-only">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in rows)
+                {
+                    <tr>
+                        <td class="whitespace-nowrap">
+                            <span class="text-content font-medium">@row.Name</span>
+                            <span class="ml-2 text-xs text-content-subtle">@row.WorkOrderCount WO · @row.SalesLineCount lines@(row.CostLineCount > 0 ? $" · {row.CostLineCount} invoices" : "")</span>
                             @if (row.IsLocked)
                             {
-                                <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted" title="Locked — profit / loss realised as sales less invoiced cost">—</td>
-                                <td class="px-4 py-3 text-right whitespace-nowrap font-medium @(row.ProfitLoss == 0m ? "text-content-muted" : row.ProfitLoss > 0m ? "text-positive" : "text-negative")">@WholeMoney(row.ProfitLoss)</td>
+                                <Pill Tone="Tone.Muted" Class="ml-2" Title="@($"Locked {row.LockedAt?.ToString("dd MMM yyyy")} — figures frozen; profit / loss realised against actual invoiced cost")">Locked</Pill>
                             }
-                            else
+                        </td>
+                        <td class="text-right whitespace-nowrap text-content">@WholeMoney(row.SalesValue)</td>
+                        <td class="text-right whitespace-nowrap"
+                            title="@(row.SalesValue == 0m ? "" : $"{Math.Round(row.ClaimedToDate / row.SalesValue * 100m, 1)}% of the package's sales value claimed")">
+                            @WholeMoney(row.ClaimedToDate)
+                        </td>
+                        <td class="text-right whitespace-nowrap border-l text-content">@WholeMoney(row.TargetCost)</td>
+                        <td class="text-right whitespace-nowrap text-content">@WholeMoney(row.WoCommitted)</td>
+                        <td class="text-right whitespace-nowrap"
+                            title="@(row.WoCommitted == 0m ? "" : $"{Math.Round(row.InvoicedToDate / row.WoCommitted * 100m, 1)}% of committed orders invoiced")">
+                            @WholeMoney(row.InvoicedToDate)
+                        </td>
+                        @if (row.IsLocked)
+                        {
+                            <td class="text-right whitespace-nowrap" title="Locked — profit / loss realised as sales less invoiced cost">—</td>
+                            <td class="text-right whitespace-nowrap font-medium @(row.ProfitLoss == 0m ?"text-content-muted" : row.ProfitLoss > 0m ? "text-positive" : "text-negative")">@WholeMoney(row.ProfitLoss)</td>
+                        }
+                        else
+                        {
+                            <td class="text-right whitespace-nowrap @(row.Drawdown < 0m ?"text-negative" : row.Drawdown == 0m ? "text-content-muted" : "text-content")">@WholeMoney(row.Drawdown)</td>
+                            <td class="text-right whitespace-nowrap @(row.Margin < 0m ?"text-negative" : "text-content")"
+                                title="Forecast buying gain — on lock, profit / loss is realised as sales value less actual invoiced cost">@WholeMoney(row.Margin)</td>
+                        }
+                        <td class="text-right whitespace-nowrap">
+                            @if (CanManage)
                             {
-                                <td class="px-4 py-3 text-right whitespace-nowrap @(row.Drawdown < 0m ? "text-negative" : row.Drawdown == 0m ? "text-content-muted" : "text-content")">@WholeMoney(row.Drawdown)</td>
-                                <td class="px-4 py-3 text-right whitespace-nowrap @(row.Margin < 0m ? "text-negative" : "text-content")"
-                                    title="Forecast buying gain — on lock, profit / loss is realised as sales value less actual invoiced cost">@WholeMoney(row.Margin)</td>
-                            }
-                            <td class="px-4 py-3 text-right whitespace-nowrap">
-                                @if (CanManage)
+                                @if (!row.IsLocked)
                                 {
-                                    @if (!row.IsLocked)
+                                    <button type="button" disabled="@busy" @onclick="() => OpenEdit(row.ReconciliationPackageId)"
+                                            class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">Edit</button>
+                                    <button type="button" disabled="@busy" @onclick="() => SetLockAsync(row, true)"
+                                            title="Lock — no more buying expected: figures freeze and sales value less actual invoiced cost is banked as profit / loss"
+                                            class="ml-2 text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">Lock</button>
+                                    @if (pendingDeleteId == row.ReconciliationPackageId)
                                     {
-                                        <button type="button" disabled="@busy" @onclick="() => OpenEdit(row.ReconciliationPackageId)"
-                                                class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">Edit</button>
-                                        <button type="button" disabled="@busy" @onclick="() => SetLockAsync(row, true)"
-                                                title="Lock — no more buying expected: figures freeze and sales value less actual invoiced cost is banked as profit / loss"
-                                                class="ml-2 text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">Lock</button>
-                                        @if (pendingDeleteId == row.ReconciliationPackageId)
-                                        {
-                                            <button type="button" disabled="@busy" @onclick="() => RemoveAsync(row)"
-                                                    class="ml-2 text-xs font-medium text-negative underline underline-offset-4">Confirm</button>
-                                            <button type="button" disabled="@busy" @onclick="() => pendingDeleteId = null"
-                                                    class="ml-1.5 text-xs text-content-subtle hover:text-content underline underline-offset-4">Keep</button>
-                                        }
-                                        else
-                                        {
-                                            <button type="button" disabled="@busy" @onclick="() => pendingDeleteId = row.ReconciliationPackageId"
-                                                    class="ml-2 text-xs font-medium text-content-subtle hover:text-negative underline underline-offset-4">Dissolve</button>
-                                        }
+                                        <button type="button" disabled="@busy" @onclick="() => RemoveAsync(row)"
+                                                class="ml-2 text-xs font-medium text-negative underline underline-offset-4">Confirm</button>
+                                        <button type="button" disabled="@busy" @onclick="() => pendingDeleteId = null"
+                                                class="ml-1.5 text-xs text-content-subtle hover:text-content underline underline-offset-4">Keep</button>
                                     }
                                     else
                                     {
-                                        <button type="button" disabled="@busy" @onclick="() => SetLockAsync(row, false)"
-                                                title="Unlock — the snapshot clears and the figures go live again"
-                                                class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">Unlock</button>
+                                        <button type="button" disabled="@busy" @onclick="() => pendingDeleteId = row.ReconciliationPackageId"
+                                                class="ml-2 text-xs font-medium text-content-subtle hover:text-negative underline underline-offset-4">Dissolve</button>
                                     }
                                 }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                                else
+                                {
+                                    <button type="button" disabled="@busy" @onclick="() => SetLockAsync(row, false)"
+                                            title="Unlock — the snapshot clears and the figures go live again"
+                                            class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4">Unlock</button>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </RecordsTable>
     }
 
     @* What's not yet reconciled — nothing falls through the cracks. *@
@@ -147,8 +141,8 @@
         @if (showUnallocated)
         {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                <div class="rounded-lg border border-line bg-surface p-3">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1.5">Work orders in no package</p>
+                <div class="rounded border border-line bg-surface p-3">
+                    <p class="eyebrow mb-1.5">Work orders in no package</p>
                     @if (UnpackagedOrders.Count == 0)
                     {
                         <p class="text-sm text-content-subtle italic">Every work order is packaged.</p>
@@ -158,14 +152,14 @@
                         @foreach (var detail in UnpackagedOrders)
                         {
                             <p class="text-sm text-content-muted">
-                                <span class="font-mono text-[11px] text-content-subtle">@($"WO-{detail.Order.Number:0000}")</span>
+                                <span class="font-mono text-xs text-content-subtle">@($"WO-{detail.Order.Number:0000}")</span>
                                 @detail.SubcontractorName · @WholeMoney(detail.Lines.Sum(line => line.LineTotal))
                             </p>
                         }
                     }
                 </div>
-                <div class="rounded-lg border border-line bg-surface p-3">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1.5">Sales value not yet in a package</p>
+                <div class="rounded border border-line bg-surface p-3">
+                    <p class="eyebrow mb-1.5">Sales value not yet in a package</p>
                     @if (LinesWithRemaining.Count == 0)
                     {
                         <p class="text-sm text-content-subtle italic">Every sales line is fully assigned.</p>
@@ -175,7 +169,7 @@
                         @foreach (var entry in LinesWithRemaining.Take(30))
                         {
                             <p class="text-sm text-content-muted" title="@entry.Line.Description">
-                                <span class="font-mono text-[11px] text-content-subtle">@entry.Line.CostCode</span>
+                                <span class="font-mono text-xs text-content-subtle">@entry.Line.CostCode</span>
                                 @Truncate(entry.Line.Description, 44) · @WholeMoney(entry.Remaining) remaining
                             </p>
                         }

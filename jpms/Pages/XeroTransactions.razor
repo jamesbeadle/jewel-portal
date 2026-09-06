@@ -7,17 +7,13 @@
 
 <PageTitle>Transactions · Xero · JPMS</PageTitle>
 
-<ApprovedSessionGate>
-    <section class="px-6 md:px-8 py-8 md:py-12">
-        <WorkspaceSectionNav />
-        <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
-            <div>
-                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Financials · Xero</p>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Transactions</h1>
-                <p class="text-sm text-content-muted mt-2">
-                    Purchase invoices read live from Xero since @FromDateText — with each line's site and cost code, ready for reconciliation.
-                </p>
-            </div>
+<Page>
+    <WorkspaceSectionNav />
+    <PageHeader>
+        <SubtitleContent>
+            Purchase invoices read live from Xero since @FromDateText — with each line's site and cost code, ready for reconciliation.
+        </SubtitleContent>
+        <Actions>
             <Toolbar>
                 <ExportToExcelButton FileName="Xero transactions"
                                      Disabled="@(VisibleTransactions.Count == 0 && Breakdown.Count == 0)"
@@ -28,223 +24,219 @@
                 <ToolbarButton Icon="refresh" Label="Refresh from Xero"
                                Busy="@isRefreshing" OnClick="ForceRefreshAsync" />
             </Toolbar>
-        </header>
+        </Actions>
+    </PageHeader>
 
-        @* Both views — the transaction list and the site × cost code pivot — are computed off the
-           one snapshot, so the whole body waits on it together. A multi-year read is slow enough
-           that a row count or a total shown early would be believed. *@
-        @if (Snapshot is null)
+    @* Both views — the transaction list and the site × cost code pivot — are computed off the
+       one snapshot, so the whole body waits on it together. A multi-year read is slow enough
+       that a row count or a total shown early would be believed. *@
+    @if (Snapshot is null)
+    {
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading transactions from Xero" />
+    }
+    else if (!Snapshot.IsConfigured)
+    {
+        <div class="panel-raised px-5 py-4 text-sm text-content-muted">
+            Xero isn't connected yet. Add the custom connection's credentials as the
+            <span class="font-mono text-content">Xero__ClientId</span> and
+            <span class="font-mono text-content">Xero__ClientSecret</span> app settings on the API, then reload.
+        </div>
+    }
+    else if (Snapshot.Error is not null)
+    {
+        <div class="panel-raised px-5 py-4 text-sm text-content-muted">
+            <p class="text-content font-medium mb-1">Xero returned an error</p>
+            <p>@Snapshot.Error</p>
+        </div>
+    }
+    else if (VisibleTransactions.Count == 0)
+    {
+        <p class="text-sm text-content-subtle py-8">Xero returned no purchase invoices since @FromDateText.</p>
+    }
+    else
+    {
+        @if (Snapshot.Truncated)
         {
-            <LoadGate IsLoading="true" Prominent="true" Label="Loading transactions from Xero" />
-        }
-        else if (!Snapshot.IsConfigured)
-        {
-            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
-                Xero isn't connected yet. Add the custom connection's credentials as the
-                <span class="font-mono text-content">Xero__ClientId</span> and
-                <span class="font-mono text-content">Xero__ClientSecret</span> app settings on the API, then reload.
+            <div class="panel-raised px-5 py-4 text-sm text-content-muted mb-6">
+                <p class="text-content font-medium mb-1">Fetch cap reached — totals are incomplete</p>
+                <p>
+                    Xero holds more records since @FromDateText than the API's page cap allows.
+                    Raise the <span class="font-mono text-content">Xero__MaxPages</span> app setting and refresh.
+                </p>
             </div>
         }
-        else if (Snapshot.Error is not null)
-        {
-            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
-                <p class="text-content font-medium mb-1">Xero returned an error</p>
-                <p>@Snapshot.Error</p>
+
+        <div class="mb-6 flex items-center justify-between gap-4 flex-wrap">
+            <div class="inline-flex rounded border border-line overflow-hidden">
+                <button class="@TabClass(View.Transactions)" @onclick="() => activeView = View.Transactions">Transactions</button>
+                <button class="@TabClass(View.BySite)" @onclick="() => activeView = View.BySite">Site × cost code</button>
             </div>
-        }
-        else if (VisibleTransactions.Count == 0)
+            <p class="text-xs text-content-subtle">
+                @BillCount bills · @CreditNoteCount credit notes ·
+                fetched @FetchedText
+            </p>
+        </div>
+
+        @if (activeView == View.Transactions)
         {
-            <p class="text-sm text-content-subtle py-8">Xero returned no purchase invoices since @FromDateText.</p>
+            <p class="text-sm text-content-muted mb-4">
+                @Filtered.Count shown · @WholeMoney(Filtered.Sum(t => Sign(t) * t.Total)) total (net of credit notes) ·
+                @WholeMoney(Filtered.Sum(t => Sign(t) * t.AmountDue)) outstanding.
+                <span class="text-content-subtle">Click a row for its lines.</span>
+            </p>
+
+            <div class="mb-4 flex flex-wrap items-center gap-2">
+                <input class="field w-64"
+                       placeholder="Search supplier, number, reference…"
+                       value="@search" @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
+                @foreach (var status in Statuses)
+                {
+                    <button class="@ChipClassFor(status)" @onclick="() => ToggleStatus(status)">@status</button>
+                }
+            </div>
+
+            <RecordsTable Dense="true" MaxHeight="max-h-[85vh]">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Supplier</th>
+                        <th class="hidden md:table-cell">Number</th>
+                        <th>Site</th>
+                        <th class="hidden lg:table-cell">Cost code</th>
+                        <th>Status</th>
+                        <th class="text-right hidden md:table-cell">Net</th>
+                        <th class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var transaction in Filtered)
+                    {
+                        <tr class="cursor-pointer hover:bg-surface-raised" @onclick="() => ToggleExpanded(transaction.TransactionId)">
+                            <td class="whitespace-nowrap">@DateText(transaction.Date)</td>
+                            <td class="text-content font-medium">@(transaction.ContactName ?? "—")</td>
+                            <td class="hidden md:table-cell">
+                                @(transaction.Number ?? "—")
+                                @if (IsCreditNote(transaction))
+                                {
+                                    <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5">Credit note</span>
+                                }
+                            </td>
+                            <td>@DistinctText(transaction.Lines.Select(l => l.Site))</td>
+                            <td class="hidden lg:table-cell">@DistinctText(transaction.Lines.Select(l => l.CostCode))</td>
+                            <td class="text-content-subtle">@transaction.Status</td>
+                            <td class="text-right hidden md:table-cell">@WholeMoney(transaction.SubTotal)</td>
+                            <td class="text-right text-content font-medium">@WholeMoney(transaction.Total)</td>
+                        </tr>
+                        @if (expandedId == transaction.TransactionId)
+                        {
+                            <tr>
+                                <td colspan="8" class="pb-4 pt-1">
+                                    @if (transaction.Reference is not null)
+                                    {
+                                        <p class="text-xs text-content-subtle mb-2">Reference: @transaction.Reference</p>
+                                    }
+                                    @if (transaction.Lines.Count == 0)
+                                    {
+                                        <p class="text-xs text-content-subtle">Xero returned no line detail for this invoice.</p>
+                                    }
+                                    else
+                                    {
+                                        <table class="w-full text-xs">
+                                            <thead>
+                                                <tr>
+                                                    <th>Description</th>
+                                                    <th>Account</th>
+                                                    <th>Site</th>
+                                                    <th>Cost code</th>
+                                                    <th class="text-right">Net</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var line in transaction.Lines)
+                                                {
+                                                    <tr>
+                                                        <td>@(line.Description ?? "—")</td>
+                                                        <td>@AccountText(line)</td>
+                                                        <td>@(line.Site ?? "—")</td>
+                                                        <td>@(line.CostCode ?? "—")</td>
+                                                        <td class="text-right text-content">@WholeMoney(line.LineAmount)</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </RecordsTable>
         }
         else
         {
-            @if (Snapshot.Truncated)
-            {
-                <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted mb-6">
-                    <p class="text-content font-medium mb-1">Fetch cap reached — totals are incomplete</p>
-                    <p>
-                        Xero holds more records since @FromDateText than the API's page cap allows.
-                        Raise the <span class="font-mono text-content">Xero__MaxPages</span> app setting and refresh.
-                    </p>
-                </div>
-            }
-
-            <div class="mb-6 flex items-center justify-between gap-4 flex-wrap">
-                <div class="inline-flex rounded-lg border border-line overflow-hidden">
-                    <button class="@TabClass(View.Transactions)" @onclick="() => activeView = View.Transactions">Transactions</button>
-                    <button class="@TabClass(View.BySite)" @onclick="() => activeView = View.BySite">Site × cost code</button>
-                </div>
-                <p class="text-xs text-content-subtle">
-                    @BillCount bills · @CreditNoteCount credit notes ·
-                    fetched @FetchedText
-                </p>
-            </div>
-
-            @if (activeView == View.Transactions)
-            {
-                <p class="text-sm text-content-muted mb-4">
-                    @Filtered.Count shown · @WholeMoney(Filtered.Sum(t => Sign(t) * t.Total)) total (net of credit notes) ·
-                    @WholeMoney(Filtered.Sum(t => Sign(t) * t.AmountDue)) outstanding.
-                    <span class="text-content-subtle">Click a row for its lines.</span>
-                </p>
-
-                <div class="mb-4 flex flex-wrap items-center gap-2">
-                    <input class="text-sm bg-surface border border-line rounded-lg px-3 py-1.5 text-content placeholder:text-content-subtle w-64"
-                           placeholder="Search supplier, number, reference…"
-                           value="@search" @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
-                    @foreach (var status in Statuses)
+            <p class="text-sm text-content-muted mb-4">
+                Net (pre-VAT) spend by site and cost code, per calendar year — bills that are paid,
+                authorised or awaiting approval, minus credit notes (the same basis as the accountant's
+                payable invoice summary).
+                <span class="text-content-subtle">
+                    @if (AwaitingApprovalNet != 0)
                     {
-                        <button class="@ChipClassFor(status)" @onclick="() => ToggleStatus(status)">@status</button>
+                        <text>Includes @WholeMoney(AwaitingApprovalNet) awaiting approval. </text>
                     }
-                </div>
+                    @if (OtherExcludedNet != 0)
+                    {
+                        <text>Drafts: @WholeMoney(OtherExcludedNet) excluded.</text>
+                    }
+                </span>
+            </p>
 
-                <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-                    <table class="w-full text-sm">
-                        <thead class="bg-surface-raised border-b border-line">
-                            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Date</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Supplier</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden md:table-cell">Number</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Site</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Cost code</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Status</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right hidden md:table-cell">Net</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-line">
-                            @foreach (var transaction in Filtered)
-                            {
-                                <tr class="cursor-pointer hover:bg-surface-raised" @onclick="() => ToggleExpanded(transaction.TransactionId)">
-                                    <td class="px-4 py-3 text-content-muted whitespace-nowrap">@DateText(transaction.Date)</td>
-                                    <td class="px-4 py-3 text-content font-medium">@(transaction.ContactName ?? "—")</td>
-                                    <td class="px-4 py-3 text-content-muted hidden md:table-cell">
-                                        @(transaction.Number ?? "—")
-                                        @if (IsCreditNote(transaction))
-                                        {
-                                            <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5">Credit note</span>
-                                        }
-                                    </td>
-                                    <td class="px-4 py-3 text-content-muted">@DistinctText(transaction.Lines.Select(l => l.Site))</td>
-                                    <td class="px-4 py-3 text-content-muted hidden lg:table-cell">@DistinctText(transaction.Lines.Select(l => l.CostCode))</td>
-                                    <td class="px-4 py-3 text-content-subtle">@transaction.Status</td>
-                                    <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell">@WholeMoney(transaction.SubTotal)</td>
-                                    <td class="px-4 py-3 text-right text-content font-medium">@WholeMoney(transaction.Total)</td>
-                                </tr>
-                                @if (expandedId == transaction.TransactionId)
-                                {
-                                    <tr>
-                                        <td colspan="8" class="px-4 pb-4 pt-1 bg-surface-raised">
-                                            @if (transaction.Reference is not null)
-                                            {
-                                                <p class="text-xs text-content-subtle mb-2">Reference: @transaction.Reference</p>
-                                            }
-                                            @if (transaction.Lines.Count == 0)
-                                            {
-                                                <p class="text-xs text-content-subtle">Xero returned no line detail for this invoice.</p>
-                                            }
-                                            else
-                                            {
-                                                <table class="w-full text-xs">
-                                                    <thead>
-                                                        <tr class="text-left text-[10px] uppercase tracking-wider text-content-subtle">
-                                                            <th class="px-2 py-1.5">Description</th>
-                                                            <th class="px-2 py-1.5">Account</th>
-                                                            <th class="px-2 py-1.5">Site</th>
-                                                            <th class="px-2 py-1.5">Cost code</th>
-                                                            <th class="px-2 py-1.5 text-right">Net</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody class="divide-y divide-line">
-                                                        @foreach (var line in transaction.Lines)
-                                                        {
-                                                            <tr>
-                                                                <td class="px-2 py-1.5 text-content-muted">@(line.Description ?? "—")</td>
-                                                                <td class="px-2 py-1.5 text-content-muted">@AccountText(line)</td>
-                                                                <td class="px-2 py-1.5 text-content-muted">@(line.Site ?? "—")</td>
-                                                                <td class="px-2 py-1.5 text-content-muted">@(line.CostCode ?? "—")</td>
-                                                                <td class="px-2 py-1.5 text-right text-content">@WholeMoney(line.LineAmount)</td>
-                                                            </tr>
-                                                        }
-                                                    </tbody>
-                                                </table>
-                                            }
-                                        </td>
-                                    </tr>
-                                }
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            else
-            {
-                <p class="text-sm text-content-muted mb-4">
-                    Net (pre-VAT) spend by site and cost code, per calendar year — bills that are paid,
-                    authorised or awaiting approval, minus credit notes (the same basis as the accountant's
-                    payable invoice summary).
-                    <span class="text-content-subtle">
-                        @if (AwaitingApprovalNet != 0)
+            <RecordsTable Dense="true" MaxHeight="max-h-[85vh]">
+                <thead>
+                    <tr>
+                        <th>Site / cost code</th>
+                        @foreach (var year in Years)
                         {
-                            <text>Includes @WholeMoney(AwaitingApprovalNet) awaiting approval. </text>
+                            <th class="text-right">@year</th>
                         }
-                        @if (OtherExcludedNet != 0)
-                        {
-                            <text>Drafts: @WholeMoney(OtherExcludedNet) excluded.</text>
-                        }
-                    </span>
-                </p>
-
-                <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-                    <table class="w-full text-sm">
-                        <thead class="bg-surface-raised border-b border-line">
-                            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Site / cost code</th>
-                                @foreach (var year in Years)
-                                {
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">@year</th>
-                                }
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-line">
-                            @foreach (var site in Breakdown)
+                        <th class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var site in Breakdown)
+                    {
+                        <tr class="bg-surface-raised/50">
+                            <td class="text-content font-semibold">@site.Name</td>
+                            @foreach (var year in Years)
                             {
-                                <tr class="bg-surface-raised/50">
-                                    <td class="px-4 py-3 text-content font-semibold">@site.Name</td>
-                                    @foreach (var year in Years)
-                                    {
-                                        <td class="px-4 py-3 text-right text-content font-semibold">@MoneyOrDash(site.ForYear(year))</td>
-                                    }
-                                    <td class="px-4 py-3 text-right text-content font-semibold">@WholeMoney(site.Total)</td>
-                                </tr>
-                                @foreach (var costCode in site.CostCodes)
-                                {
-                                    <tr>
-                                        <td class="px-4 py-2.5 pl-8 text-content-muted">@costCode.Name</td>
-                                        @foreach (var year in Years)
-                                        {
-                                            <td class="px-4 py-2.5 text-right text-content-muted">@MoneyOrDash(costCode.ForYear(year))</td>
-                                        }
-                                        <td class="px-4 py-2.5 text-right text-content-muted">@WholeMoney(costCode.Total)</td>
-                                    </tr>
-                                }
+                                <td class="text-right text-content font-semibold">@MoneyOrDash(site.ForYear(year))</td>
                             }
-                        </tbody>
-                        <tfoot class="bg-surface-raised border-t border-line">
+                            <td class="text-right text-content font-semibold">@WholeMoney(site.Total)</td>
+                        </tr>
+                        @foreach (var costCode in site.CostCodes)
+                        {
                             <tr>
-                                <td class="px-4 py-3 text-content font-semibold">All sites</td>
+                                <td class="pl-8">@costCode.Name</td>
                                 @foreach (var year in Years)
                                 {
-                                    <td class="px-4 py-3 text-right text-content font-semibold">@MoneyOrDash(Breakdown.Sum(site => site.ForYear(year)))</td>
+                                    <td class="text-right">@MoneyOrDash(costCode.ForYear(year))</td>
                                 }
-                                <td class="px-4 py-3 text-right text-content font-semibold">@WholeMoney(Breakdown.Sum(site => site.Total))</td>
+                                <td class="text-right">@WholeMoney(costCode.Total)</td>
                             </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            }
+                        }
+                    }
+                </tbody>
+                <tfoot class="bg-surface-raised border-t border-line">
+                    <tr>
+                        <td class="text-content font-semibold">All sites</td>
+                        @foreach (var year in Years)
+                        {
+                            <td class="text-right text-content font-semibold">@MoneyOrDash(Breakdown.Sum(site => site.ForYear(year)))</td>
+                        }
+                        <td class="text-right text-content font-semibold">@WholeMoney(Breakdown.Sum(site => site.Total))</td>
+                    </tr>
+                </tfoot>
+            </RecordsTable>
         }
-    </section>
-</ApprovedSessionGate>
+    }
+</Page>
 

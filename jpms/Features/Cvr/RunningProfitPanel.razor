@@ -12,10 +12,10 @@
    the table's own row order and owns the labour-accrual overlay; the basis switch lives here
    because this is the first Xero panel a reader meets, and it is bound back to the page because
    every Xero panel reads it. *@
-<div class="rounded-xl border border-line bg-surface p-5 mb-6">
+<div class="panel p-5 mb-6">
     <div class="flex items-start justify-between gap-x-6 gap-y-1 flex-wrap">
         <div>
-            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+            <p class="eyebrow">
                 Running profit by month
                 <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— the whole job's % profit to date at each month end, that month's movement beneath · Xero site P&L, @BasisLabel</span>
             </p>
@@ -38,7 +38,7 @@
                         AccrualHover="AccrualHover"
                         AccrualOwnFor="AccrualOwnFor"
                         AccrualToDateFor="AccrualToDateFor" />
-    <p class="text-[11px] text-content-subtle mt-3 max-w-3xl">
+    <p class="text-xs text-content-subtle mt-3 max-w-3xl">
         Each cell's main figure is the whole job to that month end — cumulative profit (income less
         cost of sales less overheads tracked to the site, in Xero) over cumulative invoicing, exactly
         the accountant's "Running % Profit" row — so the row reads as the project's trend, and the
@@ -59,7 +59,7 @@
         certification reads higher.
         @if (IncludeLabourAccrual)
         {
-            <text>The basis switch is ON: months marked <span class="text-amber-400">•</span> include
+            <text>The basis switch is ON: months marked <span class="text-warning">•</span> include
             approved labour not yet billed — approved timesheet cost from the portal that no
             Xero-approved bill settles yet. It is an accrual, not a Xero figure: as each labourer's
             bill is approved in Xero the cost enters the synced P&L and leaves the accrual in the

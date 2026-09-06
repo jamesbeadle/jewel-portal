@@ -6,13 +6,13 @@
    (2026-09-03: "no highlighting of the selected document"). Rows just unpacked from an archive
    carry an "Extracted" badge until they are opened. *@
 <button type="button" @onclick="() => OnSelect.InvokeAsync()" aria-current="@(IsOpen ? "true" : null)"
-        class="relative w-full text-left rounded-lg border pl-4 pr-3 py-2.5 transition @RowClass">
+        class="relative w-full text-left rounded border pl-4 pr-3 py-2.5 transition @RowClass">
     @if (IsOpen)
     {
         <span class="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r bg-accent" aria-hidden="true"></span>
     }
     <div class="flex items-baseline justify-between gap-3">
-        <span class="text-sm truncate @(IsOpen ? "font-semibold text-content" : "font-medium text-content")">@Item.FileName</span>
+        <span class="text-sm truncate @(IsOpen ?"font-semibold text-content" : "font-medium text-content")">@Item.FileName</span>
         <span class="text-xs text-content-subtle shrink-0">@ListDate(Item.ReceivedAt)</span>
     </div>
     <p class="text-xs text-content-subtle truncate mt-0.5">
@@ -21,19 +21,19 @@
     <div class="flex flex-wrap items-center gap-1.5 mt-1">
         @if (IsFresh)
         {
-            <span class="inline-flex items-center rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-semibold px-2 py-0.5">Extracted</span>
+            <Pill Tone="Tone.Warning">Extracted</Pill>
         }
         @if (Item.FileSizeBytes > 0)
         {
-            <span class="text-[10px] text-content-subtle">@FormatSize(Item.FileSizeBytes)</span>
+            <span class="text-xs text-content-subtle">@FormatSize(Item.FileSizeBytes)</span>
         }
         @if (ProjectHint is not null)
         {
-            <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@ProjectHint</span>
+            <Pill Tone="Tone.Info">@ProjectHint</Pill>
         }
         @if (Item.Status == DocumentControlStatus.Filed)
         {
-            <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-medium px-2 py-0.5">@Item.FiledLabel</span>
+            <Pill Tone="Tone.Positive">@Item.FiledLabel</Pill>
         }
     </div>
 </button>
@@ -48,8 +48,8 @@
     [Parameter] public EventCallback OnSelect { get; set; }
 
     private string RowClass => IsOpen
-        ? "border-accent bg-accent/10 ring-2 ring-accent/40 shadow-sm"
+        ? "border-accent bg-accent/10 ring-2 ring-accent/40 "
         : IsFresh
-            ? "border-amber-300 bg-amber-50/60 hover:bg-amber-50"
+            ? "border-warning/40 bg-warning/10 hover:bg-warning/15"
             : "border-line bg-surface hover:bg-surface-raised";
 }

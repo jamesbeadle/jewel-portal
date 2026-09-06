@@ -4,12 +4,12 @@
 @* One job's cumulative-position card: the two lines (invoiced, cost) job start to date, the
    gap between them read as cumulative profit, and the accountant's two warnings — or, with no
    chart to draw, the reason why. *@
-<div class="rounded-lg border border-line bg-surface-raised px-4 pt-3.5 pb-3">
+<div class="rounded border border-line bg-surface-raised px-4 pt-3.5 pb-3">
     @if (Card.Chart is null)
     {
         <div class="flex items-center justify-center min-h-[170px]">
-            <p class="text-[11px] text-content-subtle text-center leading-relaxed max-w-[240px]">
-                <span class="block text-amber-400 mb-1">@Card.Project.Name ⚠</span>
+            <p class="text-xs text-content-subtle text-center leading-relaxed max-w-[240px]">
+                <span class="block text-warning mb-1">@Card.Project.Name ⚠</span>
                 @Card.Unavailable
             </p>
         </div>
@@ -19,7 +19,7 @@
         var chart = Card.Chart!;
         <div class="flex items-baseline justify-between gap-2">
             <span class="text-[12.5px] font-medium text-content">@Card.Project.Name</span>
-            <span class="text-[10px] text-content-faint whitespace-nowrap">@chart.RangeLabel</span>
+            <span class="text-xs text-content-faint whitespace-nowrap">@chart.RangeLabel</span>
         </div>
         <div class="relative h-[110px] mt-2">
             <div class="absolute inset-x-0 bottom-0 border-t border-line"></div>
@@ -46,11 +46,11 @@
         <div class="flex items-baseline justify-between gap-2 mt-2 flex-wrap">
             <span class="text-sm font-semibold @ProfitClass(chart.GrossProfit)">
                 @MoneyCompact(chart.GrossProfit)
-                <span class="text-[10.5px] font-normal text-content-faint ml-1">cum. profit@(chart.Margin is decimal cumMargin ? $" · {Pct(cumMargin)}" : "")</span>
+                <span class="text-xs font-normal text-content-faint ml-1">cum. profit@(chart.Margin is decimal cumMargin ? $" · {Pct(cumMargin)}" : "")</span>
             </span>
             @if (chart.Warning is not null)
             {
-                <span class="text-[10px] text-amber-400">⚠ @chart.Warning</span>
+                <span class="text-xs text-warning">⚠ @chart.Warning</span>
             }
         </div>
     }

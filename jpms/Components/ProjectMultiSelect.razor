@@ -16,7 +16,7 @@
               WidthClass="w-96 max-w-[90vw]"
               Disabled="@Disabled"
               ToggleTitle="Choose which projects the report covers"
-              ToggleClass="inline-flex items-center gap-2 rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content hover:border-line-strong focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition">
+              ToggleClass="inline-flex items-center gap-2 rounded border border-line-strong bg-surface-field px-3 py-2 text-sm text-content hover:border-line-strong focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition">
     <ToggleContent>
         <span>@ToggleLabel</span>
     </ToggleContent>
@@ -25,17 +25,17 @@
             <span class="text-content-subtle mr-auto">Show</span>
             <button type="button"
                     title="Everything except Leads and Completed"
-                    class="rounded-md px-2 py-1 text-content-muted hover:text-content hover:bg-surface-raised transition"
+                    class="rounded px-2 py-1 text-content-muted hover:text-content hover:bg-surface-raised transition"
                     @onclick="SelectLive">
                 Live jobs
             </button>
             <button type="button"
-                    class="rounded-md px-2 py-1 text-content-muted hover:text-content hover:bg-surface-raised transition"
+                    class="rounded px-2 py-1 text-content-muted hover:text-content hover:bg-surface-raised transition"
                     @onclick="SelectAll">
                 All
             </button>
             <button type="button"
-                    class="rounded-md px-2 py-1 text-content-muted hover:text-content hover:bg-surface-raised transition"
+                    class="rounded px-2 py-1 text-content-muted hover:text-content hover:bg-surface-raised transition"
                     @onclick="SelectNone">
                 None
             </button>
@@ -51,9 +51,9 @@
                                @onchange="() => ToggleProject(id)" />
                         <span class="w-1.5 h-1.5 rounded-full shrink-0 @project.Stage.AccentDotClass()"
                               title="@project.Stage.DisplayName()" aria-hidden="true"></span>
-                        <span class="font-mono text-[11px] text-content-subtle shrink-0">@project.Reference</span>
+                        <span class="font-mono text-xs text-content-subtle shrink-0">@project.Reference</span>
                         <span class="text-content truncate">@project.Name</span>
-                        <span class="ml-auto pl-2 text-[11px] text-content-subtle whitespace-nowrap shrink-0">@project.Stage.DisplayName()</span>
+                        <span class="ml-auto pl-2 text-xs text-content-subtle whitespace-nowrap shrink-0">@project.Stage.DisplayName()</span>
                     </label>
                 </li>
             }

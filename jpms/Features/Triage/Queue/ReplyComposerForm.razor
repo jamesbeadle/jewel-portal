@@ -9,17 +9,18 @@
    the page's prefill-ownership flag inside the callbacks the page passes. *@
 <div class="space-y-3">
     <div class="flex items-center justify-between">
-        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">@(IsForward ? "Forward" : "Reply") — sends from the projects mailbox</p>
+        <p class="eyebrow">@(IsForward ? "Forward" : "Reply") — sends from the projects mailbox</p>
         <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="() => OnDiscard.InvokeAsync()">Discard draft</button>
     </div>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
+        <FormField Label="To" Required>
         <RecipientInput Value="@To" ValueChanged="value => ToChanged.InvokeAsync(value)" />
+        </FormField>
     </div>
     <div>
         <div class="flex items-center justify-between">
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
+            <label class="block text-sm font-medium text-content mb-1">Cc</label>
             @if (!ShowBcc)
             {
                 <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => ShowBccChanged.InvokeAsync(true)">Bcc</button>
@@ -30,18 +31,21 @@
     @if (ShowBcc)
     {
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
+            <FormField Label="Bcc">
             <RecipientInput Value="@Bcc" ValueChanged="value => BccChanged.InvokeAsync(value)" Placeholder="Blind-copied recipients" />
+            </FormField>
         </div>
     }
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
+        <FormField Label="Subject" Required>
         <input class="field" type="text" value="@Subject" @oninput="e => SubjectChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" />
+        </FormField>
     </div>
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">@(IsForward ? "Your message *" : "Your reply *")</label>
+        <FormField Label="@(IsForward ? "Your message *" : "Your reply *")">
         <RichTextEditor Value="@Body" ValueChanged="BodyChanged" MinHeight="180"
                         Placeholder="@(IsForward ? "Write the message — the forwarded email is quoted behind it…" : "Write the reply — the whole thread is quoted behind it…")" />
+        </FormField>
     </div>
 
     @* A forward carries the original email's attachments automatically (Graph's createForward

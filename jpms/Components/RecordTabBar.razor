@@ -23,7 +23,7 @@
         var current = tab;
         @if (current.Id == ActiveId)
         {
-            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent text-accent-ink font-medium"
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-accent text-accent-ink font-medium"
                   aria-current="page" title="@current.Title">
                 <ActionIcon Name="@current.Icon" Class="w-4 h-4 shrink-0" />
                 <span>@current.Eyebrow</span>
@@ -79,7 +79,7 @@
     [Parameter] public Func<RecordType, string, RecordActivitySummary?>? ActivityFor { get; set; }
 
     private const string InactiveClass =
-        "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
+        "inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-content-muted hover:text-content hover:bg-surface-raised";
 
     private RecordActivitySummary? ActivityOf(RecordType type, string recordId) =>
         ActivityFor?.Invoke(type, recordId);

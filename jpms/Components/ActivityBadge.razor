@@ -8,8 +8,9 @@
     loading conventions a single inline mark is never gated, and an absent badge cannot mislead the
     way a 0 can — absence while the activity store loads and absence after it mean the same thing.
 
-    Colour: neutral → amber → orange, deliberately not red — in this app red means overdue, and an
-    active record is a signal, not a problem.
+    Colour: Recent is a muted pill with a warning dot, Active a warning pill, Busy a warning pill
+    in bold — deliberately never red: in this app red means overdue, and an active record is a
+    signal, not a problem.
 *@
 
 @if (Activity is { } summary && summary.Band is not ActivityBand.None)
@@ -21,10 +22,8 @@
     }
     else
     {
-        <span class="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-semibold align-middle @PillClass(summary.Band) @Class"
-              title="@Hover(summary)">
-            <span class="inline-block w-1.5 h-1.5 rounded-full @DotClass(summary.Band)" aria-hidden="true"></span>@CountLabel(summary)
-        </span>
+        <Pill Tone="@ToneOf(summary.Band)" Dot="true" Class="@($"align-middle {(summary.Band == ActivityBand.Busy ? "font-semibold" : "")} {Class}")"
+              Title="@Hover(summary)">@CountLabel(summary)</Pill>
     }
 }
 
@@ -38,19 +37,14 @@
     /// <summary>Extra classes appended to the outer element (e.g. "ml-1.5" in a title cell).</summary>
     [Parameter] public string Class { get; set; } = "";
 
-    private static string PillClass(ActivityBand band) => band switch
+    private static Tone ToneOf(ActivityBand band) => band switch
     {
-        ActivityBand.Busy   => "bg-orange-500/15 text-orange-600",
-        ActivityBand.Active => "bg-amber-500/10 text-amber-600",
-        _                   => "bg-surface-raised border border-line text-content-muted"
+        ActivityBand.Busy   => Tone.Warning,
+        ActivityBand.Active => Tone.Warning,
+        _                   => Tone.Muted
     };
 
-    private static string DotClass(ActivityBand band) => band switch
-    {
-        ActivityBand.Busy   => "bg-orange-500",
-        ActivityBand.Active => "bg-amber-500",
-        _                   => "bg-content-subtle"
-    };
+    private static string DotClass(ActivityBand band) => ToneOf(band) == Tone.Muted ? Tone.Warning.Dot() : ToneOf(band).Dot();
 
     // The pill's number is the last-7-days count. It can legitimately be 0 while the band is still
     // Recent (several emails just over a week old holding the score up) — show the fading dot with

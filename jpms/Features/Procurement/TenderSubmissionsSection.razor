@@ -17,10 +17,10 @@
 
     @if (Emails.Count > 0)
     {
-        <div class="rounded-xl border border-line bg-surface mb-3">
+        <div class="panel mb-3">
             <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-b border-line">
-                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Tender responses</p>
-                <span class="text-[11px] text-content-subtle">Extract a tender to review it against the line schedule and save it as a submission.</span>
+                <p class="eyebrow">Tender responses</p>
+                <span class="text-xs text-content-subtle">Extract a tender to review it against the line schedule and save it as a submission.</span>
             </div>
             <ul class="divide-y divide-line">
                 @foreach (var email in Emails)
@@ -32,10 +32,10 @@
                                 <span class="text-content-subtle"> — @email.Subject</span>
                                 @if (email.HasAttachments)
                                 {
-                                    <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                                    <Pill Tone="Tone.Muted" Class="ml-2">attachment</Pill>
                                 }
                             </p>
-                            <p class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</p>
+                            <p class="text-xs text-content-subtle">@DateTimeText(email.ReceivedAt)</p>
                         </div>
                         @if (CanEdit)
                         {
@@ -51,18 +51,19 @@
 
     @if (AwardNote is not null)
     {
-        <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">@AwardNote</p>
+        <Notice Tone="Tone.Positive" Class="mb-3">@AwardNote</Notice>
     }
 
     @* Persistent award summary — who won, for how much, and the purchase-order it raised. *@
     @if (Awarded is { } awarded)
     {
-        <div class="rounded-xl border border-positive/30 bg-positive/10 px-4 py-3 mb-3 flex flex-wrap items-center justify-between gap-3">
+        <Notice Tone="Tone.Positive" Class="mb-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
             <p class="text-sm text-content">
                 <span class="font-semibold">Awarded</span> to
                 <span class="font-medium">@awarded.SubcontractorName</span>
                 at @awarded.Order.Value.ToString("£#,##0.00")
-                on @awarded.Order.AwardedAt.LocalDateTime.ToString("d MMM yyyy") —
+                on @DateText(awarded.Order.AwardedAt) —
                 <a class="text-accent hover:underline" href="@($"/projects/{ProjectId}/work-orders")"
                    title="Open the project's Work Orders tab, where this order's cost-coded lines feed the cost-centre totals.">
                     work order WO-@awarded.Order.Number.ToString("0000")</a>
@@ -74,16 +75,17 @@
                         title="Draft the work-order email to the winning subcontractor in the shared mailbox — reviewed and sent from Outlook, nothing sends from here."
                         @onclick="() => OnEmailWorkOrder.InvokeAsync()">Email work order to winner</button>
             }
-        </div>
+            </div>
+        </Notice>
         @if (WorkOrderEmailNote is not null)
         {
-            <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">
+            <Notice Tone="Tone.Positive" Class="mb-3">
                 @WorkOrderEmailNote
                 @if (WorkOrderEmailLink is not null)
                 {
                     <a class="text-accent underline ml-1" href="@WorkOrderEmailLink" target="_blank" rel="noopener">Open the draft in Outlook</a>
                 }
-            </p>
+            </Notice>
         }
     }
 

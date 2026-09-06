@@ -1,0 +1,35 @@
+@namespace Jewel.JPMS.Components
+
+@*
+    THE checkbox: the Figma 16×16 box (4px radius, Table-Seperator border, field fill, accent
+    tick) with its label to the right, 14/Reg white, the whole row clickable. Every checkbox in
+    the app already gets the box from the base stylesheet (input[type=checkbox] in
+    app.tailwind.css) — this component adds the label and the one-line binding.
+
+    <Checkbox @bind-Value="showRetired" Label="Show retired" />
+    <Checkbox Value="@item.Selected" ValueChanged="v => Toggle(item, v)">Row content</Checkbox>
+*@
+
+<label class="inline-flex items-center gap-2 text-sm text-content cursor-pointer select-none @Class @(Disabled ?"opacity-50 cursor-not-allowed" : "")" title="@Title">
+    <input type="checkbox" checked="@Value" disabled="@Disabled" @onchange="OnChange" />
+    @if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+    else
+    {
+        <span>@Label</span>
+    }
+</label>
+
+@code {
+    [Parameter] public bool Value { get; set; }
+    [Parameter] public EventCallback<bool> ValueChanged { get; set; }
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string Class { get; set; } = "";
+
+    private Task OnChange(ChangeEventArgs e) => ValueChanged.InvokeAsync(e.Value is true);
+}

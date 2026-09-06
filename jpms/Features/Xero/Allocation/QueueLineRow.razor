@@ -29,14 +29,14 @@
            both are set, since picking a bucket was the later, deliberate act. *@
         @if (!string.IsNullOrEmpty(ArmedBucket))
         {
-            <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40 max-w-[11rem] truncate align-middle"
+            <button class="text-xs font-medium rounded px-2.5 py-1 bg-content text-surface disabled:opacity-40 max-w-[11rem] truncate align-middle"
                     title="@($"Allocate to the {ArmedBucket} bucket — no project, no cost centre")"
                     disabled="@Busy"
                     @onclick="() => OnBucket.InvokeAsync(ArmedBucket)">Allocate to @ArmedBucket</button>
         }
         else
         {
-            <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40 align-middle"
+            <button class="text-xs font-medium rounded px-2.5 py-1 bg-content text-surface disabled:opacity-40 align-middle"
                     disabled="@(Busy || !CanAllocate)"
                     @onclick="() => OnAllocate.InvokeAsync()">Allocate</button>
         }
@@ -48,7 +48,7 @@
            here. Pressing it again is the Xero retry. Unset (in the menu,
            only on lines with a saved project) reverses an accidental Set:
            project cleared here and the site removed in Xero. *@
-        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40 align-middle"
+        <button class="btn-secondary ml-2 align-middle"
                 title="Save the project and set its Xero site now — moves the line to that project's tab, cost centre to follow"
                 disabled="@(Busy || !CanSetProject)"
                 @onclick="() => OnSetProject.InvokeAsync()">Set</button>
@@ -57,7 +57,7 @@
         @* whitespace-normal: the cell's nowrap would otherwise reach the
            menu panel and clip its longer bucket names. *@
         <DropdownMenu Label="More" WidthClass="w-72" Disabled="@Busy"
-                      ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:text-content transition"
+                      ToggleClass="inline-flex items-center gap-1 rounded border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:text-content transition"
                       Class="inline-block text-left ml-2 align-middle whitespace-normal"
                       Items="MenuItems"
                       OnOpenChanged="open => OnMenuOpenChanged.InvokeAsync(open)" />

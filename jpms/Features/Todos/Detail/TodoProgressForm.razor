@@ -6,7 +6,7 @@
    chases that happen elsewhere (a call, an email from your own Outlook, a conversation on site).
    The form stays open after a failed save so the words survive to retry. *@
 
-<div class="rounded-lg border border-line bg-canvas/40 p-3 space-y-2">
+<div class="rounded border border-line bg-canvas/40 p-3 space-y-2">
     <div class="flex flex-wrap gap-3 text-sm">
         <label class="inline-flex items-center gap-1.5 cursor-pointer">
             <input type="radio" name="todo-progress-kind" checked="@(kind == TodoActivityKind.Chased)" disabled="@Busy"
@@ -19,12 +19,12 @@
             <span>Note</span>
         </label>
     </div>
-    <textarea class="w-full rounded-md bg-surface border border-line px-2 py-1.5 text-sm" rows="3"
+    <textarea class="field" rows="3"
               placeholder="@Placeholder" disabled="@Busy" maxlength="400" @bind="note" @bind:event="oninput"></textarea>
     <div class="flex items-center gap-2">
         <button type="button" class="btn-primary text-xs px-2 py-1" disabled="@(Busy || !CanSave)" @onclick="SaveAsync">Save</button>
         <button type="button" class="btn-neutral text-xs px-2 py-1" disabled="@Busy" @onclick="() => OnCancel.InvokeAsync()">Cancel</button>
-        <span class="text-[11px] text-content-subtle">@Hint</span>
+        <span class="text-xs text-content-subtle">@Hint</span>
     </div>
 </div>
 

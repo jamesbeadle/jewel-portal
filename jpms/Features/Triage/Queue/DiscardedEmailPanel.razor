@@ -6,7 +6,7 @@
 <div class="panel p-5 space-y-4 relative">
     @if (ActionError is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@ActionError</p>
+        <Notice Tone="Tone.Negative">@ActionError</Notice>
     }
 
     <TriageMessageDetail Selected="Selected"

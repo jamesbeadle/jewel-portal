@@ -165,15 +165,13 @@ public partial class XeroTransactions
 
     private string TabClass(View view) =>
         (activeView == view
-            ? "bg-content text-surface"
-            : "bg-surface text-content-muted hover:text-content")
-        + " text-sm font-medium px-4 py-1.5 transition-colors";
+            ? "chip chip-active"
+            : "chip");
 
     private string ChipClassFor(string status) =>
         (statusFilter == status
-            ? "bg-content text-surface border-content"
-            : "bg-surface text-content-muted border-line hover:text-content")
-        + " text-xs font-medium border rounded-full px-3 py-1 transition-colors";
+            ? "chip chip-active"
+            : "chip");
 
     private static string AccountText(XeroTransactionLine line) =>
         line.AccountCode is null

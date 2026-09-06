@@ -13,19 +13,20 @@
     <div class="space-y-4">
         @if (error is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+            <Notice Tone="Tone.Negative">@error</Notice>
         }
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField Label="Reference" Value="@reference" OnChange="v => reference = v" Required="true" />
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Status</label>
+                <FormField Label="Status">
                 <select class="field" value="@((int)status)" @onchange="OnStatusChanged">
                     @foreach (var option in StatusOptions)
                     {
                         <option value="@((int)option)">@option.DisplayName()</option>
                     }
                 </select>
+                </FormField>
             </div>
         </div>
 

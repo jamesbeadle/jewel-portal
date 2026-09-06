@@ -14,8 +14,7 @@
 
 <div class="space-y-3">
     <div class="flex items-center justify-between gap-2">
-        <input class="field flex-1" type="search" placeholder="Filter by sender or subject…"
-               value="@filter" @oninput="e => filter = e.Value?.ToString() ?? string.Empty" />
+        <SearchInput @bind-Value="filter" Placeholder="Filter by sender or subject…" Width="flex-1" />
         <a class="text-xs text-accent hover:underline shrink-0" href="@Family.RouteFor(Record)"
            title="The full-page register — every email carrying this tag">Full register →</a>
     </div>
@@ -32,7 +31,7 @@
 
     @if (loadError is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@loadError</p>
+        <Notice Tone="Tone.Negative">@loadError</Notice>
     }
 
     @if (!loaded)
@@ -107,10 +106,9 @@
     private bool IsScopedToProject => ProjectNameMatch.IsUsable(ProjectName) && !showAllProjects;
 
     private string ScopeChipClass(bool isThisProject) =>
-        "rounded-full border px-3 py-1 text-xs font-medium transition "
-        + (isThisProject != showAllProjects
-            ? "border-accent bg-accent/10 text-accent"
-            : "border-line text-content-muted hover:text-content hover:border-line-strong");
+        (isThisProject != showAllProjects
+            ? "chip chip-active"
+            : "chip");
 
     // The list only offers "tag like this" while there is an open email to tag.
     private EventCallback<MailboxMessage> TagLikeWhenEmailOpen =>

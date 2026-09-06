@@ -22,7 +22,7 @@
 <ul class="space-y-2">
     @foreach (var thread in Threads)
     {
-        <li @key="thread.Key" class="rounded-lg border border-line bg-surface px-4 py-3">
+        <li @key="thread.Key" class="rounded border border-line bg-surface px-4 py-3">
             @EmailEntry(thread.Latest, thread)
 
             @if (thread.Earlier.Count > 0 && expandedThreads.Contains(thread.Key))
@@ -101,13 +101,13 @@
         <div class="min-w-0">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <span class="text-sm font-medium text-content truncate">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
-                <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                <span class="text-xs text-content-subtle">@DateTimeText(email.ReceivedAt)</span>
             </div>
             <p class="text-sm text-content mt-0.5">
                 @email.Subject
                 @if (email.HasAttachments)
                 {
-                    <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                    <Pill Tone="Tone.Muted" Class="ml-2">attachment</Pill>
                 }
             </p>
             @if (OtherTags(email) is { Count: > 0 } chips)
@@ -115,14 +115,14 @@
                 <div class="flex flex-wrap items-center gap-1 mt-1">
                     @foreach (var tag in chips)
                     {
-                        <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagStem(tag)</span>
+                        <Pill Tone="Tone.Info">@TagStem(tag)</Pill>
                     }
                 </div>
             }
 
             @if (isExpanded)
             {
-                <div class="mt-2 rounded-lg bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
+                <div class="mt-2 rounded bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
                     @if (detail is null)
                     {
                         <p class="text-sm text-content-subtle italic">Loading full email…</p>
@@ -153,8 +153,8 @@
                 </div>
                 @if (detail is { Attachments.Count: > 0 })
                 {
-                    <div class="mt-2 rounded-lg bg-surface-raised border border-line p-3">
-                        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
+                    <div class="mt-2 rounded bg-surface-raised border border-line p-3">
+                        <p class="eyebrow mb-2">
                             @detail.Attachments.Count attachment@(detail.Attachments.Count == 1 ? "" : "s")
                         </p>
                         <ul class="space-y-1">

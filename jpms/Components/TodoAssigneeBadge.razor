@@ -16,14 +16,13 @@
 @if (Item.AssigneeRole is Role role)
 {
     <span title="Assigned to @TodoAssigneePicker.Label(Item)"
-          class="inline-flex min-w-0 max-w-[14rem] items-center rounded border px-1.5 text-[10px] font-medium leading-4 whitespace-nowrap @RolePresentations.For(role).BadgeClass">
+          class="inline-flex min-w-0 max-w-[14rem] items-center rounded border px-2 py-0.5 text-xs font-medium whitespace-nowrap @RolePresentations.For(role).BadgeClass">
         <span class="truncate">@TodoAssigneePicker.Label(Item)</span>
     </span>
 }
 else if (ShowUnassigned)
 {
-    <span title="Assigned to nobody yet"
-          class="inline-flex items-center rounded border border-line bg-surface-raised px-1.5 text-[10px] leading-4 whitespace-nowrap text-content-subtle">Unassigned</span>
+    <Pill Tone="Tone.Muted" Title="Assigned to nobody yet">Unassigned</Pill>
 }
 
 @code {

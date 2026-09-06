@@ -20,52 +20,50 @@
     }
     else if (entries.Count == 0)
     {
-        <p class="text-sm text-content-subtle italic">
-            No Xero purchase lines have been allocated to this report line yet.
-        </p>
+        <EmptyState Message="No Xero purchase lines have been allocated to this report line yet." />
     }
     else
     {
         <div class="space-y-4">
-            <div class="rounded-lg border border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
-                <table class="w-full text-sm border-collapse">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Date</th>
+            <div class="rounded border border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
+                <table class="data-table data-table-dense">
+                    <thead>
+                        <tr>
+                            <th class="whitespace-nowrap">Date</th>
                             @if (ShowCentreColumn)
                             {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Centre</th>
+                                <th class="whitespace-nowrap">Centre</th>
                             }
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Supplier</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Invoice</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Description</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Net £</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Work Order</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5"><span class="sr-only">Move</span></th>
+                            <th>Supplier</th>
+                            <th class="whitespace-nowrap">Invoice</th>
+                            <th>Description</th>
+                            <th class="text-right whitespace-nowrap">Net £</th>
+                            <th class="whitespace-nowrap">Work Order</th>
+                            <th><span class="sr-only">Move</span></th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-line">
+                    <tbody>
                         @foreach (var entry in ResidentEntries)
                         {
                             var line = entry.Line;
                             <tr>
-                                <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
+                                <td class="whitespace-nowrap">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
                                 @if (ShowCentreColumn)
                                 {
-                                    <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">@entry.CostCode</td>
+                                    <td class="font-mono text-xs text-content-subtle whitespace-nowrap">@entry.CostCode</td>
                                 }
-                                <td class="px-4 py-2.5 text-content">@line.Supplier</td>
-                                <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@line.InvoiceNumber</td>
-                                <td class="px-4 py-2.5 text-content-muted">
+                                <td class="text-content">@line.Supplier</td>
+                                <td class="whitespace-nowrap">@line.InvoiceNumber</td>
+                                <td>
                                     @line.Description
                                     @if (line.IsSplit)
                                     {
-                                        <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
+                                        <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5"
                                               title="This centre's share of a line split across several cost centres">Split</span>
                                     }
                                 </td>
-                                <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.Net < 0 ? "text-negative" : "text-content")">@MoneyExact(line.Net)</td>
-                                <td class="px-4 py-2.5 whitespace-nowrap">
+                                <td class="text-right whitespace-nowrap @(line.Net < 0 ?"text-negative" : "text-content")">@MoneyExact(line.Net)</td>
+                                <td class="whitespace-nowrap">
                                     @if (line.IsSplit)
                                     {
                                         @* Linking classifies the whole ledger line — a split's other shares
@@ -91,7 +89,7 @@
                                         <span class="inline-flex items-center gap-1.5">
                                             @* Keyed on a nonce so a failed save recreates the element — otherwise the
                                                browser keeps showing the picked work order even though it didn't stick. *@
-                                            <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-64"
+                                            <select class="field w-64"
                                                     @key="@($"{line.XeroLedgerLineId}|{linkRevertNonce}")"
                                                     disabled="@linkingLineIds.Contains(line.XeroLedgerLineId)"
                                                     title="The work order this invoice line pays against — options that can't take the line's value are disabled; unlinked lines count as non-work-order cost of sales"
@@ -118,7 +116,7 @@
                                         </span>
                                     }
                                 </td>
-                                <td class="px-4 py-2.5 whitespace-nowrap text-right">
+                                <td class="whitespace-nowrap text-right">
                                     @if (line.IsSplit)
                                     {
                                         @* Only a share of the line sits here — moving the whole line from this
@@ -129,7 +127,7 @@
                                     else if (movingLineId == line.XeroLedgerLineId)
                                     {
                                         <span class="inline-flex items-center gap-1.5">
-                                            <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-52"
+                                            <select class="field w-52"
                                                     disabled="@isMoving"
                                                     @onchange="e => MoveAsync(entry, e.Value?.ToString())">
                                                 <option value="" selected>Move to…</option>
@@ -139,7 +137,7 @@
                                                 }
                                             </select>
                                             <button type="button" aria-label="Cancel move" disabled="@isMoving"
-                                                    class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised"
+                                                    class="inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-content hover:bg-surface-raised"
                                                     @onclick="CancelMove">
                                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                                      stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -158,12 +156,12 @@
                     </tbody>
                     <tfoot class="border-t-2 border-line-strong bg-surface-raised">
                         <tr class="font-semibold text-content">
-                            <td class="px-4 py-2.5" colspan="@(ShowCentreColumn ? 5 : 4)">Total — allocated to this centre</td>
-                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(ResidentEntries.Sum(entry => entry.Line.Net))</td>
-                            <td class="px-4 py-2.5 whitespace-nowrap text-content-subtle text-xs">
+                            <td colspan="@(ShowCentreColumn ? 5 : 4)">Total — allocated to this centre</td>
+                            <td class="text-right whitespace-nowrap">@MoneyExact(ResidentEntries.Sum(entry => entry.Line.Net))</td>
+                            <td class="whitespace-nowrap text-content-subtle text-xs">
                                 @MoneyExact(ResidentEntries.Sum(entry => entry.Line.Net - (entry.Line.IsSplit ? 0m : entry.Line.LinkedTotal))) not linked
                             </td>
-                            <td class="px-4 py-2.5"></td>
+                            <td></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -175,34 +173,33 @@
                    order moves from the invoice's Xero centre onto the order's centres, pro-rata
                    to the order's line values. Negative rows are this centre's spend moving out;
                    positive rows arrive via orders coded here. *@
-                <div class="rounded-lg border border-line overflow-x-auto">
-                    <p class="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                <div class="rounded border border-line overflow-x-auto">
+                    <p class="px-4 pt-3 pb-1 eyebrow">
                         Moved via work orders — linked spend follows the order's cost centres
                     </p>
-                    <table class="w-full text-sm border-collapse">
-                        <tbody class="divide-y divide-line">
+                    <table class="data-table data-table-dense">
+                        <tbody>
                             @foreach (var entry in AttributionEntries)
                             {
                                 var line = entry.Line;
                                 <tr class="text-content-muted">
-                                    <td class="px-4 py-2.5 whitespace-nowrap">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
-                                    <td class="px-4 py-2.5">@line.Supplier</td>
-                                    <td class="px-4 py-2.5 whitespace-nowrap">@line.InvoiceNumber</td>
-                                    <td class="px-4 py-2.5">@line.Description</td>
-                                    <td class="px-4 py-2.5 whitespace-nowrap">
-                                        <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px]"
-                                              title="@(line.Net < 0m
+                                    <td class="whitespace-nowrap">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
+                                    <td>@line.Supplier</td>
+                                    <td class="whitespace-nowrap">@line.InvoiceNumber</td>
+                                    <td>@line.Description</td>
+                                    <td class="whitespace-nowrap">
+                                        <Pill Tone="Tone.Muted" Title="@(line.Net < 0m
                                                          ? $"Linked to {line.ViaWorkOrderRef} — moved onto that order's cost centres"
                                                          : $"Arrives via {line.ViaWorkOrderRef}, invoiced on {line.SourceCostCode}")">
                                             @line.ViaWorkOrderRef
-                                        </span>
+                                        </Pill>
                                     </td>
-                                    <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.Net < 0m ? "text-negative" : "text-content")">@MoneyExact(line.Net)</td>
+                                    <td class="text-right whitespace-nowrap @(line.Net < 0m ?"text-negative" : "text-content")">@MoneyExact(line.Net)</td>
                                 </tr>
                             }
                             <tr class="border-t-2 border-line-strong bg-surface-raised font-semibold text-content">
-                                <td class="px-4 py-2.5" colspan="5">Total — actual cost of sales for this centre</td>
-                                <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(entries.Sum(entry => entry.Line.Net))</td>
+                                <td colspan="5">Total — actual cost of sales for this centre</td>
+                                <td class="text-right whitespace-nowrap">@MoneyExact(entries.Sum(entry => entry.Line.Net))</td>
                             </tr>
                         </tbody>
                     </table>

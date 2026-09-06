@@ -5,17 +5,17 @@
    manual materials / travel lines. *@
 <div class="flex items-start justify-between gap-6">
     <div class="flex-1">
-        <h4 class="text-xs uppercase tracking-wide text-content-subtle mb-2">Itemised schedule — code the bill to these totals</h4>
-        <table class="w-full text-sm max-w-2xl">
+        <h4 class="eyebrow mb-2">Itemised schedule — code the bill to these totals</h4>
+        <table class="data-table data-table-dense max-w-2xl">
             <tbody>
                 @foreach (var line in Schedule.Lines)
                 {
-                    <tr class="border-b border-line/40">
-                        <td class="py-1.5 pr-3 text-content">@line.ProjectName</td>
-                        <td class="py-1.5 pr-3 text-content-muted tabular-nums">@line.CostCode</td>
-                        <td class="py-1.5 pr-3 text-content-subtle">@(line.Nature == SettlementLineNature.CisLabour ? "CIS labour" : line.Nature == SettlementLineNature.CisMaterials ? "Materials" : "Travel")</td>
-                        <td class="py-1.5 pr-3 text-right tabular-nums text-content">@line.Amount.ToString("N2")</td>
-                        <td class="py-1.5 text-right">
+                    <tr class="border-line/40">
+                        <td class="text-content">@line.ProjectName</td>
+                        <td class="tabular-nums">@line.CostCode</td>
+                        <td class="text-content-subtle">@(line.Nature == SettlementLineNature.CisLabour ? "CIS labour" : line.Nature == SettlementLineNature.CisMaterials ? "Materials" : "Travel")</td>
+                        <td class="text-right tabular-nums text-content">@line.Amount.ToString("N2")</td>
+                        <td class="text-right">
                             @if (line.WorkerSettlementLineId is not null)
                             {
                                 <button type="button" class="btn-ghost text-negative text-xs"
@@ -25,13 +25,13 @@
                     </tr>
                 }
                 <tr>
-                    <td colspan="3" class="py-1.5 pr-3 text-content-subtle text-right">CIS @Schedule.CisRatePercent.ToString("0")% on labour @Schedule.GrossLabour.ToString("N2")</td>
-                    <td class="py-1.5 pr-3 text-right tabular-nums text-content-muted">− @Schedule.CisDeduction.ToString("N2")</td>
+                    <td colspan="3" class="text-content-subtle text-right">CIS @Schedule.CisRatePercent.ToString("0")% on labour @Schedule.GrossLabour.ToString("N2")</td>
+                    <td class="text-right tabular-nums">− @Schedule.CisDeduction.ToString("N2")</td>
                     <td></td>
                 </tr>
                 <tr>
-                    <td colspan="3" class="py-1.5 pr-3 font-medium text-content text-right">Net payable</td>
-                    <td class="py-1.5 pr-3 text-right tabular-nums font-semibold text-content">@Schedule.NetPayable.ToString("N2")</td>
+                    <td colspan="3" class="font-medium text-content text-right">Net payable</td>
+                    <td class="text-right tabular-nums font-semibold text-content">@Schedule.NetPayable.ToString("N2")</td>
                     <td></td>
                 </tr>
             </tbody>

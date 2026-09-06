@@ -36,6 +36,25 @@
         background-color: theme('colors.surface.field');
         border-radius: 9999px;
     }
+
+    /* The Figma checkbox and radio, applied to every native control at the base layer so no
+       view has to remember: 16px, 4px radius (full on radios), Table-Seperator border on the
+       field fill, the accent for the tick. Disabled fades. */
+    input[type="checkbox"], input[type="radio"] {
+        @apply w-4 h-4 shrink-0 border border-line-strong bg-surface-field accent-accent cursor-pointer align-middle;
+    }
+
+    input[type="checkbox"] {
+        @apply rounded;
+    }
+
+    input[type="radio"] {
+        @apply rounded-full;
+    }
+
+    input[type="checkbox"]:disabled, input[type="radio"]:disabled {
+        @apply opacity-50 cursor-not-allowed;
+    }
 }
 
 @layer components {
@@ -129,6 +148,32 @@
         @apply border-line-strong;
     }
 
+    /* In-view navigation comes in exactly two looks, and the difference is the point:
+       a TAB changes the route (an <a href>) and reads as an underline on the section's
+       baseline — WorkspaceSectionNav, RecordTabBar and every register's kind switch; a CHIP
+       filters local state (a <button>) and reads as a small bordered pill. Decision 2026-09-03.
+       TabRow and FilterChips render these; a view never composes them by hand. */
+    .tab {
+        @apply inline-flex items-center gap-1.5 px-3 py-2 -mb-px text-sm font-medium border-b-2 border-transparent text-content-faint hover:text-content transition-colors whitespace-nowrap;
+    }
+
+    .tab-active {
+        @apply border-accent text-content;
+    }
+
+    .chip {
+        @apply inline-flex items-center gap-1.5 h-8 px-3 rounded border border-line bg-transparent text-sm font-medium text-content-muted hover:text-content hover:border-line-strong transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed;
+    }
+
+    .chip-active {
+        @apply border-accent bg-accent/10 text-accent hover:text-accent hover:border-accent;
+    }
+
+    /* The count that rides on a tab or chip. */
+    .chip-count {
+        @apply ml-1 rounded bg-surface-raised px-1.5 py-0.5 text-xs text-content-subtle;
+    }
+
     /* A Toolbar's icon button: the Minimal button at a fixed 32px square, glyph in currentColor.
        Disabled styling is built in because toolbars are exactly where "can't right now" is
        common — an export with no rows, a refresh already in flight. */
@@ -139,33 +184,53 @@
     /* The Figma `Table Wrapper`: header row on the CANVAS colour in white SemiBold, body rows on
        surface in G4, every cell separated by the Table-Seperator border, 40px header / 48px rows,
        16/24 cell padding. Links inside are `font-medium text-info`; money in the trailing column
-       is `font-medium text-content`. */
+       is `font-medium text-content`. The header is sticky by construction, so a table inside a
+       scrolling panel keeps its column names without each view re-typing `sticky top-0 z-20`.
+       Rows a view makes clickable carry `is-clickable`; a totals row lives in <tfoot>.
+       `data-table-dense` is the 40px-row cut for long financial registers. */
     .data-table {
-        @apply w-full text-sm text-left border border-line-strong;
-    }
-
-    .data-table thead tr {
-        @apply text-content font-semibold;
+        @apply w-full text-sm text-left border-collapse;
     }
 
     .data-table th {
-        @apply h-10 px-6 py-3 bg-canvas border-b border-line-strong font-semibold text-content;
-    }
-
-    .data-table tbody tr {
-        @apply transition;
+        @apply sticky top-0 z-10 h-10 px-6 py-3 bg-canvas border-b border-line-strong font-semibold text-content text-left align-bottom;
     }
 
     .data-table td {
-        @apply h-12 px-6 py-4 bg-surface border-b border-line-strong text-content-muted;
+        @apply h-12 px-6 py-4 bg-surface border-b border-line-strong text-content-muted align-middle;
     }
 
     .data-table tbody tr:last-child td {
         @apply border-b-0;
     }
 
+    .data-table tbody tr.is-clickable {
+        @apply cursor-pointer;
+    }
+
     .data-table tbody tr.is-clickable:hover td {
-        @apply bg-surface-raised cursor-pointer;
+        @apply bg-surface-raised;
+    }
+
+    .data-table tbody tr.is-selected td {
+        @apply bg-surface-raised;
+    }
+
+    .data-table tfoot td {
+        @apply bg-canvas border-t border-line-strong font-semibold text-content;
+    }
+
+    .data-table-dense th {
+        @apply h-8 px-4 py-2;
+    }
+
+    .data-table-dense td {
+        @apply h-10 px-4 py-2;
+    }
+
+    /* Money and numbers sit right-aligned in the same figures font as everything else. */
+    .data-table .num, .data-table th.num, .data-table td.num {
+        @apply text-right whitespace-nowrap tabular-nums;
     }
 
     /* The assistant panel's slide, and the shell's matching squeeze

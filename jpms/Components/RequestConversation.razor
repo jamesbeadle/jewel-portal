@@ -39,7 +39,7 @@
     {
         @if (messages.Count == 0)
         {
-            <p class="rounded-lg border border-dashed border-line px-4 py-6 text-center text-sm text-content-subtle italic mb-5">
+            <p class="rounded border border-dashed border-line px-4 py-6 text-center text-sm text-content-subtle italic mb-5">
                 No messages yet. Start the discussion below.
             </p>
         }
@@ -49,28 +49,28 @@
                 @foreach (var message in messages)
                 {
                     var isInternal = message.Visibility == MessageVisibility.Internal;
-                    <li class="rounded-lg border px-4 py-3 @(isInternal ? "border-amber-500/40 bg-amber-500/[0.04]" : "border-line bg-surface-raised")">
+                    <li class="rounded border px-4 py-3 @(isInternal ?"border-warning/40 bg-warning/5" : "border-line bg-surface-raised")">
                         <div class="flex items-start justify-between gap-3 mb-2">
                             <div class="flex items-center gap-2.5 min-w-0">
-                                <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[11px] font-semibold @(isInternal ? "bg-amber-500/15 text-amber-600" : "bg-surface text-content-muted border border-line")"
+                                <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-semibold @(isInternal ?"bg-warning/15 text-warning" : "bg-surface text-content-muted border border-line")"
                                       aria-hidden="true">@Initials(message)</span>
                                 <span class="text-sm font-semibold text-content truncate">@AuthorLabel(message)</span>
                                 @if (!string.IsNullOrEmpty(message.MailboxId))
                                 {
-                                    <span class="inline-flex items-center rounded border border-line bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-content-subtle shrink-0">Email</span>
+                                    <Pill Tone="Tone.Muted" Class="shrink-0">Email</Pill>
                                 }
                             </div>
                             <div class="flex items-center gap-2 shrink-0">
                                 @if (isInternal)
                                 {
-                                    <span class="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Internal</span>
+                                    <Pill Tone="Tone.Warning">Internal</Pill>
                                 }
                                 else
                                 {
-                                    <span class="inline-flex items-center rounded bg-surface border border-line px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-content-muted">Shared</span>
+                                    <Pill Tone="Tone.Muted">Shared</Pill>
                                 }
                                 <time class="text-xs text-content-subtle whitespace-nowrap" datetime="@message.PostedAt.ToString("o")">
-                                    @message.PostedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")
+                                    @DateTimeText(message.PostedAt)
                                 </time>
                             </div>
                         </div>
@@ -84,7 +84,7 @@
                                the body, the attachments as their own bounded block below. The listed Body is
                                only Graph's short preview snippet, so long emails and their history only appear
                                here. HTML is sanitised server-side before it reaches us. *@
-                            <div class="rounded-lg bg-surface border border-line p-3 max-h-[28rem] overflow-y-auto">
+                            <div class="rounded bg-surface border border-line p-3 max-h-[28rem] overflow-y-auto">
                                 @if (!details.TryGetValue(message.MessageId, out var detail) || detail is null)
                                 {
                                     <p class="text-sm text-content-subtle italic">Loading full email…</p>
@@ -119,8 +119,8 @@
                                 @* View opens the file in a new tab (types a browser renders); Download always
                                    saves. Both stream through the request-scoped attachment endpoint, which
                                    checks the email carries this request's tag — same gate as the body above. *@
-                                <div class="mt-2 rounded-lg bg-surface border border-line p-3">
-                                    <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
+                                <div class="mt-2 rounded bg-surface border border-line p-3">
+                                    <p class="eyebrow mb-2">
                                         @loadedDetail.Attachments.Count attachment@(loadedDetail.Attachments.Count == 1 ? "" : "s")
                                     </p>
                                     <ul class="space-y-1">
@@ -195,11 +195,11 @@
                             </div>
                             @if (replyForMessageId == message.MessageId && replyError is not null)
                             {
-                                <p class="mt-2 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@replyError</p>
+                                <Notice Tone="Tone.Negative" Class="mt-2">@replyError</Notice>
                             }
                             @if (replyForMessageId == message.MessageId && replyDraft is not null)
                             {
-                                <div class="mt-2 rounded-lg bg-positive/10 border border-positive/30 px-3 py-2">
+                                <Notice Tone="Tone.Positive" Class="mt-2">
                                     <p class="text-sm font-medium text-positive">
                                         Reply draft created in the projects mailbox — official PDF attached, in this email's thread.
                                     </p>
@@ -214,7 +214,7 @@
                                         <a href="@replyDraft.WebLink" target="_blank" rel="noopener"
                                            class="text-xs text-accent hover:underline underline-offset-2">Open the draft in Outlook</a>
                                     }
-                                </div>
+                                </Notice>
                             }
                         }
                     </li>
@@ -225,10 +225,10 @@
         @* The composer is its own bounded area, and it takes the warm internal tint the moment
            "Internal only" is ticked — so what you are about to write is visibly the same kind of
            thing as the internal cards above it, before you write it. *@
-        <div class="rounded-lg border px-4 py-3 transition-colors @(internalOnly ? "border-amber-500/40 bg-amber-500/[0.04]" : "border-line bg-surface-raised")">
+        <div class="rounded border px-4 py-3 transition-colors @(internalOnly ?"border-warning/40 bg-warning/5" : "border-line bg-surface-raised")">
             @if (error is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+                <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
             }
             @if (replyToId is not null)
             {

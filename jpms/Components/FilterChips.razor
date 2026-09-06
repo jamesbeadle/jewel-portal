@@ -1,0 +1,43 @@
+@namespace Jewel.JPMS.Components
+
+@*
+    THE local filter row: choices that narrow what is on screen WITHOUT changing the route
+    (status, bucket, owner…). Each is a button; the selected ones are accent-outlined chips.
+    For sibling views reached by navigation use TabRow — an underline, not a pill.
+
+        <FilterChips Items="@statuses" Selected="@status" OnSelect="s => status = s" />
+    Multi-select: pass SelectedKeys and OnToggle instead.
+*@
+
+<div class="flex flex-wrap items-center gap-2 @Class" role="group" aria-label="@AriaLabel">
+    @foreach (var item in Items)
+    {
+        var active = IsActive(item.Key);
+        <button type="button" class="chip @(active ?"chip-active" : "")" title="@item.Title"
+                aria-pressed="@(active ? "true" : "false")" disabled="@Disabled"
+                @onclick="() => Pick(item.Key)">
+            @item.Label
+            @if (item.Count is { } count)
+            {
+                <span class="chip-count">@count</span>
+            }
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<TabItem> Items { get; set; } = Array.Empty<TabItem>();
+    /// <summary>Single-select: the selected key.</summary>
+    [Parameter] public string? Selected { get; set; }
+    [Parameter] public EventCallback<string> OnSelect { get; set; }
+    /// <summary>Multi-select: the selected keys; each click toggles one.</summary>
+    [Parameter] public IReadOnlySet<string>? SelectedKeys { get; set; }
+    [Parameter] public EventCallback<string> OnToggle { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string AriaLabel { get; set; } = "Filters";
+    [Parameter] public string Class { get; set; } = "";
+
+    private bool IsActive(string key) => SelectedKeys is not null ? SelectedKeys.Contains(key) : key == Selected;
+
+    private Task Pick(string key) => SelectedKeys is not null ? OnToggle.InvokeAsync(key) : OnSelect.InvokeAsync(key);
+}

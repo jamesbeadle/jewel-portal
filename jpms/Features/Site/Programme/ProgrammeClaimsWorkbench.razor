@@ -10,7 +10,7 @@
    the page prefills the NOD from a detected delay event and re-reads the LADs when one lands. *@
 @if ((Error ?? error) is { } shown)
 {
-    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@shown</p>
+    <Notice Tone="Tone.Negative" Class="mb-4">@shown</Notice>
 }
 
 <div class="flex flex-wrap gap-2 mb-5">
@@ -24,12 +24,14 @@
     <div class="panel p-4 mb-5 space-y-3">
         <p class="text-sm font-semibold text-content">Raise a Notice of Delay</p>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+            <FormField Label="Title">
             <input class="field" @bind="nodTitle" placeholder="e.g. Delay to steel delivery — structural frame" />
+            </FormField>
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+            <FormField Label="Description">
             <textarea class="field" rows="3" @bind="nodDescription" placeholder="The cause of delay, the works affected and the expected programme impact."></textarea>
+            </FormField>
         </div>
         <div class="flex gap-2">
             <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(nodTitle))" @onclick="RaiseNodAsync">Raise NOD</button>
@@ -42,15 +44,17 @@ else if (openForm == Form.Eot)
     <div class="panel p-4 mb-5 space-y-3">
         <p class="text-sm font-semibold text-content">Raise an Extension of Time</p>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+            <FormField Label="Title">
             <input class="field" @bind="eotTitle" placeholder="e.g. EOT — 10 working days, steel delivery delay" />
+            </FormField>
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+            <FormField Label="Description">
             <textarea class="field" rows="3" @bind="eotDescription" placeholder="The extension sought and the grounds for it."></textarea>
+            </FormField>
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Arises from Notice of Delay (optional)</label>
+            <FormField Label="Arises from Notice of Delay (optional)">
             <select class="field" @bind="eotRelatedNodId">
                 <option value="">No related NOD</option>
                 @foreach (var nod in Nods)
@@ -58,6 +62,7 @@ else if (openForm == Form.Eot)
                     <option value="@nod.RequestId">@nod.Reference — @nod.Title</option>
                 }
             </select>
+            </FormField>
         </div>
         <div class="flex gap-2">
             <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(eotTitle))" @onclick="RaiseEotAsync">Raise EOT</button>
@@ -70,34 +75,41 @@ else if (openForm == Form.Lad)
     <div class="panel p-4 mb-5 space-y-3">
         <p class="text-sm font-semibold text-content">Record a Liquidated Damages claim</p>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+            <FormField Label="Title">
             <input class="field" @bind="ladTitle" placeholder="e.g. LADs notice — completion overrun" />
+            </FormField>
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+            <FormField Label="Description">
             <textarea class="field" rows="3" @bind="ladDescription" placeholder="The client's notice and the completion date it's claimed against."></textarea>
+            </FormField>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period from</label>
+                <FormField Label="Period from">
                 <input type="date" class="field" @bind="ladPeriodFrom" />
+                </FormField>
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period to</label>
+                <FormField Label="Period to">
                 <input type="date" class="field" @bind="ladPeriodTo" />
+                </FormField>
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Days claimed</label>
+                <FormField Label="Days claimed">
                 <input type="number" min="0" class="field" @bind="ladDaysClaimed" />
+                </FormField>
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Rate / week (£)</label>
+                <FormField Label="Rate / week (£)">
                 <input type="number" min="0" step="0.01" class="field" @bind="ladRatePerWeek" />
+                </FormField>
             </div>
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amount claimed (£)</label>
+            <FormField Label="Amount claimed (£)">
             <input type="number" min="0" step="0.01" class="field" @bind="ladAmount" />
+            </FormField>
         </div>
         <div class="flex gap-2">
             <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(ladTitle))" @onclick="RecordLadAsync">Record claim</button>
@@ -119,15 +131,15 @@ else if (openForm == Form.Lad)
             <ul class="space-y-2">
                 @foreach (var nod in Nods)
                 {
-                    <li class="rounded-lg border border-line bg-surface px-4 py-3">
+                    <li class="rounded border border-line bg-surface px-4 py-3">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <div class="flex items-center gap-2">
                                 <span class="font-mono text-xs text-content-muted">@nod.Reference</span>
                                 <span class="text-sm font-medium text-content">@nod.Title</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">@nod.Status</span>
-                                <span class="text-xs text-content-subtle">@((nod.IssuedAt ?? nod.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</span>
+                                <Pill Tone="Tone.Muted">@nod.Status</Pill>
+                                <span class="text-xs text-content-subtle">@(DateText(nod.IssuedAt ?? nod.RaisedAt))</span>
                             </div>
                         </div>
                         @if (!string.IsNullOrWhiteSpace(nod.Description))
@@ -153,7 +165,7 @@ else if (openForm == Form.Lad)
             <ul class="space-y-2">
                 @foreach (var eot in Eots)
                 {
-                    <li class="rounded-lg border border-line bg-surface px-4 py-3">
+                    <li class="rounded border border-line bg-surface px-4 py-3">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <div class="flex items-center gap-2">
                                 <span class="font-mono text-xs text-content-muted">@eot.Reference</span>
@@ -162,10 +174,10 @@ else if (openForm == Form.Lad)
                             <div class="flex items-center gap-2">
                                 @if (RelatedNodReference(eot) is { } nodRef)
                                 {
-                                    <span class="inline-flex items-center rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent" title="Arises from this Notice of Delay">from @nodRef</span>
+                                    <Pill Tone="Tone.Info" Title="Arises from this Notice of Delay">from @nodRef</Pill>
                                 }
-                                <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">@eot.Status</span>
-                                <span class="text-xs text-content-subtle">@((eot.IssuedAt ?? eot.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</span>
+                                <Pill Tone="Tone.Muted">@eot.Status</Pill>
+                                <span class="text-xs text-content-subtle">@(DateText(eot.IssuedAt ?? eot.RaisedAt))</span>
                             </div>
                         </div>
                         @if (!string.IsNullOrWhiteSpace(eot.Description))
@@ -195,15 +207,15 @@ else if (openForm == Form.Lad)
             <ul class="space-y-2">
                 @foreach (var lad in Lads)
                 {
-                    <li class="rounded-lg border border-line bg-surface px-4 py-3">
+                    <li class="rounded border border-line bg-surface px-4 py-3">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <div class="flex items-center gap-2">
                                 <span class="font-mono text-xs text-content-muted">@lad.Reference</span>
                                 <span class="text-sm font-medium text-content">@lad.Title</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">@lad.Status.DisplayName()</span>
-                                <span class="text-xs text-content-subtle">@lad.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                                <Pill Tone="Tone.Muted">@lad.Status.DisplayName()</Pill>
+                                <span class="text-xs text-content-subtle">@DateText(lad.RaisedAt)</span>
                             </div>
                         </div>
                         <p class="text-xs text-content-subtle mt-1">

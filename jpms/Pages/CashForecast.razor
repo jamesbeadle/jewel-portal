@@ -65,156 +65,152 @@
     Director/FD/PM), so the tweak survives reloads and every colleague sees the same forecast.
 *@
 
-<ApprovedSessionGate>
-    <section class="px-6 md:px-8 py-8 md:py-12">
-        <header class="mb-4">
-            <p class="eyebrow mb-1">JPMS · Company</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Cash Forecast</h1>
-            <p class="text-sm text-content-muted mt-1">
-                Every known future cash movement in the month it is expected to land@(IsDirector ? ", and the bank balance that results — lowest point first" : "").
-            </p>
-        </header>
+<Page>
+    <PageHeader>
+        <SubtitleContent>
+            Every known future cash movement in the month it is expected to land@(IsDirector ? ", and the bank balance that results — lowest point first" : "").
+        </SubtitleContent>
+    </PageHeader>
 
-        @* Standing notice until the FD and consultant sign off the §4 phasing rules — the
-           AMOUNTS are live and tie to the statements; only their TIMING is provisional. *@
-        <p class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-sm text-amber-600 mb-6 max-w-4xl">
-            <span class="font-semibold">Unconfirmed figures.</span> The timing rules behind this
-            forecast are awaiting sign-off (Financial-Reports-and-Nav-Refactor-Plan §4). Amounts
-            are live and reconcile to the statement below; treat the months as indicative. Two
-            known simplifications: supplier bills are assumed payable this month (per-bill due
-            dates come with the confirmed build), and the overheads figure is entered on this
-            page, not yet a system setting.
-        </p>
+    @* Standing notice until the FD and consultant sign off the §4 phasing rules — the
+       AMOUNTS are live and tie to the statements; only their TIMING is provisional. *@
+    <Notice Tone="Tone.Warning" Class="mb-6 max-w-4xl">
+        <span class="font-semibold">Unconfirmed figures.</span> The timing rules behind this
+        forecast are awaiting sign-off (Financial-Reports-and-Nav-Refactor-Plan §4). Amounts
+        are live and reconcile to the statement below; treat the months as indicative. Two
+        known simplifications: supplier bills are assumed payable this month (per-bill due
+        dates come with the confirmed build), and the overheads figure is entered on this
+        page, not yet a system setting.
+    </Notice>
 
-        @{
-            // Computed ONCE per render and threaded through — the KPI strip, the table, the
-            // chart and the reconciliation check must all describe the same forecast.
-            var forecastView = TableReady && SelectedProjects.Count > 0 ? BuildForecast() : null;
-        }
+    @{
+        // Computed ONCE per render and threaded through — the KPI strip, the table, the
+        // chart and the reconciliation check must all describe the same forecast.
+        var forecastView = TableReady && SelectedProjects.Count > 0 ? BuildForecast() : null;
+    }
 
-        @if (IsDirector)
-        {
-            <ForecastKpiStrip Bank="BankSnapshot" BankReady="BankReady" TableReady="TableReady"
-                              Forecast="forecastView" FetchedText="@FetchedText" />
-        }
+    @if (IsDirector)
+    {
+        <ForecastKpiStrip Bank="BankSnapshot" BankReady="BankReady" TableReady="TableReady"
+                          Forecast="forecastView" FetchedText="@FetchedText" />
+    }
 
-        @if (projectsFailed)
-        {
-            <p class="text-sm text-negative">Couldn't load the project list. The details are in the red bar at the top — reload to try again.</p>
-        }
-        else
-        {
-            <div class="mb-3 flex items-center justify-between gap-3 flex-wrap">
-                @* The filter is a control, so it is never gated: it renders disabled with a
-                   loading label until the project list lands (the loading-states convention). *@
-                @if (Projects.Current is null)
-                {
-                    <select disabled
-                            class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content-subtle">
-                        <option>Loading projects…</option>
-                    </select>
-                }
-                else
-                {
-                    <ProjectMultiSelect Projects="@(Projects.Current!)"
-                                        Selected="@selectedIds"
-                                        SelectedChanged="OnSelectionChangedAsync" />
-                }
-                @* Disabled while any selected row failed to load: the on-screen banner discloses
-                   the zeros, but a workbook travels without it — retry first, then export. *@
-                <ExportToExcelButton FileName="Cash forecast"
-                                     Disabled="@(!TableReady || SelectedProjects.Count == 0 || FailedSelectedProjects.Count > 0)"
-                                     BuildWorkbook="BuildExportWorkbook" />
-            </div>
-
-            @* One gate for everything below: the forecast, the statement and the table are the
-               same arithmetic over the same sources, so all of it reveals in one piece. *@
-            <LoadGate IsLoading="@(!TableReady)" Prominent="true" Label="Loading project cashflows">
-            @if (SelectedProjects.Count == 0)
+    @if (projectsFailed)
+    {
+        <p class="text-sm text-negative">Couldn't load the project list. The details are in the red bar at the top — reload to try again.</p>
+    }
+    else
+    {
+        <div class="mb-3 flex items-center justify-between gap-3 flex-wrap">
+            @* The filter is a control, so it is never gated: it renders disabled with a
+               loading label until the project list lands (the loading-states convention). *@
+            @if (Projects.Current is null)
             {
-                <div class="panel p-8 text-center">
-                    <p class="text-sm text-content">No projects selected — pick some in the filter above.</p>
-                </div>
+                <select disabled
+                        class="field">
+                    <option>Loading projects…</option>
+                </select>
             }
             else
             {
-                @if (FailedSelectedProjects.Count > 0)
-                {
-                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">
-                        The cash position could not be loaded for @string.Join(", ", FailedSelectedProjects.Select(p => p.Reference)) — those rows show zeros.
-                        <button type="button" class="underline underline-offset-2 ml-1" @onclick="RetryFailedAsync">Retry</button>
-                    </p>
-                }
-
-                var forecast = forecastView!;
-
-                <p class="text-xs text-content-subtle mb-3 max-w-4xl">
-                    <span class="font-medium text-content-muted">No signs to decode:</span> the band
-                    carries the direction — Cash in adds, Cash out subtracts; only Net movement and
-                    the balance are signed. Anything overdue sits in the current month, never the
-                    past. Flows with no honest date (no practical-completion date set) sit in
-                    Undated and never touch the balance.
-                </p>
-
-                <CashForecastTable Forecast="forecast" IsDirector="IsDirector"
-                                   ExpandedCategories="expandedCategories" OnToggle="ToggleCategory"
-                                   OnNextValuationChanged="args => OnNextValuationChangedAsync(args.Project, args.Args)"
-                                   OnMonthlyValuationChanged="args => OnMonthlyValuationChangedAsync(args.Project, args.Args)"
-                                   OverheadsDefault="overheadsMonthly" OverheadsOverrides="overheadsOverrides"
-                                   OnOverheadsDefaultChanged="OnOverheadsChanged"
-                                   OnOverheadsMonthChanged="args => OnOverheadMonthChangedAsync(args.Month, args.Args)" />
-
-                @* ── The balance drawn: one line, the trough flagged. Directors only — it is the
-                   bank position over time. ── *@
-                @if (IsDirector && forecast.Closing.Length > 1)
-                {
-                    <div class="rounded-xl border border-line bg-surface px-5 py-4 mb-6">
-                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2">Closing bank balance by month</p>
-                        <ForecastBalanceChart Axis="forecast.Axis" Closing="forecast.Closing"
-                                              MinIndex="forecast.MinIndex"
-                                              HighReference="@(BankSnapshot?.TotalCash ?? 0m)" />
-                    </div>
-                }
-
-                @* ── The promise, checked live: phased months per project must equal that
-                   project's completion cashflow on the statement below — to the penny. ── *@
-                @if (forecast.Variances.Count == 0)
-                {
-                    <p class="text-xs text-content-subtle mb-10 max-w-4xl">
-                        <span class="text-positive font-semibold">✓ Ties to the statement below, to the penny.</span>
-                        Every project's phased months (dated, later and undated together) sum to its
-                        Project Completion Cashflow — the forecast is the same figures spread in
-                        time, never a second opinion.
-                    </p>
-                }
-                else
-                {
-                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-xs text-negative mb-10 max-w-4xl">
-                        Phasing does not explain the statement for
-                        @string.Join(", ", forecast.Variances.Select(variance => $"{variance.Project.Reference} ({Signed(variance.Variance)})"))
-                        — this is a defect to report, not a judgement call. The statement below remains authoritative.
-                    </p>
-                }
-
-                @* ════════════════════════ the divider ════════════════════════ *@
-                <div class="flex items-center gap-4 mb-6">
-                    <div class="h-px bg-line flex-1"></div>
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold whitespace-nowrap">Position to completion — the former Cash Summary</p>
-                    <div class="h-px bg-line flex-1"></div>
-                </div>
-                <p class="text-xs text-content-subtle mb-4 max-w-4xl">
-                    The to-completion statement this page grew out of, unchanged: no time axis, just
-                    where the selected jobs' cash lands if they run to the end. The forecast above is
-                    these same figures with "when" added. The old bank tiles are not repeated here —
-                    their figures live in the strip at the top.
-                </p>
-
-                var combined = Totals();
-                <CombinedStatementCard Combined="combined" SelectionLabel="@SelectionLabel" />
-                <ProjectCashTable Rows="@(SelectedProjects.Select(project => (project, RowFor(project.ProjectId))).ToList())"
-                                  Total="combined" />
+                <ProjectMultiSelect Projects="@(Projects.Current!)"
+                                    Selected="@selectedIds"
+                                    SelectedChanged="OnSelectionChangedAsync" />
             }
-            </LoadGate>
+            @* Disabled while any selected row failed to load: the on-screen banner discloses
+               the zeros, but a workbook travels without it — retry first, then export. *@
+            <ExportToExcelButton FileName="Cash forecast"
+                                 Disabled="@(!TableReady || SelectedProjects.Count == 0 || FailedSelectedProjects.Count > 0)"
+                                 BuildWorkbook="BuildExportWorkbook" />
+        </div>
+
+        @* One gate for everything below: the forecast, the statement and the table are the
+           same arithmetic over the same sources, so all of it reveals in one piece. *@
+        <LoadGate IsLoading="@(!TableReady)" Prominent="true" Label="Loading project cashflows">
+        @if (SelectedProjects.Count == 0)
+        {
+            <div class="panel p-8 text-center">
+                <p class="text-sm text-content">No projects selected — pick some in the filter above.</p>
+            </div>
         }
-    </section>
-</ApprovedSessionGate>
+        else
+        {
+            @if (FailedSelectedProjects.Count > 0)
+            {
+                <Notice Tone="Tone.Negative" Class="mb-4">
+                    The cash position could not be loaded for @string.Join(", ", FailedSelectedProjects.Select(p => p.Reference)) — those rows show zeros.
+                    <button type="button" class="underline underline-offset-2 ml-1" @onclick="RetryFailedAsync">Retry</button>
+                </Notice>
+            }
+
+            var forecast = forecastView!;
+
+            <p class="text-xs text-content-subtle mb-3 max-w-4xl">
+                <span class="font-medium text-content-muted">No signs to decode:</span> the band
+                carries the direction — Cash in adds, Cash out subtracts; only Net movement and
+                the balance are signed. Anything overdue sits in the current month, never the
+                past. Flows with no honest date (no practical-completion date set) sit in
+                Undated and never touch the balance.
+            </p>
+
+            <CashForecastTable Forecast="forecast" IsDirector="IsDirector"
+                               ExpandedCategories="expandedCategories" OnToggle="ToggleCategory"
+                               OnNextValuationChanged="args => OnNextValuationChangedAsync(args.Project, args.Args)"
+                               OnMonthlyValuationChanged="args => OnMonthlyValuationChangedAsync(args.Project, args.Args)"
+                               OverheadsDefault="overheadsMonthly" OverheadsOverrides="overheadsOverrides"
+                               OnOverheadsDefaultChanged="OnOverheadsChanged"
+                               OnOverheadsMonthChanged="args => OnOverheadMonthChangedAsync(args.Month, args.Args)" />
+
+            @* ── The balance drawn: one line, the trough flagged. Directors only — it is the
+               bank position over time. ── *@
+            @if (IsDirector && forecast.Closing.Length > 1)
+            {
+                <div class="panel px-5 py-4 mb-6">
+                    <p class="eyebrow mb-2">Closing bank balance by month</p>
+                    <ForecastBalanceChart Axis="forecast.Axis" Closing="forecast.Closing"
+                                          MinIndex="forecast.MinIndex"
+                                          HighReference="@(BankSnapshot?.TotalCash ?? 0m)" />
+                </div>
+            }
+
+            @* ── The promise, checked live: phased months per project must equal that
+               project's completion cashflow on the statement below — to the penny. ── *@
+            @if (forecast.Variances.Count == 0)
+            {
+                <p class="text-xs text-content-subtle mb-10 max-w-4xl">
+                    <span class="text-positive font-semibold">✓ Ties to the statement below, to the penny.</span>
+                    Every project's phased months (dated, later and undated together) sum to its
+                    Project Completion Cashflow — the forecast is the same figures spread in
+                    time, never a second opinion.
+                </p>
+            }
+            else
+            {
+                <Notice Tone="Tone.Negative" Class="mb-10 max-w-4xl">
+                    Phasing does not explain the statement for
+                    @string.Join(", ", forecast.Variances.Select(variance => $"{variance.Project.Reference} ({Signed(variance.Variance)})"))
+                    — this is a defect to report, not a judgement call. The statement below remains authoritative.
+                </Notice>
+            }
+
+            @* ════════════════════════ the divider ════════════════════════ *@
+            <div class="flex items-center gap-4 mb-6">
+                <div class="h-px bg-line flex-1"></div>
+                <p class="eyebrow whitespace-nowrap">Position to completion — the former Cash Summary</p>
+                <div class="h-px bg-line flex-1"></div>
+            </div>
+            <p class="text-xs text-content-subtle mb-4 max-w-4xl">
+                The to-completion statement this page grew out of, unchanged: no time axis, just
+                where the selected jobs' cash lands if they run to the end. The forecast above is
+                these same figures with "when" added. The old bank tiles are not repeated here —
+                their figures live in the strip at the top.
+            </p>
+
+            var combined = Totals();
+            <CombinedStatementCard Combined="combined" SelectionLabel="@SelectionLabel" />
+            <ProjectCashTable Rows="@(SelectedProjects.Select(project => (project, RowFor(project.ProjectId))).ToList())"
+                              Total="combined" />
+        }
+        </LoadGate>
+    }
+</Page>

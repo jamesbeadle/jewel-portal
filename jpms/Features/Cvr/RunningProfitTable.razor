@@ -7,25 +7,25 @@
    carries the level. The host builds the MovementModel and owns the labour-accrual overlay —
    the three delegates carry its per-cell hover, dot and to-date figures. *@
 <div class="overflow-x-auto">
-    <table class="w-full text-sm" style="border-collapse:separate;border-spacing:3px">
+    <table class="data-table data-table-dense" style="border-collapse:separate;border-spacing:3px">
         <thead>
-            <tr class="text-[10px] uppercase tracking-wider text-content-subtle font-medium">
-                <th class="text-left py-1.5 px-2">Project</th>
+            <tr>
+                <th class="text-left">Project</th>
                 @foreach (var month in Movement.Months)
                 {
-                    <th class="text-center py-1.5 px-2 whitespace-nowrap">@month.ToString("MMM yy")</th>
+                    <th class="text-center whitespace-nowrap">@month.ToString("MMM yy")</th>
                 }
-                <th class="text-center py-1.5 px-2 whitespace-nowrap">6-mo Δ</th>
-                <th class="text-center py-1.5 px-2 whitespace-nowrap">Position now</th>
+                <th class="text-center whitespace-nowrap">6-mo Δ</th>
+                <th class="text-center whitespace-nowrap">Position now</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var row in Movement.Rows)
             {
                 <tr>
-                    <td class="text-left whitespace-nowrap py-2 pr-3">
+                    <td class="text-left whitespace-nowrap">
                         <span class="text-content">@row.Project.Name</span>
-                        <span class="block font-mono text-[9px] text-content-faint">@row.Project.Reference</span>
+                        <span class="block font-mono text-xs text-content-faint">@row.Project.Reference</span>
                     </td>
                     @for (var index = 0; index < row.MonthCells.Count; index++)
                     {
@@ -34,45 +34,45 @@
                         var move = row.MovementsPp[index];
                         @if (cell.Empty)
                         {
-                            <td class="text-center rounded-md py-2.5 px-2 text-xs text-content-faint" style="background:#12151c">—</td>
+                            <td class="text-center rounded text-xs text-content-faint" style="background:#12151c">—</td>
                         }
                         else if (cell.Running is not decimal runningLevel)
                         {
                             @* Costs have moved but nothing has EVER been invoiced — no honest running %; the £ is in the hover. *@
-                            <td class="text-center rounded-md py-2.5 px-2 text-xs text-content-faint" style="background:#12151c"
+                            <td class="text-center rounded text-xs text-content-faint" style="background:#12151c"
                                 title="@($"{cellMonth:MMM yy} — nothing invoiced to date · profit to date {SignedMoneyCompact(cell.CumProfit)}{AccrualHover(row.Project.ProjectId, cellMonth)}")">
                                 n/a
                                 @if (!cell.Own.Empty)
                                 {
-                                    <span class="block text-[10px] font-normal mt-0.5">@SignedMoneyCompact(cell.Own.Profit)</span>
+                                    <span class="block text-xs font-normal mt-0.5">@SignedMoneyCompact(cell.Own.Profit)</span>
                                 }
                             </td>
                         }
                         else
                         {
-                            <td class="text-center rounded-md py-1.5 px-2 text-xs tabular-nums"
+                            <td class="text-center rounded text-xs tabular-nums"
                                 style="@(move is decimal shadePp ? MovementCellStyle(shadePp, Movement.ShadeMax) : "background:#12151c")"
                                 title="@(RunningCellHover(cellMonth, cell) + AccrualHover(row.Project.ProjectId, cellMonth))">
                                 <span class="font-medium @ProfitClass(runningLevel)">@PctCell(runningLevel)</span>@if (AccrualOwnFor(row.Project.ProjectId, cellMonth) > 0m)
-                                {<span class="text-amber-400 ml-0.5" aria-hidden="true">•</span>}
-                                <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(move)@(cell.Own.Empty ? "" : $" · {SignedMoneyCompact(cell.Own.Profit)}")</span>
+                                {<span class="text-warning ml-0.5" aria-hidden="true">•</span>}
+                                <span class="block text-xs font-normal text-content-muted mt-0.5">@MovementPrint(move)@(cell.Own.Empty ? "" : $" · {SignedMoneyCompact(cell.Own.Profit)}")</span>
                             </td>
                         }
                     }
-                    <td class="text-center py-2.5 px-2 text-xs font-semibold tabular-nums @ProfitClass(row.WindowDelta ?? 0m)"
+                    <td class="text-center text-xs font-semibold tabular-nums @ProfitClass(row.WindowDelta ?? 0m)"
                         title="@($"running % now vs 6 months ago · the window itself: invoiced {MoneyCompact(row.Window.Income)} · profit {SignedMoneyCompact(row.Window.Profit)}")">
                         @(row.WindowDelta is decimal windowDelta ? SignedPp(windowDelta) : "—")
                     </td>
-                    <td class="text-center rounded-md py-2 px-3 text-xs font-semibold whitespace-nowrap border border-line bg-surface-raised @ProfitClass(row.RunningPercent ?? 0m)">
+                    <td class="text-center rounded text-xs font-semibold whitespace-nowrap border @ProfitClass(row.RunningPercent ?? 0m)">
                         @(row.RunningPercent is decimal runningPct ? PctCell(runningPct) : "—")
-                        <span class="block font-normal text-[10px] text-content-subtle mt-0.5">@MoneyCompact(row.PositionMoney)</span>
+                        <span class="block font-normal text-xs text-content-subtle mt-0.5">@MoneyCompact(row.PositionMoney)</span>
                         @if (AccrualToDateFor(row.Project.ProjectId) is > 0m and var accruedToDate)
                         {
-                            <span class="block font-normal text-[10px] text-amber-400 mt-0.5">incl. @MoneyCompact(accruedToDate) accrued</span>
+                            <span class="block font-normal text-xs text-warning mt-0.5">incl. @MoneyCompact(accruedToDate) accrued</span>
                         }
                         @if (row.Stale)
                         {
-                            <span class="block font-normal text-[10px] text-amber-400 mt-0.5">⚠ no movement 6 mo</span>
+                            <span class="block font-normal text-xs text-warning mt-0.5">⚠ no movement 6 mo</span>
                         }
                     </td>
                 </tr>
@@ -80,20 +80,20 @@
             @if (Movement.Rows.Count > 1)
             {
                 <tr class="font-semibold">
-                    <td class="text-left py-2.5 pr-3 border-t border-line text-content">
+                    <td class="text-left border-t text-content">
                         All jobs with Xero data
-                        <span class="block font-normal text-[9px] text-content-faint">combined margin — total profit over total invoiced</span>
+                        <span class="block font-normal text-xs text-content-faint">combined margin — total profit over total invoiced</span>
                     </td>
                     @for (var index = 0; index < Movement.ColumnTotals.Count; index++)
                     {
                         var total = Movement.ColumnTotals[index];
                         var totalMove = Movement.TotalMovementsPp[index];
-                        <td class="text-center py-2 px-2 text-xs border-t border-line tabular-nums"
+                        <td class="text-center text-xs border-t tabular-nums"
                             title="@($"invoiced to date {MoneyCompact(total.CumIncome)} · profit to date {SignedMoneyCompact(total.CumProfit)}")">
                             @if (total.Running is decimal totalPct)
                             {
                                 <span class="@ProfitClass(totalPct)">@PctCell(totalPct)</span>
-                                <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(totalMove)@(total.Own.Empty ? "" : $" · {SignedMoneyCompact(total.Own.Profit)}")</span>
+                                <span class="block text-xs font-normal text-content-muted mt-0.5">@MovementPrint(totalMove)@(total.Own.Empty ? "" : $" · {SignedMoneyCompact(total.Own.Profit)}")</span>
                             }
                             else
                             {
@@ -101,16 +101,16 @@
                             }
                         </td>
                     }
-                    <td class="text-center py-2.5 px-2 text-xs border-t border-line tabular-nums @ProfitClass(Movement.TotalWindowDelta ?? 0m)"
+                    <td class="text-center text-xs border-t tabular-nums @ProfitClass(Movement.TotalWindowDelta ?? 0m)"
                         title="@($"running % now vs 6 months ago · the window itself: invoiced {MoneyCompact(Movement.TotalWindow.Income)} · profit {SignedMoneyCompact(Movement.TotalWindow.Profit)}")">
                         @(Movement.TotalWindowDelta is decimal totalWindowDelta ? SignedPp(totalWindowDelta) : "—")
                     </td>
-                    <td class="text-center py-2.5 px-2 text-xs border-t border-line whitespace-nowrap @ProfitClass(Movement.TotalRunningPercent ?? 0m)">
+                    <td class="text-center text-xs border-t whitespace-nowrap @ProfitClass(Movement.TotalRunningPercent ?? 0m)">
                         @(Movement.TotalRunningPercent is decimal totalRunningPct ? PctCell(totalRunningPct) : "—")
-                        <span class="block font-normal text-[10px] text-content-subtle mt-0.5">@MoneyCompact(Movement.TotalPositionMoney)</span>
+                        <span class="block font-normal text-xs text-content-subtle mt-0.5">@MoneyCompact(Movement.TotalPositionMoney)</span>
                         @if (Movement.Rows.Sum(gridRow => AccrualToDateFor(gridRow.Project.ProjectId)) is > 0m and var totalAccrued)
                         {
-                            <span class="block font-normal text-[10px] text-amber-400 mt-0.5">incl. @MoneyCompact(totalAccrued) accrued</span>
+                            <span class="block font-normal text-xs text-warning mt-0.5">incl. @MoneyCompact(totalAccrued) accrued</span>
                         }
                     </td>
                 </tr>

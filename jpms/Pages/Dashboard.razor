@@ -9,28 +9,20 @@
 
 <PageTitle>Home · JPMS</PageTitle>
 
-@if (!isLoaded)
-{
-    <LoadingScreen />
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (Session.ActiveRole == Role.Admin)
-{
-    <AdminHome CurrentUser="Auth.CurrentUser!" />
-}
-else if (Session.ActiveRole is not null)
-{
-    <RoleHome
-        Role="Session.ActiveRole.Value"
-        DisplayName="@Auth.CurrentUser!.DisplayName"
-        Email="@Auth.CurrentUser.Email" />
-}
-
+<Page>
+    @if (Session.ActiveRole == Role.Admin)
+    {
+        <AdminHome CurrentUser="Auth.CurrentUser!" />
+    }
+    else if (Session.ActiveRole is not null)
+    {
+        <RoleHome
+            Role="Session.ActiveRole.Value"
+            DisplayName="@Auth.CurrentUser!.DisplayName"
+            Email="@Auth.CurrentUser.Email" />
+    }
+</Page>
 @code {
-    private bool isLoaded;
 
     protected override async Task OnInitializedAsync()
     {
@@ -70,7 +62,6 @@ else if (Session.ActiveRole is not null)
                 }));
         }
 
-        isLoaded = true;
     }
 
     // Runs one admin panel's load and swallows its failure, so a panel that cannot load leaves

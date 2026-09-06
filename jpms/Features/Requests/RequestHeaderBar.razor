@@ -17,7 +17,7 @@
                 {
                     <span class="font-mono text-sm text-content-muted" title="Container number — the request's folder in the projects mailbox">@Record.DisplayNumber</span>
                 }
-                <span class="text-content-subtle text-xs uppercase tracking-wide" title="@Record.Kind.LongName()">@Record.Kind.DisplayName()</span>
+                <span class="text-content-subtle text-xs" title="@Record.Kind.LongName()">@Record.Kind.DisplayName()</span>
 
                 <span class="h-4 w-px bg-line" aria-hidden="true"></span>
 
@@ -28,23 +28,22 @@
                        date + agent gate) — everything else applies directly. *@
                     <DropdownMenu AlignLeft="true" WidthClass="w-48" Disabled="@Busy"
                                   ToggleTitle="Change status"
-                                  ToggleClass="@($"inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium {StatusClass(Record.Status)}")"
+                                  ToggleClass="@Pill.ClassesFor(Record.Status.ToTone())"
                                   Items="StatusMenuItems">
                         <ToggleContent><span>@Record.Status.DisplayName()</span></ToggleContent>
                     </DropdownMenu>
                 }
                 else
                 {
-                    <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(Record.Status)">@Record.Status.DisplayName()</span>
+                    <Pill Tone="@Record.Status.ToTone()">@Record.Status.DisplayName()</Pill>
                 }
                 @if (Record.ImpliesVariation)
                 {
-                    <span class="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Variation</span>
+                    <Pill Tone="Tone.Warning">Variation</Pill>
                 }
                 @if (Record.CriticalPath)
                 {
-                    <span class="inline-flex items-center rounded bg-negative/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-negative"
-                          title="Programme-related — the answer gates work on the programme's critical path">Critical path</span>
+                    <Pill Tone="Tone.Negative" Title="Programme-related — the answer gates work on the programme's critical path">Critical path</Pill>
                 }
             </div>
             <h2 class="text-xl font-semibold text-content leading-snug">@Record.Title</h2>

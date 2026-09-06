@@ -9,7 +9,6 @@ public partial class ProjectFinancials
 {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
     private string? actionError;
 
     // Computed here rather than in an inline @{ } block: the banner sits inside an else { } code
@@ -215,7 +214,6 @@ public partial class ProjectFinancials
         _ = ValuationLines.RefreshAsync(ProjectId, CancellationToken.None);
         _ = Groups.RefreshAsync(ProjectId, CancellationToken.None);
         await CostCenters.RefreshAsync(CancellationToken.None);
-        isLoaded = true;
     }
 
     public void Dispose()

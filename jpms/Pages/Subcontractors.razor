@@ -25,47 +25,35 @@
     read shows a quiet restriction note instead of rows.
 *@
 
-@if (!isLoaded)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!CanAccess)
-{
-    <section class="px-6 md:px-8 py-12">
-        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+<Page>
+    @if (!CanAccess)
+    {
+        <PageHeader Title="Not available" />
         <p class="text-content-muted">The directory is restricted to administrators, directors and project managers.</p>
-    </section>
-}
-else
-{
-    <section class="px-6 md:px-8 py-8 md:py-12">
-        <header class="mb-6 flex flex-wrap items-start justify-between gap-3">
-            <div>
-                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Directory</p>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Directory</h1>
-                <p class="text-sm text-content-muted mt-2">@GroupSummary</p>
-            </div>
-            @if (group == DirectoryGroup.Subcontractors)
-            {
-                <div class="flex items-center gap-4 shrink-0">
-                    <ExportToExcelButton FileName="Directory"
-                                         Disabled="@(DirectoryCompanies().Count == 0)"
-                                         ShowIncludeAllRows="@(!string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(categoryFilter))"
-                                         IncludeAllLabel="Ignore search & filter"
-                                         BuildWorkbook="BuildExportWorkbook" />
-                    @if (CanManage)
-                    {
-                        <button type="button" class="btn-primary" @onclick="OpenAddModal">+ Add company</button>
-                    }
-                </div>
-            }
-        </header>
+    }
+    else
+    {
+        <PageHeader>
+            <SubtitleContent>
+                @GroupSummary
+            </SubtitleContent>
+            <Actions>
+                @if (group == DirectoryGroup.Subcontractors)
+                {
+                    <div class="flex items-center gap-4 shrink-0">
+                        <ExportToExcelButton FileName="Directory"
+                                             Disabled="@(DirectoryCompanies().Count == 0)"
+                                             ShowIncludeAllRows="@(!string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(categoryFilter))"
+                                             IncludeAllLabel="Ignore search & filter"
+                                             BuildWorkbook="BuildExportWorkbook" />
+                        @if (CanManage)
+                        {
+                            <button type="button" class="btn-primary" @onclick="OpenAddModal">+ Add company</button>
+                        }
+                    </div>
+                }
+            </Actions>
+        </PageHeader>
 
         @* The group chips: who you're looking for. Subcontractors is the company directory
            (the page's original body, unchanged); the other groups fold in alongside. *@
@@ -94,11 +82,12 @@ else
         @* Filters: category + free-text search across all types *@
         <div class="flex flex-wrap items-end gap-3 mb-5">
             <div class="grow min-w-[14rem]">
-                <label class="eyebrow block mb-1">Search</label>
+                <FormField Label="Search">
                 <input class="field" placeholder="Company, trade, contact, town…" value="@search" @oninput="OnSearchInput" />
+                </FormField>
             </div>
             <div>
-                <label class="eyebrow block mb-1">Type</label>
+                <FormField Label="Type">
                 <select class="field" value="@categoryFilter" @onchange="OnCategoryChanged">
                     <option value="">All types</option>
                     @foreach (var c in AllCategories)
@@ -106,6 +95,7 @@ else
                         <option value="@c">@Label(c)</option>
                     }
                 </select>
+                </FormField>
             </div>
             @* The live result count sits with the filters that produce it. Rendered only once the
                store has loaded — a line of text simply doesn't appear until the figure is known. *@
@@ -140,19 +130,19 @@ else
                                  OnSelectedChanged="args => SetSelected(args.SubcontractorId, args.Ticked)"
                                  OnOpen="Open" />
         }
-    </section>
 
-    @* Add company: DirectoryContactForm (the shared fields/validation component — the Control
-       Centre's System Actions pane hosts the same form to stage a contact) inside the house
-       Modal, with this page owning the SEND (SubcontractorStore.Upsert). *@
-    <Modal IsOpen="showAddModal" Title="Add company" ShowFooter="true"
-           ConfirmLabel="@(saving ? "Saving…" : "Add company")" CancelLabel="Cancel"
-           OnCancel="CloseAddModal" OnConfirm="SaveCompany" Class="max-w-lg w-full">
-        <DirectoryContactForm @ref="addForm" OnSubmit="SendCompanyAsync" />
-    </Modal>
+        @* Add company: DirectoryContactForm (the shared fields/validation component — the Control
+           Centre's System Actions pane hosts the same form to stage a contact) inside the house
+           Modal, with this page owning the SEND (SubcontractorStore.Upsert). *@
+        <Modal IsOpen="showAddModal" Title="Add company" ShowFooter="true"
+               ConfirmLabel="@(saving ? "Saving…" : "Add company")" CancelLabel="Cancel"
+               OnCancel="CloseAddModal" OnConfirm="SaveCompany" Class="max-w-lg w-full">
+            <DirectoryContactForm @ref="addForm" OnSubmit="SendCompanyAsync" />
+        </Modal>
 
-    <XeroImportModal @ref="importModal" />
+        <XeroImportModal @ref="importModal" />
 
-    <ConsolidateRecordsModal @ref="consolidateModal" OnMerged="() => selectedIds.Clear()" />
-}
+        <ConsolidateRecordsModal @ref="consolidateModal" OnMerged="() => selectedIds.Clear()" />
+    }
+</Page>
 

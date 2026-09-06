@@ -29,7 +29,7 @@
 
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+        <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
     }
 
     @if (!Editing)
@@ -39,32 +39,32 @@
             && string.IsNullOrWhiteSpace(Record.ResponseActionRequired)
             && string.IsNullOrWhiteSpace(Record.ImpactIfLate))
         {
-            <p class="text-sm text-content-subtle italic">No itemised queries yet. The issued document carries the detail above only.</p>
+            <EmptyState Message="No itemised queries yet. The issued document carries the detail above only." />
         }
         else
         {
             @if (Record.ItemList.Count > 0)
             {
                 <div class="overflow-x-auto -mx-1 px-1">
-                    <table class="w-full text-sm">
+                    <table class="data-table data-table-dense">
                         <thead>
-                            <tr class="text-left text-content-subtle border-b border-line">
-                                <th class="py-2 pr-3 font-medium w-10">Item</th>
-                                <th class="py-2 pr-3 font-medium">Drawing ref</th>
-                                <th class="py-2 pr-3 font-medium">Member / area</th>
-                                <th class="py-2 pr-3 font-medium">Query</th>
-                                <th class="py-2 font-medium">Response</th>
+                            <tr>
+                                <th class="w-10">Item</th>
+                                <th>Drawing ref</th>
+                                <th>Member / area</th>
+                                <th>Query</th>
+                                <th>Response</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var item in Record.ItemList)
                             {
-                                <tr class="border-b border-line last:border-0 align-top">
-                                    <td class="py-2 pr-3 font-mono text-content-muted">@item.Position</td>
-                                    <td class="py-2 pr-3 text-content-muted whitespace-pre-wrap">@Dash(item.DrawingRef)</td>
-                                    <td class="py-2 pr-3 text-content whitespace-pre-wrap">@Dash(item.MemberArea)</td>
-                                    <td class="py-2 pr-3 text-content whitespace-pre-wrap">@Dash(item.Query)</td>
-                                    <td class="py-2 text-content-muted whitespace-pre-wrap">@Dash(item.Response)</td>
+                                <tr class="align-top">
+                                    <td class="font-mono">@item.Position</td>
+                                    <td class="whitespace-pre-wrap">@Dash(item.DrawingRef)</td>
+                                    <td class="text-content whitespace-pre-wrap">@Dash(item.MemberArea)</td>
+                                    <td class="text-content whitespace-pre-wrap">@Dash(item.Query)</td>
+                                    <td class="whitespace-pre-wrap">@Dash(item.Response)</td>
                                 </tr>
                             }
                         </tbody>
@@ -109,31 +109,35 @@
                     @foreach (var row in items)
                     {
                         itemNumber++;
-                        <div class="rounded-lg border border-line p-3 space-y-2">
+                        <div class="rounded border border-line p-3 space-y-2">
                             <div class="flex items-center justify-between">
                                 <span class="font-mono text-xs font-semibold text-content-muted">Item @itemNumber</span>
                                 <button type="button" class="text-xs text-negative hover:underline underline-offset-2" @onclick="() => items.Remove(row)">Remove</button>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 <div>
-                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Drawing ref</label>
+                                    <FormField Label="Drawing ref">
                                     <textarea class="field" rows="2" value="@row.DrawingRef" @oninput="e => row.DrawingRef = e.Value?.ToString() ?? string.Empty"
                                               placeholder="Dwg 1986_111 Rev D&#10;SD8, SD3"></textarea>
+                                    </FormField>
                                 </div>
                                 <div>
-                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Member / area</label>
+                                    <FormField Label="Member / area">
                                     <textarea class="field" rows="2" value="@row.MemberArea" @oninput="e => row.MemberArea = e.Value?.ToString() ?? string.Empty"
                                               placeholder="West Elevation — lead valley gutter"></textarea>
+                                    </FormField>
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Query</label>
+                                <FormField Label="Query">
                                 <textarea class="field" rows="3" value="@row.Query" @oninput="e => row.Query = e.Value?.ToString() ?? string.Empty"
                                           placeholder="Please confirm…"></textarea>
+                                </FormField>
                             </div>
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Response (when received)</label>
+                                <FormField Label="Response (when received)">
                                 <textarea class="field" rows="2" value="@row.Response" @oninput="e => row.Response = e.Value?.ToString() ?? string.Empty"></textarea>
+                                </FormField>
                             </div>
                         </div>
                     }
@@ -142,19 +146,22 @@
             </div>
 
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Basis of queries</label>
+                <FormField Label="Basis of queries">
                 <textarea class="field" rows="2" value="@basis" @oninput="e => basis = e.Value?.ToString() ?? string.Empty"
                           placeholder="Architect's email ref…, site inspection observations, drawings…"></textarea>
+                </FormField>
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Response / action required</label>
+                <FormField Label="Response / action required">
                 <textarea class="field" rows="3" value="@responseAction" @oninput="e => responseAction = e.Value?.ToString() ?? string.Empty"
                           placeholder="Please provide written confirmation / instruction on the items above…"></textarea>
+                </FormField>
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Impact if not received by the required date</label>
+                <FormField Label="Impact if not received by the required date">
                 <textarea class="field" rows="2" value="@impact" @oninput="e => impact = e.Value?.ToString() ?? string.Empty"
                           placeholder="Works cannot proceed, risking programme delay while scaffold remains in place…"></textarea>
+                </FormField>
             </div>
 
             <div class="flex flex-wrap gap-2">

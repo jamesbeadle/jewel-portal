@@ -25,7 +25,7 @@
             <h2 class="text-lg font-semibold text-content leading-snug">@Record.Title</h2>
             @if (StatusLabel is { Length: > 0 } status)
             {
-                <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[11px] font-medium px-2 py-0.5 mt-1.5">@status</span>
+                <Pill Tone="Tone.Info" Class="mt-1.5">@status</Pill>
             }
         </div>
 
@@ -46,11 +46,11 @@
             </div>
             @if (!string.IsNullOrWhiteSpace(loadedRequest.Description))
             {
-                <p class="text-sm text-content whitespace-pre-wrap rounded-lg bg-surface-raised border border-line p-3">@loadedRequest.Description</p>
+                <p class="text-sm text-content whitespace-pre-wrap rounded bg-surface-raised border border-line p-3">@loadedRequest.Description</p>
             }
             @foreach (var item in loadedRequest.ItemList)
             {
-                <div class="rounded-lg border border-line p-3">
+                <div class="rounded border border-line p-3">
                     <p class="text-sm text-content whitespace-pre-wrap">@item.Query</p>
                     @if (!string.IsNullOrWhiteSpace(item.Response))
                     {

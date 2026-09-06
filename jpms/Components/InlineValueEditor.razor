@@ -15,18 +15,18 @@
            @onkeydown="OnKeyDown"
            @onblur="OnBlur"
            aria-label="@AriaLabel"
-           class="field @WidthClass text-right px-2 py-1 focus:outline-none focus:ring-2 @(Error ? "ring-2 ring-negative border-negative" : "focus:ring-accent focus:border-accent")" />
+           class="field @WidthClass text-right px-2 py-1 focus:outline-none focus:ring-2 @(Error ?"ring-2 ring-negative border-negative" : "focus:ring-accent focus:border-accent")" />
     <button type="button" title="Save (Enter)" aria-label="@SaveLabel" disabled="@Disabled"
             @onmousedown:preventDefault="PreventBlur"
             @onclick="OnSave"
-            class="inline-flex items-center justify-center w-6 h-6 rounded-md text-positive hover:bg-surface-raised">
+            class="inline-flex items-center justify-center w-6 h-6 rounded text-positive hover:bg-surface-raised">
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
              stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7" /></svg>
     </button>
     <button type="button" title="Cancel (Esc)" aria-label="@CancelLabel" disabled="@Disabled"
             @onmousedown:preventDefault="PreventBlur"
             @onclick="OnCancel"
-            class="inline-flex items-center justify-center w-6 h-6 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised">
+            class="inline-flex items-center justify-center w-6 h-6 rounded text-content-subtle hover:text-content hover:bg-surface-raised">
         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
              stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
     </button>

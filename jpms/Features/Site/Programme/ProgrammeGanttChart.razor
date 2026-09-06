@@ -9,11 +9,11 @@
     <div class="min-w-[720px]">
         @* Month header *@
         <div class="grid grid-cols-[240px_1fr] border-b border-line-strong pb-1 mb-1">
-            <div class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Task</div>
+            <div class="eyebrow">Task</div>
             <div class="relative h-5">
                 @foreach (var month in MonthMarks)
                 {
-                    <span class="absolute top-0 text-[10px] text-content-subtle border-l border-line pl-1" style="@month.Style">@month.Label</span>
+                    <span class="absolute top-0 text-xs text-content-subtle border-l border-line pl-1" style="@month.Style">@month.Label</span>
                 }
             </div>
         </div>
@@ -27,7 +27,7 @@
                         <button type="button" class="text-sm text-content text-left truncate hover:text-accent" title="Edit task" @onclick="() => BeginEdit(task)">@task.Title</button>
                         @if (slip > 0)
                         {
-                            <span class="inline-flex items-center rounded bg-negative/15 px-1.5 py-0.5 text-[10px] text-negative shrink-0">+@slip d</span>
+                            <span class="inline-flex items-center rounded bg-negative/15 px-1.5 py-0.5 text-xs text-negative shrink-0">+@slip d</span>
                         }
                     </div>
                     @if (PredecessorsOf(task.ProgrammeTaskId).Any())
@@ -35,10 +35,10 @@
                         <div class="flex flex-wrap gap-1 mt-0.5">
                             @foreach (var link in PredecessorsOf(task.ProgrammeTaskId))
                             {
-                                <span class="inline-flex items-center gap-1 rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">
+                                <Pill Tone="Tone.Muted">
                                     after @TaskTitle(link.PredecessorTaskId)@(link.LagDays != 0 ? $" {(link.LagDays > 0 ? "+" : "")}{link.LagDays}d" : "")
                                     <button type="button" class="text-content-faint hover:text-negative" title="Remove dependency" @onclick="() => OnRemoveLink.InvokeAsync(link.ProgrammeTaskLinkId)">×</button>
-                                </span>
+                                </Pill>
                             }
                         </div>
                     }
@@ -48,39 +48,43 @@
                     {
                         <div class="absolute inset-y-0 w-px bg-info/60" style="@todayStyle"></div>
                     }
-                    <div class="absolute top-1.5 h-3.5 rounded @(slip > 0 ? "bg-negative/80" : "bg-accent/80")"
+                    <div class="absolute top-1.5 h-3.5 rounded @(slip > 0 ?"bg-negative/80" : "bg-accent/80")"
                          style="@BarStyle(task.PlannedStart, task.PlannedEnd)"
-                         title="@task.Title: @task.PlannedStart.LocalDateTime.ToString("d MMM yyyy") – @task.PlannedEnd.LocalDateTime.ToString("d MMM yyyy") (@((int)task.ProgressPercent)% complete)">
+                         title="@task.Title: @DateText(task.PlannedStart) – @DateText(task.PlannedEnd) (@((int)task.ProgressPercent)% complete)">
                         <div class="h-full rounded-l bg-black/35" style="width:@(Pct((double)task.ProgressPercent))"></div>
                     </div>
                     @if (BaselineTaskFor(task.ProgrammeTaskId) is { } baselined)
                     {
                         <div class="absolute top-[26px] h-1 rounded bg-content-faint/70"
                              style="@BarStyle(baselined.PlannedStart, baselined.PlannedEnd)"
-                             title="Baseline: @baselined.PlannedStart.LocalDateTime.ToString("d MMM yyyy") – @baselined.PlannedEnd.LocalDateTime.ToString("d MMM yyyy")"></div>
+                             title="Baseline: @DateText(baselined.PlannedStart) – @DateText(baselined.PlannedEnd)"></div>
                     }
                 </div>
             </div>
 
             @if (editingTaskId == task.ProgrammeTaskId)
             {
-                <div class="bg-surface-raised border border-line rounded-lg p-4 my-2 space-y-3">
+                <div class="bg-surface-raised border border-line rounded p-4 my-2 space-y-3">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                         <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+                            <FormField Label="Title">
                             <input class="field" @bind="editTitle" />
+                            </FormField>
                         </div>
                         <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Planned start</label>
+                            <FormField Label="Planned start">
                             <input type="date" class="field" @bind="editStart" />
+                            </FormField>
                         </div>
                         <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Planned end</label>
+                            <FormField Label="Planned end">
                             <input type="date" class="field" @bind="editEnd" />
+                            </FormField>
                         </div>
                         <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Progress (%)</label>
+                            <FormField Label="Progress (%)">
                             <input type="number" min="0" max="100" class="field" @bind="editProgress" />
+                            </FormField>
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">

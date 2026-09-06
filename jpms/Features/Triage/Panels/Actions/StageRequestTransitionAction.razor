@@ -12,7 +12,7 @@
 <div class="space-y-3">
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        <Notice Tone="Tone.Negative">@error</Notice>
     }
     @* SearchSelect rather than a native select: the register runs long, so the record is found
        by typing (matches reference and title), the list opens downward whenever it fits, and
@@ -28,7 +28,7 @@
     @if (Kind == SystemActionKind.CloseRfi)
     {
         <div class="flex flex-wrap items-center gap-2">
-            <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Closed date</label>
+            <label class="eyebrow shrink-0">Closed date</label>
             <input type="date" class="field max-w-[12rem]" @bind="closeDate" />
         </div>
     }

@@ -15,16 +15,16 @@
 else if (Staged.CreateProblem is { } problem)
 {
     <div class="pt-3 border-t border-line flex flex-wrap items-center justify-between gap-3">
-        <p class="text-sm text-amber-600">Not lined up yet — @problem</p>
+        <p class="text-sm text-warning">Not lined up yet — @problem</p>
         <button type="button" class="btn-secondary text-xs" @onclick="() => OnClose.InvokeAsync()">Back to the email</button>
     </div>
 }
 else
 {
     <div class="pt-3 border-t border-line space-y-2">
-        <p class="rounded-lg bg-positive/10 border border-positive/40 px-3 py-2 text-sm text-content">
+        <Notice Tone="Tone.Positive">
             <span class="font-semibold text-positive">Lined up.</span> Apply will @Staged.Outcome — together with any reply you've written.
-        </p>
+        </Notice>
         <div class="flex flex-wrap items-center justify-end gap-2">
             <button type="button" class="btn-secondary" disabled="@Busy"
                     title="Raise it this minute instead of waiting for Apply — the email is tagged to it in the same act"

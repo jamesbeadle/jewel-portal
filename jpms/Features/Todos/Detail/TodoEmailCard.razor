@@ -5,16 +5,16 @@
    Reply action. The full body — with the quoted thread behind it — is fetched live when asked
    for; the listed BodyPreview is only Graph's short snippet. *@
 
-<li class="rounded-lg border border-line bg-surface-raised px-4 py-3">
+<li class="rounded border border-line bg-surface-raised px-4 py-3">
     <div class="flex flex-wrap items-center justify-between gap-2">
         <span class="text-sm font-medium text-content">@(string.IsNullOrWhiteSpace(Email.FromName) ? Email.FromEmail : Email.FromName)</span>
-        <span class="text-xs text-content-subtle">@Email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+        <span class="text-xs text-content-subtle">@DateTimeText(Email.ReceivedAt)</span>
     </div>
     <p class="text-sm text-content mt-0.5">
         @Email.Subject
         @if (Email.HasAttachments)
         {
-            <span class="ml-2 inline-flex items-center rounded bg-surface border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+            <Pill Tone="Tone.Muted" Class="ml-2">attachment</Pill>
         }
     </p>
     @if (OtherTags.Count > 0)
@@ -22,14 +22,14 @@
         <div class="flex flex-wrap items-center gap-1 mt-1">
             @foreach (var tag in OtherTags)
             {
-                <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagLabel(tag)</span>
+                <Pill Tone="Tone.Info">@TagLabel(tag)</Pill>
             }
         </div>
     }
 
     @if (Expanded)
     {
-        <div class="mt-2 rounded-lg bg-surface border border-line p-3 max-h-[28rem] overflow-y-auto">
+        <div class="mt-2 rounded bg-surface border border-line p-3 max-h-[28rem] overflow-y-auto">
             @if (Detail is null)
             {
                 <p class="text-sm text-content-subtle italic">Loading full email…</p>

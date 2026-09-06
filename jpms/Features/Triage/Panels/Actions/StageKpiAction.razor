@@ -18,28 +18,29 @@
 
 <div class="space-y-3">
     <div class="space-y-1">
-        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Filed under</label>
+        <FormField Label="Filed under">
         <KpiPersonPicker @ref="picker" Value="@person" ValueChanged="OnPersonChanged" />
+        </FormField>
         @if (matchedFrom is not null && person is { Email: not null } && person.Email == matchedEmail)
         {
             <p class="text-xs text-content-subtle">Matched from the email's @matchedFrom — change it if the KPI is about someone else.</p>
         }
     </div>
     <div class="space-y-1">
-        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Note <span class="font-normal normal-case">(optional)</span></label>
+        <label class="eyebrow">Note <span class="font-normal normal-case">(optional)</span></label>
         <textarea class="field w-full" rows="2" placeholder="Why this is a KPI — e.g. handled the client's complaint same day"
                   @bind="note" @bind:event="oninput"></textarea>
     </div>
     <p class="text-xs text-content-subtle">Administrators only. The mark goes to Admin → KPI emails, where nobody else can see it; the email is tagged <span class="font-medium">Admin</span> (Internal pathway) so it leaves the queue — the tag doesn't say KPI.</p>
     @if (duplicate is not null)
     {
-        <p class="text-xs text-amber-500">@duplicate</p>
+        <p class="text-xs text-warning">@duplicate</p>
     }
     @if (!CanStage)
     {
-        <p class="text-xs text-amber-500">@(UserDirectory.IsLoaded ? "Pick the person the KPI is about before staging." : "Waiting for the people list…")</p>
+        <p class="text-xs text-warning">@(UserDirectory.IsLoaded ? "Pick the person the KPI is about before staging." : "Waiting for the people list…")</p>
     }
-    <button type="button" class="@(CanStage ? "btn-primary" : "btn-primary opacity-50 cursor-not-allowed")" disabled="@(!CanStage)"
+    <button type="button" class="@(CanStage ?"btn-primary" : "btn-primary opacity-50 cursor-not-allowed")" disabled="@(!CanStage)"
             title="@(CanStage ? "Line up the KPI mark for this email's Apply" : "Pick the person first")"
             @onclick="StageAsync">Stage action</button>
 </div>

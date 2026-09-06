@@ -6,15 +6,15 @@
 {
     <div class="relative">
         <button type="button" @onclick="ToggleOpen"
-                class="inline-flex items-center gap-2 rounded-md border border-line bg-surface px-2.5 py-1 hover:border-line-strong transition">
-            <span class="text-[10px] uppercase tracking-wider text-content-subtle font-semibold">Viewing as</span>
+                class="btn-secondary">
+            <span class="eyebrow">Viewing as</span>
             <RoleBadge Role="Session.ActiveRole.Value" />
             <span class="text-content-faint text-xs" aria-hidden="true">@(isOpen ? "▲" : "▼")</span>
         </button>
 
         @if (isOpen)
         {
-            <div class="absolute right-0 mt-2 w-56 rounded-lg border border-line bg-surface shadow-lg z-20 overflow-hidden">
+            <div class="absolute right-0 mt-2 w-56 rounded border border-line bg-surface z-20 overflow-hidden">
                 <ul class="divide-y divide-line">
                     @foreach (var role in Session.AvailableRoles)
                     {
@@ -24,7 +24,7 @@
                                 <RoleBadge Role="role" />
                                 @if (role == Session.ActiveRole)
                                 {
-                                    <span class="ml-auto text-[10px] uppercase tracking-wider text-content-faint font-semibold">Current</span>
+                                    <span class="ml-auto text-xs text-content-faint font-semibold">Current</span>
                                 }
                             </button>
                         </li>
@@ -34,7 +34,7 @@
                 {
                     @* Only opted-in users (Admin → Users → "Defaults back to own role") see this;
                        for everyone else a switch sticks indefinitely, as it always has. *@
-                    <p class="px-3 py-2 text-[10px] leading-snug text-content-faint border-t border-line">
+                    <p class="px-3 py-2 text-xs leading-snug text-content-faint border-t border-line">
                         Temporary — defaults back to @home.DisplayName() around @due.ToLocalTime().ToString("HH:mm").
                     </p>
                 }

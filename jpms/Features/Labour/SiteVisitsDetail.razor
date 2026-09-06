@@ -2,22 +2,22 @@
 
 @* A site row expanded: who worked here, day by day — every settled (approved or sent-back)
    day any worker recorded against this project in the open month. *@
-<h4 class="text-xs uppercase tracking-wide text-content-subtle mb-2">Who worked here, day by day</h4>
+<h4 class="eyebrow mb-2">Who worked here, day by day</h4>
 @if (Visits.Count == 0)
 {
-    <p class="text-sm text-content-subtle italic">No days recorded.</p>
+    <EmptyState Message="No days recorded." />
 }
 else
 {
-    <table class="w-auto text-sm">
+    <table class="data-table data-table-dense w-auto">
         <tbody>
             @foreach (var (name, day) in Visits)
             {
-                <tr class="border-b border-line/40">
-                    <td class="py-1.5 pr-6 text-content-muted whitespace-nowrap">@day.Date.ToString("ddd dd MMM")</td>
-                    <td class="py-1.5 pr-6 font-medium text-content whitespace-nowrap">@name</td>
-                    <td class="py-1.5 pr-6 text-right tabular-nums text-content-muted">@($"{day.Hours:0.#} h")</td>
-                    <td class="py-1.5"><StatusPill Status="@day.Status!.Value" /></td>
+                <tr class="border-line/40">
+                    <td class="whitespace-nowrap">@day.Date.ToString("ddd dd MMM")</td>
+                    <td class="font-medium text-content whitespace-nowrap">@name</td>
+                    <td class="text-right tabular-nums">@($"{day.Hours:0.#} h")</td>
+                    <td><StatusPill Status="@day.Status!.Value" /></td>
                 </tr>
             }
         </tbody>

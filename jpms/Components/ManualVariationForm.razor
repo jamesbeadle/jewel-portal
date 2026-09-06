@@ -11,12 +11,12 @@
 <div class="space-y-4">
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        <Notice Tone="Tone.Negative">@error</Notice>
     }
 
     @if (ShowIntro)
     {
-        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+        <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
             Adds a standalone variation in <span class="font-medium text-content">Quoting</span> — no RFI needed. It won't
             appear on the valuation report until you approve it: open it and use
             <span class="font-medium text-content">Approve manually &amp; raise VO</span> (cost code + value).
@@ -34,9 +34,10 @@
     <FormField Label="Title" Value="@title" OnChange="v => Set(ref title, v)" Required="true" />
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+        <FormField Label="Description">
         <textarea class="field" rows="3" value="@description" @oninput="OnDescriptionInput"
                   placeholder="What the variation covers…"></textarea>
+        </FormField>
     </div>
 
     <div>
@@ -47,21 +48,24 @@
     @* The official document's narrative sections — printed on the VO sheet when it is downloaded
        or emailed. All optional here: the wording is editable on the variation page at every stage. *@
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Commercial basis</label>
+        <FormField Label="Commercial basis">
         <textarea class="field" rows="3" value="@commercialBasis" @oninput="e => Set(ref commercialBasis, e.Value?.ToString() ?? string.Empty)"
                   placeholder="What the price is based on — tender-face position, rate basis, OH&amp;P…"></textarea>
+        </FormField>
     </div>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme impact</label>
+        <FormField Label="Programme impact">
         <textarea class="field" rows="3" value="@programmeImpact" @oninput="e => Set(ref programmeImpact, e.Value?.ToString() ?? string.Empty)"
                   placeholder="Effect on the programme — procurement, mobilisation, works duration…"></textarea>
+        </FormField>
     </div>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Exclusions</label>
+        <FormField Label="Exclusions">
         <textarea class="field" rows="3" value="@exclusions" @oninput="e => Set(ref exclusions, e.Value?.ToString() ?? string.Empty)"
                   placeholder="What this variation expressly does not price…"></textarea>
+        </FormField>
     </div>
 </div>
 

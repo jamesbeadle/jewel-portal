@@ -142,16 +142,6 @@ public partial class ProjectVariations
         _ => "Variation"
     };
 
-    private static string BadgeClass(VariationOrder order)
-    {
-        const string baseClass = "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ";
-        return order.Status switch
-        {
-            VariationOrderStatus.Approved => baseClass + "bg-accent/10 border-accent/30 text-accent",
-            VariationOrderStatus.Rejected => baseClass + "bg-negative/10 border-negative/30 text-negative",
-            _ => baseClass + "bg-surface-raised border-line text-content-muted"
-        };
-    }
 
 
 }

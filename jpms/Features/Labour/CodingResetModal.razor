@@ -16,13 +16,13 @@
         than stage another.
     </p>
     <div class="space-y-3">
-        <label class="block text-sm text-content-muted">Reason (recorded against the month)
-            <textarea class="field mt-1" rows="3" @bind="reason" @bind:event="oninput"
+        <FormField Label="Reason (recorded against the month)">
+            <textarea class="field" rows="3" @bind="reason" @bind:event="oninput"
                       placeholder="e.g. Staged draft deleted by hand on 2 Sep — real bill is authorised"></textarea>
-        </label>
+        </FormField>
         @if (error is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+            <Notice Tone="Tone.Negative">@error</Notice>
         }
     </div>
 </Modal>

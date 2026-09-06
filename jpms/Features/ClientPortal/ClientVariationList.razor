@@ -5,38 +5,34 @@
 
 @if (Orders.Count == 0)
 {
-    <div class="panel p-8 text-center text-sm text-content-subtle">
-        No variation orders yet. When one is issued on your project, it appears here.
-    </div>
+    <EmptyState Message="No variation orders yet. When one is issued on your project, it appears here." />
 }
 else
 {
-    <div class="panel overflow-x-auto">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="text-left text-content-subtle border-b border-line">
-                    <th class="px-4 py-3 font-medium">Reference</th>
-                    <th class="px-4 py-3 font-medium">Title</th>
-                    <th class="px-4 py-3 font-medium">Project</th>
-                    <th class="px-4 py-3 font-medium">Status</th>
-                    <th class="px-4 py-3 font-medium text-right">Value</th>
+    <RecordsTable MaxHeight="">
+        <thead>
+            <tr>
+                <th>Reference</th>
+                <th>Title</th>
+                <th>Project</th>
+                <th>Status</th>
+                <th class="text-right">Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var order in Orders)
+            {
+                <tr class="border-b border-line last:border-0 hover:bg-surface-raised cursor-pointer"
+                    @onclick="() => Open(order.VariationOrderId)">
+                    <td class="font-medium text-content whitespace-nowrap">@(order.VariationRef ?? order.Reference)</td>
+                    <td class="text-content">@order.Title</td>
+                    <td>@order.ProjectName</td>
+                    <td class="whitespace-nowrap">@order.Status.DisplayName()</td>
+                    <td class="whitespace-nowrap text-right">@(ClientPortalDisplay.ValueLabel(order) ?? "—")</td>
                 </tr>
-            </thead>
-            <tbody>
-                @foreach (var order in Orders)
-                {
-                    <tr class="border-b border-line last:border-0 hover:bg-surface-raised cursor-pointer"
-                        @onclick="() => Open(order.VariationOrderId)">
-                        <td class="px-4 py-3 font-medium text-content whitespace-nowrap">@(order.VariationRef ?? order.Reference)</td>
-                        <td class="px-4 py-3 text-content">@order.Title</td>
-                        <td class="px-4 py-3 text-content-muted">@order.ProjectName</td>
-                        <td class="px-4 py-3 text-content-muted whitespace-nowrap">@order.Status.DisplayName()</td>
-                        <td class="px-4 py-3 text-content-muted whitespace-nowrap text-right">@(ClientPortalDisplay.ValueLabel(order) ?? "—")</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+            }
+        </tbody>
+    </RecordsTable>
 }
 
 @code {

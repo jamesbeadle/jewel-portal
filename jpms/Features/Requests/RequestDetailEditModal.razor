@@ -11,12 +11,13 @@
     <div class="space-y-4">
         @if (error is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+            <Notice Tone="Tone.Negative">@error</Notice>
         }
 
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+            <FormField Label="Detail">
             <textarea class="field" rows="6" value="@description" @oninput="e => description = e.Value?.ToString() ?? string.Empty"></textarea>
+            </FormField>
         </div>
     </div>
 </Modal>

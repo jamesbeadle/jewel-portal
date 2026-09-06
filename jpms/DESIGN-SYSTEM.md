@@ -89,32 +89,44 @@ dismiss to its left), exactly as in the design. Destructive acts add `text-negat
 
 ## 4. Reusable primitives (`Components/`)
 
+The rule for each lives in `CLAUDE.md` → *Shared components*. Build order and the evidence
+behind each: `docs/ui/stage-1-components.md`.
+
 | Component | Purpose |
 |---|---|
-| `JewelIcon` | The brand mark (exact Figma path, `currentColor`) |
-| `NavIcon` | Route → outline nav icon for the rail |
-| `ActionIcon` | Name → outline action glyph (excel, download, refresh, email, document…) for toolbars and tab bars |
-| `Toolbar` / `ToolbarButton` / `ToolbarDivider` | THE in-view menu: a row of compact icon buttons with hover text for a component's view operations (export, refresh, download, email), grouped by related functionality with dividers. Labelled `btn-primary` stays reserved for the one primary act of creation |
-| `ExportToExcelButton` | The Excel export as a Toolbar icon button; with `ShowIncludeAllRows` it opens a current-view / include-all menu |
-| `RecordTabBar` | The request chain (Request → RFI → Variation) as document tabs — only existing records get a tab |
-| `Panel` | Card with optional title (18/Semi) + header actions; body `p-6` |
-| `Stat` / `FigureTile` | The Figma stat card: 14/Med label over a 20/Med figure, `p-6` |
-| `MetricStat` | The un-boxed headline figure: 14/Med label, 24/Med value, positive/negative delta + 12px caption |
-| `FormField` | 14/Med white label over a `field` |
-| `Pagination` | Range label + prev/next pager for tables (numbered pages per the Figma are still to come — open-book-design-rules.md §7 item 10) |
+| `Page` | Every routed view: the approved-session gate + the one content gutter (`CanAccess`, `MaxWidth`, `Bare`) |
+| `PageHeader` | The page's one header — subtitle/count, `Primary` (the one green button), `Actions`; `Title`/`Eyebrow` only on a record page (the top bar names registers) |
+| `SectionHeader` / `Panel` | Un-boxed section title + actions / the boxed card with `Title`, `HeaderActions`, `IsLoading` |
+| `Notice` | The inline message box, by `Tone`; `Dismissible` |
+| `Pill` | Every status badge, by `Tone` (`StatusTones.cs` maps each enum); `OnClick` makes it a menu trigger |
+| `FormField` / `Checkbox` | Every labelled control (label, `field`, `Hint`, `Error`, `Required`) / the labelled tick |
+| `RecordsTable` | A list of records: panel + scroll box + `IsLoading` + `IsEmpty`, the `<thead>`/`<tbody>` inside; `SortableColumnHeader` for sortable columns |
+| `TabRow` / `FilterChips` | Route/pane tabs (underline) / local filters (pills) — `TabItem` rows |
+| `SearchInput` | The debounced search box |
+| `StatTile` / `MetricStat` | The labelled figure (Figma stat card) / the un-boxed headline figure with delta |
+| `EmptyState` | "Nothing here yet", with room for the one action |
+| `ConfirmDialog` / `InlineConfirm` | The confirm modal (`Danger`) / the two-click armed button |
 | `Modal` | The Figma dialog: 24/Semi title, hairline under the header, Large Cancel/Action footer |
+| `Toolbar` / `ToolbarButton` / `ToolbarDivider` / `ExportToExcelButton` | THE in-view menu of icon buttons with hover text |
+| `RecordTabBar` / `WorkspaceSectionNav` / `ProjectPageShell` | The request chain tabs / a section's tab row / the project page frame (breadcrumb + project `PageHeader` + tab nav) |
+| `JewelIcon` / `NavIcon` / `ActionIcon` | The brand mark / rail icons / action glyphs |
+| `LoadGate` / `LoadingScreen` | The pulsing jewel for a region / a whole page (see *Loading states*) |
+| `DropdownMenu` | The row/record actions menu |
+| `DateText` / `DateTimeText` / `Money` / `WholeMoney` | Not components — the global helpers every date and figure renders through |
 
 ## 5. Keeping future work consistent
 
-New pages compose `Panel`, `Stat`/`MetricStat`, `data-table`, `Modal`, `btn-*`, `field` and
-`eyebrow` rather than hand-rolling utilities. The lint grep doubles as a CI check — any of these in
-`Pages`, `Components`, `Features` or `Layout` means the change drifted from the system:
+New views compose the components in §4 rather than hand-rolling utilities. The lint grep
+doubles as a CI check — any hit in `Pages`, `Components`, `Features` or `Layout` means the change
+drifted from the system (`PurchaseOrderSheet` — a printed sheet with its own CSS — and the
+light email-body surfaces `bg-white text-gray-900` are the known exceptions):
 
 ```
-grep -rnE "slate-|bg-white|text-\[11px\]|text-\[10px\]|rounded-xl|rounded-md|rounded-full|uppercase|tracking-|shadow-" Pages Components Features Layout
+grep -rnE "slate-|amber-|emerald-|rose-|red-[0-9]|text-\[1?[0-9]px\]|rounded-(xl|2xl|lg|md)|uppercase|tracking-|shadow-(sm|md|lg|xl|2xl)|bg-negative/10 border|btn-primary text-xs|<section class=\"px-|RequestAccessView Email|<label class=\"block eyebrow|<h1 |<thead class=|<tbody class=\"divide|ToString\(\"d{1,2} MMM yyyy|confirming[A-Z]|Armed\b|(Chip|Tab)Class\(" Pages Components Features Layout
 ```
 
-(`rounded-full` is allowed on avatars and radio buttons; `shadow-` only on the modal.)
+(`rounded-lg` is allowed on the modal panel and `DropdownMenu`; `<h1` on the auth pages outside
+the shell.)
 
 Still to read from the Figma (`docs/ui/open-book-design-rules.md` §8): row hover/select fill,
 the row-action dropdown, tabs vs pills, toggle switch, date picker, login page, button

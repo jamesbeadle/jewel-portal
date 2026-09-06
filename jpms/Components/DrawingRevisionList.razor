@@ -1,7 +1,7 @@
 @inject IDrawingStore DrawingStore
 @inject AuthService Auth
 
-<section class="rounded-xl border border-line bg-surface overflow-hidden">
+<section class="panel overflow-hidden">
     <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between">
         <h2 class="text-sm font-medium text-content-muted">@Heading</h2>
         <span class="text-xs text-content-subtle">@Revisions.Count revisions</span>
@@ -24,18 +24,18 @@
                                 @switch (revision.ApprovalStatus)
                                 {
                                     case DrawingApprovalStatus.Approved:
-                                        <span class="ml-2 inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">Approved · latest</span>
+                                        <Pill Tone="Tone.Positive" Class="ml-2">Approved · latest</Pill>
                                         break;
                                     case DrawingApprovalStatus.Unapproved:
-                                        <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">Unapproved</span>
+                                        <Pill Tone="Tone.Warning" Class="ml-2">Unapproved</Pill>
                                         break;
                                     case DrawingApprovalStatus.Archived:
-                                        <span class="ml-2 inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle">Archived</span>
+                                        <Pill Tone="Tone.Muted" Class="ml-2">Archived</Pill>
                                         break;
                                 }
                                 @if (revision.IsAmbiguous)
                                 {
-                                    <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">Ambiguous</span>
+                                    <Pill Tone="Tone.Warning" Class="ml-2">Ambiguous</Pill>
                                 }
                             </p>
                             <p class="text-xs text-content-subtle mt-1 truncate" title="@revision.FileName">
@@ -46,7 +46,7 @@
                                 }
                             </p>
                             <p class="text-xs text-content-subtle">
-                                Received @revision.ReceivedAt.LocalDateTime.ToString("d MMM yyyy") · @revision.ViewCount views
+                                Received @DateText(revision.ReceivedAt) · @revision.ViewCount views
                                 @if (revision.ApprovalStatus == DrawingApprovalStatus.Approved && revision.ApprovedByEmail is not null)
                                 {
                                     <span> · approved by @revision.ApprovedByEmail</span>
@@ -57,27 +57,27 @@
                             <p class="mt-1.5 flex flex-wrap items-center gap-1">
                                 @if (revision.MetadataExtractedAt is { } extractedAt)
                                 {
-                                    <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                                    <Pill Tone="Tone.Positive">
                                         Metadata extracted @extractedAt.LocalDateTime.ToString("d MMM, HH:mm")
-                                    </span>
+                                    </Pill>
                                 }
                                 else
                                 {
-                                    <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                                    <Pill Tone="Tone.Warning">
                                         Metadata not extracted
-                                    </span>
+                                    </Pill>
                                 }
                                 @if (revision.AnalysedAt is { } analysedAt)
                                 {
-                                    <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                                    <Pill Tone="Tone.Positive">
                                         Analysed @analysedAt.LocalDateTime.ToString("d MMM, HH:mm")
-                                    </span>
+                                    </Pill>
                                 }
                                 else
                                 {
-                                    <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                                    <Pill Tone="Tone.Warning">
                                         Not analysed
-                                    </span>
+                                    </Pill>
                                 }
                             </p>
                         </div>
@@ -94,7 +94,7 @@
                                 else
                                 {
                                     <button type="button" @onclick="() => OnPreview.InvokeAsync(revision)"
-                                            class="rounded-lg border border-line-strong px-2.5 py-1 text-xs font-medium text-content hover:bg-surface-raised transition">
+                                            class="btn-secondary">
                                         Preview
                                     </button>
                                 }
@@ -109,7 +109,7 @@
                             {
                                 <button type="button" disabled="@busy"
                                         @onclick="() => Approve(revision.DrawingRevisionId)"
-                                        class="rounded-lg bg-accent text-accent-ink text-xs font-medium px-2.5 py-1 hover:bg-accent-hover transition disabled:opacity-60">
+                                        class="btn-primary">
                                     Approve
                                 </button>
                             }
@@ -117,7 +117,7 @@
                             {
                                 <button type="button" disabled="@busy"
                                         @onclick="() => pendingDelete = revision"
-                                        class="text-xs text-red-600 hover:text-red-700 hover:underline underline-offset-2 disabled:opacity-60">
+                                        class="text-xs text-negative hover:text-negative hover:underline underline-offset-2 disabled:opacity-60">
                                     Delete
                                 </button>
                             }
@@ -129,7 +129,7 @@
     }
     @if (error is not null)
     {
-        <p class="px-5 py-3 text-sm text-red-700 bg-red-50 border-t border-red-200">@error</p>
+        <p class="px-5 py-3 text-sm text-negative bg-negative/10 border-t border-negative/30">@error</p>
     }
 </section>
 

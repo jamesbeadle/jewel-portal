@@ -9,18 +9,7 @@
 
 <PageTitle>Bid Package Invites · JPMS</PageTitle>
 
-@if (!isLoaded)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="bid-package-invites">
         <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
             <div>
@@ -43,7 +32,7 @@ else
 
         @if (error is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
         }
 
         @if (Packages.Count == 0)
@@ -57,34 +46,32 @@ else
         }
         else
         {
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-                <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Package</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden sm:table-cell">Trade</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Status</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Created</th>
+            <RecordsTable>
+                <thead>
+                    <tr>
+                        <th>Package</th>
+                        <th class="hidden sm:table-cell">Trade</th>
+                        <th>Status</th>
+                        <th class="hidden lg:table-cell">Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var package in Packages)
+                    {
+                        <tr class="hover:bg-surface-raised @(package.Status == BidPackageStatus.Closed ?"opacity-60" : "")">
+                            <td>
+                                <a class="text-content font-medium hover:underline underline-offset-4"
+                                   href="@($"/projects/{ProjectId}/bid-package-invites/{package.BidPackageId}")">@package.Title</a>
+                            </td>
+                            <td class="hidden sm:table-cell">@package.Trade</td>
+                            <td>
+                                <Pill Tone="Tone.Muted">@package.Status</Pill>
+                            </td>
+                            <td class="text-content-subtle hidden lg:table-cell">@DateText(package.CreatedAt)</td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @foreach (var package in Packages)
-                        {
-                            <tr class="hover:bg-surface-raised @(package.Status == BidPackageStatus.Closed ? "opacity-60" : "")">
-                                <td class="px-4 py-3">
-                                    <a class="text-content font-medium hover:underline underline-offset-4"
-                                       href="@($"/projects/{ProjectId}/bid-package-invites/{package.BidPackageId}")">@package.Title</a>
-                                </td>
-                                <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@package.Trade</td>
-                                <td class="px-4 py-3">
-                                    <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@package.Status</span>
-                                </td>
-                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell">@package.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </RecordsTable>
         }
     </ProjectPageShell>
 
@@ -93,10 +80,11 @@ else
            ConfirmLabel="@(busy ? "Creating…" : "Create package")"
            ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(createTitle) || string.IsNullOrWhiteSpace(createTrade))" CancelLabel="Cancel"
            OnCancel="CloseCreateModal" OnConfirm="ConfirmCreate" Class="max-w-lg w-full">
-        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Title</label>
+        <FormField Label="Title">
         <input class="field mb-3" placeholder="e.g. Ground-floor electrical works" @bind="createTitle" @bind:event="oninput" />
+        </FormField>
 
-        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Trade</label>
+        <FormField Label="Trade">
         @* The curated trade list (Admin → Trades), not free text — packages carry the same trade
            names the directory filters on. Loading convention: a control is never gated — it
            renders disabled with a "Loading…" placeholder until the list has landed. *@
@@ -114,6 +102,7 @@ else
                 }
             }
         </select>
+        </FormField>
         @if (SubcontractorStore.TradesLoaded && SubcontractorStore.Trades().Count == 0)
         {
             <p class="text-xs text-content-subtle -mt-2 mb-3">No trades yet — an administrator can add them under Admin → Trades.</p>
@@ -166,7 +155,7 @@ else
 
             @if (suggestError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@suggestError</p>
+                <Notice Tone="Tone.Negative" Class="mb-3">@suggestError</Notice>
             }
 
             @if (suggestBusy)
@@ -178,7 +167,7 @@ else
             }
             else if (suggestions is null)
             {
-                <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Model</label>
+                <FormField Label="Model">
                 @* Same cost lever as the chat panel: only a tier KEY leaves the browser — the
                    server maps it to a model id, and unknown keys degrade to cheap. *@
                 <select class="field mb-1" @bind="suggestModelKey" aria-label="Model">
@@ -187,6 +176,7 @@ else
                         <option value="@choice.Key">@choice.DisplayName</option>
                     }
                 </select>
+                </FormField>
                 <p class="text-xs text-content-subtle">@SuggestModelHint</p>
             }
             else
@@ -213,14 +203,14 @@ else
                         {
                             var index = i;
                             var suggestion = suggestions[index];
-                            <label class="flex items-start gap-3 rounded-xl border border-line bg-surface-raised px-4 py-3 cursor-pointer @(selectedSuggestions.Contains(index) ? "border-accent/40" : "")">
+                            <label class="flex items-start gap-3 panel-raised px-4 py-3 cursor-pointer @(selectedSuggestions.Contains(index) ?"border-accent/40" : "")">
                                 <input type="checkbox" class="mt-1"
                                        checked="@selectedSuggestions.Contains(index)"
                                        @onchange="e => ToggleSuggestion(index, e.Value is true)" />
                                 <span class="min-w-0">
                                     <span class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                                         <span class="text-sm font-semibold text-content">@suggestion.Title</span>
-                                        <span class="inline-flex items-center rounded-full bg-surface border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@suggestion.Trade</span>
+                                        <Pill Tone="Tone.Muted">@suggestion.Trade</Pill>
                                         @if (suggestion.ApproxValue > 0)
                                         {
                                             <span class="text-xs text-content-subtle">~£@suggestion.ApproxValue.ToString("N0") remaining</span>
@@ -236,7 +226,7 @@ else
                                     }
                                     @if (suggestion.SourceLines.Count > 0)
                                     {
-                                        <span class="block text-[11px] text-content-faint mt-1"
+                                        <span class="block text-xs text-content-faint mt-1"
                                               title="@string.Join("\n", suggestion.SourceLines)">
                                             Based on @suggestion.SourceLines.Count report line@(suggestion.SourceLines.Count == 1 ? "" : "s")
                                         </span>
@@ -249,5 +239,5 @@ else
             }
         </ChildContent>
     </Modal>
-}
+</Page>
 

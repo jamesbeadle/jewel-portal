@@ -252,16 +252,7 @@ public partial class ProjectBuildingControl
 
     private static string Plural(int count) => count == 1 ? "" : "s";
 
-    private static string StatusClass(BuildingControlInspectionStatus status) => status switch
-    {
-        BuildingControlInspectionStatus.Passed => "bg-positive/10 text-positive",
-        BuildingControlInspectionStatus.ActionsRequired => "bg-negative/10 text-negative",
-        BuildingControlInspectionStatus.Booked or BuildingControlInspectionStatus.Inspected => "bg-accent/10 text-accent",
-        _ => "bg-surface-raised text-content-muted"
-    };
 
-    private static string DateText(DateTimeOffset? value) =>
-        value is { } date ? date.ToString("d MMM yyyy") : "—";
 
     private static string DateInput(DateTimeOffset? value) =>
         value is { } date ? date.ToString("yyyy-MM-dd") : "";

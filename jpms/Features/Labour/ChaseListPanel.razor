@@ -5,27 +5,27 @@
    timesheet and no absence. A dismissal is a recorded judgement (audited), not a swipe-away,
    so the reason is asked inline, where the decision is being made. *@
 <Panel Title="@($"Chase list ({Items.Count})")" Class="mb-6" BodyClass="p-0">
-    <table class="w-full text-sm">
+    <table class="data-table data-table-dense">
         <thead>
-            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
-                <th class="px-5 py-3">Name</th>
-                <th class="px-2 py-3">Date</th>
-                <th class="px-2 py-3">Why</th>
-                <th class="px-5 py-3 text-right"></th>
+            <tr>
+                <th>Name</th>
+                <th>Date</th>
+                <th>Why</th>
+                <th class="text-right"></th>
             </tr>
         </thead>
         <tbody>
             @foreach (var item in Items.Take(showAll ? int.MaxValue : 8))
             {
-                <tr class="border-b border-line/60">
-                    <td class="px-5 py-2 font-medium text-content whitespace-nowrap">@item.WorkerName</td>
-                    <td class="px-2 py-2 text-content-muted whitespace-nowrap">@item.Date.ToString("ddd dd MMM")</td>
-                    <td class="px-2 py-2 text-content-muted">
+                <tr>
+                    <td class="font-medium text-content whitespace-nowrap">@item.WorkerName</td>
+                    <td class="whitespace-nowrap">@item.Date.ToString("ddd dd MMM")</td>
+                    <td>
                         @(item.Reason == LabourChaseReason.OpenAttendance
                             ? $"Signed in at {item.ProjectName} — never signed out"
                             : "No timesheet and no recorded absence")
                     </td>
-                    <td class="px-5 py-2 text-right whitespace-nowrap">
+                    <td class="text-right whitespace-nowrap">
                         @if (dismissingKey == KeyOf(item))
                         {
                             <input class="field w-56 mr-1 text-xs" placeholder="Why does this day need nothing?"

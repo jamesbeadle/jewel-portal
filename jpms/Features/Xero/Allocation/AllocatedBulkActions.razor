@@ -1,12 +1,12 @@
 @namespace Jewel.JPMS.Features.Xero
 
 <BulkSelectionBar Count="Count" OnClear="OnClear">
-    <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
+    <button class="text-sm font-medium rounded px-3 py-1.5 bg-content text-surface disabled:opacity-50"
             disabled="@Busy" @onclick="() => OnSendToCostCentre.InvokeAsync()">Send to cost centre…</button>
-    <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
+    <button class="text-sm font-medium rounded px-3 py-1.5 bg-content text-surface disabled:opacity-50"
             title="Move the selected lines to another project — each keeps its cost centre, and the Xero site is rewritten"
             disabled="@Busy" @onclick="() => OnSendToProject.InvokeAsync()">Send to project…</button>
-    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
+    <button class="btn-secondary"
             title="Return the selected lines to the unallocated queue"
             disabled="@Busy" @onclick="() => OnUndo.InvokeAsync()">Undo selected</button>
 </BulkSelectionBar>

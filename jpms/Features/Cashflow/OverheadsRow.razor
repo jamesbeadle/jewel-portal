@@ -6,11 +6,11 @@
 <tr class="border-b border-line">
     <td class="px-4 py-2.5">
         <span class="text-content font-medium">Company overheads</span>
-        <span class="block text-[11px] text-content-faint">
+        <span class="block text-xs text-content-faint">
             default ·
             <input type="number" min="0" step="500" value="@Default"
                    @onchange="args => OnDefaultChanged.InvokeAsync(args)"
-                   class="w-24 rounded border border-line-strong bg-surface-field px-1.5 py-0.5 text-xs text-content" />
+                   class="field w-24 text-xs" />
             £/month — edit a month's cell to change just that month · remembered in this browser, not yet a system setting
         </span>
     </td>
@@ -22,7 +22,7 @@
             <input type="number" min="0" step="500" value="@(isOverridden ? overridden : Default)"
                    @onchange="args => OnMonthChanged.InvokeAsync((overheadsMonth, args))"
                    title="@(isOverridden ? "Edited for this month — clear it to return to the default" : "The default — edit to override this month only")"
-                   class="w-20 rounded border bg-surface-field px-1.5 py-0.5 text-xs text-content text-right @(isOverridden ? "border-accent" : "border-line-strong")" />
+                   class="w-20 rounded border bg-surface-field px-1.5 py-0.5 text-xs text-content text-right @(isOverridden ?"border-accent" : "border-line-strong")" />
         </td>
     }
     <td class="px-3 py-2.5 text-right border-l border-line text-content-faint">—</td>

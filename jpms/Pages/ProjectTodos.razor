@@ -11,32 +11,19 @@
     captured from an email at triage; the list component itself is unchanged.
 *@
 
-@if (!isLoaded)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="todos">
         <ProjectTodoList ProjectId="@ProjectId" />
     </ProjectPageShell>
-}
+</Page>
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
 
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        isLoaded = true;
     }
 }

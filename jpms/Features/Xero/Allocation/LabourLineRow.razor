@@ -32,11 +32,11 @@
                                   Disabled="@(Busy || !DirectoryLoaded)"
                                   Value="@LinkPick"
                                   ValueChanged="value => OnLinkPickChanged.InvokeAsync(value)" />
-                    <button class="text-xs font-medium rounded-lg px-2 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                    <button class="btn-secondary"
                             disabled="@(Busy || LinkPick == "")"
                             title="Link the worker to the picked directory company — audited; settlement then reconciles through it"
                             @onclick="() => OnLinkWorker.InvokeAsync()">Link</button>
-                    <button class="text-xs font-medium rounded-lg px-2 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                    <button class="btn-secondary"
                             disabled="@Busy"
                             title="They bill under their own name — becomes their own settlement counterparty; no directory company is created"
                             @onclick="() => OnMarkSoleTrader.InvokeAsync()">Sole trader</button>
@@ -54,23 +54,22 @@
     <td class="px-3 py-2.5 text-right whitespace-nowrap align-top">
         @if (Line.CoveredByTimesheets)
         {
-            <span class="inline-block text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface text-content-subtle border border-line align-middle"
-                  title="Marked as settlement — the covered value is excluded from cost-of-sales aggregations; the worker-month verdict lives on the Labour overview's Settlement view">
+            <Pill Tone="Tone.Muted" Class="align-middle" Title="Marked as settlement — the covered value is excluded from cost-of-sales aggregations; the worker-month verdict lives on the Labour overview's Settlement view">
                 Covered · @(Line.CoveredPeriodStart?.ToString("MMM yyyy") ?? "")
-            </span>
-            <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40 align-middle"
+            </Pill>
+            <button class="btn-secondary ml-2 align-middle"
                     title="Remove the settlement mark — the line goes back to the outstanding labour list"
                     disabled="@Busy" @onclick="() => OnUnmarkCover.InvokeAsync()">Un-mark</button>
         }
         else
         {
-            <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40 align-middle"
+            <button class="text-xs font-medium rounded px-2.5 py-1 bg-content text-surface disabled:opacity-40 align-middle"
                     title="@MarkCoverHint(Line)"
                     disabled="@(Busy || !CanMarkCover(Line))"
                     @onclick="() => OnMarkCover.InvokeAsync()">Mark as settlement@(SettlementMonthOf(Line) is { } month ? $" · {month:MMM yyyy}" : "")</button>
         }
         <DropdownMenu Label="More" WidthClass="w-72" Disabled="@Busy"
-                      ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:text-content transition"
+                      ToggleClass="inline-flex items-center gap-1 rounded border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:text-content transition"
                       Class="inline-block text-left ml-2 align-middle whitespace-normal"
                       Items="MenuItems"
                       OnOpenChanged="open => OnMenuOpenChanged.InvokeAsync(open)" />

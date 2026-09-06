@@ -13,54 +13,38 @@
 
 <PageTitle>@Title · JPMS</PageTitle>
 
-@if (!isLoaded)
-{
-    <section class="px-4 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!CanAccess || !HasLinkedRecord)
-{
-    <section class="px-4 md:px-8 py-12">
-        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+<Page>
+    @if (!CanAccess || !HasLinkedRecord)
+    {
+        <PageHeader Title="Not available" />
         <p class="text-content-muted">
             This page shows a subcontractor one of their own work orders. Your login isn't linked
             to a subcontractor record.
         </p>
-    </section>
-}
-else if (!PortalStore.IsLoaded)
-{
-    <section class="px-4 md:px-8 py-12">
+    }
+    else if (!PortalStore.IsLoaded)
+    {
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (Order is null)
-{
-    <section class="px-4 md:px-8 py-12">
-        <h1 class="text-2xl font-semibold text-content mb-2">Work order not found</h1>
+    }
+    else if (Order is null)
+    {
+        <PageHeader Title="Work order not found" />
         <p class="text-content-muted">
             This work order isn't one of yours, or hasn't been issued yet.
             <a class="underline underline-offset-4" href="/portal">Back to your record</a>
         </p>
-    </section>
-}
-else
-{
-    <section class="px-4 md:px-8 py-6">
+    }
+    else
+    {
         <div class="po-toolbar max-w-[820px] mx-auto mb-5">
             <div class="flex items-center justify-between gap-3 flex-wrap">
                 <a class="text-sm text-content-subtle hover:text-content underline underline-offset-4" href="/portal">← Your record</a>
                 <div class="flex items-center gap-3">
                     @if (Order.Order.IsAccepted)
                     {
-                        <span class="rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 px-2.5 py-0.5 text-xs font-medium">
-                            Accepted @Order.Order.AcceptedAt!.Value.LocalDateTime.ToString("d MMM yyyy")
-                        </span>
+                        <Pill Tone="Tone.Positive">
+                            Accepted @DateText(Order.Order.AcceptedAt!.Value)
+                        </Pill>
                     }
                     else if (CanAcceptThisOrder)
                     {
@@ -84,11 +68,11 @@ else
             }
             @if (acceptError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-2">@acceptError</p>
+                <Notice Tone="Tone.Negative" Class="mt-2">@acceptError</Notice>
             }
             @if (acceptNote is not null)
             {
-                <p class="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-900 mt-2">@acceptNote</p>
+                <Notice Tone="Tone.Positive" Class="mt-2">@acceptNote</Notice>
             }
         </div>
 
@@ -101,8 +85,8 @@ else
                             SiteAddressLines="@(Order.SiteAddressLines ?? Array.Empty<string>())"
                             ApprovedByName="@Order.ApprovedByName"
                             PaymentTermsDays="@(MyRecord?.Record.PaymentTermsDays ?? 30)" />
-    </section>
-}
+    }
+</Page>
 
 <style>
     @@media print {
@@ -113,7 +97,6 @@ else
 @code {
     [Parameter] public string WorkOrderId { get; set; } = "";
 
-    private bool isLoaded;
     private bool acceptBusy;
     private string? acceptError;
     private string? acceptNote;
@@ -162,7 +145,6 @@ else
         PortalStore.OnChange += HandleChange;
         // Revalidate in the background on every visit (stale-while-revalidate, per CLAUDE.md).
         if (CanAccess && HasLinkedRecord) _ = PortalStore.Refresh();
-        isLoaded = true;
     }
 
     private void HandleChange() => StateHasChanged();

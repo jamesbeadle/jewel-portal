@@ -31,13 +31,13 @@
         }
         @if (ShowCaret)
         {
-            <span class="text-[9px]" aria-hidden="true">@(open ? "▲" : "▼")</span>
+            <span class="text-xs" aria-hidden="true">@(open ? "▲" : "▼")</span>
         }
     </button>
 
     @if (open)
     {
-        <div class="absolute @AlignClass mt-2 @WidthClass rounded-lg border border-line bg-surface shadow-lg z-30 overflow-hidden"
+        <div class="absolute @AlignClass mt-2 @WidthClass rounded border border-line bg-surface shadow-lg z-30 overflow-hidden"
              role="menu">
             @if (ChildContent is not null)
             {
@@ -67,7 +67,7 @@
                                             role="menuitem"
                                             title="@entry.Hint"
                                             disabled="@entry.Disabled"
-                                            class="w-full text-left px-3 py-2 text-sm transition @(entry.Disabled ? "text-content-subtle cursor-default" : entry.Destructive ? "text-negative hover:bg-surface-raised" : "text-content hover:bg-surface-raised")"
+                                            class="w-full text-left px-3 py-2 text-sm transition @(entry.Disabled ?"text-content-subtle cursor-default" : entry.Destructive ? "text-negative hover:bg-surface-raised" : "text-content hover:bg-surface-raised")"
                                             @onclick="() => Run(entry)">
                                         @entry.Label@(entry.Selected ? " ✓" : "")
                                     </button>

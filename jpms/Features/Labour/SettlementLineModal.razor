@@ -9,27 +9,27 @@
        OnCancel="() => open = false" OnConfirm="SaveAsync">
     <p class="text-xs text-content-subtle mb-3">Labour comes from approved timesheets only. This adds a non-labour line to the worker's month — it changes the Xero account and is never CIS-deducted.</p>
     <div class="space-y-3">
-        <label class="block text-sm text-content-muted">Nature
-            <select class="field mt-1" @bind="nature">
+        <FormField Label="Nature">
+            <select class="field" @bind="nature">
                 <option value="@SettlementLineNature.CisMaterials">Materials</option>
                 <option value="@SettlementLineNature.Travel">Travel</option>
             </select>
-        </label>
-        <label class="block text-sm text-content-muted">Site (project id)
-            <input class="field mt-1" @bind="projectId" placeholder="Project id" />
-        </label>
-        <label class="block text-sm text-content-muted">Cost code
-            <input class="field mt-1" @bind="costCode" placeholder="e.g. 00010" />
-        </label>
-        <label class="block text-sm text-content-muted">Amount (£, net)
+        </FormField>
+        <FormField Label="Site (project id)">
+            <input class="field" @bind="projectId" placeholder="Project id" />
+        </FormField>
+        <FormField Label="Cost code">
+            <input class="field" @bind="costCode" placeholder="e.g. 00010" />
+        </FormField>
+        <FormField Label="Amount (£, net)">
             <input class="field mt-1 w-32" type="number" step="0.01" min="0" @bind="amount" />
-        </label>
-        <label class="block text-sm text-content-muted">Note (optional)
-            <input class="field mt-1" @bind="note" />
-        </label>
+        </FormField>
+        <FormField Label="Note (optional)">
+            <input class="field" @bind="note" />
+        </FormField>
         @if (error is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+            <Notice Tone="Tone.Negative">@error</Notice>
         }
     </div>
 </Modal>

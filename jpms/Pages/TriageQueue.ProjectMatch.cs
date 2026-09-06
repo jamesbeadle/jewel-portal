@@ -134,7 +134,7 @@ public partial class TriageQueue
 
     private static string ThreadRowClass(bool current)
     {
-        var baseClass = "w-full text-left rounded-lg border px-3 py-2 transition";
+        var baseClass = "w-full text-left rounded border px-3 py-2 transition";
         return current
             ? $"{baseClass} border-accent bg-surface"
             : $"{baseClass} border-line hover:border-line-strong hover:bg-surface";

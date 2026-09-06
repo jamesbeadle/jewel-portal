@@ -20,151 +20,134 @@
     set here — it happens on the lead page and creates the client and the project shell.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
-    <section class="px-6 md:px-8 py-8 md:py-12">
-        <WorkspaceSectionNav />
-        <header class="mb-6 flex items-end justify-between gap-4">
-            <div>
-                <p class="eyebrow mb-1">JPMS · Sales</p>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Leads</h1>
-                <p class="text-sm text-content-muted mt-2 max-w-3xl">
-                    Everyone we might convince to build with Jewel — to upgrade their house or have a new one built —
-                    and the property the work would be on. Every lead lands here whatever found it; the strategy that
-                    found it is named on the row, so a strategy is judged by how far its leads climb.
-                </p>
-            </div>
+<Page>
+    <WorkspaceSectionNav />
+    <PageHeader>
+        <SubtitleContent>
+            Everyone we might convince to build with Jewel — to upgrade their house or have a new one built —
+            and the property the work would be on. Every lead lands here whatever found it; the strategy that
+            found it is named on the row, so a strategy is judged by how far its leads climb.
+        </SubtitleContent>
+        <Actions>
             @if (CanWork)
             {
                 <button type="button" class="btn-primary shrink-0" @onclick="OpenCapture">New lead</button>
             }
-        </header>
+        </Actions>
+    </PageHeader>
 
-        @if (dataFailed && Leads.Current is null)
-        {
-            <div class="panel p-6 max-w-3xl">
-                <p class="text-sm text-negative">The lead register couldn't be loaded — the error banner has the detail. Reload the page to retry.</p>
-            </div>
-        }
-        else
-        {
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <Stat Label="Open leads" Value="@Open.Count.ToString()" IsLoading="@(Leads.Current is null)" />
-                <Stat Label="Open pipeline" Value="@WholeMoney(Open.Sum(lead => lead.EstimatedValue ?? 0m))" IsLoading="@(Leads.Current is null)" />
-                <Stat Label="Won this year" Value="@WonThisYear.ToString()" IsLoading="@(Leads.Current is null)" />
-                <Stat Label="New in the last 30 days" Value="@NewRecently.ToString()" IsLoading="@(Leads.Current is null)" />
-            </div>
+    @if (dataFailed && Leads.Current is null)
+    {
+        <div class="panel p-6 max-w-3xl">
+            <p class="text-sm text-negative">The lead register couldn't be loaded — the error banner has the detail. Reload the page to retry.</p>
+        </div>
+    }
+    else
+    {
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <StatTile Label="Open leads" Value="@Open.Count.ToString()" IsLoading="@(Leads.Current is null)" />
+            <StatTile Label="Open pipeline" Value="@WholeMoney(Open.Sum(lead => lead.EstimatedValue ?? 0m))" IsLoading="@(Leads.Current is null)" />
+            <StatTile Label="Won this year" Value="@WonThisYear.ToString()" IsLoading="@(Leads.Current is null)" />
+            <StatTile Label="New in the last 30 days" Value="@NewRecently.ToString()" IsLoading="@(Leads.Current is null)" />
+        </div>
 
-            <Panel Title="Lead register" IsLoading="@(Leads.Current is null || Strategies.Current is null)" LoadingLabel="Loading leads" BodyClass="p-0">
-                <HeaderActions>
-                    <input type="search" class="field h-8 py-1 text-sm w-56" placeholder="Search name, company, postcode, ref"
-                           value="@search" @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
-                    <SearchSelect Options="@StrategyOptions" Value="@strategyFilter" ValueChanged="v => strategyFilter = v"
-                                  Placeholder="All strategies" WidthClass="w-56" />
-                </HeaderActions>
-                <ChildContent>
-                    <div class="flex flex-wrap items-center gap-1.5 px-6 py-4 border-b border-line">
-                        <button type="button" class="@ChipClass(stageFilter is null)" @onclick="() => stageFilter = null">
-                            Open <span class="ml-1 text-content-faint">@Open.Count</span>
+        <Panel Title="Lead register" IsLoading="@(Leads.Current is null || Strategies.Current is null)" LoadingLabel="Loading leads" BodyClass="p-0">
+            <HeaderActions>
+                <SearchInput @bind-Value="search" Placeholder="Search name, company, postcode, ref" Width="w-56" />
+                <SearchSelect Options="@StrategyOptions" Value="@strategyFilter" ValueChanged="v => strategyFilter = v"
+                              Placeholder="All strategies" WidthClass="w-56" />
+            </HeaderActions>
+            <ChildContent>
+                <div class="flex flex-wrap items-center gap-1.5 px-6 py-4 border-b border-line">
+                    <button type="button" class="@ChipClass(stageFilter is null)" @onclick="() => stageFilter = null">
+                        Open <span class="ml-1 text-content-faint">@Open.Count</span>
+                    </button>
+                    @foreach (var stage in LeadStageExtensions.Ladder)
+                    {
+                        var s = stage;
+                        var count = All.Count(lead => lead.Stage == s);
+                        <button type="button" class="@ChipClass(stageFilter == s)" title="@s.Meaning()" @onclick="() => stageFilter = s">
+                            @s.DisplayName() <span class="ml-1 text-content-faint">@count</span>
                         </button>
-                        @foreach (var stage in LeadStageExtensions.Ladder)
-                        {
-                            var s = stage;
-                            var count = All.Count(lead => lead.Stage == s);
-                            <button type="button" class="@ChipClass(stageFilter == s)" title="@s.Meaning()" @onclick="() => stageFilter = s">
-                                @s.DisplayName() <span class="ml-1 text-content-faint">@count</span>
-                            </button>
-                        }
-                    </div>
+                    }
+                </div>
 
-                    @if (All.Count == 0)
-                    {
-                        <p class="px-6 py-8 text-sm text-content-subtle italic">
-                            No leads yet. Add the first with New lead — or write down how you mean to find them under
-                            <a href="/sales/strategies" class="text-info underline underline-offset-4">Strategies</a>.
-                        </p>
-                    }
-                    else if (Rows.Count == 0)
-                    {
-                        <p class="px-6 py-8 text-sm text-content-subtle italic">No leads match this view.</p>
-                    }
-                    else
-                    {
-                        <div class="overflow-x-auto">
-                            <table class="data-table w-full">
-                                <thead>
-                                    <tr>
-                                        <th>Ref</th>
-                                        <th>Lead</th>
-                                        <th>Property</th>
-                                        <th>The work</th>
-                                        <th>Found by</th>
-                                        <th>Stage</th>
-                                        <th class="text-right">Value</th>
-                                        <th>Owner</th>
-                                        <th>Captured</th>
+                @if (All.Count == 0)
+                {
+                    <p class="px-6 py-8 text-sm text-content-subtle italic">
+                        No leads yet. Add the first with New lead — or write down how you mean to find them under
+                        <a href="/sales/strategies" class="text-info underline underline-offset-4">Strategies</a>.
+                    </p>
+                }
+                else if (Rows.Count == 0)
+                {
+                    <p class="px-6 py-8 text-sm text-content-subtle italic">No leads match this view.</p>
+                }
+                else
+                {
+                    <div class="overflow-x-auto">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Ref</th>
+                                    <th>Lead</th>
+                                    <th>Property</th>
+                                    <th>The work</th>
+                                    <th>Found by</th>
+                                    <th>Stage</th>
+                                    <th class="text-right">Value</th>
+                                    <th>Owner</th>
+                                    <th>Captured</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var lead in Rows)
+                                {
+                                    var row = lead;
+                                    <tr class="is-clickable cursor-pointer" @key="row.LeadId" @onclick="() => OpenLead(row)">
+                                        <td class="whitespace-nowrap font-mono text-xs">@row.Reference</td>
+                                        <td>
+                                            <p class="text-content font-medium">@(string.IsNullOrWhiteSpace(row.ContactName) ? row.CompanyName : row.ContactName)</p>
+                                            <p class="text-xs text-content-subtle">
+                                                @(string.IsNullOrWhiteSpace(row.ContactName) ? row.ProspectKind.DisplayName() : string.IsNullOrWhiteSpace(row.CompanyName) ? row.ProspectKind.DisplayName() : $"{row.CompanyName} · {row.ProspectKind.DisplayName()}")
+                                            </p>
+                                        </td>
+                                        <td>
+                                            <p class="max-w-xs truncate" title="@row.PropertyAddress">@(string.IsNullOrWhiteSpace(row.PropertyAddress) ? "—" : row.PropertyAddress)</p>
+                                            @if (!string.IsNullOrWhiteSpace(row.Postcode))
+                                            {
+                                                <p class="text-xs text-content-subtle">@row.Postcode</p>
+                                            }
+                                        </td>
+                                        <td><span class="line-clamp-2 max-w-sm" title="@row.Summary">@(string.IsNullOrWhiteSpace(row.Summary) ? "—" : row.Summary)</span></td>
+                                        <td class="whitespace-nowrap">
+                                            @if (row.StrategyId is not null)
+                                            {
+                                                <a href="/sales/strategies/@row.StrategyId" class="text-info hover:underline underline-offset-4" @onclick:stopPropagation="true">@(row.StrategyName ?? "Strategy")</a>
+                                            }
+                                            else
+                                            {
+                                                <span>@row.Source.DisplayName()</span>
+                                            }
+                                        </td>
+                                        <td><LeadStagePill Stage="@row.Stage" /></td>
+                                        <td class="text-right whitespace-nowrap">@(row.EstimatedValue is { } v ? WholeMoney(v) : "—")</td>
+                                        <td class="whitespace-nowrap text-xs">@OwnerLabel(row.OwnerEmail)</td>
+                                        <td class="whitespace-nowrap text-xs" title="@DateTimeText(row.CapturedAt.ToLocalTime())">@DateText(row.CapturedAt)</td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var lead in Rows)
-                                    {
-                                        var row = lead;
-                                        <tr class="is-clickable cursor-pointer" @key="row.LeadId" @onclick="() => OpenLead(row)">
-                                            <td class="whitespace-nowrap font-mono text-xs">@row.Reference</td>
-                                            <td>
-                                                <p class="text-content font-medium">@(string.IsNullOrWhiteSpace(row.ContactName) ? row.CompanyName : row.ContactName)</p>
-                                                <p class="text-xs text-content-subtle">
-                                                    @(string.IsNullOrWhiteSpace(row.ContactName) ? row.ProspectKind.DisplayName() : string.IsNullOrWhiteSpace(row.CompanyName) ? row.ProspectKind.DisplayName() : $"{row.CompanyName} · {row.ProspectKind.DisplayName()}")
-                                                </p>
-                                            </td>
-                                            <td>
-                                                <p class="max-w-xs truncate" title="@row.PropertyAddress">@(string.IsNullOrWhiteSpace(row.PropertyAddress) ? "—" : row.PropertyAddress)</p>
-                                                @if (!string.IsNullOrWhiteSpace(row.Postcode))
-                                                {
-                                                    <p class="text-xs text-content-subtle">@row.Postcode</p>
-                                                }
-                                            </td>
-                                            <td><span class="line-clamp-2 max-w-sm" title="@row.Summary">@(string.IsNullOrWhiteSpace(row.Summary) ? "—" : row.Summary)</span></td>
-                                            <td class="whitespace-nowrap">
-                                                @if (row.StrategyId is not null)
-                                                {
-                                                    <a href="/sales/strategies/@row.StrategyId" class="text-info hover:underline underline-offset-4" @onclick:stopPropagation="true">@(row.StrategyName ?? "Strategy")</a>
-                                                }
-                                                else
-                                                {
-                                                    <span>@row.Source.DisplayName()</span>
-                                                }
-                                            </td>
-                                            <td><LeadStagePill Stage="@row.Stage" /></td>
-                                            <td class="text-right whitespace-nowrap">@(row.EstimatedValue is { } v ? WholeMoney(v) : "—")</td>
-                                            <td class="whitespace-nowrap text-xs">@OwnerLabel(row.OwnerEmail)</td>
-                                            <td class="whitespace-nowrap text-xs" title="@row.CapturedAt.ToLocalTime().ToString("d MMM yyyy HH:mm")">@row.CapturedAt.ToLocalTime().ToString("d MMM yyyy")</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                </ChildContent>
-            </Panel>
-        }
-    </section>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </ChildContent>
+        </Panel>
+    }
 
     <LeadFormModal IsOpen="@captureOpen" Strategies="@Strategies.Current" OnSaved="OnCapturedAsync" OnCancel="() => captureOpen = false" />
-}
+</Page>
 
 @code {
-    private bool sessionReady;
     private bool dataFailed;
     private bool captureOpen;
     private string search = "";
@@ -209,8 +192,7 @@ else
             .ToList();
 
     private static string ChipClass(bool active) =>
-        "rounded border px-3 py-1 text-xs font-medium transition "
-        + (active ? "border-accent text-accent bg-accent/10" : "border-line text-content-muted hover:border-line-strong hover:text-content");
+        (active ? "chip chip-active" : "chip");
 
     private static string OwnerLabel(string email)
     {
@@ -224,7 +206,6 @@ else
         Strategies.OnChanged += StateHasChanged;
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         await LoadAsync();
     }
 

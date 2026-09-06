@@ -1,5 +1,13 @@
 # Stage 1 shared components — the list to discuss
 
+> **Status 2026-09-06 (evening): all twelve built and rolled out** on branch `ui/stage-1-components`
+> (`dotnet build` 0 errors, Tailwind build clean). What each round actually touched is in the
+> commit messages on that branch; the rules are in `CLAUDE.md` → *Shared components* and the
+> lint grep in `DESIGN-SYSTEM.md` §5. Correction to item 12: `Money()` was already used 327 times
+> via the static import — only the DATE helper was unused; both now go through `DateFormats`.
+> Item 6 nuance: pane switches that don't navigate (Programme · Claims · Critical RFIs) keep the
+> underline TabRow look — they are views, not filters.
+
 Surveyed from `main` at `04985b1` (the Tailwind retune) on 2026-09-06: 452 razor files under
 `jpms/` — 92 in `Pages`, 134 in `Components`, 223 in `Features`, 3 in `Layout`. Every number below
 comes from a grep over those four folders; the commands are in the appendix so the counts can be
@@ -103,7 +111,7 @@ changes every page's first line, so it's yours to decide.
 **230 times**, another 20 with `tracking-wide`, 38 as `eyebrow block mb-1`, 35 as
 `block text-sm text-content-muted` — 129 files carry a raw `<label>`. `FormField` exists (32
 uses) but only wraps a text `<input>`, so every `<select>` (72 files), `<textarea>` (52), date
-input (26) and `SearchSelect` (53) hand-rolls its label. Checkboxes (53 files) have five
+input (26) and `SearchSelect` (53) hand-rolls its label. Checkboxes (53 files) have eight
 different class strings and none of them is the Figma checkbox.
 
 **API.** `<FormField Label="…" Hint="…" Error="…" Required>` with `ChildContent` — any control

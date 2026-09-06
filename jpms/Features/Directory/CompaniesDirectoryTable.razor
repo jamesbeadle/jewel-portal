@@ -5,37 +5,35 @@
    and type filter, with the consolidation tick column for managers. *@
 @if (Companies.Count == 0)
 {
-    <p class="text-sm text-content-subtle italic">No companies match.</p>
+    <EmptyState Message="No companies match." />
 }
 else
 {
-    <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-        <table class="w-full text-sm">
-            <thead class="bg-surface-raised border-b border-line">
-                <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                    @if (CanManage)
-                    {
-                        <th class="sticky top-0 z-20 bg-surface-raised pl-4 pr-1 py-3 w-8" title="Tick records to consolidate"></th>
-                    }
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Company</th>
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Type</th>
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden sm:table-cell">Trade</th>
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden md:table-cell">Primary contact</th>
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Location</th>
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Compliance</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-line">
-                @foreach (var company in Companies)
+    <RecordsTable>
+        <thead>
+            <tr>
+                @if (CanManage)
                 {
-                    <CompanyDirectoryRow Company="company" Compliance="Compliance" CanManage="CanManage"
-                                         Selected="SelectedIds.Contains(company.SubcontractorId)"
-                                         OnSelectedChanged="ticked => OnSelectedChanged.InvokeAsync((company.SubcontractorId, ticked))"
-                                         OnOpen="OnOpen" />
+                    <th class="pr-1 w-8" title="Tick records to consolidate"></th>
                 }
-            </tbody>
-        </table>
-    </div>
+                <th>Company</th>
+                <th>Type</th>
+                <th class="hidden sm:table-cell">Trade</th>
+                <th class="hidden md:table-cell">Primary contact</th>
+                <th class="hidden lg:table-cell">Location</th>
+                <th>Compliance</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var company in Companies)
+            {
+                <CompanyDirectoryRow Company="company" Compliance="Compliance" CanManage="CanManage"
+                                     Selected="SelectedIds.Contains(company.SubcontractorId)"
+                                     OnSelectedChanged="ticked => OnSelectedChanged.InvokeAsync((company.SubcontractorId, ticked))"
+                                     OnOpen="OnOpen" />
+            }
+        </tbody>
+    </RecordsTable>
 }
 
 @code {

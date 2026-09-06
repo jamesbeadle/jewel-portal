@@ -27,7 +27,7 @@
     roles — additional tags only; first-time triage and every action stay in the Control Centre.
 *@
 
-<ApprovedSessionGate>
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="communications">
         @* Pathway first, then type: the segmented control narrows to one side of the client wall
            (the thread's bucket category), the type filter to one kind of record within it. *@
@@ -44,8 +44,7 @@
                 @* Search within the project's tagged mail: debounced, two characters minimum,
                    one relevance-ordered page while live (the pager stands down). *@
                 <div class="relative">
-                    <input type="search" class="field w-64 pr-8" placeholder="Search emails…"
-                           value="@searchText" @oninput="OnSearchInput" aria-label="Search this project's emails" />
+                    <SearchInput Value="@searchText" ValueChanged="OnSearchInput" Placeholder="Search emails…" Width="w-64" />
                     @if (!string.IsNullOrEmpty(searchText))
                     {
                         <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-content-subtle hover:text-content text-xs"
@@ -77,7 +76,7 @@
 
         @if (loadError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@loadError</Notice>
         }
 
         <LoadGate IsLoading="@(!loaded)" Prominent="true" Label="@(SearchActive ? "Searching emails" : "Loading communications")">
@@ -101,7 +100,7 @@
         {
             @if (replySent is not null)
             {
-                <div class="rounded-lg border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
+                <div class="rounded border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
                     <p class="text-sm text-content">@replySent</p>
                     <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
                             @onclick="() => replySent = null">✕</button>
@@ -125,23 +124,23 @@
             <ul class="space-y-2">
                 @foreach (var item in items)
                 {
-                    <li @key="item.Message.Id" class="rounded-lg border border-line bg-surface px-4 py-3">
+                    <li @key="item.Message.Id" class="rounded border border-line bg-surface px-4 py-3">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <span class="flex items-center gap-2 min-w-0">
                                 <span class="text-sm font-medium text-content truncate">@DisplayFrom(item.Message)</span>
                                 @* The thread's pathway (bucket category), when triage has filed it. *@
                                 @if (BucketLabel(item.Message.Bucket) is { } pathway)
                                 {
-                                    <span class="@BucketChipClass(pathway)">@pathway</span>
+                                    <Pill Tone="@StatusTones.PathwayTone(pathway)">@pathway</Pill>
                                 }
                             </span>
-                            <span class="text-xs text-content-subtle">@item.Message.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                            <span class="text-xs text-content-subtle">@DateTimeText(item.Message.ReceivedAt)</span>
                         </div>
                         <p class="text-sm text-content mt-0.5">
                             @item.Message.Subject
                             @if (item.Message.HasAttachments)
                             {
-                                <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                                <Pill Tone="Tone.Muted" Class="ml-2">attachment</Pill>
                             }
                         </p>
                         @if (!string.IsNullOrWhiteSpace(item.Message.BodyPreview))
@@ -151,9 +150,9 @@
                         <div class="flex flex-wrap items-center gap-1 mt-2">
                             @foreach (var link in item.Links)
                             {
-                                <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent"
+                                <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent"
                                       title="@link.Tag">
-                                    <span class="uppercase tracking-wide">@TypeLabel(link.Type)</span>
+                                    <span class="">@TypeLabel(link.Type)</span>
                                     <span class="font-mono">@link.Reference</span>
                                     @if (!string.IsNullOrWhiteSpace(link.Title) && link.Title != link.Reference)
                                     {
@@ -166,7 +165,7 @@
                                the email carries is hidden. *@
                             @foreach (var tag in UnresolvedTags(item))
                             {
-                                <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[10px] text-content-subtle">@TagStem(tag)</span>
+                                <Pill Tone="Tone.Muted">@TagStem(tag)</Pill>
                             }
                         </div>
                         <div class="mt-2 flex items-center gap-4">
@@ -188,11 +187,11 @@
                                THIS project's records of that type — the Control Centre's "Link to
                                another record" trio minus the project pick. Cross-pathway links file the
                                thread under both pathways, exactly as the Control Centre does. *@
-                            <div class="mt-3 rounded-lg border border-line bg-surface-raised p-3 space-y-2">
-                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Add a tag</p>
+                            <div class="mt-3 rounded border border-line bg-surface-raised p-3 space-y-2">
+                                <p class="eyebrow">Add a tag</p>
                                 @if (tagError is not null)
                                 {
-                                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@tagError</p>
+                                    <Notice Tone="Tone.Negative">@tagError</Notice>
                                 }
                                 <div class="flex flex-wrap items-center gap-2">
                                     <select class="field w-64" value="@((int)tagRecordType)" @onchange="OnTagTypeChanged" disabled="@tagBusy">
@@ -254,5 +253,5 @@
         }
         </LoadGate>
     </ProjectPageShell>
-</ApprovedSessionGate>
+</Page>
 

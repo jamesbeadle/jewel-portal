@@ -12,7 +12,7 @@
     }
     else
     {
-        <td class="px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">
+        <td class="px-4 py-3 font-mono text-xs text-content-subtle whitespace-nowrap">
             <span class="inline-block w-4 text-content-subtle">@(Expanded ? "▾" : "▸")</span>@Group.Code
         </td>
         @if (Group.InMaster)
@@ -26,30 +26,30 @@
     }
     <td class="px-4 py-3 text-right">@Group.OrderCount</td>
     <td class="px-4 py-3 text-right">@Money(Group.Committed)</td>
-    <td class="px-4 py-3 text-right @(Group.PaidKnown ? "" : "text-content-subtle")"
+    <td class="px-4 py-3 text-right @(Group.PaidKnown ?"" : "text-content-subtle")"
         title="@(Group.PaidKnown ? "" : UnknownPaidHint)">@(Group.PaidKnown ? Money(Group.Paid) : Dash)</td>
-    <td class="px-4 py-3 text-right @(Group.PaidKnown && Group.Remaining > 0 ? "text-content" : "text-content-subtle")"
+    <td class="px-4 py-3 text-right @(Group.PaidKnown && Group.Remaining > 0 ?"text-content" : "text-content-subtle")"
         title="@(!Group.PaidKnown ? UnknownPaidHint : Group.KnownCommitted < Group.Committed ? $"Excludes {MoneyExact(Group.UnknownCommitted)} committed on orders in this group with no bill linked — nothing is known about what has been paid on them" : "")">@(Group.PaidKnown ? Money(Group.Remaining) : Dash)</td>
-    <td class="px-4 py-3 text-right @(AtPennies(Group.Committed - Group.Invoiced) < 0m ? "text-negative font-medium" : AtPennies(Group.Committed - Group.Invoiced) > 0m ? "text-content" : "text-content-subtle")"
+    <td class="px-4 py-3 text-right @(AtPennies(Group.Committed - Group.Invoiced) < 0m ?"text-negative font-medium" : AtPennies(Group.Committed - Group.Invoiced) > 0m ? "text-content" : "text-content-subtle")"
         title="@($"{MoneyExact(Group.Invoiced)} invoiced of {MoneyExact(Group.Committed)} committed")">@Money(AtPennies(Group.Committed - Group.Invoiced))</td>
 </tr>
 @if (Expanded)
 {
     <tr>
         <td colspan="@(GroupBySupplier ? 6 : 7)" class="px-4 pb-4 pt-1 bg-surface-raised/50">
-            <table class="w-full text-sm border-collapse">
+            <table class="data-table">
                 <thead>
-                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold border-b border-line">
-                        <th class="px-3 py-2 w-[90px]">Order</th>
-                        <th class="px-3 py-2 min-w-[180px]">@(GroupBySupplier ? "Cost centre" : "Supplier")</th>
-                        <th class="px-3 py-2">Line</th>
-                        <th class="px-3 py-2 whitespace-nowrap">Status</th>
-                        <th class="px-3 py-2 text-right whitespace-nowrap">Total</th>
-                        <th class="px-3 py-2 text-right whitespace-nowrap">Paid</th>
-                        <th class="px-3 py-2 w-[170px]"><span class="sr-only">Actions</span></th>
+                    <tr>
+                        <th class="w-[90px]">Order</th>
+                        <th class="min-w-[180px]">@(GroupBySupplier ? "Cost centre" : "Supplier")</th>
+                        <th>Line</th>
+                        <th class="whitespace-nowrap">Status</th>
+                        <th class="text-right whitespace-nowrap">Total</th>
+                        <th class="text-right whitespace-nowrap">Paid</th>
+                        <th class="w-[170px]"><span class="sr-only">Actions</span></th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-line">
+                <tbody>
                     @foreach (var entry in Lines)
                     {
                         <WorkOrderLineRow Entry="entry" GroupBySupplier="GroupBySupplier"

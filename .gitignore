@@ -80,3 +80,6 @@ __pycache__/
 *.pyc
 .claude-transfer/
 Claude outputs/
+
+*.bundle
+_nuget_transfer/

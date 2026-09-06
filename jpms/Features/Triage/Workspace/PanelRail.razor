@@ -66,7 +66,7 @@
             <WorkspaceIcon Kind="kind" />
             @if (BadgeFor(kind) is > 0 and var badge)
             {
-                <span class="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full bg-accent text-accent-ink text-[10px] font-semibold flex items-center justify-center leading-none">@badge</span>
+                <span class="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full bg-accent text-accent-ink text-xs font-semibold flex items-center justify-center leading-none">@badge</span>
             }
         </button>
     };
@@ -82,7 +82,7 @@
     };
 
     private static string ButtonClass(bool isActive) =>
-        "relative inline-flex items-center justify-center w-8 h-8 rounded-lg border transition "
+        "relative inline-flex items-center justify-center w-8 h-8 rounded border transition "
         + (isActive
             ? "border-accent/60 bg-accent/10 text-accent"
             : "border-transparent text-content-subtle hover:text-content hover:bg-surface-raised");

@@ -28,20 +28,6 @@ public static class ValuationInvoiceDisplay
         _ => ""
     };
 
-    public static string BadgeClass(ValuationInvoiceStatus status)
-    {
-        const string baseClass = "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ";
-        return status switch
-        {
-            ValuationInvoiceStatus.Paid => baseClass + "bg-accent/10 border-accent/30 text-accent",
-            ValuationInvoiceStatus.Issued => baseClass + "bg-info/10 border-info/30 text-info",
-            ValuationInvoiceStatus.Submitted => baseClass + "bg-warning/10 border-warning/30 text-warning",
-            ValuationInvoiceStatus.Approved => baseClass + "bg-positive/10 border-positive/30 text-positive",
-            ValuationInvoiceStatus.Rejected => baseClass + "bg-negative/10 border-negative/30 text-negative",
-            ValuationInvoiceStatus.Cancelled => baseClass + "bg-surface-raised border-line text-content-subtle line-through",
-            _ => baseClass + "bg-surface-raised border-line text-content-muted"
-        };
-    }
 
     public static string EventLabel(ValuationInvoiceEventType type) => type switch
     {

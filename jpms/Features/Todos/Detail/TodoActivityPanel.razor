@@ -40,8 +40,8 @@
                         <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full @DotClass(row.Kind)" aria-hidden="true"></span>
                         <div class="min-w-0">
                             <p class="text-content break-words">@row.Summary</p>
-                            <p class="text-[11px] text-content-subtle">
-                                @row.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")@(string.IsNullOrWhiteSpace(row.ActorEmail) ? "" : $" · {row.ActorEmail}")
+                            <p class="text-xs text-content-subtle">
+                                @DateTimeText(row.OccurredAt)@(string.IsNullOrWhiteSpace(row.ActorEmail) ? "" : $" · {row.ActorEmail}")
                             </p>
                         </div>
                     </li>
@@ -55,7 +55,7 @@
     private static string DotClass(TodoActivityKind kind) => kind switch
     {
         TodoActivityKind.Completed => "bg-positive",
-        TodoActivityKind.Chased or TodoActivityKind.EmailSent or TodoActivityKind.Started => "bg-amber-400",
+        TodoActivityKind.Chased or TodoActivityKind.EmailSent or TodoActivityKind.Started => "bg-warning",
         TodoActivityKind.Created => "bg-info",
         _ => "bg-line-strong",
     };

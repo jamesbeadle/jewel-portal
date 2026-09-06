@@ -14,7 +14,7 @@
     <div class="space-y-4">
         @if (error is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+            <Notice Tone="Tone.Negative">@error</Notice>
         }
 
         @if (loading)
@@ -23,37 +23,37 @@
         }
         else if (contacts.Count == 0)
         {
-            <p class="text-sm text-content-subtle">No contacts yet. Add the people request documents should go to — the primary contact is addressed directly, CC/BCC contacts are copied on every issue.</p>
+            <EmptyState Message="No contacts yet. Add the people request documents should go to — the primary contact is addressed directly, CC/BCC contacts are copied on every issue." />
         }
         else
         {
-            <div class="border border-line rounded-lg overflow-hidden">
-                <table class="w-full text-sm">
+            <div class="border border-line rounded overflow-hidden">
+                <table class="data-table data-table-dense">
                     <thead>
-                        <tr class="text-left text-content-subtle border-b border-line">
-                            <th class="px-3 py-2 font-medium">Name</th>
-                            <th class="px-3 py-2 font-medium">Email</th>
-                            <th class="px-3 py-2 font-medium">Routing</th>
-                            <th class="px-3 py-2"></th>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Routing</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var contact in contacts)
                         {
-                            <tr class="border-b border-line last:border-0">
-                                <td class="px-3 py-2 text-content">
+                            <tr>
+                                <td class="text-content">
                                     @contact.Name
                                     @if (contact.IsPrimary)
                                     {
-                                        <span class="ml-2 inline-flex items-center rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">Primary</span>
+                                        <Pill Tone="Tone.Info" Class="ml-2">Primary</Pill>
                                     }
                                     @if (!string.IsNullOrWhiteSpace(contact.JobTitle))
                                     {
                                         <span class="block text-xs text-content-subtle">@contact.JobTitle</span>
                                     }
                                 </td>
-                                <td class="px-3 py-2 text-content-muted">@contact.Email</td>
-                                <td class="px-3 py-2">
+                                <td>@contact.Email</td>
+                                <td>
                                     <select class="field text-xs py-1" value="@((int)contact.DefaultRouting)" disabled="@(busy || contact.IsPrimary)"
                                             @onchange="e => ChangeRoutingAsync(contact, e)">
                                         <option value="@((int)CorrespondenceRouting.To)">To</option>
@@ -62,7 +62,7 @@
                                         <option value="@((int)CorrespondenceRouting.None)">Off</option>
                                     </select>
                                 </td>
-                                <td class="px-3 py-2 text-right whitespace-nowrap">
+                                <td class="text-right whitespace-nowrap">
                                     @if (!contact.IsPrimary)
                                     {
                                         <button type="button" class="text-xs font-medium text-content-muted hover:text-content mr-3"
@@ -86,13 +86,14 @@
                 <FormField Label="Email" Value="@newEmail" OnChange="v => newEmail = v" InputType="email" Required="true" />
                 <FormField Label="Job title" Value="@newJobTitle" OnChange="v => newJobTitle = v" />
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Routing</label>
+                    <FormField Label="Routing">
                     <select class="field" @bind="newRouting">
                         <option value="@((int)CorrespondenceRouting.Cc)">CC — copied on every issue</option>
                         <option value="@((int)CorrespondenceRouting.Bcc)">BCC — blind-copied</option>
                         <option value="@((int)CorrespondenceRouting.To)">To — addressed directly</option>
                         <option value="@((int)CorrespondenceRouting.None)">Off — on the book only</option>
                     </select>
+                    </FormField>
                 </div>
             </div>
             <button type="button" class="btn-secondary" disabled="@busy" @onclick="AddAsync">

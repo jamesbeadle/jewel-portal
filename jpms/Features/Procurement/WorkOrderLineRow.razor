@@ -5,11 +5,11 @@
    supplier (whichever the group isn't), its status and invoicing/payment badges, its money,
    and its Actions menu — or, once Cancel… has been chosen, the inline confirm pair. *@
 <tr>
-    <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@Entry.Detail.Order.Title">@Entry.Detail.Order.Reference</td>
+    <td class="px-3 py-2 font-mono text-xs text-content-subtle whitespace-nowrap" title="@Entry.Detail.Order.Title">@Entry.Detail.Order.Reference</td>
     @if (GroupBySupplier)
     {
         <td class="px-3 py-2 whitespace-nowrap">
-            <span class="font-mono text-[11px] text-content-subtle mr-1.5">@CostCode</span>@CostCentreName
+            <span class="font-mono text-xs text-content-subtle mr-1.5">@CostCode</span>@CostCentreName
         </td>
     }
     else
@@ -18,21 +18,20 @@
     }
     <td class="px-3 py-2" title="@Entry.Line.Description">@Entry.Line.Title</td>
     <td class="px-3 py-2 whitespace-nowrap">
-        <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@Entry.Detail.Order.Status</span>
+        <Pill Tone="@Entry.Detail.Order.Status.ToTone()">@Entry.Detail.Order.Status</Pill>
         @if (Summary is { } summary)
         {
-            <span class="ml-1 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] @InvoicingClass(summary.InvoicingStatus)"
-                  title="@($"{MoneyExact(summary.InvoicedToDate)} invoiced of {MoneyExact(summary.Value)} · {MoneyExact(summary.RemainingToInvoice)} left to invoice (whole order)")">
+            <Pill Tone="@summary.InvoicingStatus.ToTone()" Class="ml-1"
+                  Title="@($"{MoneyExact(summary.InvoicedToDate)} invoiced of {MoneyExact(summary.Value)} · {MoneyExact(summary.RemainingToInvoice)} left to invoice (whole order)")">
                 @InvoicingLabel(summary.InvoicingStatus)
-            </span>
-            <span class="ml-1 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] @PaymentClass(summary.PaymentStatus)"
-                  title="@PaymentTitle(summary.PaymentStatus)">
+            </Pill>
+            <Pill Tone="@summary.PaymentStatus.ToTone()" Class="ml-1" Title="@PaymentTitle(summary.PaymentStatus)">
                 @PaymentLabel(summary.PaymentStatus)
-            </span>
+            </Pill>
         }
     </td>
     <td class="px-3 py-2 text-right">@Money(Entry.Line.LineTotal)</td>
-    <td class="px-3 py-2 text-right @(PaymentKnown ? "" : "text-content-subtle")"
+    <td class="px-3 py-2 text-right @(PaymentKnown ?"" : "text-content-subtle")"
         title="@(PaymentKnown ? "" : UnknownPaidHint)">@(PaymentKnown ? Money(Entry.Line.PaidToDate) : Dash)</td>
     <td class="px-3 py-2 text-right whitespace-nowrap" @onclick:stopPropagation>
         @if (CancelPending)
@@ -62,7 +61,7 @@
                and administrators (2026-08-21). *@
             <DropdownMenu Label="Actions" WidthClass="w-72"
                           Disabled="@CancelBusy"
-                          ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
+                          ToggleClass="inline-flex items-center gap-1 rounded border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
                           Class="inline-block text-left"
                           OnOpenChanged="OnMenuOpenChanged"
                           Items="MenuItems" />

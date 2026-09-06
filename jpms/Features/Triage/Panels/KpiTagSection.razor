@@ -16,7 +16,7 @@
     else…") or Admin → KPI emails.
 *@
 
-<div class="rounded-lg border border-line">
+<div class="rounded border border-line">
     <button type="button" class="w-full flex items-center gap-2 px-3 py-2 text-left"
             title="Everyone on the KPI list — pick to file this email as a KPI under them (administrators only; nothing is tagged in the mailbox)"
             @onclick="() => open = !open">
@@ -27,7 +27,7 @@
         <span class="text-xs text-content-subtle">admin only</span>
         @if (StagedHere.Count > 0)
         {
-            <span class="min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full bg-accent text-accent-ink text-[10px] font-semibold inline-flex items-center justify-center leading-none shrink-0">@StagedHere.Count</span>
+            <span class="min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full bg-accent text-accent-ink text-xs font-semibold inline-flex items-center justify-center leading-none shrink-0">@StagedHere.Count</span>
         }
     </button>
     @if (open)
@@ -53,7 +53,7 @@
                     var person = row;
                     var rowKey = person.KpiPersonId;
                     var staged = StagedFor(person);
-                    <div @key="rowKey" class="rounded-lg border border-line">
+                    <div @key="rowKey" class="rounded border border-line">
                         <div class="w-full flex items-center gap-2 px-3 py-2">
                             <button type="button" class="flex items-center gap-2 text-left flex-1 min-w-0"
                                     title="@(person.Email is null ? "Added by name — no portal login" : person.Email)"
@@ -97,7 +97,7 @@
                                             @foreach (var kpi in filed)
                                             {
                                                 <div class="flex items-baseline gap-3 text-xs">
-                                                    <span class="text-content-subtle whitespace-nowrap shrink-0">@kpi.ReceivedAt.ToLocalTime().ToString("d MMM yyyy")</span>
+                                                    <span class="text-content-subtle whitespace-nowrap shrink-0">@DateText(kpi.ReceivedAt)</span>
                                                     <span class="text-content-muted shrink-0">@kpi.Reference</span>
                                                     <span class="text-content truncate" title="@kpi.Subject">@kpi.Subject</span>
                                                     @if (!string.IsNullOrWhiteSpace(kpi.Note))

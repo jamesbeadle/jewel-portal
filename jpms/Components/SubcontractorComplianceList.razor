@@ -1,7 +1,7 @@
 @inject ISubcontractorStore SubcontractorStore
 @implements IDisposable
 
-<section class="rounded-xl border border-line bg-surface overflow-hidden">
+<section class="panel overflow-hidden">
     <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between gap-3">
         <h2 class="text-sm font-medium text-content-muted">Compliance documents</h2>
         <div class="flex items-center gap-3">
@@ -37,11 +37,11 @@
                             {
                                 @document.FileName
                             }
-                            <span> · uploaded @document.UploadedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                            <span> · uploaded @DateText(document.UploadedAt)</span>
                         </p>
                         @if (document.ExpiresAt is not null)
                         {
-                            <p class="text-xs text-content-subtle">Expires @document.ExpiresAt.Value.LocalDateTime.ToString("d MMM yyyy")</p>
+                            <p class="text-xs text-content-subtle">Expires @DateText(document.ExpiresAt.Value)</p>
                         }
                     </div>
                     <ComplianceStatusPill Status="document.Status()" />
@@ -67,7 +67,7 @@
                         {
                             @document.FileName
                         }
-                        <span> · replaced @(document.SupersededAt?.LocalDateTime.ToString("d MMM yyyy"))</span>
+                        <span> · replaced @(DateText(document.SupersededAt?.LocalDateTime))</span>
                     </li>
                 }
             </ul>
@@ -85,14 +85,15 @@
        OnCancel="CloseAdd" OnConfirm="ConfirmAdd" Class="max-w-lg w-full">
     @if (addError is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@addError</p>
+        <Notice Tone="Tone.Negative" Class="mb-3">@addError</Notice>
     }
     <div class="space-y-3">
         <div class="grid gap-3 sm:grid-cols-2">
             <div>
-                <label class="eyebrow block mb-1">Document type *</label>
+                <FormField Label="Document type" Required>
                 <input class="field w-full" list="compliance-add-kinds" placeholder="e.g. Public liability insurance"
                        @bind="addKind" @bind:event="oninput" />
+                </FormField>
                 <datalist id="compliance-add-kinds">
                     @foreach (var kind in SuggestedKinds)
                     {
@@ -101,13 +102,15 @@
                 </datalist>
             </div>
             <div>
-                <label class="eyebrow block mb-1">Expiry date</label>
+                <FormField Label="Expiry date">
                 <input type="date" class="field w-full" @bind="addExpiry" />
+                </FormField>
             </div>
         </div>
         <div>
-            <label class="eyebrow block mb-1">File *</label>
+            <FormField Label="File" Required>
             <InputFile OnChange="OnAddFileSelected" class="w-full text-sm text-content-muted" />
+            </FormField>
             @if (addFile is not null)
             {
                 <p class="text-xs text-content-subtle mt-1">@addFile.Name · @FormatSize(addFile.Size)</p>

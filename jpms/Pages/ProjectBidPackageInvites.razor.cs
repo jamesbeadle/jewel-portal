@@ -5,7 +5,6 @@ public partial class ProjectBidPackageInvites
 {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
     private bool busy;
     private string? error;
     private bool showCreateModal;
@@ -203,7 +202,6 @@ public partial class ProjectBidPackageInvites
         // background reload lands — so navigating back to this tab never shows stale data.
         ProcurementStore.Refresh(ProjectId);
         _ = SubcontractorStore.Trades(); // the create modal's trade dropdown (async; raises OnChange)
-        isLoaded = true;
     }
 
     public void Dispose()

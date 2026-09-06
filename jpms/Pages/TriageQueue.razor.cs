@@ -49,7 +49,6 @@ public partial class TriageQueue
     // Session checked and the user signed in. This is NOT "the mailbox is here" — keeping the two
     // apart is what lets the heaviest page in the app show its chrome while four fetches are still
     // out, without ever claiming a count it does not have.
-    private bool sessionReady;
     private string? loadError;
     // True while a list page (queue / discarded / tagged) is being re-fetched — drives the inline
     // spinner over the list column so pagination and filter changes fade rather than jolt.

@@ -11,7 +11,7 @@
     Setup tab.
 *@
 
-<section class="rounded-xl border border-line bg-surface overflow-hidden">
+<section class="panel overflow-hidden">
     <header class="flex items-center justify-between gap-3 px-5 py-3 border-b border-line bg-surface-raised">
         <h2 class="text-sm font-medium text-content-muted">Upcoming valuations</h2>
         @if (Overdue > 0)
@@ -30,26 +30,26 @@
     }
     else
     {
-        <table class="w-full text-sm border-collapse">
+        <table class="data-table data-table-dense">
             <thead>
-                <tr class="text-left border-b border-line">
-                    <th class="px-5 py-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Project</th>
-                    <th class="px-5 py-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold hidden sm:table-cell">Client</th>
-                    <th class="px-5 py-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold text-right">Next valuation</th>
+                <tr>
+                    <th>Project</th>
+                    <th class="hidden sm:table-cell">Client</th>
+                    <th class="text-right">Next valuation</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var project in Ordered)
                 {
-                    <tr class="border-b border-line last:border-b-0 hover:bg-surface-raised/60 transition">
-                        <td class="px-5 py-2.5">
+                    <tr class="last:border-b-0 hover:bg-surface-raised/60">
+                        <td>
                             <a href="@($"/projects/{project.ProjectId}/financials")" class="hover:underline underline-offset-4">
                                 <span class="font-mono text-xs text-content-subtle mr-2">@project.Reference</span>
                                 <span class="text-content font-medium">@project.Name</span>
                             </a>
                         </td>
-                        <td class="px-5 py-2.5 text-content-muted hidden sm:table-cell">@project.ClientName</td>
-                        <td class="px-5 py-2.5 text-right whitespace-nowrap">
+                        <td class="hidden sm:table-cell">@project.ClientName</td>
+                        <td class="text-right whitespace-nowrap">
                             <ValuationDueBadge Project="project" />
                         </td>
                     </tr>

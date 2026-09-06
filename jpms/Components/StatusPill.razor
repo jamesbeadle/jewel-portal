@@ -1,8 +1,9 @@
 @*
     Timesheet status pill for worker-facing views (My day). Compact, colour-coded, no £:
     Submitted = waiting for the PM, Approved = done, Rejected = needs the worker's attention.
+    A one-line wrapper over Pill: the label vocabulary lives here, the colour in StatusTones.
 *@
-<span class="text-xs font-medium rounded px-2 py-0.5 @PillClass">@Label</span>
+<Pill Tone="@Status.ToTone()">@Label</Pill>
 
 @code {
     [Parameter, EditorRequired] public TimesheetStatus Status { get; set; }
@@ -12,12 +13,5 @@
         TimesheetStatus.Approved => "Approved",
         TimesheetStatus.Rejected => "Sent back",
         _ => "Waiting",
-    };
-
-    private string PillClass => Status switch
-    {
-        TimesheetStatus.Approved => "bg-positive/10 text-positive",
-        TimesheetStatus.Rejected => "bg-negative/10 text-negative",
-        _ => "bg-surface-raised text-content-subtle",
     };
 }

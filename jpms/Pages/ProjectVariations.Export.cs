@@ -69,7 +69,6 @@ public partial class ProjectVariations
         Procurement.Refresh(ProjectId);     // Background revalidation of work orders (issued-WO column).
         Activity.Refresh(ProjectId);        // Activity badges land in the background — absent until then.
         await LoadVariationsAsync();
-        isLoaded = true;
     }
 
     public void Dispose()

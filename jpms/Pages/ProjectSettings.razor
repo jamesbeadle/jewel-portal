@@ -16,18 +16,7 @@
     /financials-setup and /operations-setup routes redirect here.
 *@
 
-@if (!isLoaded)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="settings">
         @if (Project is not null)
         {
@@ -45,15 +34,15 @@ else
                         <ProjectDetailsEditor ProjectId="@ProjectId" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-3">
-                        <Stat Label="Stage"           Value="@Project.Stage.DisplayName()" />
-                        <Stat Label="Entity"          Value="@Project.Organisation.ShortCode()" />
-                        <Stat Label="Project Manager" Value="@Project.ProjectManagerEmail" />
-                        <Stat Label="Client"          Value="@Project.ClientName" />
-                        <Stat Label="Site address"    Value="@SiteAddress(Project)" />
-                        <Stat Label="Xero site"       Value="@XeroSite(Project)" />
+                        <StatTile Label="Stage"           Value="@Project.Stage.DisplayName()" />
+                        <StatTile Label="Entity"          Value="@Project.Organisation.ShortCode()" />
+                        <StatTile Label="Project Manager" Value="@Project.ProjectManagerEmail" />
+                        <StatTile Label="Client"          Value="@Project.ClientName" />
+                        <StatTile Label="Site address"    Value="@SiteAddress(Project)" />
+                        <StatTile Label="Xero site"       Value="@XeroSite(Project)" />
                     </div>
                     @* Created is the system's own stamp — a secondary fact here, never a lead date. *@
-                    <p class="text-xs text-content-subtle mb-6">Created @Project.CreatedAt.ToLocalTime().ToString("d MMM yyyy")</p>
+                    <p class="text-xs text-content-subtle mb-6">Created @DateText(Project.CreatedAt)</p>
                     break;
                 case ContractPane:
                     <ProjectContractPanel ProjectId="@ProjectId" />
@@ -70,7 +59,7 @@ else
             }
         }
     </ProjectPageShell>
-}
+</Page>
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
@@ -81,7 +70,6 @@ else
     private const string CorrespondencePane = "Correspondence";
     private static readonly string[] Panes = { DetailsPane, RetentionPane, ContractPane, CorrespondencePane };
 
-    private bool isLoaded;
     private string activePane = DetailsPane;
 
     private Project? Project => Projects.Find(ProjectId);
@@ -104,8 +92,8 @@ else
 
     private string PaneClass(string pane) =>
         pane == activePane
-            ? "px-3 py-1.5 rounded-md bg-accent text-accent-ink font-medium"
-            : "px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
+            ? "px-3 py-1.5 rounded bg-accent text-accent-ink font-medium"
+            : "px-3 py-1.5 rounded text-content-muted hover:text-content hover:bg-surface-raised";
 
     protected override async Task OnInitializedAsync()
     {
@@ -115,7 +103,6 @@ else
         // pick up the new stage / entity / project manager without a page reload.
         Projects.OnChanged += StateHasChanged;
         if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
-        isLoaded = true;
     }
 
     public void Dispose() => Projects.OnChanged -= StateHasChanged;

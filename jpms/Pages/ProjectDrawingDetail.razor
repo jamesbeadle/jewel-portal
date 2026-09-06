@@ -9,7 +9,7 @@
 
 <PageTitle>Document · JPMS</PageTitle>
 
-<ApprovedSessionGate>
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="documents">
         @* Register fetch still in flight — don't flash "not found" before it lands. A FAILED
            fetch opens the gate too (loading-states rule): without that the page pulsed forever. *@
@@ -18,11 +18,13 @@
         {
             @if (DrawingStore.DrawingsFailedFor(ProjectId))
             {
-                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex flex-wrap items-center justify-between gap-3">
+                <Notice Tone="Tone.Negative">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
                     <span>The document register couldn't be loaded just then.</span>
-                    <button type="button" class="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 transition"
+                    <button type="button" class="btn-secondary text-negative border-negative/40 hover:border-negative"
                             @onclick="() => DrawingStore.RetryDrawings(ProjectId)">Try again</button>
-                </div>
+                    </div>
+                </Notice>
             }
             else
             {
@@ -38,7 +40,7 @@
                     @if (PreviousDrawing is not null)
                     {
                         <a href="@DrawingHref(PreviousDrawing)"
-                           class="rounded-lg border border-line-strong text-sm px-3 py-1.5 text-content-muted hover:bg-surface-raised transition">← Previous</a>
+                           class="btn-secondary">← Previous</a>
                     }
                     @if (Position is not null)
                     {
@@ -47,7 +49,7 @@
                     @if (NextDrawing is not null)
                     {
                         <a href="@DrawingHref(NextDrawing)"
-                           class="rounded-lg border border-line-strong text-sm px-3 py-1.5 text-content-muted hover:bg-surface-raised transition">Next →</a>
+                           class="btn-secondary">Next →</a>
                     }
                 </div>
             </div>
@@ -74,7 +76,7 @@
                                loading placeholder until the folder list has landed (never gate a control). *@
                             <select value="@(drawing.DrawingFolderId ?? "")" disabled="@(!FoldersReady || moveBusy)"
                                     @onchange="MoveToFolderAsync"
-                                    class="rounded-lg border border-line-strong bg-surface px-2 py-1 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent disabled:opacity-60">
+                                    class="field">
                                 @if (!FoldersReady)
                                 {
                                     <option value="">Loading…</option>
@@ -95,9 +97,9 @@
                             }
                             else if (moveConfirmation is not null)
                             {
-                                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                                <Pill Tone="Tone.Positive">
                                     ✓ @moveConfirmation
-                                </span>
+                                </Pill>
                             }
                         }
                         else
@@ -107,7 +109,7 @@
                     </div>
                     @if (moveError is not null)
                     {
-                        <p class="mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@moveError</p>
+                        <Notice Tone="Tone.Negative" Class="mt-2">@moveError</Notice>
                     }
                 </div>
                 @if (CanManage)
@@ -119,23 +121,23 @@
                         @if (CanExtract)
                         {
                             <button type="button" disabled="@extractBusy" @onclick="DoExtractData"
-                                    class="rounded-lg border border-line-strong text-content font-medium text-sm px-3 py-2 hover:bg-surface-raised transition disabled:opacity-60">
+                                    class="btn-secondary">
                                 @(extractBusy ? "Queueing…" : "Extract data")
                             </button>
                         }
                         else
                         {
                             <button type="button" disabled title="@ExtractDisabledReason"
-                                    class="rounded-lg border border-line-strong text-content-subtle font-medium text-sm px-3 py-2 cursor-not-allowed opacity-60">
+                                    class="btn-secondary">
                                 Extract data
                             </button>
                         }
                         <button type="button" @onclick="() => isUploading = !isUploading"
-                                class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
+                                class="btn-primary">
                             @(isUploading ? "Cancel" : "+ Upload new version")
                         </button>
                         <button type="button" disabled="@deleteBusy" @onclick="() => confirmingDelete = true"
-                                class="rounded-lg border border-red-300 text-red-700 font-medium text-sm px-3 py-2 hover:bg-red-50 transition disabled:opacity-60">
+                                class="btn-secondary text-negative border-negative/40 hover:border-negative">
                             Delete drawing
                         </button>
                     </div>
@@ -144,12 +146,12 @@
 
             @if (deleteError is not null)
             {
-                <p class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">@deleteError</p>
+                <Notice Tone="Tone.Negative" Class="mb-4">@deleteError</Notice>
             }
 
             @if (extractError is not null)
             {
-                <p class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">@extractError</p>
+                <Notice Tone="Tone.Negative" Class="mb-4">@extractError</Notice>
             }
 
             <Modal IsOpen="confirmingDelete"
@@ -179,11 +181,13 @@
             <LoadGate IsLoading="@(!RevisionsReady && !RevisionsFailed)" Prominent="true" Label="Loading revisions">
             @if (!RevisionsReady && RevisionsFailed)
             {
-                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex flex-wrap items-center justify-between gap-3">
+                <Notice Tone="Tone.Negative">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
                     <span>The revisions couldn't be loaded just then.</span>
-                    <button type="button" class="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 transition"
+                    <button type="button" class="btn-secondary text-negative border-negative/40 hover:border-negative"
                             @onclick="() => DrawingStore.RetryRevisions(DrawingId)">Try again</button>
-                </div>
+                    </div>
+                </Notice>
             }
             else
             {
@@ -191,19 +195,19 @@
                 <div class="lg:col-span-3">
                     @if (IsPreviewingOlderRevision)
                     {
-                        <div class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 flex flex-wrap items-center justify-between gap-3">
+                        <Notice Tone="Tone.Warning" Class="mb-3">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
                             <span>Showing an earlier revision — not the approved / latest one.</span>
                             <button type="button" @onclick="PreviewLatest"
-                                    class="rounded-lg border border-amber-300 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100 transition">
+                                    class="btn-secondary">
                                 Back to latest
                             </button>
-                        </div>
+                            </div>
+                        </Notice>
                     }
                     @if (PreviewRevision is null)
                     {
-                        <div class="rounded-xl border border-line bg-surface p-8 text-center text-sm text-content-subtle italic">
-                            No file to preview yet.
-                        </div>
+                        <EmptyState Message="No file to preview yet." />
                     }
                     else if (IsPdf(PreviewRevision))
                     {
@@ -215,7 +219,7 @@
                     }
                     else if (IsImage(PreviewRevision))
                     {
-                        <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                        <div class="panel overflow-hidden">
                             <header class="px-4 py-2.5 border-b border-line bg-surface-raised flex items-center justify-between gap-3">
                                 <span class="text-xs text-content-muted font-medium truncate">
                                     Showing @DrawingNaming.RevisionText(PreviewRevision.RevisionLabel) · @PreviewRevision.FileName
@@ -229,7 +233,7 @@
                     }
                     else
                     {
-                        <div class="rounded-xl border border-line bg-surface p-8 text-center text-sm text-content-subtle">
+                        <div class="panel p-8 text-center text-sm text-content-subtle">
                             This file type can't be previewed inline.
                             <a href="@FileUrl(PreviewRevision, inline: false)" target="_blank" rel="noopener"
                                class="text-accent hover:underline underline-offset-2">Download @PreviewRevision.FileName</a>.
@@ -252,5 +256,5 @@
         }
         </LoadGate>
     </ProjectPageShell>
-</ApprovedSessionGate>
+</Page>
 

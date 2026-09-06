@@ -8,7 +8,7 @@
    Value is the editor's HTML — send it with BodyIsHtml=true so the server runs the outbound
    sanitiser + inline-image extraction over it. *@
 
-<div class="rounded-lg border border-line bg-surface overflow-hidden">
+<div class="rounded border border-line bg-surface overflow-hidden">
     <div class="flex items-center gap-1 border-b border-line bg-surface-raised px-2 py-1">
         <button type="button" tabindex="-1" class="px-2 py-0.5 rounded text-sm font-semibold text-content-muted hover:text-content hover:bg-surface"
                 title="Bold" @onclick='() => ExecAsync("bold")' @onmousedown:preventDefault>B</button>
@@ -26,7 +26,7 @@
             @if (colourMenuOpen)
             {
                 <div class="fixed inset-0 z-10" @onclick="CloseColourMenu" @onmousedown:preventDefault></div>
-                <div class="absolute left-0 top-full z-20 mt-1 w-40 rounded-lg border border-line bg-surface-raised p-2 shadow-lg">
+                <div class="absolute left-0 top-full z-20 mt-1 w-40 rounded border border-line bg-surface-raised p-2">
                     <button type="button" tabindex="-1" class="mb-2 w-full rounded px-2 py-1 text-left text-xs text-content-muted hover:text-content hover:bg-surface"
                             @onclick="() => ApplyColourAsync(null)" @onmousedown:preventDefault>Automatic</button>
                     <div class="grid grid-cols-4 gap-1.5">
@@ -45,7 +45,7 @@
                 title="Bulleted list" @onclick='() => ExecAsync("insertUnorderedList")' @onmousedown:preventDefault>•&nbsp;List</button>
         <button type="button" tabindex="-1" class="px-2 py-0.5 rounded text-sm text-content-muted hover:text-content hover:bg-surface"
                 title="Numbered list" @onclick='() => ExecAsync("insertOrderedList")' @onmousedown:preventDefault>1.&nbsp;List</button>
-        <span class="ml-auto text-[11px] text-content-faint pr-1">Paste images straight into the text</span>
+        <span class="ml-auto text-xs text-content-faint pr-1">Paste images straight into the text</span>
     </div>
     <div @ref="editor" contenteditable="true" spellcheck="true" lang="en-GB" data-placeholder="@Placeholder"
          class="jpms-rich-editor px-3 py-2 text-sm text-content focus:outline-none overflow-y-auto"

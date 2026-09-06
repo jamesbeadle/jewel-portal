@@ -8,15 +8,15 @@
    are keyed in. *@
 @if (SplitOpen)
 {
-    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 space-y-4">
+    <div class="rounded border border-line bg-surface-raised px-4 py-3 space-y-4">
         <div class="flex items-center justify-between gap-2 flex-wrap">
-            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Split across cost centres</span>
+            <span class="eyebrow">Split across cost centres</span>
             <span class="flex items-center gap-2">
-                <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                <button class="text-xs font-medium rounded px-2.5 py-1 bg-content text-surface disabled:opacity-40"
                         disabled="@Busy" @onclick="() => OnApplySplit.InvokeAsync()">
                     @(Applying ? "Allocating…" : "Allocate split")
                 </button>
-                <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                <button class="btn-secondary"
                         disabled="@Busy" @onclick="() => OnCloseSplit.InvokeAsync()">Cancel</button>
             </span>
         </div>
@@ -26,23 +26,23 @@
 }
 else if (DisputeOpen)
 {
-    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 space-y-3">
+    <div class="rounded border border-line bg-surface-raised px-4 py-3 space-y-3">
         <div class="flex items-center justify-between gap-2 flex-wrap">
-            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Dispute this cost</span>
+            <span class="eyebrow">Dispute this cost</span>
             <span class="flex items-center gap-2">
-                <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                <button class="text-xs font-medium rounded px-2.5 py-1 bg-content text-surface disabled:opacity-40"
                         disabled="@Busy" @onclick="() => OnConfirmDispute.InvokeAsync()">
                     @(Applying ? "Disputing…" : "Move to Disputed")
                 </button>
-                <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                <button class="btn-secondary"
                         disabled="@Busy" @onclick="() => OnCloseDispute.InvokeAsync()">Cancel</button>
             </span>
         </div>
         @if (DisputeError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@DisputeError</p>
+            <Notice Tone="Tone.Negative">@DisputeError</Notice>
         }
-        <textarea class="w-full min-h-[4.5rem] rounded-lg bg-surface border border-line px-3 py-2 text-sm text-content placeholder:text-content-subtle"
+        <textarea class="field min-h-[4.5rem]"
                   placeholder="Why is this disputed? (optional — the discussion continues on the Disputed tab)"
                   value="@DisputeMessage" @oninput='e => DisputeMessageChanged.InvokeAsync(e.Value?.ToString() ?? "")'></textarea>
     </div>
@@ -51,9 +51,9 @@ else
 {
     @* The full set of row choices, in two rows: code the line to a project
        and cost centre, or send it to a bucket / ignore it / dispute it. *@
-    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 space-y-2">
+    <div class="rounded border border-line bg-surface-raised px-4 py-3 space-y-2">
         <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold w-16">Allocate</span>
+            <span class="eyebrow w-16">Allocate</span>
             <SearchSelect Options="@ProjectOptions" WidthClass="w-44" Placeholder="Project…"
                           Value="@ProjectValue"
                           ValueChanged="value => OnProjectPicked.InvokeAsync(value)" />
@@ -64,7 +64,7 @@ else
                it is visible WHY a coded line isn't offering plain Allocate. *@
             @if (!string.IsNullOrEmpty(ArmedBucket))
             {
-                <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40 max-w-[11rem] truncate"
+                <button class="text-xs font-medium rounded px-2.5 py-1 bg-content text-surface disabled:opacity-40 max-w-[11rem] truncate"
                         title="@($"Allocate to the {ArmedBucket} bucket — pick a project or cost centre to code it instead")"
                         disabled="@Busy" @onclick="() => OnBucketAllocate.InvokeAsync()">
                     @(Applying ? "Allocating…" : $"Allocate to {ArmedBucket}")
@@ -72,13 +72,13 @@ else
             }
             else
             {
-                <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                <button class="text-xs font-medium rounded px-2.5 py-1 bg-content text-surface disabled:opacity-40"
                         disabled="@(Busy || !CanAllocate)"
                         @onclick="() => OnAllocate.InvokeAsync()">
                     @(Applying ? "Allocating…" : "Allocate")
                 </button>
             }
-            <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+            <button class="btn-secondary"
                     title="Save the project and set its Xero site now — cost centre to follow"
                     disabled="@(Busy || !CanSetProject)"
                     @onclick="() => OnSetProject.InvokeAsync()">Set</button>
@@ -89,8 +89,8 @@ else
         <div class="flex items-center gap-2 flex-wrap">
             @* Choosing a bucket arms the primary button above as "Allocate to
                <bucket>"; picking a project or cost centre disarms it again. *@
-            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold w-16">Or</span>
-            <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-52"
+            <span class="eyebrow w-16">Or</span>
+            <select class="field w-52"
                     title="Send this line to a bucket instead of a project — no project, no cost centre"
                     value="@ArmedBucket"
                     @onchange="e => OnBucketPicked.InvokeAsync(e.Value?.ToString())">

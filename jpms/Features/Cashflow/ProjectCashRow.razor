@@ -6,7 +6,7 @@
 <tr>
     <td class="px-4 py-3 whitespace-nowrap">
         <a href="@($"/projects/{Project.ProjectId}/cashflow")" class="hover:underline underline-offset-4">
-            <span class="font-mono text-[11px] text-content-subtle mr-2">@Project.Reference</span>
+            <span class="font-mono text-xs text-content-subtle mr-2">@Project.Reference</span>
             <span class="text-content font-medium">@Project.Name</span>
         </a>
     </td>
@@ -15,11 +15,11 @@
     <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(Row.LeftToClaim)</td>
     <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(-Row.Drawdown)</td>
     <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(-Row.WoLeftToInvoice)</td>
-    <td class="px-4 py-3 text-right whitespace-nowrap @(Row.BillsUnpaid == 0m ? "text-content" : "text-negative")">@Money(-Row.BillsUnpaid)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap @(Row.BillsUnpaid == 0m ?"text-content" : "text-negative")">@Money(-Row.BillsUnpaid)</td>
     <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted">@AddBack(Row.Release1)</td>
-    <td class="px-4 py-3 text-right whitespace-nowrap font-medium border-l border-line @(Row.PracticalCompletionCashflow < 0m ? "text-negative" : "text-positive")">@Money(Row.PracticalCompletionCashflow)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap font-medium border-l border-line @(Row.PracticalCompletionCashflow < 0m ?"text-negative" : "text-positive")">@Money(Row.PracticalCompletionCashflow)</td>
     <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted">@AddBack(Row.Release2)</td>
-    <td class="px-4 py-3 text-right whitespace-nowrap font-medium @(Row.ProjectCompletionCashflow < 0m ? "text-negative" : "text-positive")">@Money(Row.ProjectCompletionCashflow)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap font-medium @(Row.ProjectCompletionCashflow < 0m ?"text-negative" : "text-positive")">@Money(Row.ProjectCompletionCashflow)</td>
 </tr>
 
 @code {

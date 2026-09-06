@@ -28,7 +28,6 @@ public partial class TriageQueue
         // reading it late would fetch the first page the wrong way round. It is a local-storage
         // read, so it costs almost nothing.
         newestFirst = await SortStorage.ReadNewestFirstAsync(Auth.CurrentUser!.Email);
-        sessionReady = true;
         // Paint the chrome before the four fetches: Blazor re-renders OnInitializedAsync only at
         // its FIRST await, which has already passed. The sort toggle is drawn from newestFirst, so
         // it goes out with the rest rather than flipping under the cursor a moment later.

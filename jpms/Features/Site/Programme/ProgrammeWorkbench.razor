@@ -7,7 +7,7 @@
    wants to raise a Notice of Delay from. *@
 @if (error is not null)
 {
-    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</p>
+    <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
 }
 
 <LoadGate IsLoading="@(!loaded)" Prominent="true" Label="Loading programme">
@@ -21,16 +21,16 @@
         var movement = Movement;
         @if (movement.CompletionSlipDays > 0)
         {
-            <div class="rounded-lg bg-negative/10 border border-negative/30 px-4 py-3 mb-5">
+            <Notice Tone="Tone.Negative" Class="mb-5">
                 <p class="text-sm font-semibold text-negative">
                     Completion has moved @movement.CompletionSlipDays day(s) against baseline “@baseline.Label”
-                    <span class="font-normal">(@(movement.BaselineCompletion?.LocalDateTime.ToString("d MMM yyyy")) → @(movement.CurrentCompletion?.LocalDateTime.ToString("d MMM yyyy")))</span>
+                    <span class="font-normal">(@(DateText(movement.BaselineCompletion?.LocalDateTime)) → @(DateText(movement.CurrentCompletion?.LocalDateTime)))</span>
                 </p>
                 <ul class="mt-2 space-y-1">
                     @foreach (var delayEvent in movement.DelayEvents)
                     {
                         <li class="flex flex-wrap items-center gap-2 text-xs text-content-muted">
-                            <span>@delayEvent.Title — end moved @delayEvent.BaselineEnd.LocalDateTime.ToString("d MMM") → @delayEvent.PlannedEnd.LocalDateTime.ToString("d MMM yyyy") (+@delayEvent.SlipDays d)@(delayEvent.DrivesCompletion ? " · drives completion" : "")</span>
+                            <span>@delayEvent.Title — end moved @delayEvent.BaselineEnd.LocalDateTime.ToString("d MMM") → @DateText(delayEvent.PlannedEnd) (+@delayEvent.SlipDays d)@(delayEvent.DrivesCompletion ? " · drives completion" : "")</span>
                             <button type="button" class="text-accent hover:underline" @onclick="() => OnRaiseNod.InvokeAsync(delayEvent)">Raise NOD</button>
                         </li>
                     }
@@ -39,26 +39,26 @@
                 {
                     <p class="text-xs text-content-subtle mt-2">No Notice of Delay has been raised since this baseline — under JCT ICD 2024 cl. 2.19 notice is due forthwith once delay is apparent.</p>
                 }
-            </div>
+            </Notice>
         }
         else if (movement.HasSlippage)
         {
-            <div class="rounded-lg bg-surface border border-line px-4 py-3 mb-5">
+            <div class="rounded bg-surface border border-line px-4 py-3 mb-5">
                 <p class="text-sm text-content">@movement.DelayEvents.Count task(s) have slipped against baseline “@baseline.Label”, but completion is holding.</p>
             </div>
         }
         else
         {
-            <div class="rounded-lg bg-accent/10 border border-accent/30 px-4 py-3 mb-5">
-                <p class="text-sm text-content">Programme holding against baseline “@baseline.Label” (taken @baseline.TakenAt.LocalDateTime.ToString("d MMM yyyy")).</p>
-            </div>
+            <Notice Tone="Tone.Positive" Class="mb-5">
+                <p class="text-sm text-content">Programme holding against baseline “@baseline.Label” (taken @DateText(baseline.TakenAt)).</p>
+            </Notice>
         }
     }
     else if (Tasks.Count > 0)
     {
-        <div class="rounded-lg bg-info/10 border border-info/30 px-4 py-3 mb-5">
+        <Notice Tone="Tone.Info" Class="mb-5">
             <p class="text-sm text-content">No baseline yet — take one so movement can be measured and delay notices evidenced.</p>
-        </div>
+        </Notice>
     }
 
     <div class="flex flex-wrap gap-2 mb-5">
@@ -73,16 +73,19 @@
             <p class="text-sm font-semibold text-content">Add a programme task</p>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div class="md:col-span-1">
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+                    <FormField Label="Title">
                     <input class="field" @bind="newTaskTitle" placeholder="e.g. Groundworks — main house" />
+                    </FormField>
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Planned start</label>
+                    <FormField Label="Planned start">
                     <input type="date" class="field" @bind="newTaskStart" />
+                    </FormField>
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Planned end</label>
+                    <FormField Label="Planned end">
                     <input type="date" class="field" @bind="newTaskEnd" />
+                    </FormField>
                 </div>
             </div>
             <div class="flex gap-2">
@@ -97,7 +100,7 @@
             <p class="text-sm font-semibold text-content">Add a dependency <span class="font-normal text-content-subtle">— finish-to-start: the successor starts after the predecessor finishes (plus lag)</span></p>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Predecessor</label>
+                    <FormField Label="Predecessor">
                     <select class="field" @bind="linkPredecessorId">
                         <option value="">Select task…</option>
                         @foreach (var task in Tasks)
@@ -105,9 +108,10 @@
                             <option value="@task.ProgrammeTaskId">@task.Title</option>
                         }
                     </select>
+                    </FormField>
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Successor</label>
+                    <FormField Label="Successor">
                     <select class="field" @bind="linkSuccessorId">
                         <option value="">Select task…</option>
                         @foreach (var task in Tasks)
@@ -115,10 +119,12 @@
                             <option value="@task.ProgrammeTaskId">@task.Title</option>
                         }
                     </select>
+                    </FormField>
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Lag (days)</label>
+                    <FormField Label="Lag (days)">
                     <input type="number" class="field" @bind="linkLagDays" />
+                    </FormField>
                 </div>
             </div>
             <div class="flex gap-2">
@@ -132,8 +138,9 @@
         <div class="panel p-4 mb-5 space-y-3">
             <p class="text-sm font-semibold text-content">Take a baseline <span class="font-normal text-content-subtle">— snapshots every task's dates as the yardstick movement is measured against</span></p>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Label</label>
+                <FormField Label="Label">
                 <input class="field" @bind="baselineLabel" placeholder="e.g. Contract programme rev A" />
+                </FormField>
             </div>
             <div class="flex gap-2">
                 <button type="button" class="btn-primary" disabled="@(busy || Tasks.Count == 0 || string.IsNullOrWhiteSpace(baselineLabel))" @onclick="TakeBaselineAsync">Take baseline</button>
@@ -142,7 +149,7 @@
             @if (Baselines.Count > 0)
             {
                 <div class="pt-3 border-t border-line">
-                    <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Baselines taken</p>
+                    <p class="eyebrow mb-2">Baselines taken</p>
                     <ul class="space-y-1.5">
                         @foreach (var baselineEntry in Baselines)
                         {
@@ -150,9 +157,9 @@
                                 <span class="text-sm text-content">@baselineEntry.Label</span>
                                 @if (baselineEntry.ProgrammeBaselineId == programme?.Baseline?.ProgrammeBaselineId)
                                 {
-                                    <span class="inline-flex items-center rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">current yardstick</span>
+                                    <Pill Tone="Tone.Info">current yardstick</Pill>
                                 }
-                                <span class="text-xs text-content-subtle">taken @baselineEntry.TakenAt.LocalDateTime.ToString("d MMM yyyy, HH:mm") by @baselineEntry.TakenByEmail</span>
+                                <span class="text-xs text-content-subtle">taken @DateTimeText(baselineEntry.TakenAt) by @baselineEntry.TakenByEmail</span>
                                 @if (confirmingRemoveBaselineId == baselineEntry.ProgrammeBaselineId)
                                 {
                                     <button type="button" class="text-xs font-semibold text-negative hover:underline" disabled="@busy" @onclick="() => RemoveBaselineAsync(baselineEntry.ProgrammeBaselineId)">Confirm remove</button>

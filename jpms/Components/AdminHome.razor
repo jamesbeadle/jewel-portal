@@ -2,19 +2,17 @@
 @inject IAccessRequestStore Requests
 @implements IDisposable
 
-<section class="px-6 py-6 md:px-8">
+<div>
 
-    <header class="mb-6 md:mb-8 flex items-start justify-between gap-4">
-        <div>
-            <h1 class="eyebrow mb-1">JPMS · Administrator</h1>
-            <p class="text-[10px] text-content-subtle break-all leading-snug">You are signed in as @CurrentUser.Email</p>
-        </div>
-        @* The admin areas, rolled into one Actions menu (James, 2026-09-03) rather than a row of
-           links: the rail's Admin folder lists the same destinations, so the homepage offers them
-           once, out of the way. Grouped: people · system · the KPI register · the AI shelf. *@
-        <DropdownMenu Label="Actions" Items="@AdminActions" WidthClass="w-64"
-                      ToggleTitle="Administration — users, system, integrations, trades, the KPI register and the AI shelf" />
-    </header>
+    @* The admin areas, rolled into one Actions menu (James, 2026-09-03) rather than a row of
+       links: the rail's Admin folder lists the same destinations, so the homepage offers them
+       once, out of the way. Grouped: people · system · the KPI register · the AI shelf. *@
+    <PageHeader Eyebrow="Administrator" Subtitle="@($"You are signed in as {CurrentUser.Email}")">
+        <Actions>
+            <DropdownMenu Label="Actions" Items="@AdminActions" WidthClass="w-64"
+                          ToggleTitle="Administration — users, system, integrations, trades, the KPI register and the AI shelf" />
+        </Actions>
+    </PageHeader>
 
     <AdminStatsRow />
 
@@ -35,7 +33,7 @@
        Admin → Users (2026-07-30) — administration outgrew a homepage panel. *@
     <PendingRequestsPanel />
 
-</section>
+</div>
 
 @code {
     [Parameter, EditorRequired] public AuthenticatedUser CurrentUser { get; set; } = default!;

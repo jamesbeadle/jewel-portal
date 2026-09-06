@@ -13,7 +13,7 @@
     {
         <button type="button" @onclick="OnStart"
                 title="Edit every line's % complete at once — for opening positions and heavy months"
-                class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
+                class="btn-secondary">
             Bulk edit %
         </button>
     }
@@ -21,11 +21,11 @@
     {
         <span class="text-xs text-content-subtle">@ChangedCount changed — totals update on save</span>
         <button type="button" @onclick="OnSave" disabled="@Saving"
-                class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
+                class="btn-primary">
             @(Saving ? "Saving…" : "Save all")
         </button>
         <button type="button" @onclick="OnCancel" disabled="@Saving"
-                class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
+                class="btn-secondary">
             Cancel
         </button>
     }

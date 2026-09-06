@@ -260,7 +260,7 @@ public partial class ProjectCalendar
     private static string KindDot(CalendarEventKind kind) => kind switch
     {
         CalendarEventKind.SiteVisit => "bg-info",
-        CalendarEventKind.Delivery => "bg-amber-400",
+        CalendarEventKind.Delivery => "bg-warning",
         CalendarEventKind.Meeting => "bg-accent",
         CalendarEventKind.SubcontractorAttendance => "bg-positive",
         _ => "bg-content-subtle"

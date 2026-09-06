@@ -13,11 +13,11 @@
    added below starts there). Manual entries are backdated historic invoices recorded
    directly as Issued/Paid. The claim card on the valuation page drives the happy path;
    this section's row menu covers the same moves plus the edge cases. *@
-<div class="rounded-xl border border-line bg-surface overflow-hidden">
+<div class="panel overflow-hidden">
     <div class="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-raised/60 transition">
         <button type="button" @onclick="Toggle" aria-expanded="@isOpen"
                 class="flex items-center gap-3 text-left grow min-w-0">
-            <svg class="@(isOpen ? "w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
+            <svg class="@(isOpen ?"w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M9 6l6 6-6 6" />
@@ -31,16 +31,16 @@
             @if (AwaitingApproval > 0)
             {
                 <span class="text-sm">
-                    <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Awaiting approval</span>
+                    <span class="eyebrow mr-1.5">Awaiting approval</span>
                     <span class="text-content-muted">@Money(AwaitingApproval)</span>
                 </span>
             }
             <span class="text-sm">
-                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Paid</span>
+                <span class="eyebrow mr-1.5">Paid</span>
                 <span class="text-content-muted">@Money(TotalPaid)</span>
             </span>
             <span class="text-sm">
-                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Invoiced</span>
+                <span class="eyebrow mr-1.5">Invoiced</span>
                 <span class="text-content font-medium">@Money(InvoicedToDate)</span>
             </span>
         </span>
@@ -67,41 +67,40 @@
                (History, Delete…) are clipped at the table's edge — on a short table that hid
                Delete entirely. Short lists render identically either way; a long list grows to
                full height for the moment the menu is showing and gets its cap back on close. *@
-            <div class="border-t border-line @(openMenuId is null ? "overflow-x-auto overflow-y-auto max-h-[85vh]" : "")">
-                <table class="w-full text-sm border-collapse">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-[100px]">Ref</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap">Period</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Amount £</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap">Status</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Paid £</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap">Report</th>
+            <div class="border-t border-line @(openMenuId is null ?"overflow-x-auto overflow-y-auto max-h-[85vh]" : "")">
+                <table class="data-table data-table-dense">
+                    <thead>
+                        <tr>
+                            <th class="w-[100px]">Ref</th>
+                            <th class="whitespace-nowrap">Period</th>
+                            <th class="text-right whitespace-nowrap">Amount £</th>
+                            <th class="whitespace-nowrap">Status</th>
+                            <th class="text-right whitespace-nowrap">Paid £</th>
+                            <th class="whitespace-nowrap">Report</th>
                             @if (CanManage)
                             {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right w-[110px]"></th>
+                                <th class="text-right w-[110px]"></th>
                             }
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-line">
+                    <tbody>
                         @foreach (var invoice in invoices)
                         {
-                            <tr class="@(invoice.Status == ValuationInvoiceStatus.Cancelled ? "opacity-50" : "")">
-                                <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">
+                            <tr class="@(invoice.Status == ValuationInvoiceStatus.Cancelled ?"opacity-50" : "")">
+                                <td class="font-mono text-xs text-content-subtle whitespace-nowrap">
                                     @invoice.DisplayNumber
                                     @if (invoice.IsManual)
                                     {
-                                        <span class="ml-1 inline-flex items-center rounded-full border border-line px-1.5 py-0.5 text-[10px] font-sans text-content-subtle"
-                                              title="Historic entry keyed in manually — counts toward certified to date and total paid">Manual</span>
+                                        <Pill Tone="Tone.Muted" Class="ml-1" Title="Historic entry keyed in manually — counts toward certified to date and total paid">Manual</Pill>
                                     }
                                 </td>
-                                <td class="px-3 py-2 text-content-muted whitespace-nowrap">@invoice.PeriodMonth.ToString("MMM yyyy")</td>
-                                <td class="px-3 py-2 text-right text-content whitespace-nowrap">@Money(invoice.Amount)</td>
-                                <td class="px-3 py-2 whitespace-nowrap">
-                                    <span class="@BadgeClass(invoice.Status)" title="@StatusTitle(invoice)">@StatusLabel(invoice.Status)</span>
+                                <td class="whitespace-nowrap">@invoice.PeriodMonth.ToString("MMM yyyy")</td>
+                                <td class="text-right text-content whitespace-nowrap">@Money(invoice.Amount)</td>
+                                <td class="whitespace-nowrap">
+                                    <Pill Tone="@invoice.Status.ToTone()" Title="@StatusTitle(invoice)">@StatusLabel(invoice.Status)</Pill>
                                 </td>
-                                <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@(invoice.AmountPaid > 0 ? Money(invoice.AmountPaid) : "—")</td>
-                                <td class="px-3 py-2 whitespace-nowrap">
+                                <td class="text-right whitespace-nowrap">@(invoice.AmountPaid > 0 ? Money(invoice.AmountPaid) : "—")</td>
+                                <td class="whitespace-nowrap">
                                     @if (invoice.ValuationReportSnapshotId is not null)
                                     {
                                         <button type="button" @onclick="() => OnViewSnapshot.InvokeAsync(invoice.ValuationReportSnapshotId)"
@@ -115,7 +114,7 @@
                                 </td>
                                 @if (CanManage)
                                 {
-                                    <td class="px-3 py-2 text-right whitespace-nowrap">
+                                    <td class="text-right whitespace-nowrap">
                                         @* One menu per row instead of a run of text links — the
                                            stage decides which moves it offers. Delete keeps its
                                            two-step confirm: choosing it swaps the menu for an
@@ -130,7 +129,7 @@
                                         else
                                         {
                                             <DropdownMenu Label="Actions" WidthClass="w-64" Disabled="@busy"
-                                                          ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
+                                                          ToggleClass="inline-flex items-center gap-1 rounded border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
                                                           Class="inline-block text-left"
                                                           OnOpenChanged="open => openMenuId = open ? invoice.ValuationInvoiceId : (openMenuId == invoice.ValuationInvoiceId ? null : openMenuId)"
                                                           Items="InvoiceMenuItems(invoice)" />
@@ -141,7 +140,7 @@
                             @if (invoice.Status == ValuationInvoiceStatus.Rejected && !string.IsNullOrWhiteSpace(invoice.RejectionReason))
                             {
                                 <tr>
-                                    <td colspan="@ColumnCount" class="px-3 py-1.5 bg-negative/5 text-xs text-negative">
+                                    <td colspan="@ColumnCount" class="bg-negative/5 text-xs text-negative">
                                         Rejected@(invoice.RejectedAt is { } r ? $" {r:dd MMM yyyy}" : ""): @invoice.RejectionReason
                                     </td>
                                 </tr>
@@ -149,7 +148,7 @@
                             @if (historyOpenId == invoice.ValuationInvoiceId)
                             {
                                 <tr>
-                                    <td colspan="@ColumnCount" class="px-3 py-2 bg-surface-raised/60">
+                                    <td colspan="@ColumnCount" class="bg-surface-raised/60">
                                         @if (historyEvents is null)
                                         {
                                             <span class="text-xs text-content-subtle italic">Loading history…</span>
@@ -164,7 +163,7 @@
                                                 @foreach (var entry in historyEvents)
                                                 {
                                                     <li class="text-xs text-content-muted">
-                                                        <span class="font-mono text-content-subtle">@entry.OccurredAt.ToString("dd MMM yyyy HH:mm")</span>
+                                                        <span class="font-mono text-content-subtle">@DateTimeText(entry.OccurredAt)</span>
                                                         <span class="ml-2 font-medium text-content">@EventLabel(entry.EventType)</span>
                                                         @if (entry.AmountBefore is not null && entry.AmountAfter is not null && entry.AmountBefore != entry.AmountAfter)
                                                         {
@@ -195,17 +194,19 @@
         {
             <div class="border-t border-line px-4 py-3 flex flex-wrap items-end gap-3">
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period month</label>
+                    <FormField Label="Period month">
                     @* Explicit value/@onchange rather than @bind: Razor special-cases @bind on
                        type="month" to expect a DateTime, but the month travels as a "yyyy-MM"
                        string (see ParseMonth). *@
                     <input type="month" value="@newMonth" @onchange="e => newMonth = e.Value?.ToString() ?? newMonth"
-                           class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                           class="field" />
+                    </FormField>
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amount £</label>
+                    <FormField Label="Amount £">
                     <input type="number" step="any" min="0" @bind="newAmount"
-                           class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content w-40 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                           class="field w-40" />
+                    </FormField>
                 </div>
                 <label class="flex items-center gap-2 text-sm text-content-subtle cursor-pointer select-none pb-2.5"
                        title="Backdated historic entry: recorded directly as issued (and paid, if a paid amount is given) so it counts toward certified to date immediately">
@@ -215,18 +216,20 @@
                 @if (newIsHistoric)
                 {
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Paid £ (blank = full, 0 = unpaid)</label>
+                        <FormField Label="Paid £ (blank = full, 0 = unpaid)">
                         <input type="number" step="any" min="0" @bind="newPaidAmount" placeholder="Full amount"
-                               class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content w-36 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                               class="field w-36" />
+                        </FormField>
                     </div>
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Note (optional)</label>
+                        <FormField Label="Note (optional)">
                         <input type="text" @bind="newNote" placeholder="e.g. old system ref"
-                               class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content w-48 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                               class="field w-48" />
+                        </FormField>
                     </div>
                 }
                 <button type="button" disabled="@busy" @onclick="AddAsync"
-                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
+                        class="btn-primary">
                     @(newIsHistoric ? "Add historic invoice" : "Add invoice")
                 </button>
             </div>
@@ -287,9 +290,10 @@
                 </p>
             }
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period month</label>
+                <FormField Label="Period month">
                 <input type="month" value="@editMonth" @onchange="e => editMonth = e.Value?.ToString() ?? editMonth"
-                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                       class="field" />
+                </FormField>
             </div>
             <FormField Label="Amount (£)" Value="@editAmount" OnChange="v => editAmount = v" InputType="number" />
             @if (editInvoice.IsManual)

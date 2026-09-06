@@ -27,22 +27,18 @@
     backend query was needed, so nothing here can drift from the registers it summarises.
 *@
 
-<section class="px-6 py-6 md:px-8">
+<div>
 
-    <header class="mb-6">
-        <p class="eyebrow mb-1.5">@Role.DisplayName()</p>
-        <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">
-            @Greeting, @FirstName.
-        </h1>
-        <p class="text-sm text-content-muted mt-1">@RoleBrief</p>
-    </header>
+    <PageHeader Eyebrow="@Role.DisplayName()" Subtitle="@RoleBrief">
+        <TitleContent>@Greeting, @FirstName.</TitleContent>
+    </PageHeader>
 
     @if (Tiles.Count > 0)
     {
         @* The count strip: only the things that are late, waiting or need a decision. A zero is
            worth showing — "nothing overdue" is information — but a metric that doesn't apply to
            this role is left out entirely rather than rendered as a dash. *@
-        <div class="grid grid-cols-2 @(Tiles.Count >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3") gap-3 md:gap-4 mb-8">
+        <div class="grid grid-cols-2 @(Tiles.Count >= 4 ?"lg:grid-cols-4" : "lg:grid-cols-3") gap-3 md:gap-4 mb-8">
             @foreach (var tile in Tiles)
             {
                 <a href="@tile.Href" class="panel p-5 hover:border-line-strong hover:bg-surface-raised transition">
@@ -98,7 +94,7 @@
                         <h2 class="text-sm font-semibold text-content">Rates needing a review</h2>
                         @if (StaleRateCount > 0)
                         {
-                            <span class="text-[11px] font-medium text-negative">@StaleRateCount stale</span>
+                            <span class="text-xs font-medium text-negative">@StaleRateCount stale</span>
                         }
                     </div>
                     <a href="/rate-library/stale" class="text-xs font-medium text-accent hover:underline">View all</a>
@@ -127,5 +123,5 @@
         }
     </div>
 
-</section>
+</div>
 

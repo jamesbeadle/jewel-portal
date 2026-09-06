@@ -27,7 +27,7 @@
             <h2 class="text-sm font-semibold text-content">My to-dos</h2>
             @if (!loading && openItems.Count > 0)
             {
-                <span class="text-[11px] text-content-subtle">@openItems.Count open</span>
+                <span class="text-xs text-content-subtle">@openItems.Count open</span>
             }
         </div>
         <div class="flex items-center gap-2">
@@ -50,7 +50,7 @@
 
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+        <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
     }
 
     @if (!loading && items.Count > 0 && RolesOnPanel.Count > 1)
@@ -98,16 +98,16 @@
             @foreach (var item in VisibleOpenItems)
             {
                 <button type="button" @key="item.TodoItemId" title="Open this item"
-                        class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                        class="w-full rounded border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                         @onclick="() => OpenItem(item)">
                     <p class="truncate text-sm text-content">
                         <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
                     </p>
-                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
-                        <span class="whitespace-nowrap @(IsGeneral(item) ? "text-accent font-medium" : "")">@ScopeLabel(item)</span>
+                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
+                        <span class="whitespace-nowrap @(IsGeneral(item) ?"text-accent font-medium" : "")">@ScopeLabel(item)</span>
                         @if (item.DueAt is not null)
                         {
-                            <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                            <span class="whitespace-nowrap @(IsOverdue(item) ?"text-negative font-medium" : "")">Due @DateText(item.DueAt.Value)</span>
                         }
                         <TodoAssigneeBadge Item="item" />
                     </div>
@@ -241,8 +241,8 @@
 
     private string ViewTabClass(bool board) =>
         boardView == board
-            ? "btn-primary text-[10px] px-2 py-1"
-            : "btn-secondary text-[10px] px-2 py-1";
+            ? "chip chip-active"
+            : "chip";
 
     private async Task SetView(bool board)
     {

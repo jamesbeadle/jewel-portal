@@ -7,11 +7,11 @@
     <span class="text-content font-medium">@(Line.ContactName ?? "—")</span>
     @if (Line.Type == "ACCPAYCREDIT")
     {
-        <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5">Credit</span>
+        <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5">Credit</span>
     }
     @if (IsAwaitingApproval(Line))
     {
-        <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
+        <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5"
               title="Awaiting approval in Xero — allocating every line of this bill confirms its cost codes to Xero and approves it">Draft</span>
     }
     <span class="block truncate text-content-muted" title="@Line.Description">@(Line.Description ?? "—")</span>

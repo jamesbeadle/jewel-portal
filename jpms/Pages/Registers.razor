@@ -17,92 +17,89 @@
     visibility — the point of moving these out of Monday is that nothing lapses unseen.
 *@
 
-<ApprovedSessionGate>
-    <section class="px-6 md:px-8 py-8 max-w-6xl">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-            <h2 class="text-lg font-semibold text-content">Registers</h2>
-            <div class="flex items-center gap-3">
-                <Toolbar>
-                    <ToolbarButton Icon="refresh" Label="Refresh" Busy="@refreshing" OnClick="RefreshAsync" />
-                    <ExportToExcelButton FileName="Registers"
-                                         Disabled="@(Items.Current is null or { Count: 0 })"
-                                         BuildWorkbook="BuildExportWorkbook" />
-                </Toolbar>
-                <button type="button" class="btn-primary" @onclick="() => StartEdit(null)">Add item</button>
-            </div>
-        </div>
-        <p class="text-sm text-content-subtle mb-5 max-w-3xl">
-            Insurances, subscriptions, vans and trade accounts, with the dates that matter.
-            Anything due inside 30 days is flagged; items deactivate rather than delete, so
-            history survives.
-        </p>
+<Page Class="max-w-6xl">
+    <SectionHeader Title="Registers">
+        <Actions>
+        <Toolbar>
+            <ToolbarButton Icon="refresh" Label="Refresh" Busy="@refreshing" OnClick="RefreshAsync" />
+            <ExportToExcelButton FileName="Registers"
+                                 Disabled="@(Items.Current is null or { Count: 0 })"
+                                 BuildWorkbook="BuildExportWorkbook" />
+        </Toolbar>
+        <button type="button" class="btn-primary" @onclick="() => StartEdit(null)">Add item</button>
+        </Actions>
+    </SectionHeader>
+    <p class="text-sm text-content-subtle mb-5 max-w-3xl">
+        Insurances, subscriptions, vans and trade accounts, with the dates that matter.
+        Anything due inside 30 days is flagged; items deactivate rather than delete, so
+        history survives.
+    </p>
 
-        @if (actionError is not null)
+    @if (actionError is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
+    }
+
+    <div class="flex items-center gap-1 mb-4">
+        @foreach (var (kind, label) in Kinds)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
+            <button type="button"
+                    class="@(activeKind == kind ?"btn-secondary bg-surface-raised text-content" : "btn-secondary text-content-subtle")"
+                    @onclick="() => activeKind = kind">@label</button>
         }
+    </div>
 
-        <div class="flex items-center gap-1 mb-4">
-            @foreach (var (kind, label) in Kinds)
+    <Panel Title="@KindLabel(activeKind)" Class="mb-6" BodyClass="p-0"
+           IsLoading="@(Items.Current is null && !dataFailed)" LoadingLabel="Loading the register">
+        @if (dataFailed)
+        {
+            <p class="p-5 text-sm text-negative">Couldn't load the register — refresh to try again.</p>
+        }
+        else
+        {
+            var rows = (Items.Current ?? Array.Empty<RegisterItem>())
+                .Where(item => item.Kind == activeKind && item.IsActive).ToList();
+            @if (rows.Count == 0)
             {
-                <button type="button"
-                        class="@(activeKind == kind ? "btn-secondary bg-surface-raised text-content" : "btn-secondary text-content-subtle")"
-                        @onclick="() => activeKind = kind">@label</button>
-            }
-        </div>
-
-        <Panel Title="@KindLabel(activeKind)" Class="mb-6" BodyClass="p-0"
-               IsLoading="@(Items.Current is null && !dataFailed)" LoadingLabel="Loading the register">
-            @if (dataFailed)
-            {
-                <p class="p-5 text-sm text-negative">Couldn't load the register — refresh to try again.</p>
+                <p class="p-5 text-sm text-content-subtle italic">Nothing on this register yet — use Add item above.</p>
             }
             else
             {
-                var rows = (Items.Current ?? Array.Empty<RegisterItem>())
-                    .Where(item => item.Kind == activeKind && item.IsActive).ToList();
-                @if (rows.Count == 0)
-                {
-                    <p class="p-5 text-sm text-content-subtle italic">Nothing on this register yet — use Add item above.</p>
-                }
-                else
-                {
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
-                                <th class="px-5 py-3">Name</th>
-                                <th class="px-2 py-3">@CounterpartyLabel(activeKind)</th>
-                                <th class="px-2 py-3">@ReferenceLabel(activeKind)</th>
-                                <th class="px-2 py-3 text-right">Cost</th>
-                                <th class="px-2 py-3">Cycle</th>
-                                <th class="px-2 py-3">@KeyDateLabel(activeKind)</th>
-                                <th class="px-2 py-3">@SecondaryDateLabel(activeKind)</th>
-                                <th class="px-5 py-3"></th>
+                <table class="data-table data-table-dense">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>@CounterpartyLabel(activeKind)</th>
+                            <th>@ReferenceLabel(activeKind)</th>
+                            <th class="text-right">Cost</th>
+                            <th>Cycle</th>
+                            <th>@KeyDateLabel(activeKind)</th>
+                            <th>@SecondaryDateLabel(activeKind)</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in rows)
+                        {
+                            <tr class="hover:bg-surface-raised/40">
+                                <td class="font-medium text-content">@item.Name</td>
+                                <td>@item.Counterparty</td>
+                                <td class="tabular-nums">@item.Reference</td>
+                                <td class="text-right tabular-nums">@(item.Cost == 0m ? "—" : item.Cost.ToString("£#,##0"))</td>
+                                <td class="text-content-subtle">@item.BillingCycle</td>
+                                <td>@DueCell(item.KeyDate)</td>
+                                <td>@DueCell(item.SecondaryDate)</td>
+                                <td class="text-right whitespace-nowrap">
+                                    <button type="button" class="btn-secondary mr-1" @onclick="() => StartEdit(item)">Edit</button>
+                                    <button type="button" class="btn-ghost text-negative" @onclick="() => DeactivateAsync(item)">Deactivate</button>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var item in rows)
-                            {
-                                <tr class="border-b border-line/60 hover:bg-surface-raised/40">
-                                    <td class="px-5 py-2.5 font-medium text-content">@item.Name</td>
-                                    <td class="px-2 py-2.5 text-content-muted">@item.Counterparty</td>
-                                    <td class="px-2 py-2.5 text-content-muted tabular-nums">@item.Reference</td>
-                                    <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@(item.Cost == 0m ? "—" : item.Cost.ToString("£#,##0"))</td>
-                                    <td class="px-2 py-2.5 text-content-subtle">@item.BillingCycle</td>
-                                    <td class="px-2 py-2.5">@DueCell(item.KeyDate)</td>
-                                    <td class="px-2 py-2.5">@DueCell(item.SecondaryDate)</td>
-                                    <td class="px-5 py-2.5 text-right whitespace-nowrap">
-                                        <button type="button" class="btn-secondary mr-1" @onclick="() => StartEdit(item)">Edit</button>
-                                        <button type="button" class="btn-ghost text-negative" @onclick="() => DeactivateAsync(item)">Deactivate</button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                }
+                        }
+                    </tbody>
+                </table>
             }
-        </Panel>
-    </section>
+        }
+    </Panel>
 
     <Modal IsOpen="@editOpen" Title="@(editId == "" ? $"Add — {KindLabel(activeKind)}" : "Edit item")"
            ConfirmLabel="@(saving ? "Saving…" : "Save")" ConfirmDisabled="@saving"
@@ -117,37 +114,37 @@
             <label class="block text-sm text-content-muted">@ReferenceLabel(activeKind)
                 <input class="field mt-1" @bind="editReference" />
             </label>
-            <label class="block text-sm text-content-muted">Cost (£)
-                <input class="field mt-1" type="number" step="0.01" min="0" @bind="editCost" />
-            </label>
-            <label class="block text-sm text-content-muted">Billing cycle
-                <select class="field mt-1" @bind="editCycle">
+            <FormField Label="Cost (£)">
+                <input class="field" type="number" step="0.01" min="0" @bind="editCost" />
+            </FormField>
+            <FormField Label="Billing cycle">
+                <select class="field" @bind="editCycle">
                     <option value="">—</option>
                     <option>Monthly</option>
                     <option>Quarterly</option>
                     <option>Annual</option>
                     <option>One-off</option>
                 </select>
-            </label>
+            </FormField>
             <label class="block text-sm text-content-muted">@KeyDateLabel(activeKind)
                 <input class="field mt-1" type="date" @bind="editKeyDate" />
             </label>
             <label class="block text-sm text-content-muted">@SecondaryDateLabel(activeKind)
                 <input class="field mt-1" type="date" @bind="editSecondaryDate" />
             </label>
-            <label class="block text-sm text-content-muted">Owner (email)
-                <input class="field mt-1" type="email" @bind="editOwner" />
-            </label>
+            <FormField Label="Owner (email)">
+                <input class="field" type="email" @bind="editOwner" />
+            </FormField>
             <label class="block text-sm text-content-muted sm:col-span-2">Notes
                 <input class="field mt-1" @bind="editNotes" />
             </label>
             @if (editError is not null)
             {
-                <p class="sm:col-span-2 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@editError</p>
+                <Notice Tone="Tone.Negative" Class="sm:col-span-2">@editError</Notice>
             }
         </div>
     </Modal>
-</ApprovedSessionGate>
+</Page>
 
 @code {
     private bool dataFailed;
@@ -254,15 +251,15 @@
             var days = (date.Value.UtcDateTime.Date - DateTime.Today).Days;
             @if (days < 0)
             {
-                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-negative/10 text-negative">@date.Value.ToString("dd MMM yyyy") · lapsed</span>
+                <Pill Tone="Tone.Negative">@DateText(date.Value) · lapsed</Pill>
             }
             else if (days <= 30)
             {
-                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-negative/10 text-negative">@date.Value.ToString("dd MMM yyyy") · @days d</span>
+                <Pill Tone="Tone.Negative">@DateText(date.Value) · @days d</Pill>
             }
             else
             {
-                <span class="text-content-muted tabular-nums">@date.Value.ToString("dd MMM yyyy")</span>
+                <span class="text-content-muted tabular-nums">@DateText(date.Value)</span>
             }
         }
     };

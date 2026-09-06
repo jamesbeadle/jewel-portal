@@ -14,7 +14,7 @@
     <div class="flex items-center gap-3">
         @if (Loaded && Emails.Count > 0)
         {
-            <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@Emails.Count</span>
+            <Pill Tone="Tone.Info">@Emails.Count</Pill>
         }
         @* Search the whole mailbox and tag what belongs here — the list AND the
            assistant's read_record_emails both get richer with each tag. *@
@@ -26,13 +26,13 @@
 
 @if (Error is not null)
 {
-    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@Error</p>
+    <Notice Tone="Tone.Negative" Class="mb-3">@Error</Notice>
 }
 
 <LoadGate IsLoading="@(!Loaded)" Prominent="true" Label="@LoadingLabel">
 @if (sentNote is not null)
 {
-    <div class="rounded-lg border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
+    <div class="rounded border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
         <p class="text-sm text-content">@sentNote</p>
         <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
                 @onclick="() => sentNote = null">✕</button>

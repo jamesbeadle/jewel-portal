@@ -20,7 +20,7 @@ public static class DocumentControlDisplay
         item.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
         || (item.ContentType ?? "").Contains("zip", StringComparison.OrdinalIgnoreCase);
 
-    public static string Date(DateTimeOffset value) => value.LocalDateTime.ToString("d MMM yyyy, HH:mm");
+    public static string Date(DateTimeOffset value) => DateTimeText(value);
 
     public static string ListDate(DateTimeOffset value)
     {
@@ -29,6 +29,6 @@ public static class DocumentControlDisplay
         if (local.Date == today) return local.ToString("HH:mm");
         if (local.Date == today.AddDays(-1)) return $"Yesterday {local:HH:mm}";
         if (local.Date > today.AddDays(-6)) return local.ToString("ddd HH:mm");
-        return local.ToString("d MMM yyyy");
+        return DateText(local);
     }
 }
