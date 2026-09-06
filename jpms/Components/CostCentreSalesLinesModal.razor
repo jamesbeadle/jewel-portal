@@ -20,9 +20,7 @@
        Class="max-w-6xl">
     @if (CountingLines.Count == 0 && NonCountingLines.Count == 0)
     {
-        <p class="text-sm text-content-subtle italic">
-            No valuation lines are coded to this report line.
-        </p>
+        <EmptyState Message="No valuation lines are coded to this report line." />
     }
     else
     {

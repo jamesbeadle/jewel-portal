@@ -120,11 +120,11 @@
                 <input readonly value="@resetLink"
                        class="field flex-1 min-w-0 text-xs" />
                 <button type="button" @onclick="CopyResetLink"
-                        class="rounded-lg bg-accent text-accent-ink font-medium text-xs px-3 py-1.5 hover:bg-accent-hover transition">
+                        class="btn-primary">
                     @(copied ? "Copied" : "Copy")
                 </button>
                 <button type="button" @onclick="() => resetLink = null"
-                        class="rounded-lg border border-line bg-surface text-content-muted font-medium text-xs px-3 py-1.5 hover:border-line-strong transition">
+                        class="btn-secondary">
                     Done
                 </button>
             </div>

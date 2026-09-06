@@ -37,15 +37,15 @@ else
         </div>
         @if (error is not null)
         {
-            <p class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@error</p>
+            <Notice Tone="Tone.Negative">@error</Notice>
         }
         <div class="flex items-center gap-2">
             <button type="button" disabled="@busy" @onclick="SaveAsync"
-                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-1.5 hover:bg-accent-hover transition disabled:opacity-60">
+                    class="btn-primary">
                 @(busy ? "Saving…" : "Save")
             </button>
             <button type="button" disabled="@busy" @onclick="() => isEditing = false"
-                    class="rounded-lg border border-line-strong text-sm px-3 py-1.5 text-content-muted hover:bg-surface-raised transition">
+                    class="btn-secondary">
                 Cancel
             </button>
         </div>

@@ -5,9 +5,7 @@
 
 @if (Requests.Count == 0)
 {
-    <div class="panel p-8 text-center text-sm text-content-subtle">
-        No requests for information yet. When the project team raises one on your project, it appears here.
-    </div>
+    <EmptyState Message="No requests for information yet. When the project team raises one on your project, it appears here." />
 }
 else
 {

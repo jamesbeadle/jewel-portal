@@ -22,9 +22,7 @@
 
         @if (CostCenters.Current.Count == 0)
         {
-            <p class="text-sm text-content-subtle italic">
-                No cost centres found. Run the cost-centre seed script against the database to populate the master list.
-            </p>
+            <EmptyState Message="No cost centres found. Run the cost-centre seed script against the database to populate the master list." />
         }
         else
         {

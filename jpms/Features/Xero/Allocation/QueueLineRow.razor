@@ -48,7 +48,7 @@
            here. Pressing it again is the Xero retry. Unset (in the menu,
            only on lines with a saved project) reverses an accidental Set:
            project cleared here and the site removed in Xero. *@
-        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40 align-middle"
+        <button class="btn-secondary ml-2 align-middle"
                 title="Save the project and set its Xero site now — moves the line to that project's tab, cost centre to follow"
                 disabled="@(Busy || !CanSetProject)"
                 @onclick="() => OnSetProject.InvokeAsync()">Set</button>

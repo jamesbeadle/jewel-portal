@@ -5,9 +5,7 @@
 
 @if (Orders.Count == 0)
 {
-    <div class="panel p-8 text-center text-sm text-content-subtle">
-        No variation orders yet. When one is issued on your project, it appears here.
-    </div>
+    <EmptyState Message="No variation orders yet. When one is issued on your project, it appears here." />
 }
 else
 {

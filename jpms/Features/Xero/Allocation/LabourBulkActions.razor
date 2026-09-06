@@ -4,7 +4,7 @@
     <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
             title="Mark every selected line as settlement of its worker's month — lines without a linked subcontractor company or a bill date are skipped and reported"
             disabled="@Busy" @onclick="() => OnMarkCover.InvokeAsync()">Mark selected as settlement</button>
-    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
+    <button class="btn-secondary"
             disabled="@Busy" @onclick="() => OnUnmarkCover.InvokeAsync()">Un-mark selected</button>
 </BulkSelectionBar>
 

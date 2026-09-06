@@ -135,7 +135,7 @@
 
                     <div class="flex flex-wrap items-center gap-2 pt-1 text-xs">
                         <button type="button"
-                                class="inline-flex items-center gap-1 rounded-lg border border-accent text-accent bg-accent/5 hover:bg-accent/10 px-2.5 py-1.5 disabled:opacity-60"
+                                class="btn-secondary"
                                 disabled="@(SelectedDrawingCount == 0 || attachingSelected)" @onclick="AttachSelectedDrawingsAsync">
                             @(attachingSelected ? "Attaching…" : $"Attach {SelectedDrawingCount} selected")
                         </button>

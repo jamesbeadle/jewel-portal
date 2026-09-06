@@ -35,7 +35,7 @@
             <label class="block eyebrow mt-3 mb-1">Variation order</label>
             @if (Variations.Count == 0)
             {
-                <p class="text-sm text-content-subtle italic">No variation orders on this project yet.</p>
+                <EmptyState Message="No variation orders on this project yet." />
             }
             else
             {

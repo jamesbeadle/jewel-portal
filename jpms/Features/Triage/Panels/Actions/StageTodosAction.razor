@@ -68,7 +68,7 @@
 
         @if (TitledTodoRows.Count == 0)
         {
-            <p class="text-sm text-content-subtle italic">No to-dos drafted from this email yet.</p>
+            <EmptyState Message="No to-dos drafted from this email yet." />
         }
         else
         {

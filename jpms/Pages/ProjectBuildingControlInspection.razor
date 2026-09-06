@@ -95,7 +95,7 @@
                     </FormField>
                 </div>
                 <div class="flex items-center justify-between">
-                    <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition disabled:opacity-50"
+                    <button type="button" class="btn-primary"
                             disabled="@(string.IsNullOrWhiteSpace(editStageName) || busy || !HasEdits(inspection))"
                             @onclick="() => SaveAsync(inspection)">
                         Save changes
@@ -117,7 +117,7 @@
                 </div>
                 @if (Photos.Count == 0)
                 {
-                    <p class="text-sm text-content-subtle italic">No photos on this stage yet — on site, this page on the phone uploads straight from the camera.</p>
+                    <EmptyState Message="No photos on this stage yet — on site, this page on the phone uploads straight from the camera." />
                 }
                 else
                 {

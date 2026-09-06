@@ -8,7 +8,7 @@
     <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
             disabled="@(Busy || string.IsNullOrEmpty(ProjectId) || string.IsNullOrEmpty(CostCenterCode))"
             @onclick="() => OnAllocate.InvokeAsync()">Allocate selected</button>
-    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
+    <button class="btn-secondary"
             title="Save the project and set its Xero site on every selected line — moves them to that project's tab, cost centres to follow"
             disabled="@(Busy || string.IsNullOrEmpty(ProjectId))"
             @onclick="() => OnSetProject.InvokeAsync()">Set selected</button>
@@ -21,9 +21,9 @@
             <option value="@bucket">@bucket</option>
         }
     </select>
-    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
+    <button class="btn-secondary"
             disabled="@(Busy || string.IsNullOrEmpty(Bucket))" @onclick="() => OnBucket.InvokeAsync()">Bucket selected</button>
-    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
+    <button class="btn-secondary"
             disabled="@Busy" @onclick="() => OnIgnore.InvokeAsync()">Ignore selected</button>
 </BulkSelectionBar>
 

@@ -18,18 +18,17 @@
 *@
 
 <Page Class="max-w-6xl">
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-        <h2 class="text-lg font-semibold text-content">Registers</h2>
-        <div class="flex items-center gap-3">
-            <Toolbar>
-                <ToolbarButton Icon="refresh" Label="Refresh" Busy="@refreshing" OnClick="RefreshAsync" />
-                <ExportToExcelButton FileName="Registers"
-                                     Disabled="@(Items.Current is null or { Count: 0 })"
-                                     BuildWorkbook="BuildExportWorkbook" />
-            </Toolbar>
-            <button type="button" class="btn-primary" @onclick="() => StartEdit(null)">Add item</button>
-        </div>
-    </div>
+    <SectionHeader Title="Registers">
+        <Actions>
+        <Toolbar>
+            <ToolbarButton Icon="refresh" Label="Refresh" Busy="@refreshing" OnClick="RefreshAsync" />
+            <ExportToExcelButton FileName="Registers"
+                                 Disabled="@(Items.Current is null or { Count: 0 })"
+                                 BuildWorkbook="BuildExportWorkbook" />
+        </Toolbar>
+        <button type="button" class="btn-primary" @onclick="() => StartEdit(null)">Add item</button>
+        </Actions>
+    </SectionHeader>
     <p class="text-sm text-content-subtle mb-5 max-w-3xl">
         Insurances, subscriptions, vans and trade accounts, with the dates that matter.
         Anything due inside 30 days is flagged; items deactivate rather than delete, so

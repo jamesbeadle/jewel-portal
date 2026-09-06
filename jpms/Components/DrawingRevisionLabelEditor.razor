@@ -20,14 +20,14 @@ else
         <input type="text" @bind="label" placeholder="A" maxlength="16"
                class="field w-16" />
         <button type="button" disabled="@busy" @onclick="SaveAsync"
-                class="rounded-md bg-accent text-accent-ink text-xs font-medium px-2 py-1 hover:bg-accent-hover transition disabled:opacity-60">
+                class="btn-primary">
             @(busy ? "Saving…" : "Save")
         </button>
         <button type="button" disabled="@busy" @onclick="() => isEditing = false"
                 class="text-xs font-normal text-content-muted hover:text-content">Cancel</button>
         @if (error is not null)
         {
-            <span class="text-xs font-normal text-red-700">@error</span>
+            <span class="text-xs font-normal text-negative">@error</span>
         }
     </span>
 }

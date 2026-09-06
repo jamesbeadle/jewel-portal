@@ -39,7 +39,7 @@
             && string.IsNullOrWhiteSpace(Record.ResponseActionRequired)
             && string.IsNullOrWhiteSpace(Record.ImpactIfLate))
         {
-            <p class="text-sm text-content-subtle italic">No itemised queries yet. The issued document carries the detail above only.</p>
+            <EmptyState Message="No itemised queries yet. The issued document carries the detail above only." />
         }
         else
         {

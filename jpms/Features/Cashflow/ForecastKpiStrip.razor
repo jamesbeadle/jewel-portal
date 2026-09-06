@@ -5,7 +5,7 @@
    API's directors-only gate). Tiles keep their shape while loading: label stays, figure
    pulses. *@
 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-    <FigureTile Label="Cash in bank" IsLoading="@(Bank is null)">
+    <StatTile Label="Cash in bank" IsLoading="@(Bank is null)">
         @if (!Bank!.IsConfigured || Bank.Error is not null)
         {
             <p class="text-sm text-content-muted mt-1">@(Bank.Error ?? "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings.")</p>
@@ -15,8 +15,8 @@
             <p class="text-2xl font-semibold text-content">@Money(Bank.TotalCash)</p>
             <p class="text-xs text-content-subtle mt-1">@Bank.BankAccounts.Count @(Bank.BankAccounts.Count == 1 ? "account" : "accounts") · fetched @FetchedText</p>
         }
-    </FigureTile>
-    <FigureTile Label="Lowest forecast balance" IsLoading="@(!BankReady || !TableReady)"
+    </StatTile>
+    <StatTile Label="Lowest forecast balance" IsLoading="@(!BankReady || !TableReady)"
                 Title="The lowest the forecast bank balance gets across the visible months — the month to plan for.">
         @if (Forecast is not { } low || low.Closing.Length == 0)
         {
@@ -27,8 +27,8 @@
             <p class="text-2xl font-semibold @(low.Closing[low.MinIndex] < 0m ? "text-negative" : "text-content")">@Money(low.Closing[low.MinIndex])</p>
             <p class="text-xs text-content-subtle mt-1">@MonthLabel(low.Axis[low.MinIndex]) — the month to plan for</p>
         }
-    </FigureTile>
-    <FigureTile Label="Outstanding sales invoices" IsLoading="@(Bank is null)">
+    </StatTile>
+    <StatTile Label="Outstanding sales invoices" IsLoading="@(Bank is null)">
         @if (!Bank!.IsConfigured || Bank.Error is not null)
         {
             <p class="text-sm text-content-muted mt-1">—</p>
@@ -41,8 +41,8 @@
                 <a class="underline underline-offset-2 hover:text-content" href="/finance/aged-receivables">aged receivables</a>
             </p>
         }
-    </FigureTile>
-    <FigureTile Label="Balance at horizon end" IsLoading="@(!BankReady || !TableReady)"
+    </StatTile>
+    <StatTile Label="Balance at horizon end" IsLoading="@(!BankReady || !TableReady)"
                 Title="Bank cash after every visible month and the dated flows beyond them — where the selected jobs leave the company if they run to the end as forecast. Undated flows excluded until they earn a date.">
         @if (Forecast is not { } view || view.Closing.Length == 0)
         {
@@ -54,7 +54,7 @@
             <p class="text-2xl font-semibold @(horizonEnd < 0m ? "text-negative" : "text-content")">@Money(horizonEnd)</p>
             <p class="text-xs text-content-subtle mt-1">after @MonthLabel(view.Axis[^1]) incl. later retention releases</p>
         }
-    </FigureTile>
+    </StatTile>
 </div>
 
 @code {

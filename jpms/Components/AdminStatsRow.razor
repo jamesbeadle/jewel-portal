@@ -9,9 +9,9 @@
 *@
 
 <div class="grid grid-cols-3 gap-3 md:gap-4 mb-8">
-    <Stat Label="Approved users"   Value="@ApprovedUserCount"  IsLoading="@IsLoading" />
-    <Stat Label="Pending requests" Value="@PendingRequestCount" IsLoading="@IsLoading" />
-    <Stat Label="Roles in use"     Value="@DistinctRoleCount"   IsLoading="@IsLoading" />
+    <StatTile Label="Approved users"   Value="@ApprovedUserCount"  IsLoading="@IsLoading" />
+    <StatTile Label="Pending requests" Value="@PendingRequestCount" IsLoading="@IsLoading" />
+    <StatTile Label="Roles in use"     Value="@DistinctRoleCount"   IsLoading="@IsLoading" />
 </div>
 
 @code {

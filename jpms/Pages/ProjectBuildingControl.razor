@@ -50,7 +50,7 @@
                     </p>
                     @if (!caseFormOpen)
                     {
-                        <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition"
+                        <button type="button" class="btn-primary"
                                 @onclick="OpenCreateCase">
                             Set up building control
                         </button>
@@ -135,7 +135,7 @@
                         </div>
                         @if (CaseFiles(ActiveCase).Count == 0)
                         {
-                            <p class="text-sm text-content-subtle italic">No documents on the case yet — the notice, the acknowledgement and the decision notice belong here.</p>
+                            <EmptyState Message="No documents on the case yet — the notice, the acknowledgement and the decision notice belong here." />
                         }
                         else
                         {
@@ -236,7 +236,7 @@
                             </label>
                         }
                         <div class="flex items-center gap-3">
-                            <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition disabled:opacity-50"
+                            <button type="button" class="btn-primary"
                                     disabled="@(string.IsNullOrWhiteSpace(formBodyName) || busy)"
                                     @onclick="SaveCaseAsync">
                                 @(editingCase is null ? "Set up case" : "Save changes")
@@ -253,7 +253,7 @@
             {
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-base font-semibold text-content">Inspections</h3>
-                    <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition"
+                    <button type="button" class="btn-primary"
                             @onclick="() => addStageOpen = !addStageOpen">
                         @(addStageOpen ? "Close" : "Add inspection")
                     </button>
@@ -276,7 +276,7 @@
                                 </FormField>
                             </div>
                         </div>
-                        <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition disabled:opacity-50"
+                        <button type="button" class="btn-primary"
                                 disabled="@(string.IsNullOrWhiteSpace(newStageName) || busy)"
                                 @onclick="AddStageAsync">
                             Add inspection
@@ -286,7 +286,7 @@
 
                 @if (Inspections.Count == 0)
                 {
-                    <p class="text-sm text-content-subtle italic">No inspection stages yet — add the stages this build will be signed off in.</p>
+                    <EmptyState Message="No inspection stages yet — add the stages this build will be signed off in." />
                 }
                 else
                 {

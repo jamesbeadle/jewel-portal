@@ -28,23 +28,22 @@
         var snapshot = Labour.Overview(year, month);
     }
 
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-        <h2 class="text-lg font-semibold text-content">Labour overview</h2>
-        <div class="flex items-center gap-3">
-            <div class="flex items-center gap-2 text-sm">
-                <button type="button" class="btn-secondary" disabled="@Loading" @onclick="() => MoveMonth(-1)">‹ Prev</button>
-                <span class="text-content-subtle w-28 text-center">@MonthLabel</span>
-                <button type="button" class="btn-secondary" disabled="@Loading" @onclick="() => MoveMonth(1)">Next ›</button>
-            </div>
-            <Toolbar>
-                <ToolbarButton Icon="refresh" Label="Refresh" Busy="@refreshing" OnClick="RefreshAsync" />
-                <ExportToExcelButton FileName="Labour-overview"
-                                     Disabled="@(snapshot is null)"
-                                     BuildWorkbook="BuildExportWorkbook" />
-            </Toolbar>
-            <button type="button" class="btn-primary" @onclick="() => weekEntryModal!.OpenAsync()">Enter a week</button>
+    <SectionHeader Title="Labour overview">
+        <Actions>
+        <div class="flex items-center gap-2 text-sm">
+            <button type="button" class="btn-secondary" disabled="@Loading" @onclick="() => MoveMonth(-1)">‹ Prev</button>
+            <span class="text-content-subtle w-28 text-center">@MonthLabel</span>
+            <button type="button" class="btn-secondary" disabled="@Loading" @onclick="() => MoveMonth(1)">Next ›</button>
         </div>
-    </div>
+        <Toolbar>
+            <ToolbarButton Icon="refresh" Label="Refresh" Busy="@refreshing" OnClick="RefreshAsync" />
+            <ExportToExcelButton FileName="Labour-overview"
+                                 Disabled="@(snapshot is null)"
+                                 BuildWorkbook="BuildExportWorkbook" />
+        </Toolbar>
+        <button type="button" class="btn-primary" @onclick="() => weekEntryModal!.OpenAsync()">Enter a week</button>
+        </Actions>
+    </SectionHeader>
     <p class="text-sm text-content-subtle mb-5 max-w-3xl">
         Every JBB project in one view — this page ignores the project picked in the sidebar.
         Projected cost across every worker for the month, and where each day actually went.

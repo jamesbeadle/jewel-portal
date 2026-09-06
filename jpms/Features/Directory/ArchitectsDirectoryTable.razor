@@ -10,7 +10,7 @@
 else if (Architects.Count == 0)
 {
     <LoadGate IsLoading="@(!Loaded)" Label="Loading">
-        <p class="text-sm text-content-subtle italic">No architect practices yet.</p>
+        <EmptyState Message="No architect practices yet." />
     </LoadGate>
 }
 else

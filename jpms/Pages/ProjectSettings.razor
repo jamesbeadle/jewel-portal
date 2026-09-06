@@ -34,12 +34,12 @@
                         <ProjectDetailsEditor ProjectId="@ProjectId" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-3">
-                        <Stat Label="Stage"           Value="@Project.Stage.DisplayName()" />
-                        <Stat Label="Entity"          Value="@Project.Organisation.ShortCode()" />
-                        <Stat Label="Project Manager" Value="@Project.ProjectManagerEmail" />
-                        <Stat Label="Client"          Value="@Project.ClientName" />
-                        <Stat Label="Site address"    Value="@SiteAddress(Project)" />
-                        <Stat Label="Xero site"       Value="@XeroSite(Project)" />
+                        <StatTile Label="Stage"           Value="@Project.Stage.DisplayName()" />
+                        <StatTile Label="Entity"          Value="@Project.Organisation.ShortCode()" />
+                        <StatTile Label="Project Manager" Value="@Project.ProjectManagerEmail" />
+                        <StatTile Label="Client"          Value="@Project.ClientName" />
+                        <StatTile Label="Site address"    Value="@SiteAddress(Project)" />
+                        <StatTile Label="Xero site"       Value="@XeroSite(Project)" />
                     </div>
                     @* Created is the system's own stamp — a secondary fact here, never a lead date. *@
                     <p class="text-xs text-content-subtle mb-6">Created @DateText(Project.CreatedAt)</p>

@@ -18,59 +18,58 @@
 
 <Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="valuation">
-        <div class="flex items-center justify-between gap-4 mb-4 flex-wrap">
-            <h2 class="text-lg font-semibold text-content">Valuation Report</h2>
-            <div class="flex items-center gap-2 flex-wrap">
-                @* Working-copy exports of the report AS IT STANDS — available at every claim
-                   stage, draft included, so the accountant can review the layout before anything
-                   is submitted. Both are stamped as a working copy; the client-facing statement
-                   remains the frozen snapshot behind the invoice. Disabled (not hidden) until the
-                   report has loaded — a control is never gated. *@
-                <Toolbar>
-                    <ToolbarButton Icon="download" Label="Download PDF — working copy of the report as it stands" Target="_blank"
+        <SectionHeader Title="Valuation Report">
+            <Actions>
+            @* Working-copy exports of the report AS IT STANDS — available at every claim
+               stage, draft included, so the accountant can review the layout before anything
+               is submitted. Both are stamped as a working copy; the client-facing statement
+               remains the frozen snapshot behind the invoice. Disabled (not hidden) until the
+               report has loaded — a control is never gated. *@
+            <Toolbar>
+                <ToolbarButton Icon="download" Label="Download PDF — working copy of the report as it stands" Target="_blank"
+                               Disabled="@(!ReportReady)"
+                               Href="@($"/api/projects/{ProjectId}/valuation-report/pdf")" />
+                @* Also waits for the variations register: the workbook's Pending tab reads it,
+                   and exporting before it has answered would pass "not loaded" off as "none". *@
+                <ExportToExcelButton FileName="@LiveExportFileName" FileDate="@DateTimeOffset.UtcNow"
+                                     Disabled="@(!ReportReady || PendingVariationsUnanswered || ClientReferencesUnanswered)"
+                                     BuildWorkbook="BuildLiveExportWorkbook" />
+                @* Report setup, apart from the document actions: the client's schedule-of-works
+                   references per cost centre, printed as a "Client ref" column on the PDF. *@
+                @if (CanMapClientReferences)
+                {
+                    <ToolbarDivider />
+                    <ToolbarButton Icon="tag" Label="Client references — map cost centres to the client's schedule-of-works item numbers for the PDF"
                                    Disabled="@(!ReportReady)"
-                                   Href="@($"/api/projects/{ProjectId}/valuation-report/pdf")" />
-                    @* Also waits for the variations register: the workbook's Pending tab reads it,
-                       and exporting before it has answered would pass "not loaded" off as "none". *@
-                    <ExportToExcelButton FileName="@LiveExportFileName" FileDate="@DateTimeOffset.UtcNow"
-                                         Disabled="@(!ReportReady || PendingVariationsUnanswered || ClientReferencesUnanswered)"
-                                         BuildWorkbook="BuildLiveExportWorkbook" />
-                    @* Report setup, apart from the document actions: the client's schedule-of-works
-                       references per cost centre, printed as a "Client ref" column on the PDF. *@
-                    @if (CanMapClientReferences)
+                                   OnClick="@(() => showClientReferences = true)" />
+                }
+            </Toolbar>
+            @* The claim picker sits in a row with the New claim button, so it shows its own
+               waiting state rather than a spinner between two controls. Disabled while the
+               claims load: an empty picker reads as "this project has never been valued". *@
+            @if (!ClaimReady)
+            {
+                <select disabled
+                        class="field">
+                    <option>Loading claims…</option>
+                </select>
+            }
+            else if (Claims.Count > 0)
+            {
+                <select @bind="selectedClaimId"
+                        class="field">
+                    @foreach (var claim in Claims)
                     {
-                        <ToolbarDivider />
-                        <ToolbarButton Icon="tag" Label="Client references — map cost centres to the client's schedule-of-works item numbers for the PDF"
-                                       Disabled="@(!ReportReady)"
-                                       OnClick="@(() => showClientReferences = true)" />
+                        <option value="@claim.ValuationClaimId">@claim.DisplayName — @claim.Status.DisplayName() (@DateText(claim.ClaimDate))</option>
                     }
-                </Toolbar>
-                @* The claim picker sits in a row with the New claim button, so it shows its own
-                   waiting state rather than a spinner between two controls. Disabled while the
-                   claims load: an empty picker reads as "this project has never been valued". *@
-                @if (!ClaimReady)
-                {
-                    <select disabled
-                            class="field">
-                        <option>Loading claims…</option>
-                    </select>
-                }
-                else if (Claims.Count > 0)
-                {
-                    <select @bind="selectedClaimId"
-                            class="field">
-                        @foreach (var claim in Claims)
-                        {
-                            <option value="@claim.ValuationClaimId">@claim.DisplayName — @claim.Status.DisplayName() (@DateText(claim.ClaimDate))</option>
-                        }
-                    </select>
-                }
-                <button @onclick="ToggleStartClaim"
-                        class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
-                    New claim
-                </button>
-            </div>
-        </div>
+                </select>
+            }
+            <button @onclick="ToggleStartClaim"
+                    class="btn-secondary">
+                New claim
+            </button>
+            </Actions>
+        </SectionHeader>
 
         @if (actionError is not null)
         {
@@ -131,7 +130,7 @@
                     {
                         case ClaimStage.Draft:
                             <button @onclick="PreapproveAsync" disabled="@busy"
-                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
+                                    class="btn-primary shrink-0">
                                 We're claiming this
                             </button>
                             break;
@@ -140,35 +139,35 @@
                                     title="@(PaymentDueNow > 0m
                                               ? "One click: raises the valuation invoice for the amount due and sends the claim to the architect/client — the report snapshot freezes behind it."
                                               : "Nothing is currently due — manage invoices in Valuation Invoices below")"
-                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
+                                    class="btn-primary shrink-0">
                                 Raise &amp; send invoice (@Money(PaymentDueNow))
                             </button>
                             break;
                         case ClaimStage.InvoiceDraft:
                             <button @onclick="SendInvoiceAsync" disabled="@busy"
                                     title="Sends the drafted invoice to the architect/client for approval — Actions has the no-approval-loop issue"
-                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
+                                    class="btn-primary shrink-0">
                                 Send claim
                             </button>
                             break;
                         case ClaimStage.AwaitingApproval:
                             <button @onclick="ApproveInvoiceAsync" disabled="@busy"
                                     title="Record the architect/client's approval — Actions has rejection, and issue-without-approval for clients with no formal loop"
-                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
+                                    class="btn-primary shrink-0">
                                 Record approval
                             </button>
                             break;
                         case ClaimStage.ApprovedAwaitingIssue:
                             <button @onclick="IssueInvoiceAsync" disabled="@busy"
                                     title="Marks the invoice issued to the client — moves certified to date"
-                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
+                                    class="btn-primary shrink-0">
                                 Issue invoice
                             </button>
                             break;
                         case ClaimStage.InvoiceRejected:
                             <button @onclick="AmendRejectedInvoice" disabled="@busy"
                                     title="Amend the rejected invoice — saving returns it to draft, ready to resend"
-                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
+                                    class="btn-primary shrink-0">
                                 Amend invoice…
                             </button>
                             break;
@@ -177,7 +176,7 @@
                             {
                                 <button @onclick="@(() => OpenNextClaimForm(s))"
                                         title="Payment isn't a gate — carry on with the next period. Record payment… is in Actions for when the cash lands"
-                                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover transition shrink-0">
+                                        class="btn-primary shrink-0">
                                     Start next claim
                                 </button>
                             }
@@ -190,7 +189,7 @@
                                     title="@(IsLatestClaim(s)
                                         ? "The invoice payment is already recorded — this locks the period as the baseline and rolls into the next"
                                         : "The invoice payment is already recorded — this locks the period as the baseline the next claim measures against (it has already been rolled over)")"
-                                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
+                                    class="btn-primary shrink-0">
                                 @ConfirmLabel(s)
                             </button>
                             break;
@@ -198,7 +197,7 @@
                             @if (IsLatestClaim(s))
                             {
                                 <button @onclick="@(() => OpenNextClaimForm(s))"
-                                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover transition shrink-0">
+                                        class="btn-primary shrink-0">
                                     Start next claim
                                 </button>
                             }
@@ -219,7 +218,7 @@
         {
             <div class="flex justify-end mb-2">
                 <button @onclick="OpenAddLine"
-                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
+                        class="btn-primary">
                     Add line
                 </button>
             </div>

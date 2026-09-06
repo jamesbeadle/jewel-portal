@@ -8,23 +8,22 @@
    same scope on differently-shaped lines. Whole sales lines tick in by default; a
    partial £ slice covers client lines shared between subs. Presentation only. *@
 <section class="mt-8">
-    <div class="flex items-center justify-between gap-3 mb-1 flex-wrap">
-        <h2 class="text-lg font-semibold text-content">Packages</h2>
-        <div class="flex items-center gap-2">
-            <ExportToExcelButton FileName="Reconciliation packages"
-                                 Disabled="@(rows.Count == 0)"
-                                 BuildWorkbook="BuildExportWorkbook" />
-            @if (CanManage)
-            {
-                <button type="button" class="btn-secondary text-sm"
-                        title="Raise a work order directly and package it against the valuation lines that priced its scope, in one go"
-                        @onclick="() => manualOrderOpen = true">
-                    New work order + package
-                </button>
-                <button type="button" class="btn-secondary text-sm" @onclick="OpenCreate">New package</button>
-            }
-        </div>
-    </div>
+    <SectionHeader Title="Packages">
+        <Actions>
+        <ExportToExcelButton FileName="Reconciliation packages"
+                             Disabled="@(rows.Count == 0)"
+                             BuildWorkbook="BuildExportWorkbook" />
+        @if (CanManage)
+        {
+            <button type="button" class="btn-secondary text-sm"
+                    title="Raise a work order directly and package it against the valuation lines that priced its scope, in one go"
+                    @onclick="() => manualOrderOpen = true">
+                New work order + package
+            </button>
+            <button type="button" class="btn-secondary text-sm" @onclick="OpenCreate">New package</button>
+        }
+        </Actions>
+    </SectionHeader>
     <p class="text-sm text-content-subtle mb-3">
         Match a sub's work orders — and any purchase invoices bought directly for the same scope —
         against the valuation lines that priced it, and read the true position at package level:
@@ -42,9 +41,7 @@
     }
     else if (rows.Count == 0)
     {
-        <p class="text-sm text-content-subtle italic">
-            No packages yet. Create one to reconcile a subcontractor's orders against the sales that cover their scope.
-        </p>
+        <EmptyState Message="No packages yet. Create one to reconcile a subcontractor's orders against the sales that cover their scope." />
     }
     else
     {

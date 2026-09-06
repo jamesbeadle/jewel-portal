@@ -5,7 +5,7 @@
    and type filter, with the consolidation tick column for managers. *@
 @if (Companies.Count == 0)
 {
-    <p class="text-sm text-content-subtle italic">No companies match.</p>
+    <EmptyState Message="No companies match." />
 }
 else
 {

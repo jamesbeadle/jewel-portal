@@ -26,9 +26,7 @@
         }
         else if (Kpis.Current is { Count: 0 })
         {
-            <p class="text-sm text-content-subtle italic">
-                No emails marked yet. Mark one from the Control Centre's Internal pane — Actions → Mark as KPI.
-            </p>
+            <EmptyState Message="No emails marked yet. Mark one from the Control Centre's Internal pane — Actions → Mark as KPI." />
         }
         else
         {

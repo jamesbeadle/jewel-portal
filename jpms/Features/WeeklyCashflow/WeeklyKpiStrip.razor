@@ -7,7 +7,7 @@
 <div class="grid gap-4 sm:grid-cols-2 @(IsDirector ? "lg:grid-cols-4" : "lg:grid-cols-3") mb-8">
     @if (IsDirector)
     {
-        <FigureTile Label="Cash in bank" IsLoading="@(Bank is null)">
+        <StatTile Label="Cash in bank" IsLoading="@(Bank is null)">
             @if (!BankReady)
             {
                 <p class="text-sm text-content-muted mt-1">Needs the bank position from Xero.</p>
@@ -17,16 +17,16 @@
                 <p class="text-2xl font-semibold text-content">@Money(Bank!.TotalCash)</p>
                 <p class="text-xs text-content-subtle mt-1">Xero, as of @FetchedText</p>
             }
-        </FigureTile>
+        </StatTile>
     }
-    <FigureTile Label="To pay this week" IsLoading="@(View is null)" LoadingLabel="Loading this week's payments"
+    <StatTile Label="To pay this week" IsLoading="@(View is null)" LoadingLabel="Loading this week's payments"
                 Title="Cash out planned for the current week — bills and manual items placed (or due) this week.">
         <p class="text-2xl font-semibold text-content">@Money(View!.CashOut[0])</p>
         <p class="text-xs text-content-subtle mt-1">incl. everything overdue</p>
-    </FigureTile>
+    </StatTile>
     @if (IsDirector)
     {
-        <FigureTile Label="Lowest week" IsLoading="@(View is null || Bank is null)" LoadingLabel="Loading the lowest week"
+        <StatTile Label="Lowest week" IsLoading="@(View is null || Bank is null)" LoadingLabel="Loading the lowest week"
                     Title="The running bank balance's low point across the visible weeks — the week to plan for.">
             @if (View!.Closing is null)
             {
@@ -38,8 +38,8 @@
                 <p class="text-2xl font-semibold @(low < 0m ? "text-negative" : "text-content")">@Money(low)</p>
                 <p class="text-xs text-content-subtle mt-1">@WeekLabel(View.WeekStarts[View.MinClosingIndex], View.MinClosingIndex)</p>
             }
-        </FigureTile>
-        <FigureTile Label="Balance at horizon end" IsLoading="@(View is null || Bank is null)" LoadingLabel="Loading the horizon-end balance"
+        </StatTile>
+        <StatTile Label="Balance at horizon end" IsLoading="@(View is null || Bank is null)" LoadingLabel="Loading the horizon-end balance"
                     Title="The running bank balance after the last visible week. Entries in Later are beyond the horizon and not yet counted.">
             @if (View!.Closing is null)
             {
@@ -51,18 +51,18 @@
                 <p class="text-2xl font-semibold @(horizonEnd < 0m ? "text-negative" : "text-content")">@Money(horizonEnd)</p>
                 <p class="text-xs text-content-subtle mt-1">after @WeekLabel(View.WeekStarts[^1], View.WeekStarts.Count - 1)</p>
             }
-        </FigureTile>
+        </StatTile>
     }
     else
     {
-        <FigureTile Label="@($"Cash out, {WeeklyCashflowMaths.DefaultWeekCount} weeks")" IsLoading="@(View is null)" LoadingLabel="Loading cash out">
+        <StatTile Label="@($"Cash out, {WeeklyCashflowMaths.DefaultWeekCount} weeks")" IsLoading="@(View is null)" LoadingLabel="Loading cash out">
             <p class="text-2xl font-semibold text-content">@Money(VisibleTotal(View!.CashOut))</p>
             <p class="text-xs text-content-subtle mt-1">bills and manual items in the visible weeks</p>
-        </FigureTile>
-        <FigureTile Label="@($"Cash in, {WeeklyCashflowMaths.DefaultWeekCount} weeks")" IsLoading="@(View is null)" LoadingLabel="Loading cash in">
+        </StatTile>
+        <StatTile Label="@($"Cash in, {WeeklyCashflowMaths.DefaultWeekCount} weeks")" IsLoading="@(View is null)" LoadingLabel="Loading cash in">
             <p class="text-2xl font-semibold text-content">@Money(VisibleTotal(View!.CashIn))</p>
             <p class="text-xs text-content-subtle mt-1">outstanding invoices due in the visible weeks</p>
-        </FigureTile>
+        </StatTile>
     }
 </div>
 

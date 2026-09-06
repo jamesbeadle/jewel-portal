@@ -80,13 +80,13 @@
 
     @if (error is not null)
     {
-        <p class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@error</p>
+        <Notice Tone="Tone.Negative">@error</Notice>
     }
 
     <p class="text-xs text-content-subtle">Progress updates feed the client-facing progress reports — write the description as you'd want the client to read it.</p>
 
     <button type="submit" disabled="@busy"
-            class="w-full rounded-lg bg-accent text-accent-ink font-medium px-4 py-2.5 hover:bg-accent-hover transition disabled:opacity-60">
+            class="btn-primary w-full">
         @(busy ? "Uploading…" : "Record progress")
     </button>
 </EditForm>

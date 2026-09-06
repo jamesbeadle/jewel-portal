@@ -1,0 +1,72 @@
+@namespace Jewel.JPMS.Components
+
+@*
+    THE two-click confirm, in place: the first click ARMS the button — it changes its label to
+    the question and its border to the tone — and only the second click acts. Clicking
+    anywhere else, or waiting five seconds, disarms it. One component instead of a private
+    `confirmingDelete` / `deleteArmed` / `armed` bool per page, so every armed button asks the
+    same way and never fires on a stray click.
+
+        <InlineConfirm Label="Delete" Question="Delete this item? Click again to confirm"
+                       Danger="true" Busy="busy" OnConfirm="DeleteAsync" />
+*@
+
+<button type="button"
+        class="@ButtonClass"
+        disabled="@(Disabled || Busy)"
+        title="@(armed ? Question : Title)"
+        @onclick="Click"
+        @onfocusout="Disarm">
+    @if (armed) { @Question } else { @Label }
+</button>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    /// <summary>What the armed button says — the question, with "click again" in it.</summary>
+    [Parameter] public string Question { get; set; } = "Click again to confirm";
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public bool Danger { get; set; } = true;
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    /// <summary>Small (default) matches the in-view buttons; Ghost is the quiet text-only cut.</summary>
+    [Parameter] public bool Ghost { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public string Class { get; set; } = "";
+
+    private bool armed;
+    private CancellationTokenSource? timer;
+
+    private string ButtonClass
+    {
+        get
+        {
+        var tone = Danger ? "text-negative" : "text-content";
+        var basis = Ghost ? "btn-ghost" : "btn-secondary";
+        var armedLook = Danger ? "border-negative bg-negative/10 font-semibold" : "border-accent bg-accent/10 font-semibold";
+        return $"{basis} {tone} {(armed ? armedLook : "")} {Class}";
+        }
+    }
+
+    private async Task Click()
+    {
+        if (!armed)
+        {
+            armed = true;
+            timer?.Cancel();
+            var cts = timer = new CancellationTokenSource();
+            try { await Task.Delay(5000, cts.Token); armed = false; StateHasChanged(); }
+            catch (TaskCanceledException) { }
+            return;
+        }
+        timer?.Cancel();
+        armed = false;
+        await OnConfirm.InvokeAsync();
+    }
+
+    private void Disarm()
+    {
+        if (!armed) return;
+        timer?.Cancel();
+        armed = false;
+    }
+}

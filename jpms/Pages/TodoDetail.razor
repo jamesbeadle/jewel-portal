@@ -51,12 +51,8 @@
                 <Actions>
                     @if (CanManage)
                     {
-                        @* Two-step delete, confirmed in place: the first click arms the button —
-                           it restyles and asks — and only the second click actually deletes. *@
-                        <button type="button" disabled="@busy" @onclick="DeleteAsync"
-                                class="btn-ghost text-negative @(deleteArmed ? "bg-negative/10 font-semibold" : "")">
-                            @(deleteArmed ? "Delete this item? Click again to confirm" : "Delete")
-                        </button>
+                        <InlineConfirm Label="Delete" Question="Delete this item? Click again to confirm" Ghost="true"
+                                       Busy="@busy" OnConfirm="DeleteAsync" />
                     }
                     @if (CanComplete && !item.IsComplete && !item.IsInProgress)
                     {

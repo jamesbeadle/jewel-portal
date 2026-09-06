@@ -83,12 +83,12 @@
             }
 
             <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-                <Stat Label="Leads found" Value="@funnel.Leads.ToString()" />
-                <Stat Label="Contacted" Value="@funnel.Contacted.ToString()" />
-                <Stat Label="Engaged" Value="@funnel.Engaged.ToString()" />
-                <Stat Label="Proposals" Value="@funnel.Proposals.ToString()" />
-                <Stat Label="Won" Value="@($"{funnel.Won}{(funnel.Lost > 0 ? $" · {funnel.Lost} lost" : "")}")" />
-                <Stat Label="Open pipeline" Value="@WholeMoney(funnel.PipelineValue)" />
+                <StatTile Label="Leads found" Value="@funnel.Leads.ToString()" />
+                <StatTile Label="Contacted" Value="@funnel.Contacted.ToString()" />
+                <StatTile Label="Engaged" Value="@funnel.Engaged.ToString()" />
+                <StatTile Label="Proposals" Value="@funnel.Proposals.ToString()" />
+                <StatTile Label="Won" Value="@($"{funnel.Won}{(funnel.Lost > 0 ? $" · {funnel.Lost} lost" : "")}")" />
+                <StatTile Label="Open pipeline" Value="@WholeMoney(funnel.PipelineValue)" />
             </div>
 
             <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">

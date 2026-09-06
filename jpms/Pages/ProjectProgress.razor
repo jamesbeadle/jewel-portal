@@ -19,7 +19,7 @@
             @if (CanContribute && !isBuildingReport)
             {
                 <button type="button" @onclick="() => { editingReport = null; isBuildingReport = true; }"
-                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
+                        class="btn-primary">
                     + New report
                 </button>
             }
@@ -55,17 +55,17 @@
                         <div class="flex items-center gap-2 shrink-0">
                             <a href="@($"/api/progress-reports/{report.ProgressReportId}/pdf")"
                                title="Regenerated from the register on every download, so it always reflects the report as it stands"
-                               class="rounded-lg border border-line-strong text-sm text-content-muted px-3 py-1.5 hover:bg-surface-raised transition">
+                               class="btn-secondary">
                                 Download PDF
                             </a>
                             @if (CanContribute)
                             {
                                 <button type="button" @onclick="() => { editingReport = report; isBuildingReport = true; }"
-                                        class="rounded-lg border border-line-strong text-sm text-content-muted px-3 py-1.5 hover:bg-surface-raised transition">
+                                        class="btn-secondary">
                                     Edit
                                 </button>
                                 <button type="button" @onclick="() => DeleteReportAsync(report.ProgressReportId)"
-                                        class="rounded-lg border text-sm px-3 py-1.5 transition @(pendingReportDelete == report.ProgressReportId ? "border-red-300 bg-red-50 text-red-700" : "border-line-strong text-content-muted hover:bg-surface-raised")">
+                                        class="rounded-lg border text-sm px-3 py-1.5 transition @(pendingReportDelete == report.ProgressReportId ? "border-negative/30 bg-negative/10 text-negative" : "border-line-strong text-content-muted hover:bg-surface-raised")">
                                     @(pendingReportDelete == report.ProgressReportId ? "Confirm delete" : "Delete")
                                 </button>
                             }
@@ -93,7 +93,7 @@
             @if (CanContribute)
             {
                 <button type="button" @onclick="() => isRecording = !isRecording"
-                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
+                        class="btn-primary">
                     @(isRecording ? "Cancel" : "+ Record progress")
                 </button>
             }
@@ -109,7 +109,7 @@
         <LoadGate IsLoading="@(!UpdatesReady)" Prominent="true" Label="Loading progress">
         @if (Updates.Count == 0)
         {
-            <p class="text-sm text-content-subtle italic">No progress recorded yet.</p>
+            <EmptyState Message="No progress recorded yet." />
         }
         else
         {
@@ -129,7 +129,7 @@
                             @if (CanContribute)
                             {
                                 <button type="button" @onclick="() => DeleteUpdateAsync(update.ProgressUpdateId)"
-                                        class="rounded-lg border text-xs px-2.5 py-1.5 transition shrink-0 @(pendingUpdateDelete == update.ProgressUpdateId ? "border-red-300 bg-red-50 text-red-700" : "border-line-strong text-content-subtle hover:bg-surface-raised")">
+                                        class="rounded-lg border text-xs px-2.5 py-1.5 transition shrink-0 @(pendingUpdateDelete == update.ProgressUpdateId ? "border-negative/30 bg-negative/10 text-negative" : "border-line-strong text-content-subtle hover:bg-surface-raised")">
                                     @(pendingUpdateDelete == update.ProgressUpdateId ? "Confirm delete" : "Delete")
                                 </button>
                             }
@@ -181,7 +181,7 @@
 
         @if (actionError is not null)
         {
-            <p class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-4">@actionError</p>
+            <Notice Tone="Tone.Negative" Class="mt-4">@actionError</Notice>
         }
     </ProjectPageShell>
 </Page>

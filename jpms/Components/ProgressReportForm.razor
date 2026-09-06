@@ -48,7 +48,7 @@
         <label class="block text-sm font-medium text-content mb-1">Progress of the works — select the photo updates to include</label>
         @if (AvailableUpdates.Count == 0)
         {
-            <p class="text-sm text-content-subtle italic">No progress updates recorded yet — record progress first, then build the report from it.</p>
+            <EmptyState Message="No progress updates recorded yet — record progress first, then build the report from it." />
         }
         else
         {
@@ -78,16 +78,16 @@
 
     @if (error is not null)
     {
-        <p class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@error</p>
+        <Notice Tone="Tone.Negative">@error</Notice>
     }
 
     <div class="flex items-center gap-2">
         <button type="submit" disabled="@busy"
-                class="flex-1 rounded-lg bg-accent text-accent-ink font-medium px-4 py-2.5 hover:bg-accent-hover transition disabled:opacity-60">
+                class="btn-primary flex-1">
             @(busy ? "Saving…" : Existing is null ? "Create report" : "Save changes")
         </button>
         <button type="button" @onclick="() => OnCancelled.InvokeAsync()"
-                class="rounded-lg border border-line-strong text-sm text-content-muted px-4 py-2.5 hover:bg-surface-raised transition">
+                class="btn-secondary">
             Cancel
         </button>
     </div>

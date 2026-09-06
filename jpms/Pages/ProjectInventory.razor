@@ -21,13 +21,14 @@
 
 <Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="inventory">
-        <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-content">Inventory</h2>
-            <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition"
+        <SectionHeader Title="Inventory">
+            <Actions>
+            <button type="button" class="btn-primary"
                     @onclick="ToggleForm">
                 @(formOpen ? "Close" : "Add item")
             </button>
-        </div>
+            </Actions>
+        </SectionHeader>
 
         @if (actionError is { } error)
         {
@@ -65,7 +66,7 @@
                                   value="@formLocationDetails" @oninput="e => formLocationDetails = e.Value?.ToString() ?? string.Empty"></textarea>
                         </FormField>
                     </div>
-                    <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition disabled:opacity-50"
+                    <button type="button" class="btn-primary"
                             disabled="@(string.IsNullOrWhiteSpace(formProductName) || busy)"
                             @onclick="SaveAsync">
                         @(editingItemId is null ? "Add item" : "Save changes")
@@ -84,7 +85,7 @@
         }
         else if (Rows.Count == 0)
         {
-            <p class="text-sm text-content-subtle italic">No inventory on this project. Add an item here, or file a supplier email to a new item from the Control Centre.</p>
+            <EmptyState Message="No inventory on this project. Add an item here, or file a supplier email to a new item from the Control Centre." />
         }
         else
         {

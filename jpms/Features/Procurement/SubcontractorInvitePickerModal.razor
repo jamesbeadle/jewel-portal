@@ -30,7 +30,7 @@
     </div>
     @if (Invitable.Count == 0)
     {
-        <p class="text-sm text-content-subtle italic">No matching subcontractors in the directory.</p>
+        <EmptyState Message="No matching subcontractors in the directory." />
     }
     else
     {

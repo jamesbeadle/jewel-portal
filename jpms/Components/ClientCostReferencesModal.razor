@@ -23,7 +23,7 @@
         }
         else if (rows is { Count: 0 })
         {
-            <p class="text-sm text-content-subtle">No valuation lines carry a cost centre yet — add the bill first.</p>
+            <EmptyState Message="No valuation lines carry a cost centre yet — add the bill first." />
         }
         else if (rows is not null)
         {

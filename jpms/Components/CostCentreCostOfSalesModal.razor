@@ -20,9 +20,7 @@
     }
     else if (entries.Count == 0)
     {
-        <p class="text-sm text-content-subtle italic">
-            No Xero purchase lines have been allocated to this report line yet.
-        </p>
+        <EmptyState Message="No Xero purchase lines have been allocated to this report line yet." />
     }
     else
     {

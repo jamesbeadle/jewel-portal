@@ -18,7 +18,6 @@ public partial class TodoDetail
     private TodoItem? item;
     private bool busy;
     private string? error;
-    private bool deleteArmed;
     // Bumped after every item-changing command so the timeline panel re-reads its lines.
     private int activityVersion;
     private IReadOnlyList<SearchSelect.Option> assigneeOptions = Array.Empty<SearchSelect.Option>();
@@ -126,7 +125,6 @@ public partial class TodoDetail
     private async Task ToggleCompleteAsync()
     {
         if (item is null) return;
-        deleteArmed = false;
         await RunAsync(() => TodoStore.UpdateAsync(new UpdateTodoItem(
             item.TodoItemId, item.Title, NullIfBlank(item.Notes),
             item.AssigneeRole, item.AssigneePersonEmail, item.DueAt,
@@ -166,8 +164,6 @@ public partial class TodoDetail
     private async Task DeleteAsync()
     {
         if (item is null || busy) return;
-        if (!deleteArmed) { deleteArmed = true; return; }
-        deleteArmed = false;
         error = null;
         try
         {

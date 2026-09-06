@@ -29,14 +29,14 @@
         </p>
     </div>
 
-    <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5">
+    <div class="inline-flex gap-2">
         <button type="button" @onclick="() => SetMode(isRevision: false)"
-                class="rounded-md text-sm px-3 py-1.5 transition @(!isRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
+                class="chip @(!isRevision ? "chip-active" : "")">
             New document
         </button>
         <button type="button" @onclick="() => SetMode(isRevision: true)" disabled="@(ExistingDrawings.Count == 0 || IsBulk)"
                 title="@(IsBulk ? "A revision is one file into one document — reduce the selection to one file first." : null)"
-                class="rounded-md text-sm px-3 py-1.5 transition disabled:opacity-50 @(isRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
+                class="chip @(isRevision ? "chip-active" : "")">
             Revision of existing document
         </button>
     </div>
@@ -105,7 +105,7 @@
                 <span class="flex-1 min-w-0 font-medium break-all">@selectedFiles[0].Name</span>
                 <span class="text-content-subtle shrink-0">@FormatSize(selectedFiles[0].Size)</span>
                 <button type="button" @onclick="() => RemoveFile(selectedFiles[0])" disabled="@busy" aria-label="Remove @selectedFiles[0].Name"
-                        class="shrink-0 text-content-subtle hover:text-red-700 transition disabled:opacity-50">
+                        class="shrink-0 text-content-subtle hover:text-negative transition disabled:opacity-50">
                     ✕
                 </button>
             </p>
@@ -127,7 +127,7 @@
                             <span class="flex-1 min-w-0 truncate text-content" title="@file.Name">@file.Name</span>
                             <span class="text-content-subtle shrink-0">@FormatSize(file.Size)</span>
                             <button type="button" @onclick="() => RemoveFile(file)" disabled="@busy" aria-label="Remove @file.Name"
-                                    class="shrink-0 text-content-subtle hover:text-red-700 transition disabled:opacity-50">
+                                    class="shrink-0 text-content-subtle hover:text-negative transition disabled:opacity-50">
                                 ✕
                             </button>
                         </li>
@@ -173,12 +173,12 @@
 
     @if (error is not null)
     {
-        <p class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@error</p>
+        <Notice Tone="Tone.Negative">@error</Notice>
     }
 
     @if (failures.Count > 0)
     {
-        <div class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 space-y-1">
+        <Notice Tone="Tone.Negative">
             <p class="font-medium">@failures.Count file@(failures.Count == 1 ? "" : "s") failed to upload — still listed above, press Upload to retry:</p>
             <ul class="list-disc ml-5 space-y-0.5">
                 @foreach (var failure in failures)
@@ -186,7 +186,7 @@
                     <li><span class="font-medium break-all">@failure.Name</span> — @failure.Message</li>
                 }
             </ul>
-        </div>
+        </Notice>
     }
 
     @if (IsBulk)
@@ -203,7 +203,7 @@
     }
 
     <button type="submit" disabled="@(busy || unpacking is not null)"
-            class="w-full rounded-lg bg-accent text-accent-ink font-medium px-4 py-2.5 hover:bg-accent-hover transition disabled:opacity-60">
+            class="btn-primary w-full">
         @SubmitLabel
     </button>
 </EditForm>

@@ -10,7 +10,7 @@
 else if (Clients.Count == 0)
 {
     <LoadGate IsLoading="@(!Loaded)" Label="Loading">
-        <p class="text-sm text-content-subtle italic">No client accounts yet.</p>
+        <EmptyState Message="No client accounts yet." />
     </LoadGate>
 }
 else

@@ -49,7 +49,7 @@
         @* Only once the fetch has answered — the page's banner carries a failure. *@
         @if (Fetched)
         {
-            <p class="text-sm text-content-subtle italic">No line items on this package yet.</p>
+            <EmptyState Message="No line items on this package yet." />
         }
     }
     else

@@ -48,7 +48,7 @@ else
 
         @if (FilteredTransactions.Count == 0)
         {
-            <p class="text-sm text-content-subtle">No Xero transactions match.</p>
+            <EmptyState Message="No Xero transactions match." />
         }
         else
         {

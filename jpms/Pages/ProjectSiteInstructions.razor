@@ -23,13 +23,14 @@
 
 <Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="site-instructions">
-        <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-content">Site Instructions</h2>
-            <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition"
+        <SectionHeader Title="Site Instructions">
+            <Actions>
+            <button type="button" class="btn-primary"
                     @onclick="ToggleForm">
                 @(formOpen ? "Close" : "Raise instruction")
             </button>
-        </div>
+            </Actions>
+        </SectionHeader>
 
         @if (actionError is { } error)
         {
@@ -61,7 +62,7 @@
                                   value="@formInstruction" @oninput="e => formInstruction = e.Value?.ToString() ?? string.Empty"></textarea>
                         </FormField>
                     </div>
-                    <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition disabled:opacity-50"
+                    <button type="button" class="btn-primary"
                             disabled="@(!FormReady || busy)"
                             @onclick="SaveAsync">
                         @(editingId is null ? "Raise instruction" : "Save changes")
@@ -80,7 +81,7 @@
         }
         else if (Rows.Count == 0)
         {
-            <p class="text-sm text-content-subtle italic">No site instructions on this project. Raise one here, or write one from an email in the Control Centre (Internal pathway → Raise Site Instruction).</p>
+            <EmptyState Message="No site instructions on this project. Raise one here, or write one from an email in the Control Centre (Internal pathway → Raise Site Instruction)." />
         }
         else
         {

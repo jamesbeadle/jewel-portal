@@ -22,19 +22,18 @@
 
 <Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="calendar">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h2 class="text-lg font-semibold text-content">Calendar</h2>
-            <div class="flex items-center gap-2">
-                <button type="button" class="btn-secondary" @onclick="() => MoveMonth(-1)">‹ Prev</button>
-                <span class="text-content-subtle w-32 text-center text-sm">@MonthLabel</span>
-                <button type="button" class="btn-secondary" @onclick="() => MoveMonth(1)">Next ›</button>
-                <button type="button" class="btn-secondary" @onclick="GoToday">Today</button>
-                <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition ml-2"
-                        @onclick="OpenAdd">
-                    Add event
-                </button>
-            </div>
-        </div>
+        <SectionHeader Title="Calendar">
+            <Actions>
+            <button type="button" class="btn-secondary" @onclick="() => MoveMonth(-1)">‹ Prev</button>
+            <span class="text-content-subtle w-32 text-center text-sm">@MonthLabel</span>
+            <button type="button" class="btn-secondary" @onclick="() => MoveMonth(1)">Next ›</button>
+            <button type="button" class="btn-secondary" @onclick="GoToday">Today</button>
+            <button type="button" class="btn-primary ml-2"
+                    @onclick="OpenAdd">
+                Add event
+            </button>
+            </Actions>
+        </SectionHeader>
 
         @if (actionError is { } error)
         {

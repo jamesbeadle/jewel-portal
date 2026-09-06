@@ -29,7 +29,7 @@
         <div class="border-t border-line px-4 py-4">
             @if (Claim is null)
             {
-                <p class="text-sm text-content-subtle italic">No claim selected.</p>
+                <EmptyState Message="No claim selected." />
             }
             else
             {

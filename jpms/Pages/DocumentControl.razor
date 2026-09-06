@@ -150,7 +150,7 @@
                         <div class="pt-3 border-t border-line space-y-3">
                             <p class="eyebrow">File this document</p>
 
-                            <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5">
+                            <div class="inline-flex gap-2">
                                 <button type="button" @onclick="() => SetDestination(FileDestination.Drawing)"
                                         class="@DestinationTabClass(FileDestination.Drawing)">Project documents</button>
                                 <button type="button" @onclick="() => SetDestination(FileDestination.PaymentCertificate)"
@@ -165,13 +165,13 @@
                                     The file lands as an <span class="font-medium text-content">unapproved revision</span> —
                                     a new (or blank) code registers a new document in the project's Documents register, named by its file until it is given a code or title; approval follows the normal documents workflow.
                                 </p>
-                                <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5">
+                                <div class="inline-flex gap-2">
                                     <button type="button" @onclick="() => SetDrawingMode(isRevision: false)"
-                                            class="rounded-md text-xs px-2.5 py-1.5 transition @(!drawingIsRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
+                                            class="chip @(!drawingIsRevision ? "chip-active" : "")">
                                         New document
                                     </button>
                                     <button type="button" @onclick="() => SetDrawingMode(isRevision: true)"
-                                            class="rounded-md text-xs px-2.5 py-1.5 transition @(drawingIsRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
+                                            class="chip @(drawingIsRevision ? "chip-active" : "")">
                                         Revision of existing document
                                     </button>
                                 </div>

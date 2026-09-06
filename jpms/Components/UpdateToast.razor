@@ -44,7 +44,7 @@
             </span>
 
             <button type="button" @onclick="Refresh" disabled="@refreshing"
-                    class="shrink-0 rounded-lg bg-accent hover:bg-accent-hover text-accent-ink px-3.5 py-1.5 text-xs font-semibold transition disabled:opacity-60 disabled:pointer-events-none">
+                    class="btn-primary shrink-0">
                 @(refreshing ? "Updating…" : "Refresh")
             </button>
 

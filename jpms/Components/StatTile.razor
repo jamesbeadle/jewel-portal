@@ -1,0 +1,47 @@
+@namespace Jewel.JPMS.Components
+
+@*
+    THE labelled figure — the Figma "Asset Metric" card: 14/Med label over a 20/Med value in a
+    square, 24px-padded panel. Give it a Value, or put a richer figure (a Money with its caption,
+    a delta) in ChildContent. Pass IsLoading while the store behind the figure is still fetching:
+    the label stays (the strip keeps its shape) and the figure is the pulsing jewel — never a
+    placeholder zero, because a reader believes the first number they see.
+*@
+
+<article class="panel p-6 @Class" title="@Title">
+    <p class="eyebrow mb-4">@Label</p>
+    @if (IsLoading)
+    {
+        <p class="text-xl font-medium text-content flex items-center h-5" role="status" aria-live="polite" aria-busy="true">
+            <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
+            <span class="sr-only">@(LoadingLabel ?? $"Loading {Label.ToLowerInvariant()}")</span>
+        </p>
+    }
+    else if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+    else
+    {
+        <p class="text-xl font-medium text-content">@Value</p>
+        @if (Caption is not null)
+        {
+            <p class="text-xs font-medium text-content-subtle mt-1">@Caption</p>
+        }
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    /// <summary>The figure, when it is one line of text. Otherwise render it as ChildContent.</summary>
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public string? Caption { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    /// <summary>True until every store the figure reads has landed.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+    /// <summary>The screen reader's line while loading; "Loading &lt;label&gt;" when not given.</summary>
+    [Parameter] public string? LoadingLabel { get; set; }
+    /// <summary>The tile's hover text — what the figure is, for the reader who asks.</summary>
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string Class { get; set; } = "";
+}

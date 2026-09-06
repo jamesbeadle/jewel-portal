@@ -28,12 +28,13 @@
         var mappings = Labour.XeroMappings();
     }
 
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-        <h2 class="text-lg font-semibold text-content">Xero mapping</h2>
+    <SectionHeader Title="Xero mapping">
+        <Actions>
         <Toolbar>
             <ToolbarButton Icon="refresh" Label="Refresh" Busy="@refreshing" OnClick="RefreshAsync" />
         </Toolbar>
-    </div>
+        </Actions>
+    </SectionHeader>
     <p class="text-sm text-content-subtle mb-5 max-w-3xl">
         Where each site and cost code lands in Xero. Changing a mapping starts a new dated row
         and closes the old one — history keeps reporting through the mapping that was in force
@@ -78,7 +79,7 @@
             var openSites = mappings.Sites.Where(row => row.EffectiveTo is null).ToList();
             @if (openSites.Count == 0)
             {
-                <p class="text-sm text-content-subtle italic">No sites mapped yet — the coding run will skip every site until they are.</p>
+                <EmptyState Message="No sites mapped yet — the coding run will skip every site until they are." />
             }
             else
             {
@@ -143,7 +144,7 @@
             var openCodes = mappings.CostCodes.Where(row => row.EffectiveTo is null).ToList();
             @if (openCodes.Count == 0)
             {
-                <p class="text-sm text-content-subtle italic">No cost codes mapped yet.</p>
+                <EmptyState Message="No cost codes mapped yet." />
             }
             else
             {

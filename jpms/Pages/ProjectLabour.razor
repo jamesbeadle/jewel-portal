@@ -35,23 +35,22 @@
                                     OnApproveOverBudget="OpenOverBudget" />
         }
 
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h2 class="text-lg font-semibold text-content">Labour</h2>
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2 text-sm">
-                    <button type="button" class="btn-secondary" @onclick="() => MoveWeek(-7)">‹ Prev</button>
-                    <span class="text-content-subtle">w/c @DateText(weekStart)</span>
-                    <button type="button" class="btn-secondary" @onclick="() => MoveWeek(7)">Next ›</button>
-                </div>
-                <Toolbar>
-                    <ExportToExcelButton FileName="Labour"
-                                         ShowIncludeAllRows="true"
-                                         Disabled="@(!HasExportableLabourData())"
-                                         BuildWorkbook="BuildExportWorkbook" />
-                </Toolbar>
-                <button type="button" class="btn-primary" @onclick="OpenAddDay">Add a day</button>
+        <SectionHeader Title="Labour">
+            <Actions>
+            <div class="flex items-center gap-2 text-sm">
+                <button type="button" class="btn-secondary" @onclick="() => MoveWeek(-7)">‹ Prev</button>
+                <span class="text-content-subtle">w/c @DateText(weekStart)</span>
+                <button type="button" class="btn-secondary" @onclick="() => MoveWeek(7)">Next ›</button>
             </div>
-        </div>
+            <Toolbar>
+                <ExportToExcelButton FileName="Labour"
+                                     ShowIncludeAllRows="true"
+                                     Disabled="@(!HasExportableLabourData())"
+                                     BuildWorkbook="BuildExportWorkbook" />
+            </Toolbar>
+            <button type="button" class="btn-primary" @onclick="OpenAddDay">Add a day</button>
+            </Actions>
+        </SectionHeader>
 
         @* ---- The week's timesheets: one panel, statuses as pills, approval at its foot. ---- *@
         <Panel Title="Timesheets" Class="mb-6" BodyClass="p-0"
@@ -210,7 +209,7 @@
                     }
                     else if (ProjectLedgerLines().Count == 0)
                     {
-                        <p class="text-sm text-content-subtle italic">No allocated invoice lines on this project yet.</p>
+                        <EmptyState Message="No allocated invoice lines on this project yet." />
                     }
                     else
                     {

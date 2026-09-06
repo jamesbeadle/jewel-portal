@@ -125,7 +125,7 @@
                                 @foreach (var skill in agentSkills)
                                 {
                                     <a href="/admin/skills?skill=@Uri.EscapeDataString(skill.SkillKey)"
-                                       class="flex items-center justify-between gap-3 rounded-lg border border-line bg-surface-raised px-3 py-2 hover:border-line-strong transition">
+                                       class="btn-secondary">
                                         <span class="min-w-0">
                                             <span class="block truncate text-xs text-content">@skill.DisplayName
                                                 @if (skill.AgentKey == "shared")

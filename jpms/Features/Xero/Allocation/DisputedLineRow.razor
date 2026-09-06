@@ -22,11 +22,11 @@
            its project's tab armed for Allocate. Either side may press
            either button. Who disputed it and the latest word sit in
            the Line cell; the thread itself opens from here. *@
-        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content align-middle"
+        <button class="btn-secondary align-middle"
                 @onclick="() => OnOpenDiscussion.InvokeAsync()">
             Discussion (@(Line.DisputeMessages?.Count ?? 0))…
         </button>
-        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40 align-middle"
+        <button class="btn-secondary ml-2 align-middle"
                 title="Save the proposed project and cost centre on the line — it stays disputed"
                 disabled="@(Busy || string.IsNullOrEmpty(ProjectValue))"
                 @onclick="() => OnSaveCoding.InvokeAsync()">Save</button>

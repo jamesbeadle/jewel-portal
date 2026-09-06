@@ -54,18 +54,18 @@
                            extracted — the Bluebeam markups + text-layer backlog in one click.
                            Extraction reads PDFs regardless of what they are — drawings or not. *@
                         <button type="button" @onclick="() => confirmingExtractAll = true"
-                                class="rounded-lg border border-line-strong text-sm px-3 py-2 text-content-muted hover:bg-surface-raised transition">
+                                class="btn-secondary">
                             Extract all
                         </button>
                     }
                     <button type="button" @onclick="OpenNewFolder"
-                            class="rounded-lg border border-line-strong text-sm px-3 py-2 text-content-muted hover:bg-surface-raised transition">
+                            class="btn-secondary">
                         + New folder
                     </button>
                     @* "Add documents" OPENS the panel; the button that actually uploads lives inside
                        it and says "…to the register" — two different acts, two different labels. *@
                     <button type="button" @onclick="ToggleUploadPanel"
-                            class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
+                            class="btn-primary">
                         @(isUploading ? "Close" : "+ Add documents")
                     </button>
                 }
@@ -112,7 +112,7 @@
             </FormField>
             @if (folderError is not null)
             {
-                <p class="mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@folderError</p>
+                <Notice Tone="Tone.Negative" Class="mt-2">@folderError</Notice>
             }
         </Modal>
 
@@ -129,7 +129,7 @@
             </p>
             @if (folderError is not null)
             {
-                <p class="mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@folderError</p>
+                <Notice Tone="Tone.Negative" Class="mt-2">@folderError</Notice>
             }
         </Modal>
 
@@ -147,7 +147,7 @@
             </p>
             @if (extractAllError is not null)
             {
-                <p class="mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@extractAllError</p>
+                <Notice Tone="Tone.Negative" Class="mt-2">@extractAllError</Notice>
             }
         </Modal>
 

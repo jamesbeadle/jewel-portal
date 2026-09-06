@@ -10,9 +10,7 @@
        Class="max-w-6xl">
     @if (Entries.Count == 0)
     {
-        <p class="text-sm text-content-subtle italic">
-            No work-order lines are coded to this report line.
-        </p>
+        <EmptyState Message="No work-order lines are coded to this report line." />
     }
     else
     {

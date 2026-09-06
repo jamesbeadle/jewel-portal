@@ -5,7 +5,7 @@
 <h4 class="eyebrow mb-2">Who worked here, day by day</h4>
 @if (Visits.Count == 0)
 {
-    <p class="text-sm text-content-subtle italic">No days recorded.</p>
+    <EmptyState Message="No days recorded." />
 }
 else
 {

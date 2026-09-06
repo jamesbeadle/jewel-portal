@@ -62,7 +62,7 @@
                 <td class="text-right hidden md:table-cell whitespace-nowrap">
                     @if (record.DaysOutstanding is int days)
                     {
-                        <span class="@(record.IsOverdue ? "text-red-600 font-semibold" : "text-content-muted")">@days</span>
+                        <span class="@(record.IsOverdue ? "text-negative font-semibold" : "text-content-muted")">@days</span>
                     }
                     else
                     {

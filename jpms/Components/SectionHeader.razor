@@ -1,0 +1,41 @@
+@namespace Jewel.JPMS.Components
+
+@*
+    THE section title — the un-boxed region's heading (Figma: 18/Semi, 24px above its table),
+    with the region's own controls to the right: a FilterChips row, a SearchInput, a Toolbar,
+    or the region's one button. A Panel with a Title is the boxed equivalent; this is for
+    the sections that sit straight on the canvas.
+
+        <SectionHeader Title="Work orders by cost centre">
+            <Actions><SearchInput … /><ExportToExcelButton … /></Actions>
+        </SectionHeader>
+*@
+
+<div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 mb-6 @Class">
+    <div class="min-w-0">
+        @if (TitleContent is not null)
+        {
+            <h2 class="text-lg font-semibold text-content">@TitleContent</h2>
+        }
+        else
+        {
+            <h2 class="text-lg font-semibold text-content">@Title</h2>
+        }
+        @if (Subtitle is not null)
+        {
+            <p class="text-sm text-content-muted mt-1">@Subtitle</p>
+        }
+    </div>
+    @if (Actions is not null)
+    {
+        <div class="flex flex-wrap items-center gap-2 shrink-0">@Actions</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public RenderFragment? TitleContent { get; set; }
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+    [Parameter] public string Class { get; set; } = "";
+}

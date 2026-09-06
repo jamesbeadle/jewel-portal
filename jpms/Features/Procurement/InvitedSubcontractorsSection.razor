@@ -50,7 +50,7 @@
         @* Only once the fetch has answered — the page's banner carries a failure. *@
         @if (Fetched)
         {
-            <p class="text-sm text-content-subtle italic">No subcontractors invited yet.</p>
+            <EmptyState Message="No subcontractors invited yet." />
         }
     }
     else

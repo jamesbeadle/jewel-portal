@@ -94,7 +94,7 @@
                                 else
                                 {
                                     <button type="button" @onclick="() => OnPreview.InvokeAsync(revision)"
-                                            class="rounded-lg border border-line-strong px-2.5 py-1 text-xs font-medium text-content hover:bg-surface-raised transition">
+                                            class="btn-secondary">
                                         Preview
                                     </button>
                                 }
@@ -109,7 +109,7 @@
                             {
                                 <button type="button" disabled="@busy"
                                         @onclick="() => Approve(revision.DrawingRevisionId)"
-                                        class="rounded-lg bg-accent text-accent-ink text-xs font-medium px-2.5 py-1 hover:bg-accent-hover transition disabled:opacity-60">
+                                        class="btn-primary">
                                     Approve
                                 </button>
                             }
@@ -117,7 +117,7 @@
                             {
                                 <button type="button" disabled="@busy"
                                         @onclick="() => pendingDelete = revision"
-                                        class="text-xs text-red-600 hover:text-red-700 hover:underline underline-offset-2 disabled:opacity-60">
+                                        class="text-xs text-negative hover:text-negative hover:underline underline-offset-2 disabled:opacity-60">
                                     Delete
                                 </button>
                             }
@@ -129,7 +129,7 @@
     }
     @if (error is not null)
     {
-        <p class="px-5 py-3 text-sm text-red-700 bg-red-50 border-t border-red-200">@error</p>
+        <p class="px-5 py-3 text-sm text-negative bg-negative/10 border-t border-negative/30">@error</p>
     }
 </section>
 

@@ -109,7 +109,7 @@
                                 </p>
                                 <div class="flex items-center gap-2">
                                     <button type="button" disabled="@busy" @onclick="DisconnectAsync"
-                                            class="rounded-lg border border-red-300 text-red-700 font-medium text-sm px-3 py-2 hover:bg-red-50 transition disabled:opacity-60">
+                                            class="btn-secondary text-negative border-negative/40 hover:border-negative">
                                         @(busy ? "Disconnecting…" : "Disconnect")
                                     </button>
                                     <button type="button" class="btn-neutral" disabled="@busy" @onclick="() => confirmingDisconnect = false">

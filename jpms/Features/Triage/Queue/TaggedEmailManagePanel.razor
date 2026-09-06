@@ -40,7 +40,7 @@
             }
             @if (Selected.Categories.Count == 0)
             {
-                <p class="text-sm text-content-subtle italic">No workflow tags. (Refresh if you just changed them.)</p>
+                <EmptyState Message="No workflow tags. (Refresh if you just changed them.)" />
             }
             else
             {

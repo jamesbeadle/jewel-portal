@@ -23,10 +23,8 @@
     }
     else if (SelectableLines.Count == 0)
     {
-        <p class="text-sm text-content-subtle italic">
-            No priced lines on this project's valuation report yet. Build the report on the
-            Valuation tab first, or key line items by hand under Edit details.
-        </p>
+        <EmptyState Message="No priced lines on this project's valuation report yet. Build the report on the
+            Valuation tab first, or key line items by hand under Edit details." />
     }
     else
     {

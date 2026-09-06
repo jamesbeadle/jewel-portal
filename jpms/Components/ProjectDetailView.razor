@@ -18,9 +18,9 @@
     </header>
 
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-8">
-        <Stat Label="Stage"            Value="@Project.Stage.DisplayName()" />
-        <Stat Label="Entity"           Value="@Project.Organisation.ShortCode()" />
-        <Stat Label="Project Manager"  Value="@Project.ProjectManagerEmail" />
+        <StatTile Label="Stage"            Value="@Project.Stage.DisplayName()" />
+        <StatTile Label="Entity"           Value="@Project.Organisation.ShortCode()" />
+        <StatTile Label="Project Manager"  Value="@Project.ProjectManagerEmail" />
     </div>
 
     <section class="rounded-xl border border-line bg-surface overflow-hidden">

@@ -70,7 +70,7 @@
 
                     @if (TradesModel.Current is { Count: 0 })
                     {
-                        <p class="text-sm text-content-subtle italic">No trades yet — add the first above.</p>
+                        <EmptyState Message="No trades yet — add the first above." />
                     }
                     else
                     {

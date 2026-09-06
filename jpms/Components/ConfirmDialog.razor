@@ -1,0 +1,45 @@
+@namespace Jewel.JPMS.Components
+
+@*
+    THE "are you sure?" dialog — a Modal preset for the irreversible act: the question as the
+    title, one line of consequence as the body, a Large Cancel and a Large confirm on the
+    right. Danger colours the confirm's label red (the fill stays grey-outlined: red is never
+    a button fill), so "Delete work order" and "Confirm & roll over" read as the same shape
+    with a different weight. Busy disables both while the command runs.
+
+        <ConfirmDialog IsOpen="deleting" Title="Delete this work order?" ConfirmLabel="Delete"
+                       Danger="true" Busy="busy" OnConfirm="DeleteAsync" OnCancel="() => deleting = false">
+            This removes WO-0045 and its lines. Bills already linked in Xero are left as they are.
+        </ConfirmDialog>
+*@
+
+<Modal IsOpen="IsOpen" Title="@Title" OnCancel="OnCancel" DismissOnOverlayClick="@(!Busy)">
+    <ChildContent>
+        @if (ChildContent is not null)
+        {
+            <div class="text-sm text-content-muted leading-relaxed">@ChildContent</div>
+        }
+    </ChildContent>
+    <FooterContent>
+        <button type="button" class="btn-secondary" disabled="@Busy" @onclick="OnCancel">@CancelLabel</button>
+        <button type="button" class="@(Danger ? "btn-secondary text-negative border-negative/40 hover:border-negative" : "btn-primary")"
+                disabled="@(Busy || ConfirmDisabled)" @onclick="OnConfirm">
+            @(Busy ? BusyLabel ?? ConfirmLabel : ConfirmLabel)
+        </button>
+    </FooterContent>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string ConfirmLabel { get; set; } = "Confirm";
+    [Parameter] public string? BusyLabel { get; set; }
+    [Parameter] public string CancelLabel { get; set; } = "Cancel";
+    /// <summary>Destructive: the confirm reads in red.</summary>
+    [Parameter] public bool Danger { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool ConfirmDisabled { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+}

@@ -22,13 +22,14 @@
 *@
 
 <Page Class="max-w-5xl">
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-        <h2 class="text-lg font-semibold text-content">Policies & sign-off</h2>
+    <SectionHeader Title="Policies & sign-off">
+        <Actions>
         @if (IsAdminView)
         {
             <button type="button" class="btn-primary" @onclick="() => publishOpen = true">Publish for signing</button>
         }
-    </div>
+        </Actions>
+    </SectionHeader>
     <p class="text-sm text-content-subtle mb-5 max-w-3xl">
         Documents that need everyone's signature — NDAs, staff policies, H&S. Signing records
         your typed name and the time against the exact revision you read.
