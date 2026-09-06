@@ -18,102 +18,92 @@
     folder (FinanceRoles), mirroring the API's CommercialTeam gate on the filtered audit read.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!CanAccess)
-{
-    <section class="px-6 md:px-8 py-12">
+<Page>
+    @if (!CanAccess)
+    {
         <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
         <p class="text-content-muted">The reconciliation audit is restricted to the commercial team.</p>
-    </section>
-}
-else
-{
-    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="reconciliation-audit">
-        <div class="flex items-center justify-between gap-4 mb-4 flex-wrap">
-            <div>
-                <h2 class="text-lg font-semibold text-content">Reconciliation Audit</h2>
-                <p class="text-sm text-content-muted mt-1">
-                    Cost centre moves on the valuation report — who moved which line, from where to
-                    where, and when. The moves themselves are made on the Valuation Report tab.
-                </p>
+    }
+    else
+    {
+        <ProjectPageShell ProjectId="@ProjectId" ActiveTab="reconciliation-audit">
+            <div class="flex items-center justify-between gap-4 mb-4 flex-wrap">
+                <div>
+                    <h2 class="text-lg font-semibold text-content">Reconciliation Audit</h2>
+                    <p class="text-sm text-content-muted mt-1">
+                        Cost centre moves on the valuation report — who moved which line, from where to
+                        where, and when. The moves themselves are made on the Valuation Report tab.
+                    </p>
+                </div>
+                @if (loaded && total > 0)
+                {
+                    <span class="text-xs text-content-subtle">Showing @items.Count of @total</span>
+                }
             </div>
-            @if (loaded && total > 0)
+
+            @if (loadError is not null)
             {
-                <span class="text-xs text-content-subtle">Showing @items.Count of @total</span>
+                <Notice Tone="Tone.Negative" Class="mb-4">@loadError</Notice>
             }
-        </div>
 
-        @if (loadError is not null)
-        {
-            <Notice Tone="Tone.Negative" Class="mb-4">@loadError</Notice>
-        }
-
-        <LoadGate IsLoading="@(!loaded)" Prominent="true" Label="Loading the reconciliation audit">
-        @if (loadError is not null && items.Count == 0)
-        {
-            @* A failed page has nothing to report; saying "no moves recorded" would read as one. *@
-            <p class="text-sm text-negative">Couldn't load the reconciliation audit. The reason is in the red bar above — reload to try again.</p>
-        }
-        else if (items.Count == 0)
-        {
-            <div class="panel p-8 text-center">
-                <p class="text-sm text-content">No cost centre moves recorded yet.</p>
-                <p class="text-xs text-content-subtle mt-1">
-                    When a valuation report line is recoded to a different cost centre, the move
-                    appears here with who made it and the value that moved.
-                </p>
-            </div>
-        }
-        else
-        {
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="px-4 py-3 whitespace-nowrap">When</th>
-                            <th class="px-4 py-3 whitespace-nowrap">Moved by</th>
-                            <th class="px-4 py-3 whitespace-nowrap">Line</th>
-                            <th class="px-4 py-3 min-w-[320px]">Move</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @foreach (var item in items)
-                        {
-                            <tr @key="item.AuditEventId">
-                                <td class="px-4 py-3 text-content-muted whitespace-nowrap"
-                                    title="@item.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm:ss")">@Ago(item.OccurredAt)</td>
-                                <td class="px-4 py-3 text-content-muted whitespace-nowrap">@Dash(item.ActorEmail)</td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    <span class="font-mono text-xs text-content-muted">@Dash(item.RecordReference)</span>
-                                </td>
-                                <td class="px-4 py-3 text-content">@item.Detail</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-
-            @if (nextCursor is not null)
+            <LoadGate IsLoading="@(!loaded)" Prominent="true" Label="Loading the reconciliation audit">
+            @if (loadError is not null && items.Count == 0)
             {
-                <div class="mt-4 text-center">
-                    <button type="button" class="btn-secondary text-sm" disabled="@loadingMore" @onclick="LoadMoreAsync">
-                        @(loadingMore ? "Loading…" : "Load more")
-                    </button>
+                @* A failed page has nothing to report; saying "no moves recorded" would read as one. *@
+                <p class="text-sm text-negative">Couldn't load the reconciliation audit. The reason is in the red bar above — reload to try again.</p>
+            }
+            else if (items.Count == 0)
+            {
+                <div class="panel p-8 text-center">
+                    <p class="text-sm text-content">No cost centre moves recorded yet.</p>
+                    <p class="text-xs text-content-subtle mt-1">
+                        When a valuation report line is recoded to a different cost centre, the move
+                        appears here with who made it and the value that moved.
+                    </p>
                 </div>
             }
-        }
-        </LoadGate>
-    </ProjectPageShell>
-}
+            else
+            {
+                <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-surface-raised border-b border-line">
+                            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                <th class="px-4 py-3 whitespace-nowrap">When</th>
+                                <th class="px-4 py-3 whitespace-nowrap">Moved by</th>
+                                <th class="px-4 py-3 whitespace-nowrap">Line</th>
+                                <th class="px-4 py-3 min-w-[320px]">Move</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-line">
+                            @foreach (var item in items)
+                            {
+                                <tr @key="item.AuditEventId">
+                                    <td class="px-4 py-3 text-content-muted whitespace-nowrap"
+                                        title="@item.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm:ss")">@Ago(item.OccurredAt)</td>
+                                    <td class="px-4 py-3 text-content-muted whitespace-nowrap">@Dash(item.ActorEmail)</td>
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <span class="font-mono text-xs text-content-muted">@Dash(item.RecordReference)</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-content">@item.Detail</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (nextCursor is not null)
+                {
+                    <div class="mt-4 text-center">
+                        <button type="button" class="btn-secondary text-sm" disabled="@loadingMore" @onclick="LoadMoreAsync">
+                            @(loadingMore ? "Loading…" : "Load more")
+                        </button>
+                    </div>
+                }
+            }
+            </LoadGate>
+        </ProjectPageShell>
+    }
+</Page>
 
 @code {
     private const int PageSize = 50;

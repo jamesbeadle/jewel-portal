@@ -20,18 +20,7 @@
     the client-safe subset, ready for the client surface when that access is built.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="calendar">
         <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h2 class="text-lg font-semibold text-content">Calendar</h2>
@@ -173,7 +162,7 @@ else
             </section>
         }
     </ProjectPageShell>
-}
+</Page>
 
 <Modal IsOpen="@editOpen" Title="@(editingId is null ? "Add a calendar event" : $"Calendar event {editingReference}")"
        OnCancel="CloseEdit" DismissOnOverlayClick="false">

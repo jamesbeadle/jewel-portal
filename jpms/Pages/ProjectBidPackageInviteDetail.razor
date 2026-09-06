@@ -23,18 +23,7 @@
 
 <PageTitle>Bid Package Invite · JPMS</PageTitle>
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="bid-package-invites">
         <nav class="mb-4 text-sm">
             <a href="@($"/projects/{ProjectId}/bid-package-invites")" class="text-content-subtle hover:text-content underline underline-offset-4">Bid package invites</a>
@@ -261,5 +250,5 @@ else
                               Busy="busy"
                               OnCancel="CloseValuationPicker"
                               OnConfirm="AppendValuationLinesAsync" />
-}
+</Page>
 

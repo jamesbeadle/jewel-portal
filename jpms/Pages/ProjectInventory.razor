@@ -19,18 +19,7 @@
     exactly like a defect or work order.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="inventory">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold text-content">Inventory</h2>
@@ -149,7 +138,7 @@ else
             </div>
         }
     </ProjectPageShell>
-}
+</Page>
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";

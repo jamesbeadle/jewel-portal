@@ -19,7 +19,7 @@
 
 <PageTitle>Work Orders · JPMS</PageTitle>
 
-<ApprovedSessionGate>
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="work-orders">
         <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
             <h2 class="text-lg font-semibold text-content">Work orders by @(groupBySupplier ? "supplier" : "cost centre")</h2>
@@ -189,5 +189,5 @@
 
         <DeleteWorkOrderModal @ref="deleteModal" ProjectId="@ProjectId" BusyChanged="busy => deleteBusy = busy" />
     </ProjectPageShell>
-</ApprovedSessionGate>
+</Page>
 

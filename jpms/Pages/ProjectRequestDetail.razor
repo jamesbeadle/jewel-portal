@@ -21,242 +21,234 @@
 
 <PageTitle>Request · JPMS</PageTitle>
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!dataLoaded)
-{
-    @* Tab chrome first, the record when it lands. The whole body reads off the record, the
-       variation and its bid packages, so it waits for the lot rather than filling in around a
-       lineage bar that still says "no variation". *@
-    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading request" />
-    </ProjectPageShell>
-}
-else if (record is null)
-{
-    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
-        <p class="text-sm text-content-subtle italic">That request could not be found.</p>
-        <a href="@RegisterHref" class="btn-neutral mt-4">Back to register</a>
-    </ProjectPageShell>
-}
-else
-{
-    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
-        <a href="@RegisterHref" class="text-sm text-content-muted hover:text-content inline-flex items-center gap-1 mb-4">
-            &larr; Request register
-        </a>
+<Page>
+    @if (!dataLoaded)
+    {
+        @* Tab chrome first, the record when it lands. The whole body reads off the record, the
+           variation and its bid packages, so it waits for the lot rather than filling in around a
+           lineage bar that still says "no variation". *@
+        <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
+            <LoadGate IsLoading="true" Prominent="true" Label="Loading request" />
+        </ProjectPageShell>
+    }
+    else if (record is null)
+    {
+        <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
+            <p class="text-sm text-content-subtle italic">That request could not be found.</p>
+            <a href="@RegisterHref" class="btn-neutral mt-4">Back to register</a>
+        </ProjectPageShell>
+    }
+    else
+    {
+        <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
+            <a href="@RegisterHref" class="text-sm text-content-muted hover:text-content inline-flex items-center gap-1 mb-4">
+                &larr; Request register
+            </a>
 
-        <RequestHeaderBar Record="record" CanEdit="CanEditDetails" CanDraftEmail="CanDraftEmail"
-                          Busy="busy" PreparingDraft="preparingDraft"
-                          StatusMenuItems="StatusMenuItems" ActionMenuItems="ActionMenuItems"
-                          OnEmail="OpenEmailModal" OnPromote="PromoteToRfi" />
+            <RequestHeaderBar Record="record" CanEdit="CanEditDetails" CanDraftEmail="CanDraftEmail"
+                              Busy="busy" PreparingDraft="preparingDraft"
+                              StatusMenuItems="StatusMenuItems" ActionMenuItems="ActionMenuItems"
+                              OnEmail="OpenEmailModal" OnPromote="PromoteToRfi" />
 
-        @* The request is the containing object; its related documents sit behind tabs. Request and
-           the official stage are panes of THIS page; the variation and bid package tabs carry on
-           to those records' own pages, which render the same bar. *@
-        <RecordTabBar ProjectId="@ProjectId" ActiveId="@ActiveTabId"
-                      Request="record" Variation="variation"
-                      LocalRequestTabs="true" OnSelect="SetActiveTab"
-                      ActivityFor="TabActivity" />
+            @* The request is the containing object; its related documents sit behind tabs. Request and
+               the official stage are panes of THIS page; the variation and bid package tabs carry on
+               to those records' own pages, which render the same bar. *@
+            <RecordTabBar ProjectId="@ProjectId" ActiveId="@ActiveTabId"
+                          Request="record" Variation="variation"
+                          LocalRequestTabs="true" OnSelect="SetActiveTab"
+                          ActivityFor="TabActivity" />
 
-        <RequestFactsStrip Record="record" />
+            <RequestFactsStrip Record="record" />
 
-        @* Outcomes of header actions (close/reopen/response/triage/delete) surface here, under the
-           facts strip, now that the Manage panel is gone. *@
-        @if (actionError is not null)
-        {
-            <Notice Tone="Tone.Negative" Class="mb-5">@actionError</Notice>
-        }
-        @if (ShowCriticalPathNudge)
-        {
-            <CriticalPathNudge DaysOutstanding="record.DaysOutstanding" Busy="busy" OnAnswer="AnswerCriticalPathNudge" />
-        }
+            @* Outcomes of header actions (close/reopen/response/triage/delete) surface here, under the
+               facts strip, now that the Manage panel is gone. *@
+            @if (actionError is not null)
+            {
+                <Notice Tone="Tone.Negative" Class="mb-5">@actionError</Notice>
+            }
+            @if (ShowCriticalPathNudge)
+            {
+                <CriticalPathNudge DaysOutstanding="record.DaysOutstanding" Busy="busy" OnAnswer="AnswerCriticalPathNudge" />
+            }
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            <div class="lg:col-span-2 space-y-5">
-                @* ---- Request (container) pane: the request's own detail and correspondence ---- *@
-                @if (ShowContainerPane)
-                {
-                <Panel Title="Detail">
-                    <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(record.Description) ? "—" : record.Description)</p>
-                </Panel>
-                }
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                <div class="lg:col-span-2 space-y-5">
+                    @* ---- Request (container) pane: the request's own detail and correspondence ---- *@
+                    @if (ShowContainerPane)
+                    {
+                    <Panel Title="Detail">
+                        <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(record.Description) ? "—" : record.Description)</p>
+                    </Panel>
+                    }
 
-                @* ---- Official-document pane: the form, the response, and the document's own
-                       actions. For an unpromoted General request there is no official tab yet, so
-                       the prepared-ahead form simply sits on the container pane as before. ---- *@
-                @if (ShowOfficialContent)
-                {
-                <RequestOfficialFormPanel Record="record" CanEdit="CanEditDetails" CanDraftEmail="CanDraftEmail"
-                                          Busy="busy" PreparingDraft="preparingDraft" DocumentHref="@DocumentHref"
-                                          OnEmail="OpenEmailModal"
-                                          @bind-Editing="editingForm"
-                                          OnSaved="saved => record = saved" />
+                    @* ---- Official-document pane: the form, the response, and the document's own
+                           actions. For an unpromoted General request there is no official tab yet, so
+                           the prepared-ahead form simply sits on the container pane as before. ---- *@
+                    @if (ShowOfficialContent)
+                    {
+                    <RequestOfficialFormPanel Record="record" CanEdit="CanEditDetails" CanDraftEmail="CanDraftEmail"
+                                              Busy="busy" PreparingDraft="preparingDraft" DocumentHref="@DocumentHref"
+                                              OnEmail="OpenEmailModal"
+                                              @bind-Editing="editingForm"
+                                              OnSaved="saved => record = saved" />
 
-                @if (!string.IsNullOrWhiteSpace(record.ResponseText))
-                {
-                    <RequestResponsePanel Record="record" />
-                }
-                }
+                    @if (!string.IsNullOrWhiteSpace(record.ResponseText))
+                    {
+                        <RequestResponsePanel Record="record" />
+                    }
+                    }
 
-                @if (ShowContainerPane)
-                {
-                @* Per-message reply drafting is off: emailing the document (fresh or into a tagged
-                   chain) is consolidated behind the single Email button in the page header. *@
-                @* Drawings linked from the register and photos taken on site. Uploaded files ride
-                   out on the RFI email; linked drawings do not — the architect issued those, and
-                   the document already cites them by code and revision. *@
-                <RequestAttachmentsPanel ProjectId="@ProjectId" RequestId="@RequestId" CanEdit="@CanEditDetails" />
+                    @if (ShowContainerPane)
+                    {
+                    @* Per-message reply drafting is off: emailing the document (fresh or into a tagged
+                       chain) is consolidated behind the single Email button in the page header. *@
+                    @* Drawings linked from the register and photos taken on site. Uploaded files ride
+                       out on the RFI email; linked drawings do not — the architect issued those, and
+                       the document already cites them by code and revision. *@
+                    <RequestAttachmentsPanel ProjectId="@ProjectId" RequestId="@RequestId" CanEdit="@CanEditDetails" />
 
-                <RequestConversation RequestId="@RequestId" CanDraftReply="false"
-                                     RequestReference="@record?.Reference" />
+                    <RequestConversation RequestId="@RequestId" CanDraftReply="false"
+                                         RequestReference="@record?.Reference" />
 
-                @if (!HasOfficialTab)
-                {
-                @* The record's own audit slice. Its main job here is answering "did the document go
-                   out?" — every draft the portal creates writes a row the moment it lands in the
-                   projects mailbox, with a link that opens that draft in Outlook. Sent is never
-                   observable from code (a human presses Send), so "drafted" is the honest signal. *@
-                <RecordAuditHistory RecordId="@RequestId"
-                                    RecordType="Jewel.JPMS.Models.RecordType.Request"
-                                    Title="History" />
-                }
-                }
-            </div>
-
-            <div class="space-y-5">
-                @if (ShowContainerPane && HasOfficialTab)
-                {
-                    @* On a promoted record the container pane's rail carries the audit slice; the
-                       issue machinery (recipients, variation) lives with the official document. *@
+                    @if (!HasOfficialTab)
+                    {
+                    @* The record's own audit slice. Its main job here is answering "did the document go
+                       out?" — every draft the portal creates writes a row the moment it lands in the
+                       projects mailbox, with a link that opens that draft in Outlook. Sent is never
+                       observable from code (a human presses Send), so "drafted" is the honest signal. *@
                     <RecordAuditHistory RecordId="@RequestId"
                                         RecordType="Jewel.JPMS.Models.RecordType.Request"
                                         Title="History" />
-                }
+                    }
+                    }
+                </div>
 
-                @if (ShowOfficialContent)
-                {
-                @* Document + email actions live with the official form; this rail panel is just the
-                   record's shape — its type (with promotion) and who it corresponds with. Hidden
-                   entirely when there is nothing to show (official kind, no edit rights). *@
-                @if (!record.Kind.IsEmailable() || CanEditDetails)
-                {
-                    <RequestPartyPanel Record="record" CanEdit="CanEditDetails" Busy="busy" Error="@ladderError"
-                                       Clients="clients" Architects="architects"
-                                       RecipientPreview="recipientPreview"
-                                       OnPartyPicked="pick => LinkPartyAsync(pick.Kind, pick.PartyId)"
-                                       OnBehalfPicked="SetOnBehalfClientAsync" />
-                }
+                <div class="space-y-5">
+                    @if (ShowContainerPane && HasOfficialTab)
+                    {
+                        @* On a promoted record the container pane's rail carries the audit slice; the
+                           issue machinery (recipients, variation) lives with the official document. *@
+                        <RecordAuditHistory RecordId="@RequestId"
+                                            RecordType="Jewel.JPMS.Models.RecordType.Request"
+                                            Title="History" />
+                    }
 
-                @* Any RFI can raise a variation order quote — an architect answering "yes, do it"
-                   is the ordinary way one starts, with no subcontractor tender involved. The RFQ
-                   flag is not the gate; it only decides whether bid packages hang off the
-                   variation afterwards. *@
-                @if (record.Kind is RequestType.Rfi || record.HasRfq || variation is not null)
-                {
-                    <RequestVariationCard Variation="variation" VariationHref="@VariationHref"
-                                          HasRfq="record.HasRfq" Error="@variationError"
-                                          CanRaise="CanRaiseVariation" Busy="busy"
-                                          OnRaise="OpenVariationDraft" />
-                }
-                }
+                    @if (ShowOfficialContent)
+                    {
+                    @* Document + email actions live with the official form; this rail panel is just the
+                       record's shape — its type (with promotion) and who it corresponds with. Hidden
+                       entirely when there is nothing to show (official kind, no edit rights). *@
+                    @if (!record.Kind.IsEmailable() || CanEditDetails)
+                    {
+                        <RequestPartyPanel Record="record" CanEdit="CanEditDetails" Busy="busy" Error="@ladderError"
+                                           Clients="clients" Architects="architects"
+                                           RecipientPreview="recipientPreview"
+                                           OnPartyPicked="pick => LinkPartyAsync(pick.Kind, pick.PartyId)"
+                                           OnBehalfPicked="SetOnBehalfClientAsync" />
+                    }
 
+                    @* Any RFI can raise a variation order quote — an architect answering "yes, do it"
+                       is the ordinary way one starts, with no subcontractor tender involved. The RFQ
+                       flag is not the gate; it only decides whether bid packages hang off the
+                       variation afterwards. *@
+                    @if (record.Kind is RequestType.Rfi || record.HasRfq || variation is not null)
+                    {
+                        <RequestVariationCard Variation="variation" VariationHref="@VariationHref"
+                                              HasRfq="record.HasRfq" Error="@variationError"
+                                              CanRaise="CanRaiseVariation" Busy="busy"
+                                              OnRaise="OpenVariationDraft" />
+                    }
+                    }
+
+                </div>
             </div>
-        </div>
-    </ProjectPageShell>
+        </ProjectPageShell>
 
-    <Modal IsOpen="confirmingDelete"
-           Title="Delete this request?"
-           ConfirmLabel="@(busy ? "Deleting…" : "Delete request")"
-           OnCancel="CancelDelete"
-           OnConfirm="PerformDelete">
-        <p class="text-sm text-content">
-            This will permanently remove <span class="font-mono">@record?.Reference</span> — “@record?.Title” — and its entire conversation. This cannot be undone.
-        </p>
-    </Modal>
-
-    <Modal IsOpen="confirmingReturn"
-           Title="Return this request to the Control Centre?"
-           ConfirmLabel="@(busy ? "Returning…" : "Return to Control Centre")"
-           OnCancel="CancelReturn"
-           OnConfirm="PerformReturn">
-        <p class="text-sm text-content">
-            Every email linked to <span class="font-mono">@record?.Reference</span> — “@record?.Title” — will go back to the Control Centre queue so the thread can be processed again from scratch. The request itself and its conversation history stay in the register.
-        </p>
-    </Modal>
-
-    <Modal IsOpen="confirmingClose"
-           Title="Close this request?"
-           ConfirmLabel="@(busy ? "Closing…" : "Close request")"
-           OnCancel="CancelClose"
-           OnConfirm="PerformClose">
-        <div class="space-y-3">
+        <Modal IsOpen="confirmingDelete"
+               Title="Delete this request?"
+               ConfirmLabel="@(busy ? "Deleting…" : "Delete request")"
+               OnCancel="CancelDelete"
+               OnConfirm="PerformDelete">
             <p class="text-sm text-content">
-                Closes <span class="font-mono">@record?.Reference</span> — “@record?.Title”. If the request was actually resolved earlier, set the date it closed below.
+                This will permanently remove <span class="font-mono">@record?.Reference</span> — “@record?.Title” — and its entire conversation. This cannot be undone.
             </p>
-            <FormField Label="Date closed" Value="@closeDate" OnChange="v => closeDate = v" InputType="date" />
-            @if (closeError is not null)
-            {
-                <Notice Tone="Tone.Negative">@closeError</Notice>
-            }
-        </div>
-    </Modal>
+        </Modal>
 
-    <EmailDraftStagingModal IsOpen="emailModalOpen"
-                            KindLabel="@record.Kind.DisplayName()"
-                            TaggedEmails="taggedEmails"
-                            TaggedEmailsLoading="taggedEmailsLoading"
-                            @bind-SelectedChainId="selectedChainMailboxId"
-                            DraftResult="draftResult"
-                            Error="@draftError"
-                            Preparing="preparingDraft"
-                            OnCancel="CloseEmailModal"
-                            OnConfirm="ConfirmEmailDraft" />
-
-    <Modal IsOpen="respondingOpen"
-           Title="Record a response"
-           ConfirmLabel="@(busy ? "Saving…" : "Save response")"
-           ConfirmDisabled="@busy"
-           OnCancel="CancelResponseModal"
-           OnConfirm="SaveResponseFromModal">
-        <div class="space-y-3">
-            <p class="text-sm text-content-subtle">
-                The formal answer or decision recorded on the request itself — it appears in the
-                Response panel, prints on the official document, and moves the request to Needs
-                action (the ball is back with us). (Use the conversation for ordinary discussion.)
+        <Modal IsOpen="confirmingReturn"
+               Title="Return this request to the Control Centre?"
+               ConfirmLabel="@(busy ? "Returning…" : "Return to Control Centre")"
+               OnCancel="CancelReturn"
+               OnConfirm="PerformReturn">
+            <p class="text-sm text-content">
+                Every email linked to <span class="font-mono">@record?.Reference</span> — “@record?.Title” — will go back to the Control Centre queue so the thread can be processed again from scratch. The request itself and its conversation history stay in the register.
             </p>
-            <textarea class="field" rows="4" value="@responseDraft" @oninput="OnResponseDraftInput"
-                      placeholder="The answer or decision…"></textarea>
-            @if (actionError is not null)
-            {
-                <Notice Tone="Tone.Negative">@actionError</Notice>
-            }
-        </div>
-    </Modal>
+        </Modal>
 
-    @* The old single "Edit request details" modal is split three ways, each opened from an Edit
-       control on the surface it edits: the page header (reference, status, subject), the facts
-       strip (dates, drawing refs, value) and the Detail panel (the detail text). *@
-    <RequestHeaderEditModal Record="record" StatusOptions="StatusOptions" Busy="busy"
-                            @bind-IsOpen="editingHeader" Send="SendEdit" />
-    <RequestFactsEditModal Record="record" Busy="busy" @bind-IsOpen="editingFacts" Send="SendEdit" />
-    <RequestDetailEditModal Record="record" Busy="busy" @bind-IsOpen="editingDetail" Send="SendEdit" />
+        <Modal IsOpen="confirmingClose"
+               Title="Close this request?"
+               ConfirmLabel="@(busy ? "Closing…" : "Close request")"
+               OnCancel="CancelClose"
+               OnConfirm="PerformClose">
+            <div class="space-y-3">
+                <p class="text-sm text-content">
+                    Closes <span class="font-mono">@record?.Reference</span> — “@record?.Title”. If the request was actually resolved earlier, set the date it closed below.
+                </p>
+                <FormField Label="Date closed" Value="@closeDate" OnChange="v => closeDate = v" InputType="date" />
+                @if (closeError is not null)
+                {
+                    <Notice Tone="Tone.Negative">@closeError</Notice>
+                }
+            </div>
+        </Modal>
 
-    <VariationDraftModal IsOpen="variationDraftOpen" Busy="busy" Error="@variationDraftError"
-                         Title="@draftVariationTitle" TitleChanged="OnDraftTitleChanged"
-                         Description="@draftVariationDescription" DescriptionChanged="OnDraftDescriptionChanged"
-                         Value="@draftVariationValue" ValueChanged="OnDraftValueChanged"
-                         Lines="draftVariationLines" PackageTrade="@DraftPackageTrade" HasRfq="@(record?.HasRfq == true)"
-                         OnLineAccepted="change => OnDraftLineAcceptedChanged(change.Index, change.Accepted)"
-                         OnLineCostCode="change => OnDraftLineCostCodeChanged(change.Index, change.CostCode)"
-                         OnCancel="CancelVariationDraft" OnConfirm="ConfirmVariationDraft" />
-}
+        <EmailDraftStagingModal IsOpen="emailModalOpen"
+                                KindLabel="@record.Kind.DisplayName()"
+                                TaggedEmails="taggedEmails"
+                                TaggedEmailsLoading="taggedEmailsLoading"
+                                @bind-SelectedChainId="selectedChainMailboxId"
+                                DraftResult="draftResult"
+                                Error="@draftError"
+                                Preparing="preparingDraft"
+                                OnCancel="CloseEmailModal"
+                                OnConfirm="ConfirmEmailDraft" />
+
+        <Modal IsOpen="respondingOpen"
+               Title="Record a response"
+               ConfirmLabel="@(busy ? "Saving…" : "Save response")"
+               ConfirmDisabled="@busy"
+               OnCancel="CancelResponseModal"
+               OnConfirm="SaveResponseFromModal">
+            <div class="space-y-3">
+                <p class="text-sm text-content-subtle">
+                    The formal answer or decision recorded on the request itself — it appears in the
+                    Response panel, prints on the official document, and moves the request to Needs
+                    action (the ball is back with us). (Use the conversation for ordinary discussion.)
+                </p>
+                <textarea class="field" rows="4" value="@responseDraft" @oninput="OnResponseDraftInput"
+                          placeholder="The answer or decision…"></textarea>
+                @if (actionError is not null)
+                {
+                    <Notice Tone="Tone.Negative">@actionError</Notice>
+                }
+            </div>
+        </Modal>
+
+        @* The old single "Edit request details" modal is split three ways, each opened from an Edit
+           control on the surface it edits: the page header (reference, status, subject), the facts
+           strip (dates, drawing refs, value) and the Detail panel (the detail text). *@
+        <RequestHeaderEditModal Record="record" StatusOptions="StatusOptions" Busy="busy"
+                                @bind-IsOpen="editingHeader" Send="SendEdit" />
+        <RequestFactsEditModal Record="record" Busy="busy" @bind-IsOpen="editingFacts" Send="SendEdit" />
+        <RequestDetailEditModal Record="record" Busy="busy" @bind-IsOpen="editingDetail" Send="SendEdit" />
+
+        <VariationDraftModal IsOpen="variationDraftOpen" Busy="busy" Error="@variationDraftError"
+                             Title="@draftVariationTitle" TitleChanged="OnDraftTitleChanged"
+                             Description="@draftVariationDescription" DescriptionChanged="OnDraftDescriptionChanged"
+                             Value="@draftVariationValue" ValueChanged="OnDraftValueChanged"
+                             Lines="draftVariationLines" PackageTrade="@DraftPackageTrade" HasRfq="@(record?.HasRfq == true)"
+                             OnLineAccepted="change => OnDraftLineAcceptedChanged(change.Index, change.Accepted)"
+                             OnLineCostCode="change => OnDraftLineCostCodeChanged(change.Index, change.CostCode)"
+                             OnCancel="CancelVariationDraft" OnConfirm="ConfirmVariationDraft" />
+    }
+</Page>
 

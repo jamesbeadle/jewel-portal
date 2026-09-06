@@ -20,18 +20,7 @@
     email is filed to a stage — or a new stage raised from it — in the Control Centre.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="building-control">
         <h2 class="text-lg font-semibold text-content mb-4">Building Control</h2>
 
@@ -332,5 +321,5 @@ else
             }
         }
     </ProjectPageShell>
-}
+</Page>
 

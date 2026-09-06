@@ -10,18 +10,7 @@
 
 <PageTitle>WO Allocation · JPMS</PageTitle>
 
-@if (!isLoaded)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="work-order-allocation">
         <h2 class="text-lg font-semibold text-content mb-1">Work order invoice allocation</h2>
         <p class="text-sm text-content-subtle mb-4">
@@ -320,7 +309,7 @@ else
                                  OnClose="() => splitLine = null"
                                  OnSaved="HandleSplitSavedAsync" />
     </ProjectPageShell>
-}
+</Page>
 
 @code {
     private RenderFragment OptionFor(ProjectCostOfSalesLine line, WorkOrderInvoiceSummary option) => __builder =>

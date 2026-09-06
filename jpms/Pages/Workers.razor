@@ -16,172 +16,170 @@
     keep their snapshotted rate. Rates never reach the site capture page.
 *@
 
-<ApprovedSessionGate>
-    <section class="px-6 md:px-8 py-8 max-w-6xl">
-        <div class="flex flex-wrap items-start justify-between gap-3 mb-1">
-            <h2 class="text-lg font-semibold text-content">Workers</h2>
-            @* The registry is what this page is for, so the registry is what it opens on. The form
-               used to sit above the table permanently, pushing the rows the page exists to show
-               below the fold to make room for a form that is used once per worker and then never
-               again. It is a modal now — the table is the page. *@
-            <button type="button" class="btn-primary" @onclick="StartAdd">Add worker</button>
+<Page Class="max-w-6xl">
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-1">
+        <h2 class="text-lg font-semibold text-content">Workers</h2>
+        @* The registry is what this page is for, so the registry is what it opens on. The form
+           used to sit above the table permanently, pushing the rows the page exists to show
+           below the fold to make room for a form that is used once per worker and then never
+           again. It is a modal now — the table is the page. *@
+        <button type="button" class="btn-primary" @onclick="StartAdd">Add worker</button>
+    </div>
+    <p class="text-sm text-content-subtle mb-5 max-w-3xl">
+        Day-rate site operatives and their cost rates. Each worker logs their own time on the
+        My day page: invite them as a user with the Site Operative role, then enter the same
+        email here — that links their account to this record. Assign workers to projects from
+        each project's Labour tab.
+    </p>
+
+    @if (actionError is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
+    }
+
+    @{ var workers = Labour.Workers(); }
+    @* One gate over the registry: the Subcontractor column is resolved from the directory, so a
+       row rendered before it lands reads "—" for a worker who is in fact linked. *@
+    <LoadGate IsLoading="@(!RegistryReady && !workersFailed)" Prominent="true" Label="Loading workers">
+    @if (!Labour.WorkersLoaded)
+    {
+        <p class="text-sm text-negative">Couldn't load the workers. The details are in the red bar at the top — reload to try again.</p>
+    }
+    else if (workers.Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic">No workers yet — use Add worker above to enter the first one.</p>
+    }
+    else
+    {
+        <div class="mb-3 flex items-center justify-end">
+            <ExportToExcelButton FileName="Workers"
+                                 Disabled="@(workers.Count == 0)"
+                                 BuildWorkbook="BuildExportWorkbook" />
         </div>
-        <p class="text-sm text-content-subtle mb-5 max-w-3xl">
-            Day-rate site operatives and their cost rates. Each worker logs their own time on the
-            My day page: invite them as a user with the Site Operative role, then enter the same
-            email here — that links their account to this record. Assign workers to projects from
-            each project's Labour tab.
-        </p>
 
-        @if (actionError is not null)
-        {
-            <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
-        }
-
-        @{ var workers = Labour.Workers(); }
-        @* One gate over the registry: the Subcontractor column is resolved from the directory, so a
-           row rendered before it lands reads "—" for a worker who is in fact linked. *@
-        <LoadGate IsLoading="@(!RegistryReady && !workersFailed)" Prominent="true" Label="Loading workers">
-        @if (!Labour.WorkersLoaded)
-        {
-            <p class="text-sm text-negative">Couldn't load the workers. The details are in the red bar at the top — reload to try again.</p>
-        }
-        else if (workers.Count == 0)
-        {
-            <p class="text-sm text-content-subtle italic">No workers yet — use Add worker above to enter the first one.</p>
-        }
-        else
-        {
-            <div class="mb-3 flex items-center justify-end">
-                <ExportToExcelButton FileName="Workers"
-                                     Disabled="@(workers.Count == 0)"
-                                     BuildWorkbook="BuildExportWorkbook" />
-            </div>
-
-            @* Every column but Name is capped, so Name takes whatever the page has left. The three
-               money/status columns need only the width of their own figures; giving them a share of
-               the table was what squeezed the one column people actually read. *@
-            <table class="data-table">
-                <thead>
+        @* Every column but Name is capped, so Name takes whatever the page has left. The three
+           money/status columns need only the width of their own figures; giving them a share of
+           the table was what squeezed the one column people actually read. *@
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Name</th><th class="w-[210px]">Portal email</th><th class="w-[190px]">Subcontractor</th>
+                    <th class="text-right w-[100px]">Hourly £</th>
+                    <th class="text-right w-[110px]">Day £ (8h)</th><th class="w-[90px]">Status</th><th class="w-[190px]"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var worker in workers)
+                {
                     <tr>
-                        <th>Name</th><th class="w-[210px]">Portal email</th><th class="w-[190px]">Subcontractor</th>
-                        <th class="text-right w-[100px]">Hourly £</th>
-                        <th class="text-right w-[110px]">Day £ (8h)</th><th class="w-[90px]">Status</th><th class="w-[190px]"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var worker in workers)
-                    {
-                        <tr>
-                            <td class="text-content font-medium">@worker.Name</td>
-                            <td class="text-content-subtle truncate max-w-[16rem]" title="@worker.ContactEmail">@(worker.ContactEmail == "" ? "— not linked —" : worker.ContactEmail)</td>
-                            <td>
-                                @if (worker.SubcontractorId is null && worker.IsSoleTrader)
-                                {
-                                    <Pill Tone="Tone.Muted" Title="Bills under their own name — their own settlement counterparty">Sole trader</Pill>
-                                }
-                                else { @SubcontractorName(worker.SubcontractorId) }
-                            </td>
-                            <td class="text-right tabular-nums">@worker.HourlyRate.ToString("N2")</td>
-                            <td class="text-right tabular-nums">@((worker.HourlyRate * 8m).ToString("N2"))</td>
-                            <td>
-                                @if (worker.IsActive) { <span class="text-positive">Active</span> }
-                                else { <span class="text-content-subtle">Inactive</span> }
-                            </td>
-                            <td class="text-right whitespace-nowrap">
-                                <button type="button" class="btn-secondary mr-1" @onclick="() => StartEdit(worker)">Edit</button>
-                                @if (deletingWorkerId == worker.WorkerId)
-                                {
-                                    <button type="button" class="btn-primary mr-1" @onclick="() => ConfirmDeleteAsync(worker.WorkerId)">Confirm</button>
-                                    <button type="button" class="btn-ghost" @onclick="() => deletingWorkerId = null">Cancel</button>
-                                }
-                                else
-                                {
-                                    <button type="button" class="btn-ghost text-negative" @onclick="() => deletingWorkerId = worker.WorkerId">Delete</button>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
-        </LoadGate>
-
-        @* Directory matching (2026-08-31, the month-end doc): settlement is gated on the
-           worker→directory link, and this card is the bulk answer — the same name matching the
-           Xero import and the allocation page's recognition use, run server-side, with the
-           ambiguous and unmatched remainder left for a human. Only rendered while someone
-           actually lacks a settlement identity, so a clean registry keeps a clean page. *@
-        @if (RegistryReady && UnlinkedWorkers.Count > 0)
-        {
-            <div class="mt-8 rounded-xl border border-line bg-surface p-4 max-w-4xl">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <h3 class="text-sm font-semibold text-content">Workers without a settlement identity (@UnlinkedWorkers.Count)</h3>
-                        <p class="text-xs text-content-subtle mt-0.5 max-w-2xl">
-                            These workers' bills cannot be marked as settlement until each is linked to a
-                            directory company or flagged a sole trader. Find matches compares names against
-                            the directory; applying a match is audited.
-                        </p>
-                    </div>
-                    <button type="button" class="btn-secondary" disabled="@isMatching" @onclick="FindMatchesAsync">
-                        @(linkReport is null ? "Find matches" : "Re-check matches")
-                    </button>
-                </div>
-                @if (matchError is not null)
-                {
-                    <Notice Tone="Tone.Negative" Class="mt-3">@matchError</Notice>
-                }
-                @if (linkReport is not null)
-                {
-                    <table class="data-table mt-3">
-                        <thead><tr><th>Worker</th><th>Directory match</th><th class="w-[260px]"></th></tr></thead>
-                        <tbody>
-                            @foreach (var outcome in linkReport.Workers)
+                        <td class="text-content font-medium">@worker.Name</td>
+                        <td class="text-content-subtle truncate max-w-[16rem]" title="@worker.ContactEmail">@(worker.ContactEmail == "" ? "— not linked —" : worker.ContactEmail)</td>
+                        <td>
+                            @if (worker.SubcontractorId is null && worker.IsSoleTrader)
                             {
-                                <tr>
-                                    <td class="text-content font-medium">@outcome.WorkerName</td>
-                                    <td class="text-sm">
-                                        @if (outcome.Linked is { } match)
-                                        {
-                                            <span class="text-content">@match.CompanyName</span>
-                                        }
-                                        else if (outcome.Outcome == "ambiguous")
-                                        {
-                                            <span class="text-content-subtle">Matches @outcome.Candidates.Count records — pick in Edit:
-                                                @string.Join(", ", outcome.Candidates.Select(c => c.CompanyName))</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-content-subtle italic">No directory match — likely a sole trader, or the company is still to import from Xero</span>
-                                        }
-                                    </td>
-                                    <td class="text-right whitespace-nowrap">
-                                        @if (outcome.Linked is { } linkable)
-                                        {
-                                            <button type="button" class="btn-secondary mr-1" disabled="@isMatching"
-                                                    @onclick="() => ApplyLinkAsync(outcome.WorkerId, linkable.SubcontractorId)">Link</button>
-                                        }
-                                        <button type="button" class="btn-ghost" disabled="@isMatching"
-                                                title="Bills under their own name — becomes their own settlement counterparty"
-                                                @onclick="() => MarkSoleTraderAsync(outcome.WorkerId)">Sole trader</button>
-                                    </td>
-                                </tr>
+                                <Pill Tone="Tone.Muted" Title="Bills under their own name — their own settlement counterparty">Sole trader</Pill>
                             }
-                        </tbody>
-                    </table>
-                    @if (linkReport.Workers.Any(outcome => outcome.Outcome == "would link"))
-                    {
-                        <div class="mt-3 text-right">
-                            <button type="button" class="btn-primary" disabled="@isMatching" @onclick="ApplyAllMatchesAsync">
-                                Link all matched (@linkReport.Workers.Count(outcome => outcome.Outcome == "would link"))
-                            </button>
-                        </div>
-                    }
+                            else { @SubcontractorName(worker.SubcontractorId) }
+                        </td>
+                        <td class="text-right tabular-nums">@worker.HourlyRate.ToString("N2")</td>
+                        <td class="text-right tabular-nums">@((worker.HourlyRate * 8m).ToString("N2"))</td>
+                        <td>
+                            @if (worker.IsActive) { <span class="text-positive">Active</span> }
+                            else { <span class="text-content-subtle">Inactive</span> }
+                        </td>
+                        <td class="text-right whitespace-nowrap">
+                            <button type="button" class="btn-secondary mr-1" @onclick="() => StartEdit(worker)">Edit</button>
+                            @if (deletingWorkerId == worker.WorkerId)
+                            {
+                                <button type="button" class="btn-primary mr-1" @onclick="() => ConfirmDeleteAsync(worker.WorkerId)">Confirm</button>
+                                <button type="button" class="btn-ghost" @onclick="() => deletingWorkerId = null">Cancel</button>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn-ghost text-negative" @onclick="() => deletingWorkerId = worker.WorkerId">Delete</button>
+                            }
+                        </td>
+                    </tr>
                 }
+            </tbody>
+        </table>
+    }
+    </LoadGate>
+
+    @* Directory matching (2026-08-31, the month-end doc): settlement is gated on the
+       worker→directory link, and this card is the bulk answer — the same name matching the
+       Xero import and the allocation page's recognition use, run server-side, with the
+       ambiguous and unmatched remainder left for a human. Only rendered while someone
+       actually lacks a settlement identity, so a clean registry keeps a clean page. *@
+    @if (RegistryReady && UnlinkedWorkers.Count > 0)
+    {
+        <div class="mt-8 rounded-xl border border-line bg-surface p-4 max-w-4xl">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h3 class="text-sm font-semibold text-content">Workers without a settlement identity (@UnlinkedWorkers.Count)</h3>
+                    <p class="text-xs text-content-subtle mt-0.5 max-w-2xl">
+                        These workers' bills cannot be marked as settlement until each is linked to a
+                        directory company or flagged a sole trader. Find matches compares names against
+                        the directory; applying a match is audited.
+                    </p>
+                </div>
+                <button type="button" class="btn-secondary" disabled="@isMatching" @onclick="FindMatchesAsync">
+                    @(linkReport is null ? "Find matches" : "Re-check matches")
+                </button>
             </div>
-        }
-    </section>
+            @if (matchError is not null)
+            {
+                <Notice Tone="Tone.Negative" Class="mt-3">@matchError</Notice>
+            }
+            @if (linkReport is not null)
+            {
+                <table class="data-table mt-3">
+                    <thead><tr><th>Worker</th><th>Directory match</th><th class="w-[260px]"></th></tr></thead>
+                    <tbody>
+                        @foreach (var outcome in linkReport.Workers)
+                        {
+                            <tr>
+                                <td class="text-content font-medium">@outcome.WorkerName</td>
+                                <td class="text-sm">
+                                    @if (outcome.Linked is { } match)
+                                    {
+                                        <span class="text-content">@match.CompanyName</span>
+                                    }
+                                    else if (outcome.Outcome == "ambiguous")
+                                    {
+                                        <span class="text-content-subtle">Matches @outcome.Candidates.Count records — pick in Edit:
+                                            @string.Join(", ", outcome.Candidates.Select(c => c.CompanyName))</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-content-subtle italic">No directory match — likely a sole trader, or the company is still to import from Xero</span>
+                                    }
+                                </td>
+                                <td class="text-right whitespace-nowrap">
+                                    @if (outcome.Linked is { } linkable)
+                                    {
+                                        <button type="button" class="btn-secondary mr-1" disabled="@isMatching"
+                                                @onclick="() => ApplyLinkAsync(outcome.WorkerId, linkable.SubcontractorId)">Link</button>
+                                    }
+                                    <button type="button" class="btn-ghost" disabled="@isMatching"
+                                            title="Bills under their own name — becomes their own settlement counterparty"
+                                            @onclick="() => MarkSoleTraderAsync(outcome.WorkerId)">Sole trader</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (linkReport.Workers.Any(outcome => outcome.Outcome == "would link"))
+                {
+                    <div class="mt-3 text-right">
+                        <button type="button" class="btn-primary" disabled="@isMatching" @onclick="ApplyAllMatchesAsync">
+                            Link all matched (@linkReport.Workers.Count(outcome => outcome.Outcome == "would link"))
+                        </button>
+                    </div>
+                }
+            }
+        </div>
+    }
 
     @* One modal serves both Add and Edit — they are the same six fields, and the only thing that
        differs is whether a worker is already behind them. Two dialogs would be two places to keep
@@ -257,5 +255,5 @@
             already-approved timesheets keep the rate they were costed at.
         </p>
     </Modal>
-</ApprovedSessionGate>
+</Page>
 

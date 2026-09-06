@@ -87,109 +87,107 @@
     basis tag ("certified basis" / "invoiced basis") so the page answers this itself.
 *@
 
-<ApprovedSessionGate>
-    <section class="px-6 md:px-8 py-8 md:py-12">
-        <header class="mb-6">
-            <p class="eyebrow mb-1">JPMS · Company</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Profit Summary</h1>
-            <p class="text-sm text-content-muted mt-1">
-                Gross profit by project — the deal as signed, where each job stands today, and where it lands.
-            </p>
-        </header>
+<Page>
+    <header class="mb-6">
+        <p class="eyebrow mb-1">JPMS · Company</p>
+        <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Profit Summary</h1>
+        <p class="text-sm text-content-muted mt-1">
+            Gross profit by project — the deal as signed, where each job stands today, and where it lands.
+        </p>
+    </header>
 
-        @if (projectsFailed)
-        {
-            <p class="text-sm text-negative">Couldn't load the project list. The details are in the red bar at the top — reload to try again.</p>
-        }
-        else
-        {
-            <div class="mb-4 flex items-center justify-between gap-3 flex-wrap">
-                @* The filter is a control, so it is never gated: it renders disabled with a
-                   loading label until the project list lands (the loading-states convention). *@
-                @if (Projects.Current is null)
-                {
-                    <select disabled
-                            class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content-subtle">
-                        <option>Loading projects…</option>
-                    </select>
-                }
-                else
-                {
-                    <ProjectMultiSelect Projects="@(Projects.Current!)"
-                                        Selected="@selectedIds"
-                                        SelectedChanged="OnSelectionChangedAsync" />
-                }
-                @* Disabled while any selected row failed to load: the on-screen banner discloses
-                   the zeros, but a workbook travels without it — retry first, then export. *@
-                <ExportToExcelButton FileName="Profit summary"
-                                     Disabled="@(!TableReady || SelectedProjects.Count == 0 || FailedSelectedProjects.Count > 0)"
-                                     BuildWorkbook="BuildExportWorkbook" />
-            </div>
-
-            @if (selectionInitialised && SelectedProjects.Count > 0
-                 && SitePnl.Current is { IsConfigured: true } && MovementFor(GridProjects) is { } movement)
+    @if (projectsFailed)
+    {
+        <p class="text-sm text-negative">Couldn't load the project list. The details are in the red bar at the top — reload to try again.</p>
+    }
+    else
+    {
+        <div class="mb-4 flex items-center justify-between gap-3 flex-wrap">
+            @* The filter is a control, so it is never gated: it renders disabled with a
+               loading label until the project list lands (the loading-states convention). *@
+            @if (Projects.Current is null)
             {
-                <RunningProfitPanel Movement="movement" BasisLabel="@BasisLabel"
-                                    @bind-IncludeLabourAccrual="includeLabourAccrual"
-                                    AccrualHover="AccrualHover"
-                                    AccrualOwnFor="AccrualOwnFor"
-                                    AccrualToDateFor="AccrualToDateFor" />
-            }
-
-            @if (!selectionInitialised || SelectedProjects.Count > 0)
-            {
-                <ProfitSummaryStrip Rows="@(TableReady && SelectedProjects.Count > 0 ? LoadedRows() : null)" />
-            }
-
-            @* One gate for the bridge and the table together: every bar, row and total is the same
-               arithmetic over the same sources, so the region waits for every selected project
-               before showing any of it. *@
-            <LoadGate IsLoading="@(!TableReady)" Prominent="true" Label="Loading profit figures">
-            @if (SelectedProjects.Count == 0)
-            {
-                <div class="panel p-8 text-center">
-                    <p class="text-sm text-content">No projects selected — pick some in the filter above.</p>
-                </div>
+                <select disabled
+                        class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content-subtle">
+                    <option>Loading projects…</option>
+                </select>
             }
             else
             {
-                var rows = LoadedRows();
-                var total = ProfitRow.TotalOf(rows);
-                var bridge = BridgeFor(rows, total);
-
-                @if (FailedSelectedProjects.Count > 0)
-                {
-                    <Notice Tone="Tone.Negative" Class="mb-4">
-                        The profit figures could not be loaded for @string.Join(", ", FailedSelectedProjects.Select(p => p.Reference)) — those rows show zeros.
-                        <button type="button" class="underline underline-offset-2 ml-1" @onclick="RetryFailedAsync">Retry</button>
-                    </Notice>
-                }
-
-                @if (bridge is not null)
-                {
-                    <BudgetForecastBridge Bridge="bridge" />
-                }
-
-                <ProfitTable Rows="rows" Total="total"
-                             SortColumn="@sortColumn" SortDescending="sortDescending" OnSort="SortBy" />
-                <ProfitTableNotes />
+                <ProjectMultiSelect Projects="@(Projects.Current!)"
+                                    Selected="@selectedIds"
+                                    SelectedChanged="OnSelectionChangedAsync" />
             }
-            </LoadGate>
+            @* Disabled while any selected row failed to load: the on-screen banner discloses
+               the zeros, but a workbook travels without it — retry first, then export. *@
+            <ExportToExcelButton FileName="Profit summary"
+                                 Disabled="@(!TableReady || SelectedProjects.Count == 0 || FailedSelectedProjects.Count > 0)"
+                                 BuildWorkbook="BuildExportWorkbook" />
+        </div>
 
-            @if (selectionInitialised && SelectedProjects.Count > 0
-                 && SitePnl.Current is { IsConfigured: true } && MovementFor(GridProjects) is { } trend)
-            {
-                <TrajectoryPanel Cards="TrajectoriesFor(trend)" BasisLabel="@BasisLabel" />
-            }
-
-            @if (selectionInitialised && SelectedProjects.Count > 0)
-            {
-                <CumulativePositionPanel Snapshot="SitePnl.Current" Failed="pnlFailed"
-                                         Cards="CumulativeCardsFor(GridProjects)"
-                                         IncludeLabourAccrual="includeLabourAccrual"
-                                         BasisLabel="@BasisLabel"
-                                         OnSynced="LoadSitePnlAsync" />
-            }
+        @if (selectionInitialised && SelectedProjects.Count > 0
+             && SitePnl.Current is { IsConfigured: true } && MovementFor(GridProjects) is { } movement)
+        {
+            <RunningProfitPanel Movement="movement" BasisLabel="@BasisLabel"
+                                @bind-IncludeLabourAccrual="includeLabourAccrual"
+                                AccrualHover="AccrualHover"
+                                AccrualOwnFor="AccrualOwnFor"
+                                AccrualToDateFor="AccrualToDateFor" />
         }
-    </section>
-</ApprovedSessionGate>
+
+        @if (!selectionInitialised || SelectedProjects.Count > 0)
+        {
+            <ProfitSummaryStrip Rows="@(TableReady && SelectedProjects.Count > 0 ? LoadedRows() : null)" />
+        }
+
+        @* One gate for the bridge and the table together: every bar, row and total is the same
+           arithmetic over the same sources, so the region waits for every selected project
+           before showing any of it. *@
+        <LoadGate IsLoading="@(!TableReady)" Prominent="true" Label="Loading profit figures">
+        @if (SelectedProjects.Count == 0)
+        {
+            <div class="panel p-8 text-center">
+                <p class="text-sm text-content">No projects selected — pick some in the filter above.</p>
+            </div>
+        }
+        else
+        {
+            var rows = LoadedRows();
+            var total = ProfitRow.TotalOf(rows);
+            var bridge = BridgeFor(rows, total);
+
+            @if (FailedSelectedProjects.Count > 0)
+            {
+                <Notice Tone="Tone.Negative" Class="mb-4">
+                    The profit figures could not be loaded for @string.Join(", ", FailedSelectedProjects.Select(p => p.Reference)) — those rows show zeros.
+                    <button type="button" class="underline underline-offset-2 ml-1" @onclick="RetryFailedAsync">Retry</button>
+                </Notice>
+            }
+
+            @if (bridge is not null)
+            {
+                <BudgetForecastBridge Bridge="bridge" />
+            }
+
+            <ProfitTable Rows="rows" Total="total"
+                         SortColumn="@sortColumn" SortDescending="sortDescending" OnSort="SortBy" />
+            <ProfitTableNotes />
+        }
+        </LoadGate>
+
+        @if (selectionInitialised && SelectedProjects.Count > 0
+             && SitePnl.Current is { IsConfigured: true } && MovementFor(GridProjects) is { } trend)
+        {
+            <TrajectoryPanel Cards="TrajectoriesFor(trend)" BasisLabel="@BasisLabel" />
+        }
+
+        @if (selectionInitialised && SelectedProjects.Count > 0)
+        {
+            <CumulativePositionPanel Snapshot="SitePnl.Current" Failed="pnlFailed"
+                                     Cards="CumulativeCardsFor(GridProjects)"
+                                     IncludeLabourAccrual="includeLabourAccrual"
+                                     BasisLabel="@BasisLabel"
+                                     OnSynced="LoadSitePnlAsync" />
+        }
+    }
+</Page>

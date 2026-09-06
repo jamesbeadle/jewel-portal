@@ -23,168 +23,157 @@
     to guess: a site or code with no row here is a skip, reported by name.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
-    var mappings = Labour.XeroMappings();
+<Page Class="max-w-5xl">
+    @{
+        var mappings = Labour.XeroMappings();
+    }
 
-    <section class="px-6 md:px-8 py-8 max-w-5xl">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-            <h2 class="text-lg font-semibold text-content">Xero mapping</h2>
-            <Toolbar>
-                <ToolbarButton Icon="refresh" Label="Refresh" Busy="@refreshing" OnClick="RefreshAsync" />
-            </Toolbar>
-        </div>
-        <p class="text-sm text-content-subtle mb-5 max-w-3xl">
-            Where each site and cost code lands in Xero. Changing a mapping starts a new dated row
-            and closes the old one — history keeps reporting through the mapping that was in force
-            at the time, so renames in Xero never rewrite the past.
-        </p>
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+        <h2 class="text-lg font-semibold text-content">Xero mapping</h2>
+        <Toolbar>
+            <ToolbarButton Icon="refresh" Label="Refresh" Busy="@refreshing" OnClick="RefreshAsync" />
+        </Toolbar>
+    </div>
+    <p class="text-sm text-content-subtle mb-5 max-w-3xl">
+        Where each site and cost code lands in Xero. Changing a mapping starts a new dated row
+        and closes the old one — history keeps reporting through the mapping that was in force
+        at the time, so renames in Xero never rewrite the past.
+    </p>
 
-        @if (actionError is not null)
+    @if (actionError is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
+    }
+
+    <Panel Title="Sites → Xero tracking" Class="mb-6" BodyClass="p-5"
+           IsLoading="@(!MappingsReady && !dataFailed)" LoadingLabel="Loading mappings">
+        @if (dataFailed || mappings is null)
         {
-            <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
+            <p class="text-sm text-negative">Couldn't load the mappings — refresh to try again.</p>
         }
+        else
+        {
+            <div class="flex flex-wrap items-end gap-2 mb-4">
+                <label class="block text-sm text-content-muted">Project
+                    <select class="field mt-1" @bind="siteProjectId">
+                        <option value="">Project…</option>
+                        @foreach (var project in Projects.Current ?? Array.Empty<Project>())
+                        {
+                            <option value="@project.ProjectId">@project.Name</option>
+                        }
+                    </select>
+                </label>
+                <label class="block text-sm text-content-muted">Xero Sites option
+                    <select class="field mt-1" @bind="siteOptionName" disabled="@(SiteOptions().Count == 0)">
+                        <option value="">@(SiteOptions().Count == 0 ? "Loading options…" : "Sites option…")</option>
+                        @foreach (var option in SiteOptions())
+                        {
+                            <option value="@option.Name">@option.Name</option>
+                        }
+                    </select>
+                </label>
+                <button type="button" class="btn-secondary" disabled="@isSaving" @onclick="SaveSiteMappingAsync">Set mapping</button>
+            </div>
 
-        <Panel Title="Sites → Xero tracking" Class="mb-6" BodyClass="p-5"
-               IsLoading="@(!MappingsReady && !dataFailed)" LoadingLabel="Loading mappings">
-            @if (dataFailed || mappings is null)
+            var openSites = mappings.Sites.Where(row => row.EffectiveTo is null).ToList();
+            @if (openSites.Count == 0)
             {
-                <p class="text-sm text-negative">Couldn't load the mappings — refresh to try again.</p>
+                <p class="text-sm text-content-subtle italic">No sites mapped yet — the coding run will skip every site until they are.</p>
             }
             else
             {
-                <div class="flex flex-wrap items-end gap-2 mb-4">
-                    <label class="block text-sm text-content-muted">Project
-                        <select class="field mt-1" @bind="siteProjectId">
-                            <option value="">Project…</option>
-                            @foreach (var project in Projects.Current ?? Array.Empty<Project>())
-                            {
-                                <option value="@project.ProjectId">@project.Name</option>
-                            }
-                        </select>
-                    </label>
-                    <label class="block text-sm text-content-muted">Xero Sites option
-                        <select class="field mt-1" @bind="siteOptionName" disabled="@(SiteOptions().Count == 0)">
-                            <option value="">@(SiteOptions().Count == 0 ? "Loading options…" : "Sites option…")</option>
-                            @foreach (var option in SiteOptions())
-                            {
-                                <option value="@option.Name">@option.Name</option>
-                            }
-                        </select>
-                    </label>
-                    <button type="button" class="btn-secondary" disabled="@isSaving" @onclick="SaveSiteMappingAsync">Set mapping</button>
-                </div>
-
-                var openSites = mappings.Sites.Where(row => row.EffectiveTo is null).ToList();
-                @if (openSites.Count == 0)
-                {
-                    <p class="text-sm text-content-subtle italic">No sites mapped yet — the coding run will skip every site until they are.</p>
-                }
-                else
-                {
-                    <table class="w-full text-sm max-w-3xl">
-                        <thead>
-                            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
-                                <th class="py-2 pr-3">Project</th>
-                                <th class="py-2 pr-3">Xero Sites option</th>
-                                <th class="py-2">Since</th>
+                <table class="w-full text-sm max-w-3xl">
+                    <thead>
+                        <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                            <th class="py-2 pr-3">Project</th>
+                            <th class="py-2 pr-3">Xero Sites option</th>
+                            <th class="py-2">Since</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in openSites)
+                        {
+                            <tr class="border-b border-line/60">
+                                <td class="py-1.5 pr-3 text-content">@row.ProjectName</td>
+                                <td class="py-1.5 pr-3 text-content-muted">@row.XeroTrackingOptionName</td>
+                                <td class="py-1.5 text-content-subtle">@row.EffectiveFrom.ToString("dd MMM yyyy")</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var row in openSites)
-                            {
-                                <tr class="border-b border-line/60">
-                                    <td class="py-1.5 pr-3 text-content">@row.ProjectName</td>
-                                    <td class="py-1.5 pr-3 text-content-muted">@row.XeroTrackingOptionName</td>
-                                    <td class="py-1.5 text-content-subtle">@row.EffectiveFrom.ToString("dd MMM yyyy")</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                }
+                        }
+                    </tbody>
+                </table>
             }
-        </Panel>
+        }
+    </Panel>
 
-        <Panel Title="Cost codes → Xero tracking & accounts" Class="mb-6" BodyClass="p-5"
-               IsLoading="@(!MappingsReady && !dataFailed)" LoadingLabel="Loading mappings">
-            @if (dataFailed || mappings is null)
+    <Panel Title="Cost codes → Xero tracking & accounts" Class="mb-6" BodyClass="p-5"
+           IsLoading="@(!MappingsReady && !dataFailed)" LoadingLabel="Loading mappings">
+        @if (dataFailed || mappings is null)
+        {
+            <p class="text-sm text-negative">Couldn't load the mappings — refresh to try again.</p>
+        }
+        else
+        {
+            <div class="flex flex-wrap items-end gap-2 mb-4">
+                <label class="block text-sm text-content-muted">Cost code
+                    <select class="field mt-1" @bind="codeCostCode">
+                        <option value="">Cost code…</option>
+                        @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
+                        {
+                            <option value="@centre.Code">@centre.Code — @centre.Name</option>
+                        }
+                    </select>
+                </label>
+                <label class="block text-sm text-content-muted">Labour account
+                    <input class="field mt-1 w-28" @bind="codeLabourAccount" placeholder="e.g. 310" />
+                </label>
+                <label class="block text-sm text-content-muted">Materials account
+                    <input class="field mt-1 w-28" @bind="codeMaterialsAccount" placeholder="e.g. 312" />
+                </label>
+                <label class="block text-sm text-content-muted">Travel account
+                    <input class="field mt-1 w-28" @bind="codeTravelAccount" placeholder="e.g. 493" />
+                </label>
+                <button type="button" class="btn-secondary" disabled="@isSaving" @onclick="SaveCodeMappingAsync">Set mapping</button>
+            </div>
+            <p class="text-xs text-content-subtle mb-4">
+                The cost-code tracking option defaults to the code itself (the approval flow
+                already creates missing options in Xero); the account codes decide where each
+                line nature posts — CIS labour, CIS materials, travel.
+            </p>
+
+            var openCodes = mappings.CostCodes.Where(row => row.EffectiveTo is null).ToList();
+            @if (openCodes.Count == 0)
             {
-                <p class="text-sm text-negative">Couldn't load the mappings — refresh to try again.</p>
+                <p class="text-sm text-content-subtle italic">No cost codes mapped yet.</p>
             }
             else
             {
-                <div class="flex flex-wrap items-end gap-2 mb-4">
-                    <label class="block text-sm text-content-muted">Cost code
-                        <select class="field mt-1" @bind="codeCostCode">
-                            <option value="">Cost code…</option>
-                            @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
-                            {
-                                <option value="@centre.Code">@centre.Code — @centre.Name</option>
-                            }
-                        </select>
-                    </label>
-                    <label class="block text-sm text-content-muted">Labour account
-                        <input class="field mt-1 w-28" @bind="codeLabourAccount" placeholder="e.g. 310" />
-                    </label>
-                    <label class="block text-sm text-content-muted">Materials account
-                        <input class="field mt-1 w-28" @bind="codeMaterialsAccount" placeholder="e.g. 312" />
-                    </label>
-                    <label class="block text-sm text-content-muted">Travel account
-                        <input class="field mt-1 w-28" @bind="codeTravelAccount" placeholder="e.g. 493" />
-                    </label>
-                    <button type="button" class="btn-secondary" disabled="@isSaving" @onclick="SaveCodeMappingAsync">Set mapping</button>
-                </div>
-                <p class="text-xs text-content-subtle mb-4">
-                    The cost-code tracking option defaults to the code itself (the approval flow
-                    already creates missing options in Xero); the account codes decide where each
-                    line nature posts — CIS labour, CIS materials, travel.
-                </p>
-
-                var openCodes = mappings.CostCodes.Where(row => row.EffectiveTo is null).ToList();
-                @if (openCodes.Count == 0)
-                {
-                    <p class="text-sm text-content-subtle italic">No cost codes mapped yet.</p>
-                }
-                else
-                {
-                    <table class="w-full text-sm max-w-3xl">
-                        <thead>
-                            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
-                                <th class="py-2 pr-3">Cost code</th>
-                                <th class="py-2 pr-3">Labour</th>
-                                <th class="py-2 pr-3">Materials</th>
-                                <th class="py-2 pr-3">Travel</th>
-                                <th class="py-2">Since</th>
+                <table class="w-full text-sm max-w-3xl">
+                    <thead>
+                        <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                            <th class="py-2 pr-3">Cost code</th>
+                            <th class="py-2 pr-3">Labour</th>
+                            <th class="py-2 pr-3">Materials</th>
+                            <th class="py-2 pr-3">Travel</th>
+                            <th class="py-2">Since</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in openCodes)
+                        {
+                            <tr class="border-b border-line/60">
+                                <td class="py-1.5 pr-3 text-content tabular-nums">@row.CostCode</td>
+                                <td class="py-1.5 pr-3 text-content-muted tabular-nums">@Blank(row.LabourAccountCode)</td>
+                                <td class="py-1.5 pr-3 text-content-muted tabular-nums">@Blank(row.MaterialsAccountCode)</td>
+                                <td class="py-1.5 pr-3 text-content-muted tabular-nums">@Blank(row.TravelAccountCode)</td>
+                                <td class="py-1.5 text-content-subtle">@row.EffectiveFrom.ToString("dd MMM yyyy")</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var row in openCodes)
-                            {
-                                <tr class="border-b border-line/60">
-                                    <td class="py-1.5 pr-3 text-content tabular-nums">@row.CostCode</td>
-                                    <td class="py-1.5 pr-3 text-content-muted tabular-nums">@Blank(row.LabourAccountCode)</td>
-                                    <td class="py-1.5 pr-3 text-content-muted tabular-nums">@Blank(row.MaterialsAccountCode)</td>
-                                    <td class="py-1.5 pr-3 text-content-muted tabular-nums">@Blank(row.TravelAccountCode)</td>
-                                    <td class="py-1.5 text-content-subtle">@row.EffectiveFrom.ToString("dd MMM yyyy")</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                }
+                        }
+                    </tbody>
+                </table>
             }
-        </Panel>
-    </section>
-}
+        }
+    </Panel>
+</Page>
 
 @code {
     private bool sessionReady;

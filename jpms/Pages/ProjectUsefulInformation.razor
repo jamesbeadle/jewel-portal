@@ -12,11 +12,11 @@
     login. The list itself lives in UsefulInformationPanel.
 *@
 
-<ApprovedSessionGate>
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="useful-information">
         <UsefulInformationPanel ProjectId="@ProjectId" />
     </ProjectPageShell>
-</ApprovedSessionGate>
+</Page>
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";

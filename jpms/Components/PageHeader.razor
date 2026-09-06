@@ -1,0 +1,69 @@
+@namespace Jewel.JPMS.Components
+
+@*
+    THE page header — one per view, directly inside <Page>. The top bar (PageHeading in the
+    layout) already names the page, exactly as the Figma puts the page title in the top bar
+    and nowhere else, so a REGISTER page gives no Title here: its header is the subtitle / count
+    strapline and the actions. A RECORD page's Title is the record itself — "V72 · Kitchen
+    slab", the project's name — with its reference as the Eyebrow.
+
+    Actions is the view's Toolbar (icon buttons, exports, filters); Primary is the ONE labelled
+    green button the page is allowed — "Raise RFI", "New architect". Nothing else on the page is
+    btn-primary. Subtitle text that waits on data (a count) goes in SubtitleContent and simply
+    doesn't render until it is known — never a placeholder zero.
+*@
+
+@if (HasTitleBlock || HasActions)
+{
+    <header class="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 @Class">
+        <div class="min-w-0">
+            @if (Eyebrow is not null)
+            {
+                <p class="text-sm font-medium text-content-subtle mb-1">@Eyebrow</p>
+            }
+            @if (TitleContent is not null)
+            {
+                <h1 class="text-xl font-medium text-content leading-tight">@TitleContent</h1>
+            }
+            else if (Title is not null)
+            {
+                <h1 class="text-xl font-medium text-content leading-tight truncate">@Title</h1>
+            }
+            @if (SubtitleContent is not null)
+            {
+                <div class="text-sm text-content-muted @(Title is not null || TitleContent is not null ? "mt-1" : "")">@SubtitleContent</div>
+            }
+            else if (Subtitle is not null)
+            {
+                <p class="text-sm text-content-muted @(Title is not null || TitleContent is not null ? "mt-1" : "")">@Subtitle</p>
+            }
+        </div>
+        @if (HasActions)
+        {
+            <div class="flex flex-wrap items-center gap-3 shrink-0">
+                @Actions
+                @Primary
+            </div>
+        }
+    </header>
+}
+
+@code {
+    /// <summary>A record page's title — the record. Omit on register pages (the top bar names them).</summary>
+    [Parameter] public string? Title { get; set; }
+    /// <summary>Rich title (reference badge + name, prev/next arrows). Wins over Title.</summary>
+    [Parameter] public RenderFragment? TitleContent { get; set; }
+    /// <summary>The line above the title — a reference, a parent.</summary>
+    [Parameter] public string? Eyebrow { get; set; }
+    [Parameter] public string? Subtitle { get; set; }
+    /// <summary>Subtitle with markup or data-dependent parts. Wins over Subtitle.</summary>
+    [Parameter] public RenderFragment? SubtitleContent { get; set; }
+    /// <summary>The Toolbar and other secondary controls.</summary>
+    [Parameter] public RenderFragment? Actions { get; set; }
+    /// <summary>The ONE btn-primary on the page.</summary>
+    [Parameter] public RenderFragment? Primary { get; set; }
+    [Parameter] public string Class { get; set; } = "";
+
+    private bool HasTitleBlock => Title is not null || TitleContent is not null || Eyebrow is not null || Subtitle is not null || SubtitleContent is not null;
+    private bool HasActions => Actions is not null || Primary is not null;
+}

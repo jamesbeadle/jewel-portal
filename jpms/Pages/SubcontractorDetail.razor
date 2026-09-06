@@ -9,42 +9,28 @@
 
 <PageTitle>@PageTitleText · JPMS</PageTitle>
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!CanAccess)
-{
-    <section class="px-6 md:px-8 py-12">
+<Page>
+    @if (!CanAccess)
+    {
         <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
         <p class="text-content-muted">The company directory is restricted to administrators, the managing and finance directors, and project managers.</p>
-    </section>
-}
-else if (!SubcontractorStore.IsLoaded)
-{
-    @* Directory fetch still in flight — don't flash "not found" before it lands. *@
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (subcontractor is null)
-{
-    <section class="px-6 md:px-8 py-12">
+    }
+    else if (!SubcontractorStore.IsLoaded)
+    {
+        @* Directory fetch still in flight — don't flash "not found" before it lands. *@
+        <section class="px-6 md:px-8 py-12">
+            <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+        </section>
+    }
+    else if (subcontractor is null)
+    {
         <h1 class="text-2xl font-semibold text-content mb-2">Subcontractor not found</h1>
         <p class="text-content-muted">
             <a class="text-content underline" href="/directory">Back to directory</a>.
         </p>
-    </section>
-}
-else
-{
-    <section class="px-6 md:px-8 py-8 md:py-12">
+    }
+    else
+    {
         <nav class="mb-4 text-sm">
             <a href="/directory" class="text-content-subtle hover:text-content underline underline-offset-4">Subcontractors</a>
             <span class="text-content-subtle mx-2">/</span>
@@ -332,6 +318,6 @@ else
                 </div>
             </div>
         </Modal>
-    </section>
-}
+    }
+</Page>
 

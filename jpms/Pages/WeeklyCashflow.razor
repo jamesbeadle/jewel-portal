@@ -42,138 +42,136 @@
     working surface — without the bank position.
 *@
 
-<ApprovedSessionGate>
-    <section class="px-6 md:px-8 py-8 md:py-12">
-        <header class="mb-6 md:mb-8 flex items-end justify-between gap-4 flex-wrap">
-            <div>
-                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Company</p>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Weekly Cashflow</h1>
-                <p class="text-sm text-content-muted mt-1">
-                    The next @WeeklyCashflowMaths.DefaultWeekCount weeks, week by week — every outstanding bill and invoice from Xero, plus the
-                    outgoings it can't see. Move any entry to the week it will really be paid.
-                </p>
-            </div>
-            <div class="flex items-center gap-3">
-                <Toolbar>
-                    <ExportToExcelButton FileName="Weekly cashflow"
-                                         Disabled="@(!GridReady || !XeroReady)"
-                                         BuildWorkbook="BuildExportWorkbook" />
-                    <ToolbarDivider />
-                    <ToolbarButton Icon="folder" Label="Group suppliers"
-                                   Disabled="@(!GridReady || planFailed)" OnClick="() => groupsModal.Open()" />
-                    <ToolbarButton Icon="refresh" Label="Refresh from Xero"
-                                   Busy="@isRefreshing" OnClick="ForceRefreshAsync" />
-                </Toolbar>
-                @* A control, so never gated — disabled until the plan has landed, in its own language. *@
-                <button type="button" class="btn-primary" disabled="@(!GridReady || planFailed)" @onclick="() => itemModal.OpenAdd(today)">Add item</button>
-            </div>
-        </header>
+<Page>
+    <header class="mb-6 md:mb-8 flex items-end justify-between gap-4 flex-wrap">
+        <div>
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Company</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Weekly Cashflow</h1>
+            <p class="text-sm text-content-muted mt-1">
+                The next @WeeklyCashflowMaths.DefaultWeekCount weeks, week by week — every outstanding bill and invoice from Xero, plus the
+                outgoings it can't see. Move any entry to the week it will really be paid.
+            </p>
+        </div>
+        <div class="flex items-center gap-3">
+            <Toolbar>
+                <ExportToExcelButton FileName="Weekly cashflow"
+                                     Disabled="@(!GridReady || !XeroReady)"
+                                     BuildWorkbook="BuildExportWorkbook" />
+                <ToolbarDivider />
+                <ToolbarButton Icon="folder" Label="Group suppliers"
+                               Disabled="@(!GridReady || planFailed)" OnClick="() => groupsModal.Open()" />
+                <ToolbarButton Icon="refresh" Label="Refresh from Xero"
+                               Busy="@isRefreshing" OnClick="ForceRefreshAsync" />
+            </Toolbar>
+            @* A control, so never gated — disabled until the plan has landed, in its own language. *@
+            <button type="button" class="btn-primary" disabled="@(!GridReady || planFailed)" @onclick="() => itemModal.OpenAdd(today)">Add item</button>
+        </div>
+    </header>
 
-        @{
-            // Computed ONCE per render and threaded through — the tiles, the bands and the
-            // export must all describe the same grid.
-            var view = GridReady && XeroReady ? BuildView() : null;
-        }
+    @{
+        // Computed ONCE per render and threaded through — the tiles, the bands and the
+        // export must all describe the same grid.
+        var view = GridReady && XeroReady ? BuildView() : null;
+    }
 
-        <WeeklyKpiStrip IsDirector="IsDirector" Bank="BankSnapshot" BankReady="BankReady"
-                        View="view" FetchedText="@FetchedText" />
+    <WeeklyKpiStrip IsDirector="IsDirector" Bank="BankSnapshot" BankReady="BankReady"
+                    View="view" FetchedText="@FetchedText" />
 
-        @if (moveError is not null)
+    @if (moveError is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-4">
+            @moveError
+            <button type="button" class="underline underline-offset-2 ml-1" @onclick="() => moveError = null">Dismiss</button>
+        </Notice>
+    }
+
+    @* One gate for the whole grid: every cell is arithmetic over all three sources, so it
+       reveals in one piece. A failed fetch opens the gate to a message — the toast carries
+       the reference and the detail. *@
+    <LoadGate IsLoading="@(!GridReady)" Prominent="true" Label="Loading the weekly cashflow">
+        @if (planFailed)
         {
-            <Notice Tone="Tone.Negative" Class="mb-4">
-                @moveError
-                <button type="button" class="underline underline-offset-2 ml-1" @onclick="() => moveError = null">Dismiss</button>
-            </Notice>
+            <p class="text-sm text-negative">Couldn't load the weekly plan. The details are in the red bar at the top — reload to try again.</p>
         }
-
-        @* One gate for the whole grid: every cell is arithmetic over all three sources, so it
-           reveals in one piece. A failed fetch opens the gate to a message — the toast carries
-           the reference and the detail. *@
-        <LoadGate IsLoading="@(!GridReady)" Prominent="true" Label="Loading the weekly cashflow">
-            @if (planFailed)
+        else if (PayablesSnapshot is { IsConfigured: false } || ReceivablesSnapshot is { IsConfigured: false })
+        {
+            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+                Xero isn't connected yet. Add the custom connection's credentials as the
+                <span class="font-mono text-content">Xero__ClientId</span> and
+                <span class="font-mono text-content">Xero__ClientSecret</span> app settings on the API, then reload.
+            </div>
+        }
+        else if (PayablesSnapshot?.Error is { } payablesError)
+        {
+            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+                <p class="text-content font-medium mb-1">Xero returned an error reading the bills</p>
+                <p>@payablesError</p>
+            </div>
+        }
+        else if (ReceivablesSnapshot?.Error is { } receivablesError)
+        {
+            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+                <p class="text-content font-medium mb-1">Xero returned an error reading the invoices</p>
+                <p>@receivablesError</p>
+            </div>
+        }
+        else if (view is not null)
+        {
+            @if (PayablesSnapshot!.Truncated || ReceivablesSnapshot!.Truncated)
             {
-                <p class="text-sm text-negative">Couldn't load the weekly plan. The details are in the red bar at the top — reload to try again.</p>
-            }
-            else if (PayablesSnapshot is { IsConfigured: false } || ReceivablesSnapshot is { IsConfigured: false })
-            {
-                <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
-                    Xero isn't connected yet. Add the custom connection's credentials as the
-                    <span class="font-mono text-content">Xero__ClientId</span> and
-                    <span class="font-mono text-content">Xero__ClientSecret</span> app settings on the API, then reload.
+                <div class="rounded-xl border border-line bg-surface-raised px-5 py-3 text-sm text-content-muted mb-6">
+                    Xero holds more outstanding documents than the read's page cap could fetch — these totals are
+                    incomplete. Raise the <span class="font-mono text-content">Xero__MaxPages</span> app setting.
                 </div>
             }
-            else if (PayablesSnapshot?.Error is { } payablesError)
-            {
-                <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
-                    <p class="text-content font-medium mb-1">Xero returned an error reading the bills</p>
-                    <p>@payablesError</p>
-                </div>
-            }
-            else if (ReceivablesSnapshot?.Error is { } receivablesError)
-            {
-                <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
-                    <p class="text-content font-medium mb-1">Xero returned an error reading the invoices</p>
-                    <p>@receivablesError</p>
-                </div>
-            }
-            else if (view is not null)
-            {
-                @if (PayablesSnapshot!.Truncated || ReceivablesSnapshot!.Truncated)
-                {
-                    <div class="rounded-xl border border-line bg-surface-raised px-5 py-3 text-sm text-content-muted mb-6">
-                        Xero holds more outstanding documents than the read's page cap could fetch — these totals are
-                        incomplete. Raise the <span class="font-mono text-content">Xero__MaxPages</span> app setting.
-                    </div>
-                }
 
-                <p class="text-xs text-content-subtle mb-3 max-w-4xl">
-                    <span class="font-medium text-content-muted">No signs to decode:</span> the band carries the
-                    direction — Cash in adds, Cash out subtracts. Anything overdue sits in the current week, never
-                    the past. An <span class="font-medium text-content-muted">Expected</span> (invoices) or
-                    <span class="font-medium text-content-muted">Planned</span> (bills) date set in Xero places the
-                    entry at that week instead of its due week — set it there once and this grid follows.
-                    Use ‹ › on an entry's cell to move it to the week it will really be paid — the
-                    <span class="text-accent">‣</span> marks a moved entry, and ↺ returns it to its due (or
-                    Xero-expected) week.
-                    Moves are shared: everyone sees the same plan. <span class="font-medium text-content-muted">Group
-                    suppliers</span> (toolbar) pulls chosen suppliers into one line; ⊘ on a Xero row excludes an
-                    entry that's already covered elsewhere — a direct debit, say — and parks it, struck through
-                    and uncounted, at the foot of its band. <span class="font-medium text-content-muted">Add item</span>
-                    (top right, or the row at the foot of Cash out) keeps the outgoings Xero can't see yet — a
-                    bill that hasn't landed, overheads, wages — one-off or recurring, each under its own band
-                    while it has a live item.
-                </p>
+            <p class="text-xs text-content-subtle mb-3 max-w-4xl">
+                <span class="font-medium text-content-muted">No signs to decode:</span> the band carries the
+                direction — Cash in adds, Cash out subtracts. Anything overdue sits in the current week, never
+                the past. An <span class="font-medium text-content-muted">Expected</span> (invoices) or
+                <span class="font-medium text-content-muted">Planned</span> (bills) date set in Xero places the
+                entry at that week instead of its due week — set it there once and this grid follows.
+                Use ‹ › on an entry's cell to move it to the week it will really be paid — the
+                <span class="text-accent">‣</span> marks a moved entry, and ↺ returns it to its due (or
+                Xero-expected) week.
+                Moves are shared: everyone sees the same plan. <span class="font-medium text-content-muted">Group
+                suppliers</span> (toolbar) pulls chosen suppliers into one line; ⊘ on a Xero row excludes an
+                entry that's already covered elsewhere — a direct debit, say — and parks it, struck through
+                and uncounted, at the foot of its band. <span class="font-medium text-content-muted">Add item</span>
+                (top right, or the row at the foot of Cash out) keeps the outgoings Xero can't see yet — a
+                bill that hasn't landed, overheads, wages — one-off or recurring, each under its own band
+                while it has a live item.
+            </p>
 
-                <WeeklyCashflowGrid View="view" IsDirector="IsDirector"
-                                    CollapsedBands="collapsedBands" OnToggleBand="ToggleBand"
-                                    SupplierGroups="GroupSlicesFor(view)"
-                                    ExpandedGroups="expandedGroups" MovingGroupIds="movingGroupIds"
-                                    OnToggleGroup="ToggleGroup"
-                                    OnResetGroupCell="args => ResetGroupCellAsync(args.Slice, args.CellIndex)"
-                                    OnMoveGroupCell="args => MoveGroupCellAsync(args.Slice, args.FromWeek, args.ToWeek)"
-                                    ExcludedSeeds="excludedSeeds" ExcludedByFor="ExcludedByFor"
-                                    MovingKeys="movingKeys" ExcludingKeys="excludingKeys"
-                                    OnEdit="itemId => itemModal.OpenEdit(itemId)"
-                                    OnAddItem="() => itemModal.OpenAdd(today)"
-                                    OnExclude="row => SetExclusionAsync(row.PlacementKey, true)"
-                                    OnRestore="key => SetExclusionAsync(key, false)"
-                                    OnReset="ResetEntryAsync"
-                                    OnMove="args => MoveEntryAsync(args.Entry, args.ToWeek)" />
+            <WeeklyCashflowGrid View="view" IsDirector="IsDirector"
+                                CollapsedBands="collapsedBands" OnToggleBand="ToggleBand"
+                                SupplierGroups="GroupSlicesFor(view)"
+                                ExpandedGroups="expandedGroups" MovingGroupIds="movingGroupIds"
+                                OnToggleGroup="ToggleGroup"
+                                OnResetGroupCell="args => ResetGroupCellAsync(args.Slice, args.CellIndex)"
+                                OnMoveGroupCell="args => MoveGroupCellAsync(args.Slice, args.FromWeek, args.ToWeek)"
+                                ExcludedSeeds="excludedSeeds" ExcludedByFor="ExcludedByFor"
+                                MovingKeys="movingKeys" ExcludingKeys="excludingKeys"
+                                OnEdit="itemId => itemModal.OpenEdit(itemId)"
+                                OnAddItem="() => itemModal.OpenAdd(today)"
+                                OnExclude="row => SetExclusionAsync(row.PlacementKey, true)"
+                                OnRestore="key => SetExclusionAsync(key, false)"
+                                OnReset="ResetEntryAsync"
+                                OnMove="args => MoveEntryAsync(args.Entry, args.ToWeek)" />
 
-                <p class="text-xs text-content-subtle mb-10 max-w-4xl">
-                    Every figure is an outstanding Xero document or an item added on this page — nothing is
-                    invented, and moving an entry changes <span class="font-medium text-content-muted">when</span>,
-                    never <span class="font-medium text-content-muted">how much</span>. Excluded entries are the
-                    one deliberate exception: parked, visible and uncounted, so a direct debit isn't paid twice
-                    on paper. Bills tie to
-                    <a class="underline underline-offset-2" href="/finance/aged-payables">Aged Payables</a>, invoices to
-                    <a class="underline underline-offset-2" href="/finance/aged-receivables">Aged Receivables</a>, to the penny.
-                    Xero read at @XeroFetchedText.
-                </p>
-            }
-        </LoadGate>
-    </section>
+            <p class="text-xs text-content-subtle mb-10 max-w-4xl">
+                Every figure is an outstanding Xero document or an item added on this page — nothing is
+                invented, and moving an entry changes <span class="font-medium text-content-muted">when</span>,
+                never <span class="font-medium text-content-muted">how much</span>. Excluded entries are the
+                one deliberate exception: parked, visible and uncounted, so a direct debit isn't paid twice
+                on paper. Bills tie to
+                <a class="underline underline-offset-2" href="/finance/aged-payables">Aged Payables</a>, invoices to
+                <a class="underline underline-offset-2" href="/finance/aged-receivables">Aged Receivables</a>, to the penny.
+                Xero read at @XeroFetchedText.
+            </p>
+        }
+    </LoadGate>
 
     <CashflowItemModal @ref="itemModal" />
     <SupplierGroupsModal @ref="groupsModal" />
-</ApprovedSessionGate>
+</Page>

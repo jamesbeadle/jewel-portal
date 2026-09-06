@@ -23,123 +23,112 @@
     in the view.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
-    var snapshot = Labour.Overview(year, month);
+<Page Class="max-w-7xl">
+    @{
+        var snapshot = Labour.Overview(year, month);
+    }
 
-    <section class="px-6 md:px-8 py-8 max-w-7xl">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-            <h2 class="text-lg font-semibold text-content">Labour overview</h2>
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2 text-sm">
-                    <button type="button" class="btn-secondary" disabled="@Loading" @onclick="() => MoveMonth(-1)">‹ Prev</button>
-                    <span class="text-content-subtle w-28 text-center">@MonthLabel</span>
-                    <button type="button" class="btn-secondary" disabled="@Loading" @onclick="() => MoveMonth(1)">Next ›</button>
-                </div>
-                <Toolbar>
-                    <ToolbarButton Icon="refresh" Label="Refresh" Busy="@refreshing" OnClick="RefreshAsync" />
-                    <ExportToExcelButton FileName="Labour-overview"
-                                         Disabled="@(snapshot is null)"
-                                         BuildWorkbook="BuildExportWorkbook" />
-                </Toolbar>
-                <button type="button" class="btn-primary" @onclick="() => weekEntryModal!.OpenAsync()">Enter a week</button>
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+        <h2 class="text-lg font-semibold text-content">Labour overview</h2>
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 text-sm">
+                <button type="button" class="btn-secondary" disabled="@Loading" @onclick="() => MoveMonth(-1)">‹ Prev</button>
+                <span class="text-content-subtle w-28 text-center">@MonthLabel</span>
+                <button type="button" class="btn-secondary" disabled="@Loading" @onclick="() => MoveMonth(1)">Next ›</button>
             </div>
+            <Toolbar>
+                <ToolbarButton Icon="refresh" Label="Refresh" Busy="@refreshing" OnClick="RefreshAsync" />
+                <ExportToExcelButton FileName="Labour-overview"
+                                     Disabled="@(snapshot is null)"
+                                     BuildWorkbook="BuildExportWorkbook" />
+            </Toolbar>
+            <button type="button" class="btn-primary" @onclick="() => weekEntryModal!.OpenAsync()">Enter a week</button>
         </div>
-        <p class="text-sm text-content-subtle mb-5 max-w-3xl">
-            Every JBB project in one view — this page ignores the project picked in the sidebar.
-            Projected cost across every worker for the month, and where each day actually went.
-            Contracted days multiplied by day rate, less every day recorded as holiday, a half day
-            or not worked. Days not yet submitted stay at the full rate, so the figure is only as
-            accurate as the submission rate below.
-        </p>
+    </div>
+    <p class="text-sm text-content-subtle mb-5 max-w-3xl">
+        Every JBB project in one view — this page ignores the project picked in the sidebar.
+        Projected cost across every worker for the month, and where each day actually went.
+        Contracted days multiplied by day rate, less every day recorded as holiday, a half day
+        or not worked. Days not yet submitted stay at the full rate, so the figure is only as
+        accurate as the submission rate below.
+    </p>
 
-        @if (actionError is not null)
-        {
-            <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
-        }
-        @if (weekSummaryLines is not null)
-        {
-            <Notice Tone="Tone.Positive" Class="mb-3">
-                @foreach (var line in weekSummaryLines)
-                {
-                    <p>@line</p>
-                }
-            </Notice>
-        }
-
-        @* ---- Forecast header: one leading figure, quiet secondaries, the confidence bar. ---- *@
-        <LabourForecastHeader Snapshot="snapshot" Loading="@(Loading && !dataFailed)" />
-
-        @* ---- View selector: local panes, not routes. ---- *@
-        <div class="flex items-center gap-1 mb-4">
-            @foreach (var (key, label) in Views)
+    @if (actionError is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
+    }
+    @if (weekSummaryLines is not null)
+    {
+        <Notice Tone="Tone.Positive" Class="mb-3">
+            @foreach (var line in weekSummaryLines)
             {
-                <button type="button"
-                        class="@(view == key ? "btn-secondary bg-surface-raised text-content" : "btn-secondary text-content-subtle")"
-                        @onclick="() => view = key">@label</button>
+                <p>@line</p>
             }
-        </div>
+        </Notice>
+    }
 
-        @if (view == "workers")
-        {
-            <WorkerPlacementTable @key="@($"workers:{MonthKey}")" Snapshot="snapshot" Loading="@(Loading && !dataFailed)" Year="year" Month="month"
-                                  MonthWeekdays="MonthWeekdays()" ColourOf="ColourOf"
-                                  OnRecordAbsence="OpenAbsenceToday" />
-        }
-        else if (view == "sites")
-        {
-            <SiteCostTable @key="@($"sites:{MonthKey}")" Snapshot="snapshot" Loading="@(Loading && !dataFailed)" ColourOf="ColourOf" />
-        }
-        else if (view == "costcodes")
-        {
-            <CostCodeTable Snapshot="snapshot" Loading="@(Loading && !dataFailed)" />
-        }
-        else if (view == "signoff")
-        {
-            <WeeklySignOffTable Snapshot="snapshot" Loading="@(Loading && !dataFailed)" MonthWeeks="MonthWeeks(snapshot)"
-                                MonthStart="@(new DateTime(year, month, 1))"
-                                OnSignOff="pick => SignOffAsync(pick.WorkerId, pick.WeekStart)"
-                                OnRemoveSignOff="pick => RemoveSignOffAsync(pick.WorkerId, pick.WeekStart)" />
-        }
-        else
-        {
-            <SettlementSchedulesPanel @key="@($"settlement:{MonthKey}")" Schedules="Labour.Schedules(year, month)"
-                                      Loading="@(!Labour.SchedulesLoadedFor(year, month) && !dataFailed)"
-                                      RunningCoding="isRunningCoding" CodingResults="codingResults" CodingPlan="codingPlan"
-                                      OnPreviewCoding="PreviewCodingAsync" OnRunCoding="RunCodingAsync" OnCancelPlan="CancelCodingPlan"
-                                      OnResetCoding="OpenCodingReset"
-                                      OnAddLine="OpenSettleLine" OnRemoveLine="RemoveSettlementLineAsync" />
-        }
+    @* ---- Forecast header: one leading figure, quiet secondaries, the confidence bar. ---- *@
+    <LabourForecastHeader Snapshot="snapshot" Loading="@(Loading && !dataFailed)" />
 
-        @* ---- Chase list: conditional panel — absent while loading, absent when clear. ---- *@
-        @if (snapshot is not null && snapshot.Chase.Count > 0)
+    @* ---- View selector: local panes, not routes. ---- *@
+    <div class="flex items-center gap-1 mb-4">
+        @foreach (var (key, label) in Views)
         {
-            <ChaseListPanel @key="@($"chase:{MonthKey}")" Items="snapshot.Chase" DismissedThisMonth="snapshot.DismissedThisMonth"
-                            OnDismissed="RefreshAsync" OnRecordAbsence="item => OpenAbsence(item.WorkerId, item.WorkerName, item.Date)" />
+            <button type="button"
+                    class="@(view == key ? "btn-secondary bg-surface-raised text-content" : "btn-secondary text-content-subtle")"
+                    @onclick="() => view = key">@label</button>
         }
-        @* A month whose chase list is empty but carries dismissals still says so — a clean list
-           should read as "reviewed", never "unchecked". *@
-        @if (snapshot is not null && snapshot.Chase.Count == 0 && snapshot.DismissedThisMonth > 0)
-        {
-            <p class="text-xs text-content-subtle mb-6">
-                Chase list clear — @snapshot.DismissedThisMonth day@(snapshot.DismissedThisMonth == 1 ? "" : "s")
-                dismissed this month (audited).
-            </p>
-        }
-    </section>
+    </div>
+
+    @if (view == "workers")
+    {
+        <WorkerPlacementTable @key="@($"workers:{MonthKey}")" Snapshot="snapshot" Loading="@(Loading && !dataFailed)" Year="year" Month="month"
+                              MonthWeekdays="MonthWeekdays()" ColourOf="ColourOf"
+                              OnRecordAbsence="OpenAbsenceToday" />
+    }
+    else if (view == "sites")
+    {
+        <SiteCostTable @key="@($"sites:{MonthKey}")" Snapshot="snapshot" Loading="@(Loading && !dataFailed)" ColourOf="ColourOf" />
+    }
+    else if (view == "costcodes")
+    {
+        <CostCodeTable Snapshot="snapshot" Loading="@(Loading && !dataFailed)" />
+    }
+    else if (view == "signoff")
+    {
+        <WeeklySignOffTable Snapshot="snapshot" Loading="@(Loading && !dataFailed)" MonthWeeks="MonthWeeks(snapshot)"
+                            MonthStart="@(new DateTime(year, month, 1))"
+                            OnSignOff="pick => SignOffAsync(pick.WorkerId, pick.WeekStart)"
+                            OnRemoveSignOff="pick => RemoveSignOffAsync(pick.WorkerId, pick.WeekStart)" />
+    }
+    else
+    {
+        <SettlementSchedulesPanel @key="@($"settlement:{MonthKey}")" Schedules="Labour.Schedules(year, month)"
+                                  Loading="@(!Labour.SchedulesLoadedFor(year, month) && !dataFailed)"
+                                  RunningCoding="isRunningCoding" CodingResults="codingResults" CodingPlan="codingPlan"
+                                  OnPreviewCoding="PreviewCodingAsync" OnRunCoding="RunCodingAsync" OnCancelPlan="CancelCodingPlan"
+                                  OnResetCoding="OpenCodingReset"
+                                  OnAddLine="OpenSettleLine" OnRemoveLine="RemoveSettlementLineAsync" />
+    }
+
+    @* ---- Chase list: conditional panel — absent while loading, absent when clear. ---- *@
+    @if (snapshot is not null && snapshot.Chase.Count > 0)
+    {
+        <ChaseListPanel @key="@($"chase:{MonthKey}")" Items="snapshot.Chase" DismissedThisMonth="snapshot.DismissedThisMonth"
+                        OnDismissed="RefreshAsync" OnRecordAbsence="item => OpenAbsence(item.WorkerId, item.WorkerName, item.Date)" />
+    }
+    @* A month whose chase list is empty but carries dismissals still says so — a clean list
+       should read as "reviewed", never "unchecked". *@
+    @if (snapshot is not null && snapshot.Chase.Count == 0 && snapshot.DismissedThisMonth > 0)
+    {
+        <p class="text-xs text-content-subtle mb-6">
+            Chase list clear — @snapshot.DismissedThisMonth day@(snapshot.DismissedThisMonth == 1 ? "" : "s")
+            dismissed this month (audited).
+        </p>
+    }
 
     <AbsenceModal @ref="absenceModal" Year="year" Month="month" />
     <SettlementLineModal @ref="settlementLineModal" Year="year" Month="month" />
     <CodingResetModal @ref="codingResetModal" Year="year" Month="month" />
     <WeekEntryModal @ref="weekEntryModal" OnSaved="lines => weekSummaryLines = lines" />
-}
+</Page>

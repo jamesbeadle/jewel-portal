@@ -15,18 +15,7 @@
 
 <PageTitle>Cost allocation · JPMS</PageTitle>
 
-@if (!sessionReady)
-{
-    <section class="w-full px-6 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     @* Full-width (no max-w cap): the allocation table is the whole page. A capped,
        centred container left growing side margins when zooming out instead of giving
        the columns the reclaimed space. *@
@@ -386,4 +375,4 @@ else
             }
         </Modal>
     </section>
-}
+</Page>

@@ -24,29 +24,17 @@
     same courtesy the other admin pages show.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (Session.ActiveRole != Role.Admin)
-{
-    <section class="px-6 md:px-8 py-12 max-w-2xl">
+<Page>
+    @if (Session.ActiveRole != Role.Admin)
+    {
         <div class="panel p-6">
             <p class="text-sm text-content-muted">
                 This area is for administrators. If you hold the Administrator role, switch to it to see the KPI register.
             </p>
         </div>
-    </section>
-}
-else
-{
-    <section class="px-6 md:px-8 py-8 md:py-12">
+    }
+    else
+    {
         <WorkspaceSectionNav />
         <header class="mb-6 md:mb-8">
             <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Admin</p>
@@ -190,59 +178,59 @@ else
                 </Panel>
             </div>
         }
-    </section>
 
-    <Modal IsOpen="editing is not null"
-           Title="@(editing is null ? "" : $"Edit {editing.Reference}")"
-           ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
-           ConfirmDisabled="@(busy || editPerson is null || editPerson.IsEmpty)"
-           OnCancel="() => editing = null"
-           OnConfirm="SaveEditAsync"
-           Class="max-w-xl">
-        @if (editing is not null)
-        {
+        <Modal IsOpen="editing is not null"
+               Title="@(editing is null ? "" : $"Edit {editing.Reference}")"
+               ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
+               ConfirmDisabled="@(busy || editPerson is null || editPerson.IsEmpty)"
+               OnCancel="() => editing = null"
+               OnConfirm="SaveEditAsync"
+               Class="max-w-xl">
+            @if (editing is not null)
+            {
+                <div class="space-y-4">
+                    @if (formError is not null)
+                    {
+                        <Notice Tone="Tone.Negative">@formError</Notice>
+                    }
+                    <p class="text-sm text-content truncate" title="@editing.Subject">@editing.Subject</p>
+                    <div class="space-y-1">
+                        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Filed under</label>
+                        <KpiPersonPicker Value="@editPerson" ValueChanged="v => editPerson = v" />
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Note <span class="font-normal normal-case">(optional)</span></label>
+                        <textarea class="field w-full" rows="3" @bind="editNote" @bind:event="oninput"></textarea>
+                    </div>
+                </div>
+            }
+        </Modal>
+
+        <Modal IsOpen="addingPerson"
+               Title="Add a person"
+               ConfirmLabel="@(busy ? "Adding…" : "Add person")"
+               ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(newPersonName))"
+               OnCancel="() => addingPerson = false"
+               OnConfirm="AddPersonAsync"
+               Class="max-w-md">
             <div class="space-y-4">
                 @if (formError is not null)
                 {
                     <Notice Tone="Tone.Negative">@formError</Notice>
                 }
-                <p class="text-sm text-content truncate" title="@editing.Subject">@editing.Subject</p>
+                <p class="text-sm text-content-muted">
+                    Someone at Jewel without a portal login — they'll be offered wherever a KPI is filed. Portal
+                    users are already offered by name and need no adding.
+                </p>
                 <div class="space-y-1">
-                    <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Filed under</label>
-                    <KpiPersonPicker Value="@editPerson" ValueChanged="v => editPerson = v" />
-                </div>
-                <div class="space-y-1">
-                    <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Note <span class="font-normal normal-case">(optional)</span></label>
-                    <textarea class="field w-full" rows="3" @bind="editNote" @bind:event="oninput"></textarea>
+                    <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Name</label>
+                    <input class="field w-full" placeholder="e.g. James Clark" @bind="newPersonName" @bind:event="oninput"
+                           @onkeydown="@(e => { if (e.Key == "Enter") _ = AddPersonAsync(); })" />
                 </div>
             </div>
-        }
-    </Modal>
-
-    <Modal IsOpen="addingPerson"
-           Title="Add a person"
-           ConfirmLabel="@(busy ? "Adding…" : "Add person")"
-           ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(newPersonName))"
-           OnCancel="() => addingPerson = false"
-           OnConfirm="AddPersonAsync"
-           Class="max-w-md">
-        <div class="space-y-4">
-            @if (formError is not null)
-            {
-                <Notice Tone="Tone.Negative">@formError</Notice>
-            }
-            <p class="text-sm text-content-muted">
-                Someone at Jewel without a portal login — they'll be offered wherever a KPI is filed. Portal
-                users are already offered by name and need no adding.
-            </p>
-            <div class="space-y-1">
-                <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Name</label>
-                <input class="field w-full" placeholder="e.g. James Clark" @bind="newPersonName" @bind:event="oninput"
-                       @onkeydown="@(e => { if (e.Key == "Enter") _ = AddPersonAsync(); })" />
-            </div>
-        </div>
-    </Modal>
-}
+        </Modal>
+    }
+</Page>
 
 @code {
     private bool sessionReady;

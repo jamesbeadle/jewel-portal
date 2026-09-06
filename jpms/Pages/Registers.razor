@@ -17,92 +17,90 @@
     visibility — the point of moving these out of Monday is that nothing lapses unseen.
 *@
 
-<ApprovedSessionGate>
-    <section class="px-6 md:px-8 py-8 max-w-6xl">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-            <h2 class="text-lg font-semibold text-content">Registers</h2>
-            <div class="flex items-center gap-3">
-                <Toolbar>
-                    <ToolbarButton Icon="refresh" Label="Refresh" Busy="@refreshing" OnClick="RefreshAsync" />
-                    <ExportToExcelButton FileName="Registers"
-                                         Disabled="@(Items.Current is null or { Count: 0 })"
-                                         BuildWorkbook="BuildExportWorkbook" />
-                </Toolbar>
-                <button type="button" class="btn-primary" @onclick="() => StartEdit(null)">Add item</button>
-            </div>
+<Page Class="max-w-6xl">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+        <h2 class="text-lg font-semibold text-content">Registers</h2>
+        <div class="flex items-center gap-3">
+            <Toolbar>
+                <ToolbarButton Icon="refresh" Label="Refresh" Busy="@refreshing" OnClick="RefreshAsync" />
+                <ExportToExcelButton FileName="Registers"
+                                     Disabled="@(Items.Current is null or { Count: 0 })"
+                                     BuildWorkbook="BuildExportWorkbook" />
+            </Toolbar>
+            <button type="button" class="btn-primary" @onclick="() => StartEdit(null)">Add item</button>
         </div>
-        <p class="text-sm text-content-subtle mb-5 max-w-3xl">
-            Insurances, subscriptions, vans and trade accounts, with the dates that matter.
-            Anything due inside 30 days is flagged; items deactivate rather than delete, so
-            history survives.
-        </p>
+    </div>
+    <p class="text-sm text-content-subtle mb-5 max-w-3xl">
+        Insurances, subscriptions, vans and trade accounts, with the dates that matter.
+        Anything due inside 30 days is flagged; items deactivate rather than delete, so
+        history survives.
+    </p>
 
-        @if (actionError is not null)
+    @if (actionError is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
+    }
+
+    <div class="flex items-center gap-1 mb-4">
+        @foreach (var (kind, label) in Kinds)
         {
-            <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
+            <button type="button"
+                    class="@(activeKind == kind ? "btn-secondary bg-surface-raised text-content" : "btn-secondary text-content-subtle")"
+                    @onclick="() => activeKind = kind">@label</button>
         }
+    </div>
 
-        <div class="flex items-center gap-1 mb-4">
-            @foreach (var (kind, label) in Kinds)
+    <Panel Title="@KindLabel(activeKind)" Class="mb-6" BodyClass="p-0"
+           IsLoading="@(Items.Current is null && !dataFailed)" LoadingLabel="Loading the register">
+        @if (dataFailed)
+        {
+            <p class="p-5 text-sm text-negative">Couldn't load the register — refresh to try again.</p>
+        }
+        else
+        {
+            var rows = (Items.Current ?? Array.Empty<RegisterItem>())
+                .Where(item => item.Kind == activeKind && item.IsActive).ToList();
+            @if (rows.Count == 0)
             {
-                <button type="button"
-                        class="@(activeKind == kind ? "btn-secondary bg-surface-raised text-content" : "btn-secondary text-content-subtle")"
-                        @onclick="() => activeKind = kind">@label</button>
-            }
-        </div>
-
-        <Panel Title="@KindLabel(activeKind)" Class="mb-6" BodyClass="p-0"
-               IsLoading="@(Items.Current is null && !dataFailed)" LoadingLabel="Loading the register">
-            @if (dataFailed)
-            {
-                <p class="p-5 text-sm text-negative">Couldn't load the register — refresh to try again.</p>
+                <p class="p-5 text-sm text-content-subtle italic">Nothing on this register yet — use Add item above.</p>
             }
             else
             {
-                var rows = (Items.Current ?? Array.Empty<RegisterItem>())
-                    .Where(item => item.Kind == activeKind && item.IsActive).ToList();
-                @if (rows.Count == 0)
-                {
-                    <p class="p-5 text-sm text-content-subtle italic">Nothing on this register yet — use Add item above.</p>
-                }
-                else
-                {
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
-                                <th class="px-5 py-3">Name</th>
-                                <th class="px-2 py-3">@CounterpartyLabel(activeKind)</th>
-                                <th class="px-2 py-3">@ReferenceLabel(activeKind)</th>
-                                <th class="px-2 py-3 text-right">Cost</th>
-                                <th class="px-2 py-3">Cycle</th>
-                                <th class="px-2 py-3">@KeyDateLabel(activeKind)</th>
-                                <th class="px-2 py-3">@SecondaryDateLabel(activeKind)</th>
-                                <th class="px-5 py-3"></th>
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                            <th class="px-5 py-3">Name</th>
+                            <th class="px-2 py-3">@CounterpartyLabel(activeKind)</th>
+                            <th class="px-2 py-3">@ReferenceLabel(activeKind)</th>
+                            <th class="px-2 py-3 text-right">Cost</th>
+                            <th class="px-2 py-3">Cycle</th>
+                            <th class="px-2 py-3">@KeyDateLabel(activeKind)</th>
+                            <th class="px-2 py-3">@SecondaryDateLabel(activeKind)</th>
+                            <th class="px-5 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in rows)
+                        {
+                            <tr class="border-b border-line/60 hover:bg-surface-raised/40">
+                                <td class="px-5 py-2.5 font-medium text-content">@item.Name</td>
+                                <td class="px-2 py-2.5 text-content-muted">@item.Counterparty</td>
+                                <td class="px-2 py-2.5 text-content-muted tabular-nums">@item.Reference</td>
+                                <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@(item.Cost == 0m ? "—" : item.Cost.ToString("£#,##0"))</td>
+                                <td class="px-2 py-2.5 text-content-subtle">@item.BillingCycle</td>
+                                <td class="px-2 py-2.5">@DueCell(item.KeyDate)</td>
+                                <td class="px-2 py-2.5">@DueCell(item.SecondaryDate)</td>
+                                <td class="px-5 py-2.5 text-right whitespace-nowrap">
+                                    <button type="button" class="btn-secondary mr-1" @onclick="() => StartEdit(item)">Edit</button>
+                                    <button type="button" class="btn-ghost text-negative" @onclick="() => DeactivateAsync(item)">Deactivate</button>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var item in rows)
-                            {
-                                <tr class="border-b border-line/60 hover:bg-surface-raised/40">
-                                    <td class="px-5 py-2.5 font-medium text-content">@item.Name</td>
-                                    <td class="px-2 py-2.5 text-content-muted">@item.Counterparty</td>
-                                    <td class="px-2 py-2.5 text-content-muted tabular-nums">@item.Reference</td>
-                                    <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@(item.Cost == 0m ? "—" : item.Cost.ToString("£#,##0"))</td>
-                                    <td class="px-2 py-2.5 text-content-subtle">@item.BillingCycle</td>
-                                    <td class="px-2 py-2.5">@DueCell(item.KeyDate)</td>
-                                    <td class="px-2 py-2.5">@DueCell(item.SecondaryDate)</td>
-                                    <td class="px-5 py-2.5 text-right whitespace-nowrap">
-                                        <button type="button" class="btn-secondary mr-1" @onclick="() => StartEdit(item)">Edit</button>
-                                        <button type="button" class="btn-ghost text-negative" @onclick="() => DeactivateAsync(item)">Deactivate</button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                }
+                        }
+                    </tbody>
+                </table>
             }
-        </Panel>
-    </section>
+        }
+    </Panel>
 
     <Modal IsOpen="@editOpen" Title="@(editId == "" ? $"Add — {KindLabel(activeKind)}" : "Edit item")"
            ConfirmLabel="@(saving ? "Saving…" : "Save")" ConfirmDisabled="@saving"
@@ -147,7 +145,7 @@
             }
         </div>
     </Modal>
-</ApprovedSessionGate>
+</Page>
 
 @code {
     private bool dataFailed;

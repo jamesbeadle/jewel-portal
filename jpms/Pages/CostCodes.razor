@@ -13,107 +13,209 @@
 
 <PageTitle>Cost codes · JPMS</PageTitle>
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!CanManage)
-{
-    <section class="px-6 md:px-8 py-12 text-content-subtle text-sm">You don't have access to cost codes.</section>
-}
-else
-{
-    <section class="px-6 md:px-8 py-8 md:py-12">
-        <WorkspaceSectionNav />
-        <header class="mb-6 flex items-end justify-between gap-4">
-            <div>
-                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Commercial</p>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Cost codes</h1>
-                <p class="text-sm text-content-muted mt-2">
-                    @if (activeTab == CostCodesTab.Ours)
-                    {
-                        <text>The global cost-code master. Every project's financials, valuation report and invoice
-                        allocations group by these codes. Retired codes keep their historical allocations.</text>
-                    }
-                    else if (activeTab == CostCodesTab.XeroSites)
-                    {
-                        <text>The options of Xero's Sites tracking category, spelt exactly as Xero holds them —
-                        the names a project's Xero site mapping must match for its costs to land on the right job.</text>
-                    }
-                    else
-                    {
-                        <text>The options of Xero's Cost Code tracking category, spelt exactly as Xero holds them,
-                        side by side with the system's own master list.</text>
-                    }
-                </p>
-            </div>
-            @if (activeTab == CostCodesTab.Ours)
-            {
-                <button type="button" class="btn-primary shrink-0" @onclick="OpenAdd">New cost code</button>
-            }
-            else
-            {
-                <Toolbar>
-                    <ToolbarButton Icon="refresh" Label="Refresh from Xero"
-                                   Busy="@xeroRefreshing" OnClick="ForceRefreshXeroAsync" />
-                </Toolbar>
-            }
-        </header>
-
-        <div class="mb-6 inline-flex flex-wrap rounded-lg border border-line overflow-hidden">
-            <button class="@TabCss(activeTab == CostCodesTab.Ours)" @onclick="() => SwitchTab(CostCodesTab.Ours)">
-                Our cost codes
-            </button>
-            <button class="@TabCss(activeTab == CostCodesTab.XeroSites)" @onclick="() => SwitchTab(CostCodesTab.XeroSites)">
-                Xero sites
-            </button>
-            <button class="@TabCss(activeTab == CostCodesTab.XeroCostCodes)" @onclick="() => SwitchTab(CostCodesTab.XeroCostCodes)">
-                Xero cost codes
-            </button>
+<Page CanAccess="CanManage" AccessDeniedMessage="You don't have access to cost codes.">
+    <WorkspaceSectionNav />
+    <header class="mb-6 flex items-end justify-between gap-4">
+        <div>
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Commercial</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Cost codes</h1>
+            <p class="text-sm text-content-muted mt-2">
+                @if (activeTab == CostCodesTab.Ours)
+                {
+                    <text>The global cost-code master. Every project's financials, valuation report and invoice
+                    allocations group by these codes. Retired codes keep their historical allocations.</text>
+                }
+                else if (activeTab == CostCodesTab.XeroSites)
+                {
+                    <text>The options of Xero's Sites tracking category, spelt exactly as Xero holds them —
+                    the names a project's Xero site mapping must match for its costs to land on the right job.</text>
+                }
+                else
+                {
+                    <text>The options of Xero's Cost Code tracking category, spelt exactly as Xero holds them,
+                    side by side with the system's own master list.</text>
+                }
+            </p>
         </div>
-
-        @if (loadError is not null)
-        {
-            <Notice Tone="Tone.Negative" Class="mb-4">@loadError</Notice>
-        }
-
         @if (activeTab == CostCodesTab.Ours)
         {
-        @* One gate over the whole body: the "Show retired" toggle and the export button are read
-           off the master list too, so they belong with the table rather than ahead of it. *@
-        <LoadGate IsLoading="@(!CostCodesReady)" Prominent="true" Label="Loading cost codes">
-        @if (costCodes is null)
-        {
-            <p class="text-sm text-negative">Couldn't load the cost codes. The reason is in the red bar above — reload to try again.</p>
-        }
-        else if (costCodes.Count == 0)
-        {
-            <div class="panel p-8 text-center text-sm text-content-subtle">No cost codes yet. Add one to start allocating costs.</div>
+            <button type="button" class="btn-primary shrink-0" @onclick="OpenAdd">New cost code</button>
         }
         else
         {
-            <div class="mb-3 flex items-center justify-end gap-4">
-                <label class="flex items-center gap-2 text-sm text-content-muted cursor-pointer select-none">
-                    <input type="checkbox" checked="@showRetired" @onchange="e => showRetired = (bool)e.Value!" />
-                    <span>Show retired</span>
-                </label>
-                <ExportToExcelButton FileName="Cost codes"
-                                     Disabled="@(AllCostCodes.Count == 0)"
-                                     ShowIncludeAllRows="@(!showRetired)"
-                                     IncludeAllLabel="Include retired"
-                                     BuildWorkbook="BuildExportWorkbook" />
+            <Toolbar>
+                <ToolbarButton Icon="refresh" Label="Refresh from Xero"
+                               Busy="@xeroRefreshing" OnClick="ForceRefreshXeroAsync" />
+            </Toolbar>
+        }
+    </header>
+
+    <div class="mb-6 inline-flex flex-wrap rounded-lg border border-line overflow-hidden">
+        <button class="@TabCss(activeTab == CostCodesTab.Ours)" @onclick="() => SwitchTab(CostCodesTab.Ours)">
+            Our cost codes
+        </button>
+        <button class="@TabCss(activeTab == CostCodesTab.XeroSites)" @onclick="() => SwitchTab(CostCodesTab.XeroSites)">
+            Xero sites
+        </button>
+        <button class="@TabCss(activeTab == CostCodesTab.XeroCostCodes)" @onclick="() => SwitchTab(CostCodesTab.XeroCostCodes)">
+            Xero cost codes
+        </button>
+    </div>
+
+    @if (loadError is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-4">@loadError</Notice>
+    }
+
+    @if (activeTab == CostCodesTab.Ours)
+    {
+    @* One gate over the whole body: the "Show retired" toggle and the export button are read
+       off the master list too, so they belong with the table rather than ahead of it. *@
+    <LoadGate IsLoading="@(!CostCodesReady)" Prominent="true" Label="Loading cost codes">
+    @if (costCodes is null)
+    {
+        <p class="text-sm text-negative">Couldn't load the cost codes. The reason is in the red bar above — reload to try again.</p>
+    }
+    else if (costCodes.Count == 0)
+    {
+        <div class="panel p-8 text-center text-sm text-content-subtle">No cost codes yet. Add one to start allocating costs.</div>
+    }
+    else
+    {
+        <div class="mb-3 flex items-center justify-end gap-4">
+            <label class="flex items-center gap-2 text-sm text-content-muted cursor-pointer select-none">
+                <input type="checkbox" checked="@showRetired" @onchange="e => showRetired = (bool)e.Value!" />
+                <span>Show retired</span>
+            </label>
+            <ExportToExcelButton FileName="Cost codes"
+                                 Disabled="@(AllCostCodes.Count == 0)"
+                                 ShowIncludeAllRows="@(!showRetired)"
+                                 IncludeAllLabel="Include retired"
+                                 BuildWorkbook="BuildExportWorkbook" />
+        </div>
+
+        @if (VisibleCostCodes.Count == 0)
+        {
+            <div class="panel p-8 text-center text-sm text-content-subtle">
+                No active cost codes. Turn on "Show retired" to see retired codes.
+            </div>
+        }
+        else
+        {
+        <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-content-subtle border-b border-line">
+                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Code</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Name</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium text-right hidden md:table-cell">Sort order</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Status</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var costCode in VisibleCostCodes)
+                    {
+                        <tr class="border-b border-line last:border-0 @(costCode.IsActive ? "" : "opacity-60")">
+                            <td class="px-4 py-3 font-medium text-content whitespace-nowrap">@costCode.Code</td>
+                            <td class="px-4 py-3 text-content-muted">@costCode.Name</td>
+                            <td class="px-4 py-3 text-right text-content-subtle hidden md:table-cell">@costCode.SortOrder</td>
+                            <td class="px-4 py-3">
+                                @if (costCode.IsActive)
+                                {
+                                    <Pill Tone="Tone.Positive">Active</Pill>
+                                }
+                                else
+                                {
+                                    <Pill Tone="Tone.Muted">Retired</Pill>
+                                }
+                            </td>
+                            <td class="px-4 py-3 text-right whitespace-nowrap">
+                                <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenEdit(costCode)">Edit</button>
+                                <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => ToggleActiveAsync(costCode)">
+                                    @(costCode.IsActive ? "Retire" : "Reinstate")
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    }
+    </LoadGate>
+    }
+    else
+    {
+    @* Both Xero tabs wait on the tracking snapshot in one piece; the sites tab additionally
+       waits on the project list so option rows and their linked projects land together. A
+       failed projects fetch opens the gate too (projectsFailed), or it would pulse forever. *@
+    <LoadGate IsLoading="@(!XeroTabReady)" Prominent="true" Label="Loading from Xero">
+    @{ var snapshot = XeroTracking.Snapshot(); }
+    @if (snapshot is null)
+    {
+        <p class="text-sm text-negative">Couldn't reach the API for Xero's tracking categories. The reason is in the red bar above — reload to try again.</p>
+    }
+    else if (!snapshot.IsConfigured)
+    {
+        <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+            Xero isn't connected yet. Add the custom connection's credentials as the
+            <span class="font-mono text-content">Xero__ClientId</span> and
+            <span class="font-mono text-content">Xero__ClientSecret</span> app settings on the API, then reload.
+        </div>
+    }
+    else if (snapshot.Error is not null)
+    {
+        <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+            <p class="text-content font-medium mb-1">Xero returned an error</p>
+            <p>@snapshot.Error</p>
+        </div>
+    }
+    else
+    {
+        var sites = activeTab == CostCodesTab.XeroSites;
+        var category = sites
+            ? snapshot.Categories.FirstOrDefault(c => c.IsSiteCategory)
+            : snapshot.Categories.FirstOrDefault(c => c.IsCostCodeCategory);
+
+        @if (category is null)
+        {
+            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+                <p class="text-content font-medium mb-1">
+                    Xero has no tracking category matching the configured @(sites ? "Sites" : "Cost Code") name
+                </p>
+                @if (snapshot.Categories.Count == 0)
+                {
+                    <p>Xero returned no tracking categories at all.</p>
+                }
+                else
+                {
+                    <p>
+                        The categories Xero does have:
+                        @string.Join(" · ", snapshot.Categories.Select(c => $"\"{c.Name}\"")).
+                        Point the API's Xero settings at one of these if it is the right one.
+                    </p>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="mb-3 flex items-center justify-between gap-4 flex-wrap">
+                <p class="text-xs text-content-subtle">
+                    Xero's tracking category is named "<span class="font-medium text-content">@category.Name</span>"
+                    · @category.Options.Count @(category.Options.Count == 1 ? "option" : "options")
+                    · fetched @FetchedText(snapshot)
+                </p>
+                @if (sites && projectsFailed)
+                {
+                    <p class="text-xs text-negative">Couldn't load the project list — the "Linked project" column can't be filled in.</p>
+                }
             </div>
 
-            @if (VisibleCostCodes.Count == 0)
+            @if (category.Options.Count == 0)
             {
                 <div class="panel p-8 text-center text-sm text-content-subtle">
-                    No active cost codes. Turn on "Show retired" to see retired codes.
+                    The "@category.Name" category has no options in Xero yet.
                 </div>
             }
             else
@@ -122,223 +224,104 @@ else
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="text-left text-content-subtle border-b border-line">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Code</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Name</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium text-right hidden md:table-cell">Sort order</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">@(sites ? "Xero site" : "Xero cost code")</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Status</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3"></th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">@(sites ? "Linked project" : "System cost code")</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var costCode in VisibleCostCodes)
+                        @foreach (var option in SortedOptions(category))
                         {
-                            <tr class="border-b border-line last:border-0 @(costCode.IsActive ? "" : "opacity-60")">
-                                <td class="px-4 py-3 font-medium text-content whitespace-nowrap">@costCode.Code</td>
-                                <td class="px-4 py-3 text-content-muted">@costCode.Name</td>
-                                <td class="px-4 py-3 text-right text-content-subtle hidden md:table-cell">@costCode.SortOrder</td>
+                            <tr class="border-b border-line last:border-0 @(option.IsArchived ? "opacity-60" : "")">
+                                @* whitespace-pre so a stray leading/trailing space in Xero's
+                                   spelling stays visible rather than being swallowed — exact
+                                   phrasing is what this tab is for. *@
+                                <td class="px-4 py-3 font-medium text-content whitespace-pre">@option.Name</td>
                                 <td class="px-4 py-3">
-                                    @if (costCode.IsActive)
+                                    @if (option.IsArchived)
                                     {
-                                        <Pill Tone="Tone.Positive">Active</Pill>
+                                        <Pill Tone="Tone.Muted">Archived</Pill>
                                     }
                                     else
                                     {
-                                        <Pill Tone="Tone.Muted">Retired</Pill>
+                                        <Pill Tone="Tone.Positive">Active</Pill>
                                     }
                                 </td>
-                                <td class="px-4 py-3 text-right whitespace-nowrap">
-                                    <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenEdit(costCode)">Edit</button>
-                                    <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => ToggleActiveAsync(costCode)">
-                                        @(costCode.IsActive ? "Retire" : "Reinstate")
-                                    </button>
+                                <td class="px-4 py-3 text-content-muted">
+                                    @if (sites)
+                                    {
+                                        var linked = ProjectsMappedTo(option.Name);
+                                        @if (linked.Count == 0)
+                                        {
+                                            <span class="text-content-subtle">—</span>
+                                        }
+                                        else
+                                        {
+                                            @string.Join(", ", linked.Select(p => p.Name))
+                                        }
+                                    }
+                                    else
+                                    {
+                                        var match = SystemCodeFor(option.Name);
+                                        @if (match is null)
+                                        {
+                                            <span class="text-content-subtle">—</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="font-medium text-content">@match.Code</span>
+                                            <span> · @match.Name</span>
+                                        }
+                                    }
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
-            }
-        }
-        </LoadGate>
-        }
-        else
-        {
-        @* Both Xero tabs wait on the tracking snapshot in one piece; the sites tab additionally
-           waits on the project list so option rows and their linked projects land together. A
-           failed projects fetch opens the gate too (projectsFailed), or it would pulse forever. *@
-        <LoadGate IsLoading="@(!XeroTabReady)" Prominent="true" Label="Loading from Xero">
-        @{ var snapshot = XeroTracking.Snapshot(); }
-        @if (snapshot is null)
-        {
-            <p class="text-sm text-negative">Couldn't reach the API for Xero's tracking categories. The reason is in the red bar above — reload to try again.</p>
-        }
-        else if (!snapshot.IsConfigured)
-        {
-            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
-                Xero isn't connected yet. Add the custom connection's credentials as the
-                <span class="font-mono text-content">Xero__ClientId</span> and
-                <span class="font-mono text-content">Xero__ClientSecret</span> app settings on the API, then reload.
-            </div>
-        }
-        else if (snapshot.Error is not null)
-        {
-            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
-                <p class="text-content font-medium mb-1">Xero returned an error</p>
-                <p>@snapshot.Error</p>
-            </div>
-        }
-        else
-        {
-            var sites = activeTab == CostCodesTab.XeroSites;
-            var category = sites
-                ? snapshot.Categories.FirstOrDefault(c => c.IsSiteCategory)
-                : snapshot.Categories.FirstOrDefault(c => c.IsCostCodeCategory);
 
-            @if (category is null)
+            @if (sites && !projectsFailed && UnmatchedSiteMappings(category) is { Count: > 0 } unmatched)
             {
-                <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
-                    <p class="text-content font-medium mb-1">
-                        Xero has no tracking category matching the configured @(sites ? "Sites" : "Cost Code") name
+                <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted mt-4">
+                    <p class="text-content font-medium mb-1">Project mappings that match no Xero site option</p>
+                    <p class="mb-2">
+                        These projects have a Xero site set that Xero's "@category.Name" category doesn't contain —
+                        their write-back will refuse until the mapping matches an option above, letter for letter.
                     </p>
-                    @if (snapshot.Categories.Count == 0)
-                    {
-                        <p>Xero returned no tracking categories at all.</p>
-                    }
-                    else
-                    {
-                        <p>
-                            The categories Xero does have:
-                            @string.Join(" · ", snapshot.Categories.Select(c => $"\"{c.Name}\"")).
-                            Point the API's Xero settings at one of these if it is the right one.
-                        </p>
-                    }
+                    <ul class="space-y-1">
+                        @foreach (var project in unmatched)
+                        {
+                            <li><span class="font-medium text-content">@project.Name</span> — mapped to "<span class="whitespace-pre">@project.XeroSiteName</span>"</li>
+                        }
+                    </ul>
                 </div>
             }
-            else
+            @if (!sites && SystemCodesWithoutXeroOption(category) is { Count: > 0 } missing)
             {
-                <div class="mb-3 flex items-center justify-between gap-4 flex-wrap">
-                    <p class="text-xs text-content-subtle">
-                        Xero's tracking category is named "<span class="font-medium text-content">@category.Name</span>"
-                        · @category.Options.Count @(category.Options.Count == 1 ? "option" : "options")
-                        · fetched @FetchedText(snapshot)
-                    </p>
-                    @if (sites && projectsFailed)
-                    {
-                        <p class="text-xs text-negative">Couldn't load the project list — the "Linked project" column can't be filled in.</p>
-                    }
-                </div>
-
-                @if (category.Options.Count == 0)
-                {
-                    <div class="panel p-8 text-center text-sm text-content-subtle">
-                        The "@category.Name" category has no options in Xero yet.
-                    </div>
-                }
-                else
-                {
-                <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="text-left text-content-subtle border-b border-line">
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">@(sites ? "Xero site" : "Xero cost code")</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Status</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">@(sites ? "Linked project" : "System cost code")</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var option in SortedOptions(category))
-                            {
-                                <tr class="border-b border-line last:border-0 @(option.IsArchived ? "opacity-60" : "")">
-                                    @* whitespace-pre so a stray leading/trailing space in Xero's
-                                       spelling stays visible rather than being swallowed — exact
-                                       phrasing is what this tab is for. *@
-                                    <td class="px-4 py-3 font-medium text-content whitespace-pre">@option.Name</td>
-                                    <td class="px-4 py-3">
-                                        @if (option.IsArchived)
-                                        {
-                                            <Pill Tone="Tone.Muted">Archived</Pill>
-                                        }
-                                        else
-                                        {
-                                            <Pill Tone="Tone.Positive">Active</Pill>
-                                        }
-                                    </td>
-                                    <td class="px-4 py-3 text-content-muted">
-                                        @if (sites)
-                                        {
-                                            var linked = ProjectsMappedTo(option.Name);
-                                            @if (linked.Count == 0)
-                                            {
-                                                <span class="text-content-subtle">—</span>
-                                            }
-                                            else
-                                            {
-                                                @string.Join(", ", linked.Select(p => p.Name))
-                                            }
-                                        }
-                                        else
-                                        {
-                                            var match = SystemCodeFor(option.Name);
-                                            @if (match is null)
-                                            {
-                                                <span class="text-content-subtle">—</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="font-medium text-content">@match.Code</span>
-                                                <span> · @match.Name</span>
-                                            }
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-
-                @if (sites && !projectsFailed && UnmatchedSiteMappings(category) is { Count: > 0 } unmatched)
-                {
-                    <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted mt-4">
-                        <p class="text-content font-medium mb-1">Project mappings that match no Xero site option</p>
-                        <p class="mb-2">
-                            These projects have a Xero site set that Xero's "@category.Name" category doesn't contain —
-                            their write-back will refuse until the mapping matches an option above, letter for letter.
-                        </p>
-                        <ul class="space-y-1">
-                            @foreach (var project in unmatched)
-                            {
-                                <li><span class="font-medium text-content">@project.Name</span> — mapped to "<span class="whitespace-pre">@project.XeroSiteName</span>"</li>
-                            }
-                        </ul>
-                    </div>
-                }
-                @if (!sites && SystemCodesWithoutXeroOption(category) is { Count: > 0 } missing)
-                {
-                    <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted mt-4">
-                        <div class="flex items-start justify-between gap-4 flex-wrap">
-                            <div>
-                                <p class="text-content font-medium mb-1">Active system codes with no Xero option yet (@missing.Count)</p>
-                                <p class="mb-2">
-                                    The portal doesn't create tracking options in Xero (by decision — it holds no settings
-                                    write access). A bill approved or coded against one of these is refused until the option
-                                    exists, so create them in Xero under Settings → Tracking categories, spelt exactly.
-                                    "List for Xero" gives the exact names, mappings applied, ready to copy.
-                                </p>
-                            </div>
-                            @if (CanManage)
-                            {
-                                <button type="button" class="btn-primary shrink-0" @onclick="OpenListForXeroAsync">List for Xero…</button>
-                            }
+                <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted mt-4">
+                    <div class="flex items-start justify-between gap-4 flex-wrap">
+                        <div>
+                            <p class="text-content font-medium mb-1">Active system codes with no Xero option yet (@missing.Count)</p>
+                            <p class="mb-2">
+                                The portal doesn't create tracking options in Xero (by decision — it holds no settings
+                                write access). A bill approved or coded against one of these is refused until the option
+                                exists, so create them in Xero under Settings → Tracking categories, spelt exactly.
+                                "List for Xero" gives the exact names, mappings applied, ready to copy.
+                            </p>
                         </div>
-                        <p>@string.Join(" · ", missing.Select(c => c.Code))</p>
+                        @if (CanManage)
+                        {
+                            <button type="button" class="btn-primary shrink-0" @onclick="OpenListForXeroAsync">List for Xero…</button>
+                        }
                     </div>
-                }
-                }
+                    <p>@string.Join(" · ", missing.Select(c => c.Code))</p>
+                </div>
+            }
             }
         }
-        </LoadGate>
-        }
-    </section>
+    }
+    </LoadGate>
+    }
 
     <Modal IsOpen="adding"
            Title="New cost code"
@@ -434,5 +417,5 @@ else
             <FormField Label="Sort order" Value="@formSortOrder" OnChange="v => formSortOrder = v" InputType="number" />
         </div>
     </Modal>
-}
+</Page>
 

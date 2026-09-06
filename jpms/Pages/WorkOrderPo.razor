@@ -19,29 +19,17 @@
 
 <PageTitle>@Title · JPMS</PageTitle>
 
-@if (!isLoaded)
-{
-    <section class="px-4 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (Detail is null)
-{
-    <section class="px-4 md:px-8 py-12">
+<Page>
+    @if (Detail is null)
+    {
         <h1 class="text-2xl font-semibold text-content mb-2">Work order not found</h1>
         <p class="text-content-muted">
             This work order doesn't exist on this project.
             <a class="underline underline-offset-4" href="@($"/projects/{ProjectId}/work-orders")">Back to the Work Orders tab</a>
         </p>
-    </section>
-}
-else
-{
-    <section class="px-4 md:px-8 py-6">
+    }
+    else
+    {
         <div class="po-toolbar flex items-center justify-between gap-3 mb-5 max-w-[820px] mx-auto">
             <a class="text-sm text-content-subtle hover:text-content underline underline-offset-4"
                href="@($"/projects/{ProjectId}/work-orders")">← Work orders</a>
@@ -207,8 +195,8 @@ else
             <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Body (HTML)</label>
             <textarea class="field font-mono text-xs" rows="14" @bind="emailBody"></textarea>
         </Modal>
-    </section>
-}
+    }
+</Page>
 
 <style>
     @@media print {

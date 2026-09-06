@@ -16,7 +16,7 @@
 
 <PageTitle>Project Cashflow · JPMS</PageTitle>
 
-<ApprovedSessionGate>
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="cashflow">
         <h2 class="text-lg font-semibold text-content mb-1">Project Cashflow</h2>
         <p class="text-sm text-content-subtle mb-4 max-w-2xl">
@@ -295,5 +295,5 @@
                                  UnallocatedBills="@(unallocatedBills ?? Array.Empty<UnallocatedSiteBill>())"
                                  OnClose="() => showUnpaidInvoices = false" />
     </ProjectPageShell>
-</ApprovedSessionGate>
+</Page>
 

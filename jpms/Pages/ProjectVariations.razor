@@ -22,18 +22,7 @@
     RecordTabBar), and the Request column below links straight through.
 *@
 
-@if (!isLoaded)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="variations">
         <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
             <div>
@@ -407,5 +396,5 @@ else
             </div>
         </Modal>
     }
-}
+</Page>
 

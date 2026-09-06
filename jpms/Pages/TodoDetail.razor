@@ -19,26 +19,14 @@
     whole load for the new item.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!HasInternalRole)
-{
-    <section class="px-6 md:px-8 py-12">
+<Page>
+    @if (!HasInternalRole)
+    {
         <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
         <p class="text-content-muted">To-dos are an internal Jewel surface.</p>
-    </section>
-}
-else
-{
-    <section class="px-6 py-6 md:px-8">
+    }
+    else
+    {
         <a href="/todos" class="text-xs text-content-subtle hover:text-content underline underline-offset-2">← All to-dos</a>
 
         <LoadGate IsLoading="@itemLoading" Prominent="true" Label="Loading the to-do">
@@ -108,5 +96,5 @@ else
             </div>
         }
         </LoadGate>
-    </section>
-}
+    }
+</Page>

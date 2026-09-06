@@ -40,26 +40,14 @@
     reassign, move and delete actions. The board's drag-to-complete stays here.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!HasInternalRole)
-{
-    <section class="px-6 md:px-8 py-12">
+<Page>
+    @if (!HasInternalRole)
+    {
         <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
         <p class="text-content-muted">The to-do list is an internal Jewel surface.</p>
-    </section>
-}
-else
-{
-    <section class="px-6 py-6 md:px-8">
+    }
+    else
+    {
 
         <header class="mb-6 flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -297,8 +285,8 @@ else
         }
         </LoadGate>
 
-    </section>
-}
+    }
+</Page>
 
 <Modal IsOpen="@addOpen" Title="Add a to-do" ConfirmLabel="Add to-do item" CancelLabel="Cancel"
        OnConfirm="Add" OnCancel="CloseAdd">

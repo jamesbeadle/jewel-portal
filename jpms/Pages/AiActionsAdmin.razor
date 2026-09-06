@@ -16,25 +16,7 @@
     travel — whatever AI tool is connecting.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!CanSee)
-{
-    <section class="px-6 md:px-8 py-12">
-        <p class="text-sm text-content-muted">You do not have access to the assistant's actions.</p>
-    </section>
-}
-else
-{
-    <section class="px-6 py-6 md:px-8">
+<Page CanAccess="CanSee" AccessDeniedMessage="You do not have access to the assistant's actions.">
         <p class="eyebrow mb-1">Assistant</p>
         <h1 class="text-2xl font-semibold text-content mb-1">AI actions</h1>
         <p class="text-sm text-content-muted mb-6 max-w-3xl">
@@ -168,8 +150,7 @@ else
                 </div>
             }
         }
-    </section>
-}
+</Page>
 
 @code {
     private RenderFragment SkillChip(string skillKey, bool viaArea) => __builder =>

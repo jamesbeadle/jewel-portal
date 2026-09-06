@@ -21,147 +21,145 @@
     e-signature integration: portal RBAC and the audit row are the record.
 *@
 
-<ApprovedSessionGate>
-    <section class="px-6 md:px-8 py-8 max-w-5xl">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
-            <h2 class="text-lg font-semibold text-content">Policies & sign-off</h2>
-            @if (IsAdminView)
-            {
-                <button type="button" class="btn-primary" @onclick="() => publishOpen = true">Publish for signing</button>
-            }
-        </div>
-        <p class="text-sm text-content-subtle mb-5 max-w-3xl">
-            Documents that need everyone's signature — NDAs, staff policies, H&S. Signing records
-            your typed name and the time against the exact revision you read.
-        </p>
-
-        @if (actionError is not null)
+<Page Class="max-w-5xl">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+        <h2 class="text-lg font-semibold text-content">Policies & sign-off</h2>
+        @if (IsAdminView)
         {
-            <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
+            <button type="button" class="btn-primary" @onclick="() => publishOpen = true">Publish for signing</button>
         }
+    </div>
+    <p class="text-sm text-content-subtle mb-5 max-w-3xl">
+        Documents that need everyone's signature — NDAs, staff policies, H&S. Signing records
+        your typed name and the time against the exact revision you read.
+    </p>
 
-        @* ---- The signed-in user's own queue: everyone sees this, and it leads. ---- *@
-        <Panel Title="For you to sign" Class="mb-6" BodyClass="p-0"
-               IsLoading="@(Mine.Current is null && !dataFailed)" LoadingLabel="Loading your documents">
-            @if (dataFailed)
+    @if (actionError is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
+    }
+
+    @* ---- The signed-in user's own queue: everyone sees this, and it leads. ---- *@
+    <Panel Title="For you to sign" Class="mb-6" BodyClass="p-0"
+           IsLoading="@(Mine.Current is null && !dataFailed)" LoadingLabel="Loading your documents">
+        @if (dataFailed)
+        {
+            <p class="p-5 text-sm text-negative">Couldn't load your documents — reload to try again.</p>
+        }
+        else
+        {
+            var outstanding = (Mine.Current ?? Array.Empty<PolicySignOff>()).Where(row => row.SignedAt is null).ToList();
+            var signed = (Mine.Current ?? Array.Empty<PolicySignOff>()).Where(row => row.SignedAt is not null).ToList();
+            @if (outstanding.Count == 0)
             {
-                <p class="p-5 text-sm text-negative">Couldn't load your documents — reload to try again.</p>
+                <p class="p-5 text-sm text-content-subtle italic">Nothing waiting for your signature.</p>
             }
             else
             {
-                var outstanding = (Mine.Current ?? Array.Empty<PolicySignOff>()).Where(row => row.SignedAt is null).ToList();
-                var signed = (Mine.Current ?? Array.Empty<PolicySignOff>()).Where(row => row.SignedAt is not null).ToList();
-                @if (outstanding.Count == 0)
+                @foreach (var row in outstanding)
                 {
-                    <p class="p-5 text-sm text-content-subtle italic">Nothing waiting for your signature.</p>
-                }
-                else
-                {
-                    @foreach (var row in outstanding)
-                    {
-                        <div class="px-5 py-4 border-b border-line/60">
-                            <div class="flex items-start justify-between gap-4">
-                                <div>
-                                    <p class="text-sm font-semibold text-content">@row.Title <span class="text-content-subtle font-normal">· rev @row.Revision</span></p>
-                                    @if (row.Summary != "")
-                                    {
-                                        <p class="text-sm text-content-muted mt-1 max-w-2xl whitespace-pre-line">@row.Summary</p>
-                                    }
-                                    <p class="text-xs text-content-subtle mt-1">Requested @row.RequestedAt.ToString("dd MMM yyyy")</p>
-                                </div>
-                            </div>
-                            <div class="flex flex-wrap items-end gap-2 mt-3">
-                                <label class="block text-sm text-content-muted">Type your full name to sign
-                                    <input class="field mt-1 w-64" @bind="TypedNameFor(row.PolicySignOffId).Value" placeholder="Your name, exactly" />
-                                </label>
-                                <button type="button" class="btn-primary" disabled="@isSigning"
-                                        @onclick="() => SignAsync(row)">Sign</button>
+                    <div class="px-5 py-4 border-b border-line/60">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-semibold text-content">@row.Title <span class="text-content-subtle font-normal">· rev @row.Revision</span></p>
+                                @if (row.Summary != "")
+                                {
+                                    <p class="text-sm text-content-muted mt-1 max-w-2xl whitespace-pre-line">@row.Summary</p>
+                                }
+                                <p class="text-xs text-content-subtle mt-1">Requested @row.RequestedAt.ToString("dd MMM yyyy")</p>
                             </div>
                         </div>
-                    }
-                }
-                @if (signed.Count > 0)
-                {
-                    <div class="px-5 py-3">
-                        <p class="text-xs uppercase tracking-wide text-content-subtle mb-1.5">Signed</p>
-                        @foreach (var row in signed.Take(10))
-                        {
-                            <p class="text-sm text-content-muted py-0.5">@row.Title · rev @row.Revision —
-                                <span class="text-positive">signed @row.SignedAt!.Value.ToString("dd MMM yyyy HH:mm")</span> as “@row.SignedName”</p>
-                        }
+                        <div class="flex flex-wrap items-end gap-2 mt-3">
+                            <label class="block text-sm text-content-muted">Type your full name to sign
+                                <input class="field mt-1 w-64" @bind="TypedNameFor(row.PolicySignOffId).Value" placeholder="Your name, exactly" />
+                            </label>
+                            <button type="button" class="btn-primary" disabled="@isSigning"
+                                    @onclick="() => SignAsync(row)">Sign</button>
+                        </div>
                     </div>
                 }
             }
-        </Panel>
+            @if (signed.Count > 0)
+            {
+                <div class="px-5 py-3">
+                    <p class="text-xs uppercase tracking-wide text-content-subtle mb-1.5">Signed</p>
+                    @foreach (var row in signed.Take(10))
+                    {
+                        <p class="text-sm text-content-muted py-0.5">@row.Title · rev @row.Revision —
+                            <span class="text-positive">signed @row.SignedAt!.Value.ToString("dd MMM yyyy HH:mm")</span> as “@row.SignedName”</p>
+                    }
+                </div>
+            }
+        }
+    </Panel>
 
-        @* ---- Admin: published documents and who has / hasn't signed. Conditional panel. ---- *@
-        @if (IsAdminView && PolicyDocs.Current is { } documents)
-        {
-            <Panel Title="Published documents" Class="mb-6" BodyClass="p-0">
-                @if (documents.Count == 0)
-                {
-                    <p class="p-5 text-sm text-content-subtle italic">Nothing published yet — use Publish for signing above.</p>
-                }
-                else
-                {
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
-                                <th class="px-5 py-3">Title</th>
-                                <th class="px-2 py-3">Rev</th>
-                                <th class="px-2 py-3">Published</th>
-                                <th class="px-2 py-3">Signed</th>
-                                <th class="px-5 py-3">Outstanding</th>
+    @* ---- Admin: published documents and who has / hasn't signed. Conditional panel. ---- *@
+    @if (IsAdminView && PolicyDocs.Current is { } documents)
+    {
+        <Panel Title="Published documents" Class="mb-6" BodyClass="p-0">
+            @if (documents.Count == 0)
+            {
+                <p class="p-5 text-sm text-content-subtle italic">Nothing published yet — use Publish for signing above.</p>
+            }
+            else
+            {
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                            <th class="px-5 py-3">Title</th>
+                            <th class="px-2 py-3">Rev</th>
+                            <th class="px-2 py-3">Published</th>
+                            <th class="px-2 py-3">Signed</th>
+                            <th class="px-5 py-3">Outstanding</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var document in documents)
+                        {
+                            <tr class="border-b border-line/60 hover:bg-surface-raised/40 cursor-pointer"
+                                @onclick="() => ToggleDetailAsync(document.PolicyDocumentId)">
+                                <td class="px-5 py-2.5 font-medium text-content">@document.Title @(document.IsActive ? "" : "· superseded")</td>
+                                <td class="px-2 py-2.5 text-content-muted tabular-nums">@document.Revision</td>
+                                <td class="px-2 py-2.5 text-content-subtle whitespace-nowrap">@document.PublishedAt.ToString("dd MMM yyyy")</td>
+                                <td class="px-2 py-2.5"><Pill Tone="Tone.Positive">@document.SignedCount</Pill></td>
+                                <td class="px-5 py-2.5">
+                                    @if (document.OutstandingCount > 0)
+                                    {
+                                        <Pill Tone="Tone.Negative">@document.OutstandingCount to chase</Pill>
+                                    }
+                                    else
+                                    {
+                                        <Pill Tone="Tone.Positive">All signed</Pill>
+                                    }
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var document in documents)
+                            @if (detailDocumentId == document.PolicyDocumentId && detailRows is not null)
                             {
-                                <tr class="border-b border-line/60 hover:bg-surface-raised/40 cursor-pointer"
-                                    @onclick="() => ToggleDetailAsync(document.PolicyDocumentId)">
-                                    <td class="px-5 py-2.5 font-medium text-content">@document.Title @(document.IsActive ? "" : "· superseded")</td>
-                                    <td class="px-2 py-2.5 text-content-muted tabular-nums">@document.Revision</td>
-                                    <td class="px-2 py-2.5 text-content-subtle whitespace-nowrap">@document.PublishedAt.ToString("dd MMM yyyy")</td>
-                                    <td class="px-2 py-2.5"><Pill Tone="Tone.Positive">@document.SignedCount</Pill></td>
-                                    <td class="px-5 py-2.5">
-                                        @if (document.OutstandingCount > 0)
+                                <tr class="border-b border-line/60 bg-surface-raised/30">
+                                    <td colspan="5" class="px-5 py-3">
+                                        @foreach (var row in detailRows)
                                         {
-                                            <Pill Tone="Tone.Negative">@document.OutstandingCount to chase</Pill>
-                                        }
-                                        else
-                                        {
-                                            <Pill Tone="Tone.Positive">All signed</Pill>
+                                            <p class="text-sm py-0.5">
+                                                <span class="text-content">@row.RecipientEmail</span> —
+                                                @if (row.SignedAt is { } at)
+                                                {
+                                                    <span class="text-positive">signed @at.ToString("dd MMM HH:mm") as “@row.SignedName”</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-content-subtle">not yet signed</span>
+                                                }
+                                            </p>
                                         }
                                     </td>
                                 </tr>
-                                @if (detailDocumentId == document.PolicyDocumentId && detailRows is not null)
-                                {
-                                    <tr class="border-b border-line/60 bg-surface-raised/30">
-                                        <td colspan="5" class="px-5 py-3">
-                                            @foreach (var row in detailRows)
-                                            {
-                                                <p class="text-sm py-0.5">
-                                                    <span class="text-content">@row.RecipientEmail</span> —
-                                                    @if (row.SignedAt is { } at)
-                                                    {
-                                                        <span class="text-positive">signed @at.ToString("dd MMM HH:mm") as “@row.SignedName”</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="text-content-subtle">not yet signed</span>
-                                                    }
-                                                </p>
-                                            }
-                                        </td>
-                                    </tr>
-                                }
                             }
-                        </tbody>
-                    </table>
-                }
-            </Panel>
-        }
-    </section>
+                        }
+                    </tbody>
+                </table>
+            }
+        </Panel>
+    }
 
     <Modal IsOpen="@publishOpen" Title="Publish for signing"
            ConfirmLabel="@(publishing ? "Publishing…" : "Publish")" ConfirmDisabled="@publishing"
@@ -183,7 +181,7 @@
             }
         </div>
     </Modal>
-</ApprovedSessionGate>
+</Page>
 
 @code {
     private bool dataFailed;

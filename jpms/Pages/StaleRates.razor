@@ -7,19 +7,7 @@
 
 <PageTitle>Stale rates · JPMS</PageTitle>
 
-@if (!isLoaded)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
-    <section class="px-6 md:px-8 py-8 md:py-12">
+<Page>
         <nav class="mb-4 text-sm">
             <a href="/rate-library" class="text-content-subtle hover:text-content underline underline-offset-4">Rate library</a>
             <span class="text-content-subtle mx-2">/</span>
@@ -47,8 +35,7 @@ else
         {
             <RateTable Rates="Stale" />
         }
-    </section>
-}
+</Page>
 
 @code {
     private const int StaleDayThreshold = 60;

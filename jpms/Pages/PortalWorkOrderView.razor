@@ -13,45 +13,29 @@
 
 <PageTitle>@Title · JPMS</PageTitle>
 
-@if (!isLoaded)
-{
-    <section class="px-4 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!CanAccess || !HasLinkedRecord)
-{
-    <section class="px-4 md:px-8 py-12">
+<Page>
+    @if (!CanAccess || !HasLinkedRecord)
+    {
         <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
         <p class="text-content-muted">
             This page shows a subcontractor one of their own work orders. Your login isn't linked
             to a subcontractor record.
         </p>
-    </section>
-}
-else if (!PortalStore.IsLoaded)
-{
-    <section class="px-4 md:px-8 py-12">
+    }
+    else if (!PortalStore.IsLoaded)
+    {
         <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (Order is null)
-{
-    <section class="px-4 md:px-8 py-12">
+    }
+    else if (Order is null)
+    {
         <h1 class="text-2xl font-semibold text-content mb-2">Work order not found</h1>
         <p class="text-content-muted">
             This work order isn't one of yours, or hasn't been issued yet.
             <a class="underline underline-offset-4" href="/portal">Back to your record</a>
         </p>
-    </section>
-}
-else
-{
-    <section class="px-4 md:px-8 py-6">
+    }
+    else
+    {
         <div class="po-toolbar max-w-[820px] mx-auto mb-5">
             <div class="flex items-center justify-between gap-3 flex-wrap">
                 <a class="text-sm text-content-subtle hover:text-content underline underline-offset-4" href="/portal">← Your record</a>
@@ -101,8 +85,8 @@ else
                             SiteAddressLines="@(Order.SiteAddressLines ?? Array.Empty<string>())"
                             ApprovedByName="@Order.ApprovedByName"
                             PaymentTermsDays="@(MyRecord?.Record.PaymentTermsDays ?? 30)" />
-    </section>
-}
+    }
+</Page>
 
 <style>
     @@media print {

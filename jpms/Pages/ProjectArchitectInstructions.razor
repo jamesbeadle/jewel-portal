@@ -19,16 +19,7 @@
     from the attachment, or filed straight into this register by the architect or the Jewel team.
 *@
 
-@if (!sessionReady)
-{
-    <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@(Auth.CurrentUser?.Email ?? "")" DisplayName="@(Auth.CurrentUser?.DisplayName ?? "")" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="architect-instructions">
         <div class="flex items-start justify-between gap-3 mb-5">
             <div>
@@ -292,5 +283,5 @@ else
             </p>
         </div>
     </Modal>
-}
+</Page>
 

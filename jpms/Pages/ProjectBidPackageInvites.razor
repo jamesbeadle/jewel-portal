@@ -9,18 +9,7 @@
 
 <PageTitle>Bid Package Invites · JPMS</PageTitle>
 
-@if (!isLoaded)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="bid-package-invites">
         <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
             <div>
@@ -249,5 +238,5 @@ else
             }
         </ChildContent>
     </Modal>
-}
+</Page>
 

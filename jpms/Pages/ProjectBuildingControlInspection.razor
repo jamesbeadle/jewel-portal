@@ -23,7 +23,7 @@
     mailbox and files itself back into this list.
 *@
 
-<ApprovedSessionGate>
+<Page>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="building-control">
         @if (!BuildingControl.LoadedFor(ProjectId) && !dataFailed)
         {
@@ -238,5 +238,5 @@
             </section>
         }
     </ProjectPageShell>
-</ApprovedSessionGate>
+</Page>
 

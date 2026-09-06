@@ -7,19 +7,7 @@
 
 <PageTitle>Rate library · JPMS</PageTitle>
 
-@if (!isLoaded)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
-    <section class="px-6 md:px-8 py-8 md:py-12">
+<Page>
         <WorkspaceSectionNav />
         <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
             <div>
@@ -39,8 +27,7 @@ else
         </header>
 
         <RateTable Rates="Rates.All()" />
-    </section>
-}
+</Page>
 
 @code {
     private const int StaleDayThreshold = 60;

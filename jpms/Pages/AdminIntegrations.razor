@@ -14,29 +14,17 @@
     ?bluebeam=connected|failed, which the banner below reads.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (Session.ActiveRole != Role.Admin)
-{
-    <section class="px-6 md:px-8 py-12 max-w-2xl">
+<Page>
+    @if (Session.ActiveRole != Role.Admin)
+    {
         <div class="panel p-6">
             <p class="text-sm text-content-muted">
                 This area is for administrators. If you hold the Administrator role, switch to it to manage integrations.
             </p>
         </div>
-    </section>
-}
-else
-{
-    <section class="px-6 md:px-8 py-8 md:py-12">
+    }
+    else
+    {
         <WorkspaceSectionNav />
         <header class="mb-6 md:mb-8">
             <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Admin</p>
@@ -140,8 +128,8 @@ else
                 }
             </Panel>
         </div>
-    </section>
-}
+    }
+</Page>
 
 @code {
     private bool sessionReady;

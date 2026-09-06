@@ -29,323 +29,321 @@
     filing form. Filed and Discarded views keep the history, each filed row saying where it went.
 *@
 
-<ApprovedSessionGate>
-    <section class="px-6 md:px-8 py-8 md:py-12">
-        <header class="mb-6">
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · projects@@jewelbb.co.uk</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Document Triage</h1>
-            @* A count, not a description, so it waits for its own list — it simply does not
-               render until the count is known (see the loading-states notes). *@
-            @if (items is not null)
+<Page>
+    <header class="mb-6">
+        <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · projects@@jewelbb.co.uk</p>
+        <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Document Triage</h1>
+        @* A count, not a description, so it waits for its own list — it simply does not
+           render until the count is known (see the loading-states notes). *@
+        @if (items is not null)
+        {
+            <p class="text-sm text-content-muted mt-2">
+                @PendingItems.Count document@(PendingItems.Count == 1 ? "" : "s") waiting to be filed.
+            </p>
+        }
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-6 items-start">
+
+        @* ---- Left: the document list ---- *@
+        <div class="space-y-4">
+            <div class="sticky top-0 z-10 bg-canvas flex items-center gap-2 border-b border-line">
+                <button type="button" class="@ViewTabClass(DocView.Queue)" @onclick="() => SwitchView(DocView.Queue)">Queue</button>
+                <button type="button" class="@ViewTabClass(DocView.Filed)" @onclick="() => SwitchView(DocView.Filed)">Filed</button>
+                <button type="button" class="@ViewTabClass(DocView.Discarded)" @onclick="() => SwitchView(DocView.Discarded)">Discarded</button>
+            </div>
+
+            @if (loadError is not null)
             {
-                <p class="text-sm text-content-muted mt-2">
-                    @PendingItems.Count document@(PendingItems.Count == 1 ? "" : "s") waiting to be filed.
-                </p>
+                <Notice Tone="Tone.Negative">@loadError</Notice>
             }
-        </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-6 items-start">
-
-            @* ---- Left: the document list ---- *@
-            <div class="space-y-4">
-                <div class="sticky top-0 z-10 bg-canvas flex items-center gap-2 border-b border-line">
-                    <button type="button" class="@ViewTabClass(DocView.Queue)" @onclick="() => SwitchView(DocView.Queue)">Queue</button>
-                    <button type="button" class="@ViewTabClass(DocView.Filed)" @onclick="() => SwitchView(DocView.Filed)">Filed</button>
-                    <button type="button" class="@ViewTabClass(DocView.Discarded)" @onclick="() => SwitchView(DocView.Discarded)">Discarded</button>
-                </div>
-
-                @if (loadError is not null)
+            @* The gate opens on failure too (dataFailed pattern) — the banner above says why. *@
+            <LoadGate IsLoading="@(items is null && loadError is null)" Prominent="true" Label="Loading documents">
+                @if (VisibleItems.Count == 0)
                 {
-                    <Notice Tone="Tone.Negative">@loadError</Notice>
-                }
-
-                @* The gate opens on failure too (dataFailed pattern) — the banner above says why. *@
-                <LoadGate IsLoading="@(items is null && loadError is null)" Prominent="true" Label="Loading documents">
-                    @if (VisibleItems.Count == 0)
+                    @if (loadError is null)
                     {
-                        @if (loadError is null)
-                        {
-                            <div class="panel p-8 text-center">
-                                <p class="text-sm text-content">@EmptyText</p>
-                                @if (view == DocView.Queue)
-                                {
-                                    <p class="text-xs text-content-subtle mt-1">
-                                        Tick "Send to document triage" on an email's attachments in the Control Centre and they appear here.
-                                    </p>
-                                }
-                            </div>
-                        }
-                    }
-                    else
-                    {
-                        <div class="space-y-1.5">
-                            @foreach (var item in VisibleItems)
+                        <div class="panel p-8 text-center">
+                            <p class="text-sm text-content">@EmptyText</p>
+                            @if (view == DocView.Queue)
                             {
-                                <DocumentListItem @key="item.DocumentControlItemId" Item="item"
-                                                  IsOpen="@(item.DocumentControlItemId == selectedId)"
-                                                  IsFresh="@freshIds.Contains(item.DocumentControlItemId)"
-                                                  ProjectHint="@ProjectNameFor(item.ProjectIdHint)"
-                                                  OnSelect="() => Select(item.DocumentControlItemId)" />
+                                <p class="text-xs text-content-subtle mt-1">
+                                    Tick "Send to document triage" on an email's attachments in the Control Centre and they appear here.
+                                </p>
                             }
                         </div>
                     }
-                </LoadGate>
-            </div>
-
-            @* ---- Right: the open document ---- *@
-            <div>
-                @if (Selected is not { } item)
-                {
-                    @* A finished action lands here: the document has left the list, so its outcome
-                       is said in the emptied pane and the page waits for the next pick. *@
-                    <div class="panel p-8 text-center space-y-3">
-                        @if (doneNote is not null)
-                        {
-                            <div class="mx-auto inline-flex items-start gap-2 rounded-lg bg-positive/10 border border-positive/30 px-3 py-2 text-sm text-content text-left">
-                                <svg class="w-4 h-4 mt-0.5 shrink-0 text-positive" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
-                                </svg>
-                                <span>@doneNote</span>
-                            </div>
-                        }
-                        <p class="text-sm text-content-subtle">
-                            @(doneNote is null ? "Select a document to preview it, read its email and file it." : "Waiting for the next document.")
-                        </p>
-                    </div>
                 }
                 else
                 {
-                    <div class="panel p-5 space-y-4 relative">
-                        @if (busy)
+                    <div class="space-y-1.5">
+                        @foreach (var item in VisibleItems)
                         {
-                            <JewelSpinner Overlay="true" Label="@busyLabel" />
+                            <DocumentListItem @key="item.DocumentControlItemId" Item="item"
+                                              IsOpen="@(item.DocumentControlItemId == selectedId)"
+                                              IsFresh="@freshIds.Contains(item.DocumentControlItemId)"
+                                              ProjectHint="@ProjectNameFor(item.ProjectIdHint)"
+                                              OnSelect="() => Select(item.DocumentControlItemId)" />
                         }
+                    </div>
+                }
+            </LoadGate>
+        </div>
 
-                        <div>
-                            <div class="flex items-start justify-between gap-3">
-                                <h2 class="text-lg font-semibold text-content break-all">@item.FileName</h2>
-                                <a class="text-xs text-accent hover:underline underline-offset-2 shrink-0 mt-1.5"
-                                   href="@Store.FileUrl(item.DocumentControlItemId)" target="_blank" rel="noopener">Download</a>
-                            </div>
-                            <p class="text-xs text-content-subtle mt-1">
-                                @(item.FileSizeBytes > 0 ? $"{FormatSize(item.FileSizeBytes)} · " : "")Received @Date(item.ReceivedAt)
-                                · Sent to Document Triage by @item.SentBy, @Date(item.SentAt)
-                            </p>
+        @* ---- Right: the open document ---- *@
+        <div>
+            @if (Selected is not { } item)
+            {
+                @* A finished action lands here: the document has left the list, so its outcome
+                   is said in the emptied pane and the page waits for the next pick. *@
+                <div class="panel p-8 text-center space-y-3">
+                    @if (doneNote is not null)
+                    {
+                        <div class="mx-auto inline-flex items-start gap-2 rounded-lg bg-positive/10 border border-positive/30 px-3 py-2 text-sm text-content text-left">
+                            <svg class="w-4 h-4 mt-0.5 shrink-0 text-positive" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
+                            </svg>
+                            <span>@doneNote</span>
                         </div>
+                    }
+                    <p class="text-sm text-content-subtle">
+                        @(doneNote is null ? "Select a document to preview it, read its email and file it." : "Waiting for the next document.")
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div class="panel p-5 space-y-4 relative">
+                    @if (busy)
+                    {
+                        <JewelSpinner Overlay="true" Label="@busyLabel" />
+                    }
 
-                        @if (actionError is not null)
-                        {
-                            <Notice Tone="Tone.Negative">@actionError</Notice>
-                        }
+                    <div>
+                        <div class="flex items-start justify-between gap-3">
+                            <h2 class="text-lg font-semibold text-content break-all">@item.FileName</h2>
+                            <a class="text-xs text-accent hover:underline underline-offset-2 shrink-0 mt-1.5"
+                               href="@Store.FileUrl(item.DocumentControlItemId)" target="_blank" rel="noopener">Download</a>
+                        </div>
+                        <p class="text-xs text-content-subtle mt-1">
+                            @(item.FileSizeBytes > 0 ? $"{FormatSize(item.FileSizeBytes)} · " : "")Received @Date(item.ReceivedAt)
+                            · Sent to Document Triage by @item.SentBy, @Date(item.SentAt)
+                        </p>
+                    </div>
 
-                        <DocumentOutcomeCard Item="item" DestinationHref="@DestinationHref(item)" Busy="busy" OnRestore="DoRestore" />
+                    @if (actionError is not null)
+                    {
+                        <Notice Tone="Tone.Negative">@actionError</Notice>
+                    }
 
-                        <DocumentPreview Item="item" InlineUrl="@Store.FileUrl(item.DocumentControlItemId, inline: true)"
-                                         DownloadUrl="@Store.FileUrl(item.DocumentControlItemId)"
-                                         Busy="busy" OnExtractArchive="DoExtractArchive" />
+                    <DocumentOutcomeCard Item="item" DestinationHref="@DestinationHref(item)" Busy="busy" OnRestore="DoRestore" />
 
-                        <SourceEmailCard Item="item" Open="sourceEmailOpen" Loading="sourceEmailLoading" Email="sourceEmail"
-                                         OnToggle="ToggleSourceEmail" />
+                    <DocumentPreview Item="item" InlineUrl="@Store.FileUrl(item.DocumentControlItemId, inline: true)"
+                                     DownloadUrl="@Store.FileUrl(item.DocumentControlItemId)"
+                                     Busy="busy" OnExtractArchive="DoExtractArchive" />
 
-                        @* ---- Filing: pending documents only — one destination, its own fields. ---- *@
-                        @if (item.Status == DocumentControlStatus.Pending)
-                        {
-                            <div class="pt-3 border-t border-line space-y-3">
-                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">File this document</p>
+                    <SourceEmailCard Item="item" Open="sourceEmailOpen" Loading="sourceEmailLoading" Email="sourceEmail"
+                                     OnToggle="ToggleSourceEmail" />
 
+                    @* ---- Filing: pending documents only — one destination, its own fields. ---- *@
+                    @if (item.Status == DocumentControlStatus.Pending)
+                    {
+                        <div class="pt-3 border-t border-line space-y-3">
+                            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">File this document</p>
+
+                            <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5">
+                                <button type="button" @onclick="() => SetDestination(FileDestination.Drawing)"
+                                        class="@DestinationTabClass(FileDestination.Drawing)">Project documents</button>
+                                <button type="button" @onclick="() => SetDestination(FileDestination.PaymentCertificate)"
+                                        class="@DestinationTabClass(FileDestination.PaymentCertificate)">Payment certificate</button>
+                                <button type="button" @onclick="() => SetDestination(FileDestination.Subcontractor)"
+                                        class="@DestinationTabClass(FileDestination.Subcontractor)">Subcontractor document</button>
+                            </div>
+
+                            @if (destination == FileDestination.Drawing)
+                            {
+                                <p class="text-xs text-content-muted">
+                                    The file lands as an <span class="font-medium text-content">unapproved revision</span> —
+                                    a new (or blank) code registers a new document in the project's Documents register, named by its file until it is given a code or title; approval follows the normal documents workflow.
+                                </p>
                                 <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5">
-                                    <button type="button" @onclick="() => SetDestination(FileDestination.Drawing)"
-                                            class="@DestinationTabClass(FileDestination.Drawing)">Project documents</button>
-                                    <button type="button" @onclick="() => SetDestination(FileDestination.PaymentCertificate)"
-                                            class="@DestinationTabClass(FileDestination.PaymentCertificate)">Payment certificate</button>
-                                    <button type="button" @onclick="() => SetDestination(FileDestination.Subcontractor)"
-                                            class="@DestinationTabClass(FileDestination.Subcontractor)">Subcontractor document</button>
+                                    <button type="button" @onclick="() => SetDrawingMode(isRevision: false)"
+                                            class="rounded-md text-xs px-2.5 py-1.5 transition @(!drawingIsRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
+                                        New document
+                                    </button>
+                                    <button type="button" @onclick="() => SetDrawingMode(isRevision: true)"
+                                            class="rounded-md text-xs px-2.5 py-1.5 transition @(drawingIsRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
+                                        Revision of existing document
+                                    </button>
                                 </div>
-
-                                @if (destination == FileDestination.Drawing)
-                                {
-                                    <p class="text-xs text-content-muted">
-                                        The file lands as an <span class="font-medium text-content">unapproved revision</span> —
-                                        a new (or blank) code registers a new document in the project's Documents register, named by its file until it is given a code or title; approval follows the normal documents workflow.
-                                    </p>
-                                    <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5">
-                                        <button type="button" @onclick="() => SetDrawingMode(isRevision: false)"
-                                                class="rounded-md text-xs px-2.5 py-1.5 transition @(!drawingIsRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
-                                            New document
-                                        </button>
-                                        <button type="button" @onclick="() => SetDrawingMode(isRevision: true)"
-                                                class="rounded-md text-xs px-2.5 py-1.5 transition @(drawingIsRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
-                                            Revision of existing document
-                                        </button>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
+                                        <select class="field" value="@filingProjectId" @onchange="OnFilingProjectChanged">
+                                            <option value="">Select a project…</option>
+                                            @foreach (var project in ProjectOptions)
+                                            {
+                                                <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                                            }
+                                        </select>
                                     </div>
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    @if (drawingIsRevision)
+                                    {
                                         <div>
-                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
-                                            <select class="field" value="@filingProjectId" @onchange="OnFilingProjectChanged">
-                                                <option value="">Select a project…</option>
-                                                @foreach (var project in ProjectOptions)
-                                                {
-                                                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
-                                                }
-                                            </select>
-                                        </div>
-                                        @if (drawingIsRevision)
-                                        {
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Existing document *</label>
-                                                <select class="field" @bind="drawingId" disabled="@string.IsNullOrWhiteSpace(filingProjectId)">
-                                                    @if (string.IsNullOrWhiteSpace(filingProjectId))
-                                                    {
-                                                        <option value="">Select a project first…</option>
-                                                    }
-                                                    else if (!DrawingStore.DrawingsLoadedFor(filingProjectId))
-                                                    {
-                                                        <option value="">Loading documents…</option>
-                                                    }
-                                                    else if (DrawingOptions.Count == 0)
-                                                    {
-                                                        <option value="">No documents on this project yet</option>
-                                                    }
-                                                    else
-                                                    {
-                                                        <option value="">Select a document…</option>
-                                                        @foreach (var drawing in DrawingOptions)
-                                                        {
-                                                            <option value="@drawing.DrawingId">@DrawingNaming.Label(drawing)</option>
-                                                        }
-                                                    }
-                                                </select>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <FormField Label="Document code" Value="@drawingCode" OnChange="v => drawingCode = v" />
-                                        }
-                                    </div>
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        @if (!drawingIsRevision)
-                                        {
-                                            <FormField Label="Title" Value="@drawingTitle" OnChange="v => drawingTitle = v" />
-                                        }
-                                        <FormField Label="Revision label" Value="@drawingRevision" OnChange="v => drawingRevision = v" />
-                                        @if (!drawingIsRevision)
-                                        {
-                                            <DrawingFolderPicker @ref="drawingFolderPicker" ProjectId="@filingProjectId" />
-                                        }
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <button type="button" class="btn-primary"
-                                                disabled="@(busy || string.IsNullOrWhiteSpace(filingProjectId) || (drawingIsRevision && string.IsNullOrWhiteSpace(drawingId)))"
-                                                @onclick="DoFileAsDrawing">@(busy ? "Filing…" : "File to project documents")</button>
-                                        @DiscardControl
-                                    </div>
-                                }
-                                else if (destination == FileDestination.PaymentCertificate)
-                                {
-                                    <p class="text-xs text-content-muted">
-                                        Lands in <span class="font-medium text-content">Finance → Payment Certificates</span>, viewable by project.
-                                    </p>
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div>
-                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
-                                            <select class="field" value="@filingProjectId" @onchange="OnFilingProjectChanged">
-                                                <option value="">Select a project…</option>
-                                                @foreach (var project in ProjectOptions)
-                                                {
-                                                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
-                                                }
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Valuation claim</label>
-                                            <select class="field" @bind="certificateClaimId" disabled="@string.IsNullOrWhiteSpace(filingProjectId)">
+                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Existing document *</label>
+                                            <select class="field" @bind="drawingId" disabled="@string.IsNullOrWhiteSpace(filingProjectId)">
                                                 @if (string.IsNullOrWhiteSpace(filingProjectId))
                                                 {
                                                     <option value="">Select a project first…</option>
                                                 }
-                                                else if (!ValuationReport.ReportLoadedFor(filingProjectId))
+                                                else if (!DrawingStore.DrawingsLoadedFor(filingProjectId))
                                                 {
-                                                    <option value="">Loading claims…</option>
+                                                    <option value="">Loading documents…</option>
                                                 }
-                                                else if (ClaimOptions.Count == 0)
+                                                else if (DrawingOptions.Count == 0)
                                                 {
-                                                    <option value="">No claims on this project yet</option>
+                                                    <option value="">No documents on this project yet</option>
                                                 }
                                                 else
                                                 {
-                                                    <option value="">Not tied to a claim</option>
-                                                    @foreach (var claim in ClaimOptions)
+                                                    <option value="">Select a document…</option>
+                                                    @foreach (var drawing in DrawingOptions)
                                                     {
-                                                        <option value="@claim.ValuationClaimId">@claim.DisplayName</option>
+                                                        <option value="@drawing.DrawingId">@DrawingNaming.Label(drawing)</option>
                                                     }
                                                 }
                                             </select>
                                         </div>
+                                    }
+                                    else
+                                    {
+                                        <FormField Label="Document code" Value="@drawingCode" OnChange="v => drawingCode = v" />
+                                    }
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    @if (!drawingIsRevision)
+                                    {
+                                        <FormField Label="Title" Value="@drawingTitle" OnChange="v => drawingTitle = v" />
+                                    }
+                                    <FormField Label="Revision label" Value="@drawingRevision" OnChange="v => drawingRevision = v" />
+                                    @if (!drawingIsRevision)
+                                    {
+                                        <DrawingFolderPicker @ref="drawingFolderPicker" ProjectId="@filingProjectId" />
+                                    }
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <button type="button" class="btn-primary"
+                                            disabled="@(busy || string.IsNullOrWhiteSpace(filingProjectId) || (drawingIsRevision && string.IsNullOrWhiteSpace(drawingId)))"
+                                            @onclick="DoFileAsDrawing">@(busy ? "Filing…" : "File to project documents")</button>
+                                    @DiscardControl
+                                </div>
+                            }
+                            else if (destination == FileDestination.PaymentCertificate)
+                            {
+                                <p class="text-xs text-content-muted">
+                                    Lands in <span class="font-medium text-content">Finance → Payment Certificates</span>, viewable by project.
+                                </p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
+                                        <select class="field" value="@filingProjectId" @onchange="OnFilingProjectChanged">
+                                            <option value="">Select a project…</option>
+                                            @foreach (var project in ProjectOptions)
+                                            {
+                                                <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                                            }
+                                        </select>
                                     </div>
-                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        <FormField Label="Certificate number" Value="@certificateNumber" OnChange="v => certificateNumber = v" Required="true" />
-                                        <FormField Label="Certified amount (£)" Value="@certificateAmountText" OnChange="v => certificateAmountText = v" />
-                                        <div>
-                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Issued date *</label>
-                                            <input type="date" class="field" @bind="certificateIssuedDate" />
-                                        </div>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <button type="button" class="btn-primary"
-                                                disabled="@(busy || string.IsNullOrWhiteSpace(filingProjectId) || string.IsNullOrWhiteSpace(certificateNumber) || certificateIssuedDate is null)"
-                                                @onclick="DoFileAsPaymentCertificate">@(busy ? "Filing…" : "File as payment certificate")</button>
-                                        @DiscardControl
-                                    </div>
-                                }
-                                else
-                                {
-                                    <p class="text-xs text-content-muted">
-                                        Lands on the subcontractor's record as the current version of its kind —
-                                        superseding, never replacing, exactly like a portal upload.
-                                    </p>
-                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        <div>
-                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subcontractor *</label>
-                                            <SearchSelect Options="SubcontractorOptions" Value="@subcontractorId"
-                                                          ValueChanged="v => subcontractorId = v"
-                                                          Placeholder="Search subcontractors…" WidthClass="w-full"
-                                                          InputClass="field" />
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Kind *</label>
-                                            @* Free text with suggestions — the same shape as the portal upload, so
-                                               "Insurance" filed here and "Public liability insurance" uploaded there
-                                               can be steered to ONE spelling per kind (matching is case-insensitive
-                                               server-side; a different spelling starts a separate version history). *@
-                                            <input class="field" list="doc-control-subbie-kinds" placeholder="RAMS, Insurance, Drawings / Specifications…"
-                                                   @bind="subcontractorKind" @bind:event="oninput" />
-                                            <datalist id="doc-control-subbie-kinds">
-                                                @foreach (var kind in SubcontractorDocumentKinds)
+                                    <div>
+                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Valuation claim</label>
+                                        <select class="field" @bind="certificateClaimId" disabled="@string.IsNullOrWhiteSpace(filingProjectId)">
+                                            @if (string.IsNullOrWhiteSpace(filingProjectId))
+                                            {
+                                                <option value="">Select a project first…</option>
+                                            }
+                                            else if (!ValuationReport.ReportLoadedFor(filingProjectId))
+                                            {
+                                                <option value="">Loading claims…</option>
+                                            }
+                                            else if (ClaimOptions.Count == 0)
+                                            {
+                                                <option value="">No claims on this project yet</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="">Not tied to a claim</option>
+                                                @foreach (var claim in ClaimOptions)
                                                 {
-                                                    <option value="@kind" />
+                                                    <option value="@claim.ValuationClaimId">@claim.DisplayName</option>
                                                 }
-                                            </datalist>
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Expiry date</label>
-                                            <input type="date" class="field" @bind="subcontractorExpiry" />
-                                        </div>
+                                            }
+                                        </select>
                                     </div>
-                                    <div class="flex items-center gap-3">
-                                        <button type="button" class="btn-primary"
-                                                disabled="@(busy || string.IsNullOrWhiteSpace(subcontractorId) || string.IsNullOrWhiteSpace(subcontractorKind))"
-                                                @onclick="DoFileToSubcontractor">@(busy ? "Filing…" : "File to subcontractor")</button>
-                                        @DiscardControl
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <FormField Label="Certificate number" Value="@certificateNumber" OnChange="v => certificateNumber = v" Required="true" />
+                                    <FormField Label="Certified amount (£)" Value="@certificateAmountText" OnChange="v => certificateAmountText = v" />
+                                    <div>
+                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Issued date *</label>
+                                        <input type="date" class="field" @bind="certificateIssuedDate" />
                                     </div>
-                                }
-                            </div>
-                        }
-                    </div>
-                }
-            </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <button type="button" class="btn-primary"
+                                            disabled="@(busy || string.IsNullOrWhiteSpace(filingProjectId) || string.IsNullOrWhiteSpace(certificateNumber) || certificateIssuedDate is null)"
+                                            @onclick="DoFileAsPaymentCertificate">@(busy ? "Filing…" : "File as payment certificate")</button>
+                                    @DiscardControl
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-xs text-content-muted">
+                                    Lands on the subcontractor's record as the current version of its kind —
+                                    superseding, never replacing, exactly like a portal upload.
+                                </p>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div>
+                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subcontractor *</label>
+                                        <SearchSelect Options="SubcontractorOptions" Value="@subcontractorId"
+                                                      ValueChanged="v => subcontractorId = v"
+                                                      Placeholder="Search subcontractors…" WidthClass="w-full"
+                                                      InputClass="field" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Kind *</label>
+                                        @* Free text with suggestions — the same shape as the portal upload, so
+                                           "Insurance" filed here and "Public liability insurance" uploaded there
+                                           can be steered to ONE spelling per kind (matching is case-insensitive
+                                           server-side; a different spelling starts a separate version history). *@
+                                        <input class="field" list="doc-control-subbie-kinds" placeholder="RAMS, Insurance, Drawings / Specifications…"
+                                               @bind="subcontractorKind" @bind:event="oninput" />
+                                        <datalist id="doc-control-subbie-kinds">
+                                            @foreach (var kind in SubcontractorDocumentKinds)
+                                            {
+                                                <option value="@kind" />
+                                            }
+                                        </datalist>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Expiry date</label>
+                                        <input type="date" class="field" @bind="subcontractorExpiry" />
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <button type="button" class="btn-primary"
+                                            disabled="@(busy || string.IsNullOrWhiteSpace(subcontractorId) || string.IsNullOrWhiteSpace(subcontractorKind))"
+                                            @onclick="DoFileToSubcontractor">@(busy ? "Filing…" : "File to subcontractor")</button>
+                                    @DiscardControl
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
         </div>
-    </section>
-</ApprovedSessionGate>
+    </div>
+</Page>
 
 
 @code {
