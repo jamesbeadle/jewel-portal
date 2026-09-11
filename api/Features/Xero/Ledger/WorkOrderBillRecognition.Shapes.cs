@@ -15,7 +15,8 @@ public sealed partial class WorkOrderBillRecognition
         WorkOrderMatchRule Rule,
         string? Detail,
         string? ExceptionReason,
-        IReadOnlyList<OpenOrder> SupplierOrders);
+        IReadOnlyList<OpenOrder> SupplierOrders,
+        string? AmountNote = null);
 
     /// <summary>One rule's answer: the order each line pays, or the reason none does. Pool is
     /// set when the bill is going to the card to be split across several orders — the value gate

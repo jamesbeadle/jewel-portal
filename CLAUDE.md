@@ -191,6 +191,28 @@ finds drift.
   > 0 (decision 2026-09-08). Nothing is persisted for the match, so Sync and Re-check re-run it
   for free; the sweep (`AllocateSuggestedXeroLinesHandler`, page button and nightly worker
   alike) skips matched bills exactly as it skips labour lines.
+- **The queue a line sits in is ONE rule, shared** (`contracts/Xero/XeroLedgerQueues.cs`,
+  2026-09-11, the accountant's finding: the connector read 44 Unallocated lines against a tab bar
+  of 14): `XeroLedgerQueues.Of(line, viewerMayHandleUnplaced)` → ToCode / Labour / LabourCovered
+  / WorkOrderBill / WorkOrderBillHeldForFinance. The page partitions with it (by the role the
+  user is VIEWING AS — `Session.ActiveRole`), `list_xero_ledger_lines` stamps `queue` (+
+  `projectTab`, a `labour` block with worker/covered month/verdict) on every Unallocated line,
+  takes `queue` as a filter and returns the tab bar (`tabBar`: toCode, workOrderBills as BILLS,
+  labourOutstanding, labourCovered, awaitingAction) from `GetXeroLedgerCounts`. Never partition
+  the ledger any other way.
+- **An unplaced Work Order bill (`BySupplierOrders`, figures to key) is the Finance Director's
+  card** (2026-09-11, the accountant's rule: the owner never sees a money field, and the plain
+  queue would lose the order link). `XeroLedgerQueues.MayHandleUnplacedWorkOrderBill` = FD or
+  Admin: any other viewer gets no card and no plain-queue row (`WorkOrderBillHeldForFinance` —
+  the bill waits on the FD's tab), the connector withholds `workOrderBill` on those lines, and
+  `ApproveWorkOrderBillHandler.RequireApproverMayKeyTheFiguresAsync` refuses server-side off the
+  approver's directory roles (`UserRoles.ForAsync`), whatever a client sent.
+- **Reference beats amount; the conflict is badged** (`WorkOrderBillMatch.AmountNote`,
+  2026-09-11): when a bill landed by its reference / line references / the supplier's only order
+  and its net is exactly what is left on a DIFFERENT order or unique set (the remaining-value rung
+  run as a cross-check over what it named), the note names the fit; the card shows an amber
+  "Amount fits another order" pill, the connector reads it out in the confirm turn, nobody
+  re-routes the bill. Amounts that agree with the reference earn nothing.
 - **One bill may pay several of the supplier's open orders, as a figure per order off the
   BILL TOTAL — never off the Xero lines** (2026-09-09, the accountant's ask: the lines are the
   supplier's own CIS labour / materials split and are left exactly as raised). The card is one

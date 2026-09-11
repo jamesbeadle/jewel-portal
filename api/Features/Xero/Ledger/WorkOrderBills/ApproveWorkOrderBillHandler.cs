@@ -40,6 +40,7 @@ public sealed partial class ApproveWorkOrderBillHandler : ICommandHandler<Approv
         GuardBill(lines);
 
         var (match, recognition) = await RequireMatchAsync(lines, cancellationToken);
+        await RequireApproverMayKeyTheFiguresAsync(command, match, cancellationToken);
         var orders = await RequireOrdersAsync(command, match, cancellationToken);
         RequireSlicesTieToTheBill(command, lines);
         RequireEachOrderWithinValue(command, orders);

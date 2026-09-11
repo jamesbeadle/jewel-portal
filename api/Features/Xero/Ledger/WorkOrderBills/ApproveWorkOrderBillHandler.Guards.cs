@@ -41,6 +41,23 @@ public sealed partial class ApproveWorkOrderBillHandler
         return (verdict.Match, recognition!);
     }
 
+    /// <summary>
+    /// A bill the ladder could not place (no figure proposed — the figures on the command were
+    /// keyed by a person) may be approved only by someone who may key them: the Finance Director
+    /// (2026-09-11, the accountant's rule — the owner never sees a money field, so the page and
+    /// the connector hide that card from him; this is the same rule held server-side, off the
+    /// approver's own directory roles, whatever a client sent). A placed bill is anyone's who
+    /// may approve.
+    /// </summary>
+    private async Task RequireApproverMayKeyTheFiguresAsync(ApproveWorkOrderBill command, WorkOrderBillMatch match, CancellationToken cancellationToken)
+    {
+        if (!XeroLedgerQueues.IsUnplaced(match)) return;
+        var roles = await UserRoles.ForAsync(context, command.ApprovedBy ?? "", cancellationToken);
+        if (XeroLedgerQueues.MayHandleUnplacedWorkOrderBill(roles)) return;
+        throw new InvalidOperationException(
+            "This bill names no order and its total did not place it, so its figures have to be keyed — that is the Finance Director's card, not this role's. Leave it on the Work Order bills tab for the Finance Director.");
+    }
+
     /// <summary>Every order the slices name must be an open order of the bill's supplier.</summary>
     private async Task<Dictionary<string, PaidOrder>> RequireOrdersAsync(
         ApproveWorkOrderBill command, WorkOrderBillMatch match, CancellationToken cancellationToken)

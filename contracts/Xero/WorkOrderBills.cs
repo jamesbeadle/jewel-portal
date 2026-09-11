@@ -52,7 +52,11 @@ public sealed record WorkOrderBillOrderOption(
 /// bill, identical on each. WorkOrderId etc. name the leading order; ProposedSlices are the
 /// bill's net across the orders as the read proposes it — the starting point the card lets the
 /// user change before approving; SupplierOrders are every open order of the bill's supplier,
-/// the matched ones included, so the card can put a figure on any of them.
+/// the matched ones included, so the card can put a figure on any of them. AmountNote
+/// (2026-09-11, the accountant's rule "reference beats amount — badge the conflict"): set when
+/// the bill landed by its reference or on the supplier's only order but its net is exactly
+/// what is left on a DIFFERENT order or set of orders — the reference still wins, the card
+/// shows the badge, and a person decides whether the supplier wrote the wrong number.
 /// </summary>
 public sealed record WorkOrderBillMatch(
     string WorkOrderId,
@@ -62,7 +66,8 @@ public sealed record WorkOrderBillMatch(
     WorkOrderMatchRule Rule,
     string Detail,
     IReadOnlyList<WorkOrderBillOrderSlice> ProposedSlices,
-    IReadOnlyList<WorkOrderBillOrderOption> SupplierOrders);
+    IReadOnlyList<WorkOrderBillOrderOption> SupplierOrders,
+    string? AmountNote = null);
 
 /// <summary>One order a Work Order bill was approved against, and how much of the bill it took.</summary>
 public sealed record WorkOrderBillApprovedOrder(string WorkOrderId, string WorkOrderReference, decimal Net);

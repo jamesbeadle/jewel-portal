@@ -12,19 +12,19 @@ public partial class XeroAllocation
     // the user elsewhere, and a remembered tab restored on load may be empty.
 
     private IReadOnlyList<(string ProjectId, string Name, int Count)>? projectTabsCache;
-    private (IReadOnlyList<XeroLedgerLine>? Lines, object Projects, string? ProjectTab, int NotLabour, int NotWorkOrderBill) projectTabsCacheKey;
+    private (IReadOnlyList<XeroLedgerLine>? Lines, object Projects, string? ProjectTab, int NotLabour, int NotWorkOrderBill, Role? ViewingAs) projectTabsCacheKey;
 
     private IReadOnlyList<(string ProjectId, string Name, int Count)> ProjectTabs
     {
         get
         {
-            var key = ((IReadOnlyList<XeroLedgerLine>?)UnallocatedLines, (object)Projects, activeProjectId, notLabourIds.Count, notWorkOrderBillInvoiceIds.Count);
+            var key = ((IReadOnlyList<XeroLedgerLine>?)UnallocatedLines, (object)Projects, activeProjectId, notLabourIds.Count, notWorkOrderBillInvoiceIds.Count, Session.ActiveRole);
             if (projectTabsCache is null || key != projectTabsCacheKey)
             {
                 // Labour-recognised lines belong to the Labour section, and Work Order bills to
                 // theirs — never to a project tab, even when their Xero tracking suggests a site.
                 var tabs = UnallocatedLines
-                    .Where(line => !IsLabourLine(line) && !IsWorkOrderBillLine(line))
+                    .Where(IsPlainQueueLine)
                     .GroupBy(GroupProjectFor)
                     .Where(group => group.Key != "")
                     .Select(group => (ProjectId: group.Key, Name: ProjectName(group.Key), Count: group.Count()))
@@ -48,7 +48,7 @@ public partial class XeroAllocation
     }
 
     private int UnassignedCount =>
-        UnallocatedLines.Count(line => !IsLabourLine(line) && !IsWorkOrderBillLine(line) && GroupProjectFor(line) == "");
+        UnallocatedLines.Count(line => IsPlainQueueLine(line) && GroupProjectFor(line) == "");
 
     // -- Labour section (scope §6 recognition) ----------------------------------
     // Recognition itself is server-side, on the line (matched worker + covered flag, computed

@@ -160,6 +160,28 @@ public sealed class ApproveWorkOrderBillHandlerTests
     }
 
     [Fact]
+    public async Task AnUnplacedBillsFiguresMayOnlyBeKeyedByTheFinanceDirector()
+    {
+        // inv-1724 names no order and £10,000 is not what is left on either Anything Electrical
+        // order, so its card proposes nothing. Keyed figures are the FD's to approve (2026-09-11);
+        // the fixture's approver holds no directory role, so the same command is refused, then
+        // passes once the directory says Finance Director.
+        var fixture = await WorkOrderBillFixture.CreateAsync();
+        var command = new ApproveWorkOrderBill("inv-1724", new[] { new WorkOrderBillOrderSlice("wo-bf-26", 10000m) });
+
+        var refusal = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.ApproveAsync(command));
+        Assert.Contains("Finance Director", refusal.Message);
+
+        fixture.Context.DirectoryUserRoles.Add(new DirectoryUserRoleEntity { DirectoryUserRoleId = "R1", DirectoryUserEmail = "nigel@jewelbb.co.uk", Role = (int)Role.FinanceDirector });
+        await fixture.Context.SaveChangesAsync();
+        var outcome = await fixture.ApproveAsync(command);
+
+        Assert.Equal(new[] { "WO-0026" }, outcome.WorkOrderReferences);
+        var approval = fixture.Context.WorkOrderBillApprovals.Single();
+        Assert.Equal((int)WorkOrderMatchRule.BySupplierOrders, approval.MatchRule);
+    }
+
+    [Fact]
     public async Task ABillWithNoMatchIsRefusedWithTheReason()
     {
         // A bill that would take the supplier's only open order over its value never matches

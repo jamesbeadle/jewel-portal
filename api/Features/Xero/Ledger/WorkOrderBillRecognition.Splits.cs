@@ -12,7 +12,8 @@ public sealed partial class WorkOrderBillRecognition
         return new WorkOrderBillMatch(
             leading.WorkOrderId, leading.Reference, leading.Title, leading.ProjectId, verdict.Rule, verdict.Detail!,
             verdict.Slices.Select(slice => new WorkOrderBillOrderSlice(slice.Order.WorkOrderId, slice.Net)).ToList(),
-            verdict.SupplierOrders.Select(order => order.ToOption()).ToList());
+            verdict.SupplierOrders.Select(order => order.ToOption()).ToList(),
+            verdict.AmountNote);
     }
 
     /// <summary>

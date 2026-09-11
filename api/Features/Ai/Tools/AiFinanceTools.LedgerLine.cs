@@ -7,11 +7,14 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools;
 /// allocation decision needs (the full record carries sync bookkeeping the model never uses),
 /// plus — since 2026-09-09 — the Work Order bill facts the allocation page's Work Order bills
 /// tab shows on its card, so approving a supplier's bill against its order(s) is one
-/// approve_work_order_bill call from here, exactly as it is one press there.
+/// approve_work_order_bill call from here, exactly as it is one press there; and — since
+/// 2026-09-11, the accountant's finding — the QUEUE the page would show the line in
+/// (<see cref="XeroLedgerQueues"/>, the page's own partition) with the labour facts behind it,
+/// so a worker's bill the settlement run has covered never reads as a line wanting coding.
 /// </summary>
 internal static partial class AiFinanceTools
 {
-    private static object Line(XeroLedgerLine line) => new
+    private static object Line(XeroLedgerLine line, bool viewerMayHandleUnplaced) => new
     {
         line.XeroLedgerLineId,
         line.XeroInvoiceId,
@@ -25,6 +28,10 @@ internal static partial class AiFinanceTools
         line.AccountCode,
         line.AccountName,
         status = line.AllocationStatus.ToString(),
+        queue = XeroLedgerQueues.Of(line, viewerMayHandleUnplaced)?.ToString(),
+        projectTab = XeroLedgerQueues.Of(line, viewerMayHandleUnplaced) == XeroLedgerQueue.ToCode
+            ? line.ProjectId ?? line.SuggestedProjectId
+            : null,
         line.ProjectId,
         line.CostCenterCode,
         line.Bucket,
@@ -37,7 +44,24 @@ internal static partial class AiFinanceTools
         writeBackStatus = line.WriteBackStatus.ToString(),
         line.WriteBackError,
         line.WriteBackFailedAtUtc,
-        workOrderBill = line.WorkOrderMatch is null ? null : WorkOrderBill(line.WorkOrderMatch),
+        labour = line.MatchedWorkerId is null && !line.CoveredByTimesheets ? null : new
+        {
+            workerId = line.MatchedWorkerId,
+            workerName = line.MatchedWorkerName,
+            subcontractorId = line.MatchedSubcontractorId,
+            line.CoveredByTimesheets,
+            coveredMonth = line.CoveredPeriodStart?.ToString("yyyy-MM"),
+            verdict = line.CoveredByTimesheets
+                ? "Settled — an approved timesheet is the actual and this bill is its settlement; nothing to code."
+                : "Labour tab — a worker's bill awaiting the settlement run, not a cost to code."
+        },
+        // The Work Order bills card. For a viewer who may not key figures (queue
+        // WorkOrderBillHeldForFinance) the match is withheld: no orders, no figures — the bill is
+        // the Finance Director's, and approve_work_order_bill would refuse this role anyway.
+        workOrderBill = line.WorkOrderMatch is null
+                        || XeroLedgerQueues.Of(line, viewerMayHandleUnplaced) == XeroLedgerQueue.WorkOrderBillHeldForFinance
+            ? null
+            : WorkOrderBill(line.WorkOrderMatch),
         line.WorkOrderExceptionReason,
         workOrderApproval = line.WorkOrderApproval is null ? null : WorkOrderApproval(line.WorkOrderApproval)
     };
@@ -53,6 +77,8 @@ internal static partial class AiFinanceTools
         match.ProjectId,
         rule = match.Rule.ToString(),
         match.Detail,
+        // Reference beats amount; a conflict is badged, never acted on silently (2026-09-11).
+        match.AmountNote,
         proposedSlices = match.ProposedSlices.Select(slice => new
         {
             slice.WorkOrderId,

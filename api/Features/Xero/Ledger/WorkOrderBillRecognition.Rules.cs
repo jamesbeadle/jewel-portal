@@ -27,7 +27,39 @@ public sealed partial class WorkOrderBillRecognition
         var overValue = assignment.Pool is null ? FirstOrderOverValue(slices) : PoolOverValue(assignment.Pool, billLines);
         if (overValue is not null) return Stays(overValue, orders);
 
-        return new BillVerdict(slices, assignment.Rule, assignment.Detail, null, orders);
+        return new BillVerdict(slices, assignment.Rule, assignment.Detail, null, orders, AmountNoteFor(assignment, slices, orders, billLines, hintedProjectId));
+    }
+
+    /// <summary>
+    /// Reference beats amount — and the conflict is badged (2026-09-11, the accountant's rule).
+    /// When the bill landed by what it names (or on the supplier's only order) and its net is
+    /// exactly what is left on a different order, or on one unique set of the supplier's open
+    /// orders that is not the set it landed on, the note says so. The match is not moved; a
+    /// person reads the badge and decides whether the supplier wrote the wrong number. Nothing
+    /// when the amounts agree with the reference, or decide nothing.
+    /// </summary>
+    private static string? AmountNoteFor(
+        Assignment assignment, IReadOnlyList<(OpenOrder Order, decimal Net)> slices, List<OpenOrder> orders,
+        IReadOnlyList<XeroLedgerLineEntity> billLines, string? hintedProjectId)
+    {
+        if (assignment.Rule is WorkOrderMatchRule.ByRemainingValue or WorkOrderMatchRule.BySupplierOrders) return null;
+        var onSite = hintedProjectId is null
+            ? orders
+            : orders.Where(order => order.ProjectId.Equals(hintedProjectId, StringComparison.OrdinalIgnoreCase)).ToList();
+        var byAmount = ChooseByRemainingValue(onSite, billLines, out _);
+        if (byAmount?.Slices is null) return null;
+
+        // What the bill names: the pool when its reference names several orders (the card splits
+        // across them), else the order(s) its lines landed on.
+        var named = assignment.Pool ?? slices.Select(slice => slice.Order).ToList();
+        var landedOn = named.Select(order => order.WorkOrderId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var amountsSay = byAmount.Slices.Select(slice => slice.Order.WorkOrderId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (landedOn.SetEquals(amountsSay)) return null;
+
+        var fits = string.Join(" + ", byAmount.Slices.Select(slice => $"{slice.Order.Reference} ({slice.Order.Remaining.ToString("C2", Gbp)} left)"));
+        var landed = string.Join(" + ", named.Select(order => order.Reference));
+        return $"Amount fits {fits} — the bill's {billLines.Sum(SignedNet).ToString("C2", Gbp)} is exactly what is left there, "
+             + $"but the bill names {landed}, so it lands on {landed}. Check the reference before approving.";
     }
 
     /// <summary>The bill's net as a figure per order: each line's signed net on the order it was assigned to.</summary>

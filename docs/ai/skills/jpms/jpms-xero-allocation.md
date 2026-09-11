@@ -30,15 +30,42 @@ description: "How Xero and the portal reconcile — allocation doctrine and why 
   hand. It sits on the allocation page's Work Order bills tab as ONE card per bill, pre-filled
   from the order (project, cost code split pro rata to the order's lines, order value, invoiced
   to date, remaining), and one Approve allocates every line, links each to the order for its
-  net, writes Sites + Cost Code tracking to Xero and approves the bill there. Matching runs on
-  every unallocated read (Sync and Re-check re-run it): a WO number on the bill wins (supplier
-  + number — numbers are per project, the bill's own Xero site breaks a tie); else a supplier
-  with exactly one open order; "open" is Released with value still left to invoice. Not
-  matched, with the reason on the row: the bill would take the order over its value, several
-  orders fit and the bill carries no reference, or the supplier is on the labour registry (the
-  cover route wins). The approval is audited (who, which rule) and undone as a bill: allocation,
-  links and Xero tracking reverse together — but Xero never un-approves, so an approved bill
-  stays awaiting payment there.
+  net, writes Sites + Cost Code tracking to Xero and approves the bill there. "Open" is Released
+  with value still left to invoice. The approval is audited (who, which rule) and undone as a
+  bill: allocation, links and Xero tracking reverse together — but Xero never un-approves, so
+  an approved bill stays awaiting payment there.
+- **The matching ladder** (2026-09-11, the accountant's rules), top rung first, run on every
+  unallocated read: (1) a WO number on the bill names the order — supplier + number, the bill's
+  site breaks a tie; lines naming their own orders are proposed line by line; (2) the supplier
+  has exactly one open order; (3) the bill's net is exactly what is left to invoice on one
+  order, or (4) on one unique set of the supplier's open orders (£3,092 = WO-0055 £1,748 +
+  WO-0056 £1,344) — each order's remaining value is its figure. On every rung the figures are
+  proposed and the card needs only Approve; `workOrderBill.rule` says which rung. **Reference
+  beats amount**: when `workOrderBill.amountNote` is set the net fits a DIFFERENT order than the
+  bill names — the match stays on the reference; read the note out and let the user decide.
+  Amount is bill net (ex VAT, a credit note negative) against order value less what is already
+  linked to it — both net, to the penny.
+- **When the ladder runs out** (no order named, and the total is a part payment or fits more
+  than one way) the bill is still a Work Order bill — never the plain queue, which would lose the
+  order link — and its figures have to be keyed: that card is the **Finance Director's** (queue
+  `WorkOrderBillHeldForFinance` for everyone else; the owner never sees a money field; the server
+  refuses other roles). As the FD, never invent the split: show the supplier's open orders with
+  their remaining values and take the figure per order from the user.
+
+## Reading the queue (2026-09-11)
+
+- **The raw Unallocated count is NOT the to-do.** `list_xero_ledger_lines` with no status
+  returns `tabBar` — the page's own tab bar: `toCode` (lines wanting a project + cost centre),
+  `workOrderBills` (BILLS, one Approve each — not lines), `labourOutstanding`, `labourCovered`,
+  and `awaitingAction` = toCode + workOrderBills + labourOutstanding. Quote those, never
+  `counts.unallocated`, for "what is outstanding on Xero allocation".
+- **Every Unallocated line carries `queue`** — the tab the page shows it in, by the page's own
+  rule: `ToCode` (`projectTab` names the project tab, blank = the plain Unallocated tab),
+  `Labour` (a labour-registry worker's bill awaiting the settlement run — settlement, not a
+  cost to code; `labour` carries the worker), `LabourCovered` (already settled by an approved
+  timesheet — nothing to do), `WorkOrderBill` (approve_work_order_bill), or
+  `WorkOrderBillHeldForFinance`. Pass `queue` to read one tab. A line whose `queue` is not
+  `ToCode` is never coded with set_xero_allocation.
 
 ## Where a bill stands in Xero (2026-09-08)
 

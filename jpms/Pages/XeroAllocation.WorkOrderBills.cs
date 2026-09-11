@@ -25,10 +25,28 @@ public partial class XeroAllocation
     private string? WorkOrderBillErrorFor(IReadOnlyList<XeroLedgerLine> bill) =>
         workOrderBillErrorInvoiceId == bill[0].XeroInvoiceId ? workOrderBillError : null;
 
+    /// <summary>A line on THIS viewer's Work Order bills tab. The match rides the line; a match
+    /// with no figure proposed (the ladder ran out — figures to key) shows only to a viewer who
+    /// may key them, the Finance Director (2026-09-11, the accountant's rule: the owner never
+    /// sees a money field).</summary>
     private bool IsWorkOrderBillLine(XeroLedgerLine line) =>
+        IsMatchedWorkOrderBillLine(line) && !IsHeldForFinance(line);
+
+    /// <summary>A Work Order bill this viewer may not handle — on nobody's tab for them, and never
+    /// the plain queue: it keeps its match and waits on the Finance Director's tab.</summary>
+    private bool IsHeldForFinance(XeroLedgerLine line) =>
+        IsMatchedWorkOrderBillLine(line)
+        && XeroLedgerQueues.IsUnplaced(line.WorkOrderMatch!)
+        && !(Session.ActiveRole is { } role && XeroLedgerQueues.MayHandleUnplacedWorkOrderBill(role));
+
+    private bool IsMatchedWorkOrderBillLine(XeroLedgerLine line) =>
         line.WorkOrderMatch is not null
         && !IsLabourLine(line)
         && !notWorkOrderBillInvoiceIds.Contains(line.XeroInvoiceId);
+
+    /// <summary>The ordinary queue: nothing recognised the line, for this viewer.</summary>
+    private bool IsPlainQueueLine(XeroLedgerLine line) =>
+        !IsLabourLine(line) && !IsWorkOrderBillLine(line) && !IsHeldForFinance(line);
 
     /// <summary>The tab's number: bills (cards), not lines.</summary>
     private int WorkOrderBillCount =>

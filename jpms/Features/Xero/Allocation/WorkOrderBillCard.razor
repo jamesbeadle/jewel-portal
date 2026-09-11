@@ -22,7 +22,16 @@
                     <span class="text-content mr-2" title="@order.Title">@order.Reference</span>
                 }
                 <Pill Tone="Match.Rule.ToTone()" Class="align-middle" Title="@Match.Detail">@Match.Rule.Label()</Pill>
+                @if (Match.AmountNote is not null)
+                {
+                    @* Reference beats amount; the conflict is badged (2026-09-11). *@
+                    <Pill Tone="Tone.Warning" Class="align-middle ml-1.5" Title="@Match.AmountNote">Amount fits another order</Pill>
+                }
             </p>
+            @if (Match.AmountNote is not null)
+            {
+                <p class="text-sm text-content-muted mt-1 max-w-3xl">@Match.AmountNote</p>
+            }
         </div>
         <div class="flex items-center gap-3 whitespace-nowrap">
             <span class="text-content font-medium">@Money(BillNet) net</span>

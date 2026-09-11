@@ -109,6 +109,25 @@ public sealed class WorkOrderBillRecognitionTests
         var line = (await fixture.ReadUnallocatedAsync()).Single(candidate => candidate.XeroInvoiceId == "inv-ref");
 
         Assert.Equal((WorkOrderMatchRule.ByReference, "wo-lg-55"), (line.WorkOrderMatch?.Rule, line.WorkOrderMatch?.WorkOrderId));
+        // ... and the conflict is badged, not acted on: the amount fits WO-0056, the reference wins.
+        Assert.Contains("Amount fits WO-0056 (£1,344.00 left)", line.WorkOrderMatch!.AmountNote);
+        Assert.Contains("names WO-0055, so it lands on WO-0055", line.WorkOrderMatch.AmountNote);
+    }
+
+    [Fact]
+    public async Task TheAmountsAgreeingWithTheReferenceEarnNoBadge()
+    {
+        var fixture = await WorkOrderBillFixture.CreateAsync();
+        WorkOrderBillFixture.AddOrder(fixture.Context, "wo-lg-55", WorkOrderBillFixture.Woodhouse, 55, "sub-dry", 1344m, ("INT-PLS", 1344m));
+        WorkOrderBillFixture.AddOrder(fixture.Context, "wo-lg-56", WorkOrderBillFixture.Woodhouse, 56, "sub-dry", 5000m, ("INT-PLB", 5000m));
+        WorkOrderBillFixture.AddBill(fixture.Context, "inv-agree", "Lees Green-005", "Drywall Co Ltd", ("321", 1344m));
+        await fixture.Context.SaveChangesAsync();
+        await SetReferenceAsync(fixture, "inv-agree", "WO-0055");
+
+        var line = (await fixture.ReadUnallocatedAsync()).Single(candidate => candidate.XeroInvoiceId == "inv-agree");
+
+        Assert.Equal(WorkOrderMatchRule.ByReference, line.WorkOrderMatch?.Rule);
+        Assert.Null(line.WorkOrderMatch!.AmountNote);
     }
 
     [Fact]

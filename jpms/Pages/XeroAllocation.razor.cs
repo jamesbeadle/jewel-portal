@@ -113,7 +113,7 @@ public partial class XeroAllocation
     private IReadOnlyList<XeroLedgerLine>? visibleCache;
     private (IReadOnlyList<XeroLedgerLine>? Lines, object Projects, string Search, XeroAllocationStatus Tab,
              string? ProjectTab, string? Bucket, string AllocatedProject,
-             bool LabourTab, bool ShowCovered, int NotLabour, bool WorkOrderBillsTab, int NotWorkOrderBill, string XeroFilter) visibleCacheKey;
+             bool LabourTab, bool ShowCovered, int NotLabour, bool WorkOrderBillsTab, int NotWorkOrderBill, string XeroFilter, Role? ViewingAs) visibleCacheKey;
 
     private IReadOnlyList<XeroLedgerLine> Visible
     {
@@ -121,7 +121,9 @@ public partial class XeroAllocation
         {
             // Projects is in the key because GroupProjectFor validates against it.
             var key = (Lines, (object)Projects, search, activeTab, activeProjectId, bucketFilter, allocatedProjectFilter,
-                       labourTab, showCoveredLabour, notLabourIds.Count, workOrderBillsTab, notWorkOrderBillInvoiceIds.Count, allocatedXeroFilter);
+                       labourTab, showCoveredLabour, notLabourIds.Count, workOrderBillsTab, notWorkOrderBillInvoiceIds.Count, allocatedXeroFilter,
+                       // The role the user is viewing as decides whether an unplaced Work Order bill is theirs to see.
+                       Session.ActiveRole);
             if (visibleCache is null || key != visibleCacheKey)
             {
                 visibleCache = Lines is null
@@ -139,7 +141,7 @@ public partial class XeroAllocation
                                               ? IsLabourLine(line) && (showCoveredLabour || !line.CoveredByTimesheets)
                                               : workOrderBillsTab
                                                   ? IsWorkOrderBillLine(line)
-                                                  : !IsLabourLine(line) && !IsWorkOrderBillLine(line)
+                                                  : IsPlainQueueLine(line)
                                                     && GroupProjectFor(line) == (activeProjectId ?? "")))
                            .Where(line => activeTab != XeroAllocationStatus.Bucketed
                                           || bucketFilter is null || line.Bucket == bucketFilter)

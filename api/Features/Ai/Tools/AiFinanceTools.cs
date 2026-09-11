@@ -134,21 +134,38 @@ internal static partial class AiFinanceTools
                 + "Unallocated (awaiting a project + cost centre), Allocated (with any splits), "
                 + "Bucketed, Ignored or Disputed (with the dispute thread). Pass a status to read "
                 + "that queue, or a projectId for one project's allocated lines; with neither, the "
-                + "per-status counts come back so you can pick. This is the data behind the Xero "
-                + "Cost Allocation page and each project's cost-of-sales spend. Unallocated lines "
-                + "whose bill matched an open work order carry workOrderBill (the Work Order bills "
-                + "tab's card: the orders, the proposed per-order slices, every open order of the "
-                + "supplier) — approve_work_order_bill takes it from there; lines a candidate order "
-                + "refused carry workOrderExceptionReason; lines approved as a Work Order bill carry "
+                + "per-status counts come back AND the Cost Allocation page's tab bar (tabBar: "
+                + "toCode with its per-project tabs, workOrderBills — counted as BILLS, one Approve "
+                + "each, not lines — labourOutstanding, labourCovered) so you can pick. Every "
+                + "Unallocated line carries queue — the tab the page shows it in, decided by the "
+                + "page's own rule: ToCode (wants a project + cost centre; projectTab says which "
+                + "project tab, blank = the plain Unallocated tab), Labour (a labour-registry "
+                + "worker's bill awaiting the settlement run — NOT a cost to code), LabourCovered "
+                + "(already settled by an approved timesheet — nothing to do; the page hides these "
+                + "behind 'show covered'), WorkOrderBill (matched to open order(s), figures proposed "
+                + "— approve_work_order_bill), WorkOrderBillHeldForFinance (a Work Order bill whose "
+                + "figures still have to be keyed — the Finance Director's card; nothing to do for "
+                + "this role). The raw Unallocated count is NOT the to-do: only ToCode + "
+                + "WorkOrderBill (as bills) + Labour are. Pass queue to read one tab. Labour lines "
+                + "carry labour (worker, covered month, verdict); Work Order bill lines carry "
+                + "workOrderBill (the card: the orders, the proposed per-order slices, every open "
+                + "order of the supplier); lines a candidate order refused carry "
+                + "workOrderExceptionReason; lines approved as a Work Order bill carry "
                 + "workOrderApproval.",
                 AiToolSchema.Object(
                     ("status", "string", "Unallocated, Allocated, Bucketed, Ignored or Disputed.", false),
+                    ("queue", "string", "With status Unallocated: ToCode, Labour, LabourCovered, WorkOrderBill or WorkOrderBillHeldForFinance — one tab of the page instead of the whole status.", false),
                     ("projectId", "string", "One project's allocated lines instead of a status queue.", false),
                     ("take", "number", "With projectId only: maximum lines, default 100.", false)),
                 AiToolKind.Read,
                 XeroLedgerRoles.AllowedToAllocate,
                 async (context, input, ct) =>
                 {
+                    // The same rule the page applies to the role the user is viewing as; the
+                    // connector has no "viewing as", so the user's effective roles decide.
+                    var viewerMayHandleUnplaced = XeroLedgerQueues.MayHandleUnplacedWorkOrderBill(context.User.Roles);
+                    object Row(XeroLedgerLine line) => Line(line, viewerMayHandleUnplaced);
+
                     var projectId = AiToolSchema.Text(input, "projectId");
                     if (!string.IsNullOrWhiteSpace(projectId))
                     {
@@ -157,7 +174,7 @@ internal static partial class AiFinanceTools
                             .HandleAsync(new ListXeroLedgerLinesForProject(
                                 projectId, Math.Clamp(AiToolSchema.Number(input, "take") ?? 100, 1, 500)), ct);
                         return Serialise(new { ok = true, projectId, count = projectLines.Count,
-                            lines = projectLines.Select(Line) });
+                            lines = projectLines.Select(Row) });
                     }
 
                     var statusText = AiToolSchema.Text(input, "status")?.Trim();
@@ -166,8 +183,23 @@ internal static partial class AiFinanceTools
                         var counts = await context.Services
                             .GetRequiredService<IQueryHandler<GetXeroLedgerCounts, XeroLedgerCounts>>()
                             .HandleAsync(new GetXeroLedgerCounts(), ct);
-                        return Serialise(new { ok = true, counts,
-                            note = "Pass a status to read that queue's lines." });
+                        return Serialise(new
+                        {
+                            ok = true,
+                            counts,
+                            tabBar = new
+                            {
+                                toCode = counts.ToCode,
+                                workOrderBills = counts.WorkOrderBills,
+                                labourOutstanding = counts.LabourOutstanding,
+                                labourCovered = counts.LabourCovered,
+                                awaitingAction = counts.AwaitingAction,
+                                unit = "toCode, labourOutstanding and labourCovered are LINES; workOrderBills is BILLS (one Approve each). "
+                                     + "awaitingAction = toCode + workOrderBills + labourOutstanding — what the page will ask someone to do; "
+                                     + "counts.unallocated is the raw status and always larger."
+                            },
+                            note = "Pass a status to read that queue's lines; with status Unallocated add queue for one tab."
+                        });
                     }
 
                     if (!Enum.TryParse<XeroAllocationStatus>(statusText, ignoreCase: true, out var status))
@@ -176,8 +208,35 @@ internal static partial class AiFinanceTools
                     var lines = await context.Services
                         .GetRequiredService<IQueryHandler<ListXeroLedgerLines, IReadOnlyList<XeroLedgerLine>>>()
                         .HandleAsync(new ListXeroLedgerLines(status), ct);
+
+                    var queueText = AiToolSchema.Text(input, "queue")?.Trim();
+                    if (!string.IsNullOrWhiteSpace(queueText))
+                    {
+                        if (status != XeroAllocationStatus.Unallocated)
+                            return Fail("queue applies to status Unallocated only — the other statuses have no tabs.");
+                        if (!Enum.TryParse<XeroLedgerQueue>(queueText, ignoreCase: true, out var queue))
+                            return Fail("queue must be ToCode, Labour, LabourCovered, WorkOrderBill or WorkOrderBillHeldForFinance.");
+                        var tab = lines.Where(line => XeroLedgerQueues.Of(line, viewerMayHandleUnplaced) == queue).ToList();
+                        return Serialise(new
+                        {
+                            ok = true,
+                            status = status.ToString(),
+                            queue = queue.ToString(),
+                            count = tab.Count,
+                            bills = queue is XeroLedgerQueue.WorkOrderBill or XeroLedgerQueue.WorkOrderBillHeldForFinance
+                                ? tab.Select(line => line.XeroInvoiceId).Distinct(StringComparer.OrdinalIgnoreCase).Count()
+                                : (int?)null,
+                            lines = tab.Select(Row)
+                        });
+                    }
+
+                    var byQueue = status == XeroAllocationStatus.Unallocated
+                        ? lines.GroupBy(line => XeroLedgerQueues.Of(line, viewerMayHandleUnplaced)?.ToString() ?? "")
+                               .ToDictionary(group => group.Key, group => group.Count())
+                        : null;
                     return Serialise(new { ok = true, status = status.ToString(), count = lines.Count,
-                        lines = lines.Select(Line) });
+                        linesByQueue = byQueue,
+                        lines = lines.Select(Row) });
                 })
         };
     }
