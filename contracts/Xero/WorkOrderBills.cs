@@ -17,11 +17,15 @@ namespace Jewel.JPMS.Contracts.Xero;
 // checks they tie to the bill, and Approve spreads each order's slice over the bill's lines
 // and each line's portion over the order's cost codes, to the penny, portal-side only.
 
-/// <summary>Which rule matched a bill to its order(s) — the audit reads it back. BySupplierOrders
-/// (2026-09-10, the accountant's ask): the bill names no order and the supplier has several open,
-/// so it reaches the card with every order listed and NO figure proposed — the accountant keys
-/// the split; nothing is guessed.</summary>
-public enum WorkOrderMatchRule { ByReference = 0, BySupplier = 1, ByLineReference = 2, BySupplierOrders = 3 }
+/// <summary>Which rule matched a bill to its order(s) — the audit reads it back. The ladder
+/// (2026-09-11, the accountant's ask), top rung first: ByReference / ByLineReference — the bill
+/// names the order(s); BySupplier — the supplier has one open order; ByRemainingValue — the
+/// bill's net is exactly what is left to invoice on one of the supplier's open orders, or on one
+/// unique set of them between them (£3,092 = WO-0055 £1,748 + WO-0056 £1,344), so the figures
+/// are proposed and the card needs only Approve; BySupplierOrders — none of that held (a part
+/// bill naming no order, or amounts that fit more than one way), so the bill reaches the card
+/// with every order listed and NO figure proposed — a person keys the split; nothing is guessed.</summary>
+public enum WorkOrderMatchRule { ByReference = 0, BySupplier = 1, ByLineReference = 2, BySupplierOrders = 3, ByRemainingValue = 4 }
 
 /// <summary>This much of the bill's net on this order — the figure the card takes per open order.</summary>
 public sealed record WorkOrderBillOrderSlice(string WorkOrderId, decimal Net);

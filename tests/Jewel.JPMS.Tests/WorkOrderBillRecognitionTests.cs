@@ -14,16 +14,101 @@ namespace Jewel.JPMS.Tests;
 public sealed class WorkOrderBillRecognitionTests
 {
     [Fact]
-    public async Task ASupplierWithTwoOpenOrdersAndNoReferenceStaysInTheQueueWithTheReason()
+    public async Task ASupplierWithTwoOpenOrdersAndNoReferenceReachesTheCardWithNothingProposed()
     {
+        // The bottom of the ladder: £10,000 names no order and is not what is left on WO-0026
+        // (£97,810) or WO-0001 (£14,940), alone or together — so the card lists both at nothing.
         var fixture = await WorkOrderBillFixture.CreateAsync();
 
-        var lines = await fixture.ReadUnallocatedAsync();
+        var line = (await fixture.ReadUnallocatedAsync()).Single(candidate => candidate.XeroLedgerLineId == "inv-1724:0");
 
-        var line = lines.Single(candidate => candidate.XeroLedgerLineId == "inv-1724:0");
-        Assert.Null(line.WorkOrderMatch);
-        Assert.Contains("2 open work orders", line.WorkOrderExceptionReason);
-        Assert.Contains("WO-0026 By France", line.WorkOrderExceptionReason);
+        var match = Assert.IsType<WorkOrderBillMatch>(line.WorkOrderMatch);
+        Assert.Equal(WorkOrderMatchRule.BySupplierOrders, match.Rule);
+        Assert.Contains("2 open orders", match.Detail);
+        Assert.Contains("not what is left on any of them", match.Detail);
+        Assert.All(match.ProposedSlices, slice => Assert.Equal(0m, slice.Net));
+        Assert.Equal(2, match.ProposedSlices.Count);
+    }
+
+    [Fact]
+    public async Task TheAccountantsLadder_ABillThatIsExactlyWhatIsLeftOnTwoOrdersIsProposedAcrossThem()
+    {
+        // Sussex Tiling, Lees Green-001 (2026-09-11): £3,092 net, no order named, three open
+        // orders — £1,748 + £1,344 is the only way the open orders make the total, so the card
+        // lands with those two figures and needs only Approve. WO-0049's £14,921 is untouched.
+        var fixture = await WorkOrderBillFixture.CreateAsync();
+        WorkOrderBillFixture.AddOrder(fixture.Context, "wo-lg-55", WorkOrderBillFixture.Woodhouse, 55, "sub-dry", 1748m, ("INT-PLS", 1748m));
+        WorkOrderBillFixture.AddOrder(fixture.Context, "wo-lg-49", WorkOrderBillFixture.Woodhouse, 49, "sub-dry", 14921m, ("INT-PLS", 14921m));
+        WorkOrderBillFixture.AddOrder(fixture.Context, "wo-lg-56", WorkOrderBillFixture.Woodhouse, 56, "sub-dry", 1344m, ("INT-PLB", 1344m));
+        WorkOrderBillFixture.AddBill(fixture.Context, "inv-lg", "Lees Green-001", "Drywall Co Ltd", ("321", 720m), ("322", 2372m));
+        await fixture.Context.SaveChangesAsync();
+
+        var lines = (await fixture.ReadUnallocatedAsync()).Where(line => line.XeroInvoiceId == "inv-lg").ToList();
+
+        Assert.All(lines, line =>
+        {
+            var match = Assert.IsType<WorkOrderBillMatch>(line.WorkOrderMatch);
+            Assert.Equal(WorkOrderMatchRule.ByRemainingValue, match.Rule);
+            Assert.Contains("£3,092.00 is exactly what is left to invoice on WO-0055 (£1,748.00) + WO-0056 (£1,344.00)", match.Detail);
+            Assert.Equal(
+                new[] { ("wo-lg-55", 1748m), ("wo-lg-56", 1344m) },
+                match.ProposedSlices.Select(slice => (slice.WorkOrderId, slice.Net)));
+            Assert.Equal(4, match.SupplierOrders.Count);
+        });
+    }
+
+    [Fact]
+    public async Task TheAccountantsLadder_ABillThatIsExactlyWhatIsLeftOnOneOrderTakesThatOrder()
+    {
+        // Rung 3: several open orders, the total is what is left on WO-0055 alone — a part-invoiced
+        // order counts by what is LEFT, not its value.
+        var fixture = await WorkOrderBillFixture.CreateAsync();
+        WorkOrderBillFixture.AddOrder(fixture.Context, "wo-lg-55", WorkOrderBillFixture.Woodhouse, 55, "sub-dry", 5000m, ("INT-PLS", 5000m));
+        fixture.Context.XeroLineWorkOrderLinks.Add(new XeroLineWorkOrderLinkEntity { XeroLineWorkOrderLinkId = "L55", XeroLedgerLineId = "old-55", WorkOrderId = "wo-lg-55", ProjectId = WorkOrderBillFixture.Woodhouse, Amount = 3252m });
+        WorkOrderBillFixture.AddBill(fixture.Context, "inv-final", "Lees Green-002", "Drywall Co Ltd", ("321", 1748m));
+        await fixture.Context.SaveChangesAsync();
+
+        var line = (await fixture.ReadUnallocatedAsync()).Single(candidate => candidate.XeroInvoiceId == "inv-final");
+
+        var match = Assert.IsType<WorkOrderBillMatch>(line.WorkOrderMatch);
+        Assert.Equal((WorkOrderMatchRule.ByRemainingValue, "wo-lg-55"), (match.Rule, match.WorkOrderId));
+        Assert.Contains("exactly what is left to invoice on WO-0055", match.Detail);
+        var slice = Assert.Single(match.ProposedSlices);
+        Assert.Equal(("wo-lg-55", 1748m), (slice.WorkOrderId, slice.Net));
+    }
+
+    [Fact]
+    public async Task TheAccountantsLadder_ATotalTheAmountsMakeTwoWaysProposesNothing()
+    {
+        // Two orders with £1,748 left each and a £1,748 bill: either fits, so neither is guessed.
+        var fixture = await WorkOrderBillFixture.CreateAsync();
+        WorkOrderBillFixture.AddOrder(fixture.Context, "wo-lg-55", WorkOrderBillFixture.Woodhouse, 55, "sub-dry", 1748m, ("INT-PLS", 1748m));
+        WorkOrderBillFixture.AddOrder(fixture.Context, "wo-lg-56", WorkOrderBillFixture.Woodhouse, 56, "sub-dry", 1748m, ("INT-PLB", 1748m));
+        WorkOrderBillFixture.AddBill(fixture.Context, "inv-twin", "Lees Green-003", "Drywall Co Ltd", ("321", 1748m));
+        await fixture.Context.SaveChangesAsync();
+
+        var line = (await fixture.ReadUnallocatedAsync()).Single(candidate => candidate.XeroInvoiceId == "inv-twin");
+
+        var match = Assert.IsType<WorkOrderBillMatch>(line.WorkOrderMatch);
+        Assert.Equal(WorkOrderMatchRule.BySupplierOrders, match.Rule);
+        Assert.Contains("more than one combination", match.Detail);
+        Assert.All(match.ProposedSlices, slice => Assert.Equal(0m, slice.Net));
+    }
+
+    [Fact]
+    public async Task TheAccountantsLadder_AReferenceOnTheBillStillBeatsTheAmounts()
+    {
+        // Rung 1 over rung 3: the total is what is left on WO-0056, but the bill names WO-0055.
+        var fixture = await WorkOrderBillFixture.CreateAsync();
+        WorkOrderBillFixture.AddOrder(fixture.Context, "wo-lg-55", WorkOrderBillFixture.Woodhouse, 55, "sub-dry", 5000m, ("INT-PLS", 5000m));
+        WorkOrderBillFixture.AddOrder(fixture.Context, "wo-lg-56", WorkOrderBillFixture.Woodhouse, 56, "sub-dry", 1344m, ("INT-PLB", 1344m));
+        WorkOrderBillFixture.AddBill(fixture.Context, "inv-ref", "Lees Green-004", "Drywall Co Ltd", ("321", 1344m));
+        await fixture.Context.SaveChangesAsync();
+        await SetReferenceAsync(fixture, "inv-ref", "WO-0055");
+
+        var line = (await fixture.ReadUnallocatedAsync()).Single(candidate => candidate.XeroInvoiceId == "inv-ref");
+
+        Assert.Equal((WorkOrderMatchRule.ByReference, "wo-lg-55"), (line.WorkOrderMatch?.Rule, line.WorkOrderMatch?.WorkOrderId));
     }
 
     [Fact]

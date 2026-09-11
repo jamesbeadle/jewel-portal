@@ -20,9 +20,10 @@ public sealed partial class WorkOrderBillRecognition
         var assignment = ChooseByLine(orders, billLines, hintedProjectId) ?? ChooseForBill(orders, billLines, hintedProjectId);
         if (assignment.OrderByLineId is null) return Stays(assignment.Reason!, orders);
 
-        var slices = assignment.Unplaced
-            ? assignment.Pool!.Select(order => (order, 0m)).ToList()
-            : SlicesOf(assignment.OrderByLineId, billLines);
+        var slices = assignment.Slices
+            ?? (assignment.Unplaced
+                ? assignment.Pool!.Select(order => (order, 0m)).ToList()
+                : SlicesOf(assignment.OrderByLineId, billLines));
         var overValue = assignment.Pool is null ? FirstOrderOverValue(slices) : PoolOverValue(assignment.Pool, billLines);
         if (overValue is not null) return Stays(overValue, orders);
 
@@ -127,13 +128,17 @@ public sealed partial class WorkOrderBillRecognition
         return null;
     }
 
-    /// <summary>No number on the bill: a supplier with exactly one open order matches on that
-    /// alone — on the project the bill's site names when it names one, else anywhere. A supplier
-    /// with several (2026-09-10, the accountant's ask — the Sussex Tiling bill against two By
-    /// France orders): the bill still reaches the card, every open order listed with NO figure
-    /// proposed, for the accountant to key the split — the same card a referenced bill gets, so
-    /// the work-order approval is never lost to the plain queue for want of a number on the bill.
-    /// Only a site the supplier has no order on refuses the bill.</summary>
+    /// <summary>No number on the bill — the lower rungs of the ladder (2026-09-11, the
+    /// accountant's ask). A supplier with exactly one open order matches on that alone — on the
+    /// project the bill's site names when it names one, else anywhere. A supplier with several:
+    /// the amounts decide when they can (<see cref="ChooseByRemainingValue"/>) — the bill's net is
+    /// exactly what is left on one order, or on one unique set of them between them, and the
+    /// figures are proposed so the card needs only Approve. When the amounts cannot decide (a
+    /// part bill naming no order, or a total that fits more than one way) the bill still reaches
+    /// the card, every open order listed with NO figure proposed, for a person to key the split —
+    /// the same card a referenced bill gets, so the work-order approval is never lost to the plain
+    /// queue for want of a number on the bill. Only a site the supplier has no order on refuses
+    /// the bill.</summary>
     private static Assignment ChooseBySupplier(List<OpenOrder> orders, string? hintedProjectId, IReadOnlyList<XeroLedgerLineEntity> billLines)
     {
         var onSite = hintedProjectId is null
@@ -145,11 +150,17 @@ public sealed partial class WorkOrderBillRecognition
                 + (hintedProjectId is null ? "." : $" on {onSite[0].ProjectName}, the site on the bill."), null);
         if (onSite.Count > 1)
         {
+            var byAmount = ChooseByRemainingValue(onSite, billLines, out var amountsFitSeveralWays);
+            if (byAmount is not null) return byAmount;
+
             var listed = string.Join(", ", onSite.Select(order => order.Reference));
             return new Assignment(EveryLineOn(onSite[0], billLines), WorkOrderMatchRule.BySupplierOrders,
                 $"The supplier has {onSite.Count} open orders ({listed})"
                 + (hintedProjectId is null ? "" : $" on {onSite[0].ProjectName}, the site on the bill,")
-                + " and the bill names none — set the figure on each order it pays.",
+                + " and the bill names none"
+                + (amountsFitSeveralWays
+                    ? " — its total is what is left on more than one combination of them, so nothing is proposed: set the figure on each order it pays."
+                    : " and its total is not what is left on any of them — set the figure on each order it pays."),
                 null, onSite, Unplaced: true);
         }
         if (orders.Count == 1)
@@ -158,5 +169,47 @@ public sealed partial class WorkOrderBillRecognition
         return Assignment.Refused($"The supplier has {orders.Count} open work orders "
                                   + $"({string.Join(", ", orders.Select(order => $"{order.Reference} {order.ProjectName}"))}), "
                                   + "none on the site the bill names — set the project on the bill and re-check.");
+    }
+
+    /// <summary>More open orders than this and the amounts are not tried — every combination is
+    /// looked at, and a supplier with that many open orders is not one a total should decide.</summary>
+    private const int MostOrdersTheAmountsDecide = 16;
+
+    /// <summary>The remaining-value rung (2026-09-11, the accountant's ask — the Sussex Tiling
+    /// bill: £3,092 with no order named, and £1,748 + £1,344 left on WO-0055 and WO-0056): the
+    /// bill's net is exactly what is left to invoice on ONE of the supplier's open orders, or on
+    /// ONE set of them between them, to the penny. That set is the answer and each order's
+    /// remaining value is its figure, so the card lands filled in. A total that no combination
+    /// makes, or that more than one makes, is null — the amounts have not decided anything and
+    /// nothing is guessed; <paramref name="severalWays"/> says which it was. A credit note is
+    /// never a whole order's balance and is not tried.</summary>
+    private static Assignment? ChooseByRemainingValue(
+        IReadOnlyList<OpenOrder> orders, IReadOnlyList<XeroLedgerLineEntity> billLines, out bool severalWays)
+    {
+        severalWays = false;
+        var billNet = billLines.Sum(SignedNet);
+        if (billNet <= 0m) return null;
+
+        var candidates = orders.Where(order => order.Remaining > 0m).ToList();
+        if (candidates.Count == 0 || candidates.Count > MostOrdersTheAmountsDecide) return null;
+
+        List<OpenOrder>? fit = null;
+        for (var mask = 1; mask < 1 << candidates.Count; mask++)
+        {
+            var subset = candidates.Where((_, index) => (mask & (1 << index)) != 0).ToList();
+            if (Math.Abs(subset.Sum(order => order.Remaining) - billNet) >= 0.005m) continue;
+            if (fit is not null) { severalWays = true; return null; }
+            fit = subset;
+        }
+        if (fit is null) return null;
+
+        var slices = fit.Select(order => (order, order.Remaining)).ToList();
+        var detail = fit.Count == 1
+            ? $"Matched by amount — the bill's {billNet.ToString("C2", Gbp)} is exactly what is left to invoice on "
+              + $"{fit[0].Reference} {fit[0].Title}, and the bill names no order."
+            : $"Matched by amounts — the bill's {billNet.ToString("C2", Gbp)} is exactly what is left to invoice on "
+              + string.Join(" + ", fit.Select(order => $"{order.Reference} ({order.Remaining.ToString("C2", Gbp)})"))
+              + " between them, and the bill names no order; each order's figure is its remaining value.";
+        return new Assignment(EveryLineOn(fit[0], billLines), WorkOrderMatchRule.ByRemainingValue, detail, null, fit, Slices: slices);
     }
 }

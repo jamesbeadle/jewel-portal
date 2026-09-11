@@ -162,12 +162,16 @@ public sealed class ApproveWorkOrderBillHandlerTests
     [Fact]
     public async Task ABillWithNoMatchIsRefusedWithTheReason()
     {
+        // A bill that would take the supplier's only open order over its value never matches
+        // (a bill from a supplier with several open orders reaches the card since 2026-09-10).
         var fixture = await WorkOrderBillFixture.CreateAsync();
-        var command = new ApproveWorkOrderBill("inv-1724", new[] { new WorkOrderBillOrderSlice("wo-bf-26", 10000m) });
+        WorkOrderBillFixture.AddBill(fixture.Context, "inv-big", "78", "Drywall Co Ltd", ("321", 12000m));
+        await fixture.Context.SaveChangesAsync();
+        var command = new ApproveWorkOrderBill("inv-big", new[] { new WorkOrderBillOrderSlice("wo-wh-01", 12000m) });
 
         var refusal = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.ApproveAsync(command));
 
-        Assert.Contains("2 open work orders", refusal.Message);
+        Assert.Contains("over its value by £2,000.00", refusal.Message);
     }
 
     [Fact]

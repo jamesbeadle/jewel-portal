@@ -18,8 +18,10 @@ namespace Jewel.JPMS.Api.Features.Xero.Ledger;
 /// figure per order — each line's net on the order it names (ByLine, 2026-09-09); else a
 /// work-order number written on the bill picks the order — or, naming several, puts the whole
 /// bill on the first for the figures to be changed on the card — else a supplier with exactly
-/// one open order matches on that alone, and a supplier with several (2026-09-10) sends the
-/// bill to the card with every order listed and nothing placed, for the split to be keyed;
+/// one open order matches on that alone — else, among several, the amounts decide when they
+/// can (2026-09-11: the bill's net is exactly what is left on one order, or on one unique set
+/// of them, and those remaining values are the proposed figures) — and when they cannot, the
+/// bill goes to the card with every order listed and nothing placed, for the split to be keyed;
 /// finally each order's slice must fit inside what is left to invoice on it. The answer is BILL-level: a slice per order, the same match on every
 /// line, never a coding of the Xero lines (the supplier's own CIS split, left as raised). An
 /// "open" order is Released with value still left to invoice (decision 2026-09-08). Anything

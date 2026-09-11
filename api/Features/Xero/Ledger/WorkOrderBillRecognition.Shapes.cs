@@ -21,14 +21,16 @@ public sealed partial class WorkOrderBillRecognition
     /// set when the bill is going to the card to be split across several orders — the value gate
     /// then holds the bill against their combined remaining value. Unplaced (2026-09-10) says the
     /// bill names none of them, so the card proposes no figure at all: every pooled order is
-    /// listed at nothing and the accountant keys the split.</summary>
+    /// listed at nothing and a person keys the split. Slices (2026-09-11) is a rule that already
+    /// knows the figure per order — the remaining-value rung — so the card lands filled in.</summary>
     private sealed record Assignment(
         IReadOnlyDictionary<string, OpenOrder>? OrderByLineId,
         WorkOrderMatchRule Rule,
         string? Detail,
         string? Reason,
         IReadOnlyList<OpenOrder>? Pool = null,
-        bool Unplaced = false)
+        bool Unplaced = false,
+        IReadOnlyList<(OpenOrder Order, decimal Net)>? Slices = null)
     {
         public static Assignment Refused(string reason) => new(null, default, null, reason);
     }

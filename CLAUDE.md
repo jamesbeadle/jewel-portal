@@ -180,7 +180,14 @@ finds drift.
   number on the bill (`WorkOrderBillReference`: Reference, then descriptions, then invoice
   number; supplier + number, since numbers are per project; the bill's site breaks a tie — the
   project set on the bill in the portal first, else its Xero Sites hint, the sweep's own
-  precedence, 2026-09-09) → else exactly one open order → the value gate. "Open" = Released with remaining value
+  precedence, 2026-09-09) → else exactly one open order → else, among several, the amounts
+  (`WorkOrderMatchRule.ByRemainingValue`, 2026-09-11, the accountant's ladder: the bill's net is
+  exactly what is left on one order, or on ONE unique subset of the supplier's open orders —
+  £3,092 = WO-0055 £1,748 + WO-0056 £1,344 — and each order's remaining value is its proposed
+  figure, so the card and `approve_work_order_bill` need only Approve; credit notes and
+  suppliers with more than 16 open orders are not tried) → else `BySupplierOrders`: the card with
+  every order listed and NO figure proposed, a person keys the split (a part bill naming no
+  order, or a total that fits more than one way — nothing is ever guessed) → the value gate. "Open" = Released with remaining value
   > 0 (decision 2026-09-08). Nothing is persisted for the match, so Sync and Re-check re-run it
   for free; the sweep (`AllocateSuggestedXeroLinesHandler`, page button and nightly worker
   alike) skips matched bills exactly as it skips labour lines.

@@ -20,7 +20,9 @@ public static class StatusTones
         _ => Tone.Muted
     };
 
-    /// <summary>How a Work Order bill was matched: a reference on the bill is the firmer fact.</summary>
+    /// <summary>How a Work Order bill was matched: a reference on the bill is the firmer fact; a
+    /// match the supplier or the amounts made is a fact to glance at; figures still to set is
+    /// the one card that needs a hand.</summary>
     public static Tone ToTone(this WorkOrderMatchRule rule) => rule switch
     {
         WorkOrderMatchRule.ByReference or WorkOrderMatchRule.ByLineReference => Tone.Positive,
@@ -32,6 +34,7 @@ public static class StatusTones
     {
         WorkOrderMatchRule.ByReference => "Matched by reference",
         WorkOrderMatchRule.ByLineReference => "Matched line by line",
+        WorkOrderMatchRule.ByRemainingValue => "Matched by amount",
         WorkOrderMatchRule.BySupplierOrders => "Supplier's orders — figures to set",
         _ => "Matched by supplier"
     };
