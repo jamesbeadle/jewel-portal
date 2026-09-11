@@ -1,6 +1,6 @@
 ---
 name: jpms-xero-allocation
-description: "How Xero and the portal reconcile — allocation doctrine and why the ledgers read the way they do. Load before reading or discussing Xero costs, aged payables/receivables, cost-of-sales spend, work-order invoice links, or anything built on allocated lines. Encodes drafts-are-deliberate, allocation-moves-money-views, the complete-slice-list rule, and labour-settlement bills."
+description: "How Xero and the portal reconcile — allocation doctrine and why the ledgers read the way they do. Load before reading or discussing Xero costs, aged payables/receivables, cost-of-sales spend, work-order invoice links, Work Order bills, the Cost Allocation queue, or anything built on allocated lines. Encodes drafts-are-deliberate, allocation-moves-money-views, the complete-slice-list rule, labour-settlement bills, the Work Order bill matching ladder (reference beats amount; unplaced bills are the Finance Director's), and how to read the queue: the tab bar, not the raw Unallocated count."
 ---
 
 # JPMS — Xero allocation doctrine

@@ -1,6 +1,6 @@
 ---
 name: jpms-valuation-cycle
-description: "The monthly valuation claim and invoice cycle — the money path from % complete to cash, including raising the sales invoice in Xero and reading payments back from it. Load before any valuation, claim or valuation-invoice work: recording progress, preapproving, raising/submitting/issuing invoices, raising in Xero, payments, or presenting a statement to anyone. Encodes the claim stepper, the frozen-snapshot client rule, cumulative seeding, server-stamped retention, what certified-to-date means, the Xero raise rule (a contact that would be created is a stop, not a go) and the payment rule: Xero is the home of what has been paid — read it, never ask."
+description: "The monthly valuation claim and invoice cycle — the money path from % complete to cash, including raising the sales invoice in Xero and reading payments back from it. Load before any valuation, claim or valuation-invoice work: recording progress, preapproving, raising/submitting/issuing invoices, raising in Xero, payments, renaming claims, or presenting a statement to anyone. Encodes the claim stepper, the claim naming form, the frozen-snapshot client rule, cumulative seeding, server-stamped retention, what certified-to-date means, the Xero raise rule (the contact is the one mapped on the project — map it yourself from list_xero_customers with the user's yes; never guess, never create) and the payment rule: Xero is the home of what has been paid — read it with the payment sync, never ask."
 ---
 
 # JPMS — The valuation cycle
