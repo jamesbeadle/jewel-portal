@@ -12,7 +12,11 @@ using Jewel.JPMS.Api.Features.Sales.Research;
 using Jewel.JPMS.Api.Features.Drawings.Storage;
 using Jewel.JPMS.Api.Features.Xero;
 using Jewel.JPMS.Api.Features.Xero.Ledger;
+using Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
+using Jewel.JPMS.Api.Features.ValuationInvoices.XeroPayments;
+using Jewel.JPMS.Contracts.ValuationInvoices;
 using Jewel.JPMS.Contracts.Xero;
+using Jewel.JPMS.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -99,6 +103,12 @@ var host = new HostBuilder()
         // explicit sync endpoint, run nightly after the ledger sync.
         services.AddScoped<ICommandHandler<SyncXeroSitePnl, XeroSitePnlSyncResult>,
             Jewel.JPMS.Api.Features.Xero.SitePnl.SyncXeroSitePnlHandler>();
+        // Valuation-invoice payments read back from Xero (2026-09-11), nightly per mapped project
+        // — the same handler the invoices section's "Sync payments from Xero…" runs, and the same
+        // RecordValuationInvoicePayment handler underneath it, so the status move, paid total and
+        // audit are one implementation whoever triggers them.
+        services.AddScoped<ICommandHandler<RecordValuationInvoicePayment, ValuationInvoice>, RecordValuationInvoicePaymentHandler>();
+        services.AddScoped<ICommandHandler<SyncValuationInvoicePaymentsFromXero, ValuationInvoicePaymentSyncOutcome>, SyncValuationInvoicePaymentsFromXeroHandler>();
 
         // Bluebeam: the drawing-extraction queue consumer + the nightly refresh-token keep-alive.
         // Same options/client fork as the SWA API (app settings Bluebeam__ClientId /

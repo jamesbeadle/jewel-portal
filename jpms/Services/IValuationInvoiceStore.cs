@@ -39,5 +39,10 @@ public interface IValuationInvoiceStore
     Task<ValuationInvoiceXeroRaisePreview> PreviewXeroRaiseAsync(string valuationInvoiceId, DateTime? invoiceDate = null, DateTime? dueDate = null, CancellationToken cancellationToken = default);
     Task<ValuationInvoiceXeroRaiseOutcome> RaiseInXeroAsync(string valuationInvoiceId, DateTime? invoiceDate = null, DateTime? dueDate = null, CancellationToken cancellationToken = default);
     Task<ValuationInvoice> RecordPaymentAsync(string valuationInvoiceId, decimal amountPaid, CancellationToken cancellationToken = default);
+
+    /// <summary>Payments read back from Xero (2026-09-11) — the section's "Sync payments from Xero…":
+    /// what the sync would link and record for the project, read fresh from Xero, then the sync itself.</summary>
+    Task<ValuationInvoicePaymentSyncPreview> PreviewPaymentSyncAsync(string projectId, CancellationToken cancellationToken = default);
+    Task<ValuationInvoicePaymentSyncOutcome> SyncPaymentsFromXeroAsync(string projectId, CancellationToken cancellationToken = default);
     Task DeleteAsync(string valuationInvoiceId, CancellationToken cancellationToken = default);
 }

@@ -184,6 +184,22 @@ public interface IXeroClient
     Task<XeroSalesContactLookup> LookupSalesContactAsync(string contactId, CancellationToken ct);
 
     /// <summary>
+    /// Every ACCREC sales invoice Xero holds on one contact (by ContactID), newest first, in ANY
+    /// status but DELETED — PAID included, which the aged receivables read can never show
+    /// (2026-09-11: "the portal can't recognise when a sales invoice is paid"). Read fresh every
+    /// time, no cache: a payment may have landed a minute ago. Not configured / Xero said no
+    /// come back on the snapshot rather than thrown.
+    /// </summary>
+    Task<XeroSalesInvoiceListSnapshot> GetSalesInvoicesForContactAsync(string contactId, CancellationToken ct);
+
+    /// <summary>
+    /// One sales invoice by Xero's InvoiceID or InvoiceNumber (INV-0227). Null when Xero has no
+    /// sales invoice by that handle. Throws <see cref="XeroCallFailedException"/> when Xero
+    /// cannot be asked.
+    /// </summary>
+    Task<XeroSalesInvoiceSummary?> GetSalesInvoiceAsync(string invoiceIdOrNumber, CancellationToken ct);
+
+    /// <summary>
     /// Attaches one file to an invoice (the certificate PDF on a raised sales invoice). Needs the
     /// custom connection's accounting.attachments scope; returns the refusal as an error rather
     /// than throwing — an invoice stands without its attachment.

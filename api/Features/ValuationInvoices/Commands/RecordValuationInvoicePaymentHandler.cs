@@ -1,3 +1,7 @@
+// Explicit usings: this handler is compiled into the worker too (linked source), which has no
+// api-wide global usings.
+using Jewel.JPMS.Api.Cqrs;
+using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Contracts.ValuationInvoices;
 
 namespace Jewel.JPMS.Api.Features.ValuationInvoices.Commands;

@@ -78,6 +78,12 @@ public sealed class NullXeroClient : IXeroClient
     public Task<XeroSalesContactLookup> LookupSalesContactAsync(string contactId, CancellationToken ct) =>
         Task.FromResult(XeroSalesContactLookup.Unavailable(NotConnected));
 
+    public Task<XeroSalesInvoiceListSnapshot> GetSalesInvoicesForContactAsync(string contactId, CancellationToken ct) =>
+        Task.FromResult(XeroSalesInvoiceListSnapshot.NotConfigured());
+
+    public Task<XeroSalesInvoiceSummary?> GetSalesInvoiceAsync(string invoiceIdOrNumber, CancellationToken ct) =>
+        throw new XeroCallFailedException(NotConnected);
+
     public Task<XeroApprovalResult> AttachToInvoiceAsync(
         string invoiceId, string fileName, string contentType, byte[] content, CancellationToken ct) =>
         Task.FromResult(XeroApprovalResult.Failed(NotConnected));

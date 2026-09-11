@@ -1,0 +1,96 @@
+@namespace Jewel.JPMS.Features.ValuationInvoices
+@using Jewel.JPMS.Contracts.ValuationInvoices
+@inject IValuationInvoiceStore Invoices
+
+@* Sync payments from Xero (2026-09-11, the MD's ask: "the portal can't recognise when a sales
+   invoice is paid"). Xero is the home of what has been paid; this modal READS it: one row per
+   Issued valuation invoice with what the sync would do — record the payment Xero holds as PAID,
+   link an invoice keyed into Xero by hand to its Xero row when the match is unique, or say why
+   nothing changes (unpaid, part paid, no match, two candidates). One press applies the plan through
+   the same "Record payment" move the row menu runs. The nightly worker does the same on its own. *@
+<Modal IsOpen="open" Title="Sync payments from Xero" ShowFooter="true"
+       ConfirmLabel="@ConfirmLabel" CancelLabel="Close"
+       ConfirmDisabled="@(syncing || preview is null || !preview.HasWork)"
+       OnCancel="Close" OnConfirm="SyncAsync" Class="max-w-4xl w-full">
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
+    }
+    <LoadGate IsLoading="@(preview is null && error is null)" Prominent="true" Label="Reading Xero">
+        @if (preview is not null)
+        {
+            @foreach (var blocker in preview.Blockers)
+            {
+                <Notice Tone="Tone.Negative" Class="mb-3">@blocker</Notice>
+            }
+            @if (preview.Blockers.Count == 0)
+            {
+                <p class="text-sm text-content-subtle mb-3">
+                    Xero contact <span class="text-content font-medium">@preview.XeroContactName</span>
+                    — read @DateTimeText(preview.FetchedAtUtc). Only issued invoices are checked; an invoice Xero holds as
+                    paid is recorded paid here on Xero's date, and one with no Xero number is linked when exactly one
+                    Xero invoice matches it.
+                </p>
+                <LoadGate Overlay="true" IsLoading="@syncing">
+                    <RecordsTable IsLoading="false" IsEmpty="@(preview.Rows.Count == 0)" Dense="true" MaxHeight="max-h-[50vh]"
+                                  EmptyMessage="No issued invoices to check — nothing is awaiting payment.">
+                        <thead>
+                            <tr>
+                                <th>Invoice</th>
+                                <th>Xero</th>
+                                <th>Action</th>
+                                <th class="text-right">Amount</th>
+                                <th>Paid on</th>
+                                <th>Note</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in preview.Rows)
+                            {
+                                <tr>
+                                    <td class="font-mono text-xs whitespace-nowrap">@row.Reference</td>
+                                    <td class="whitespace-nowrap">
+                                        @if (row.XeroInvoiceNumber is not null)
+                                        {
+                                            <span>@row.XeroInvoiceNumber</span>
+                                            @if (row.XeroStatus is not null)
+                                            {
+                                                <span class="ml-1 text-xs text-content-subtle">@row.XeroStatus</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-content-subtle">—</span>
+                                        }
+                                    </td>
+                                    <td class="whitespace-nowrap"><Pill Tone="@ToneOf(row.Action)">@ActionLabel(row.Action)</Pill></td>
+                                    <td class="text-right whitespace-nowrap">@(row.AmountToRecord is { } amount ? Money(amount) : Money(row.Amount))</td>
+                                    <td class="whitespace-nowrap">@(row.PaidOn is { } paidOn ? DateText(paidOn) : "—")</td>
+                                    <td class="text-xs text-content-muted">
+                                        @row.Note
+                                        @if (row.Candidates.Count > 0)
+                                        {
+                                            <ul class="mt-1 list-disc pl-4">
+                                                @foreach (var candidate in row.Candidates)
+                                                {
+                                                    <li>@candidate</li>
+                                                }
+                                            </ul>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </RecordsTable>
+                </LoadGate>
+                @if (preview.Rows.Count > 0)
+                {
+                    <p class="text-sm text-content-subtle mt-3">
+                        @preview.PaymentsPlanned to record as paid, @preview.LinksPlanned to link, @preview.NoChange unchanged.
+                        An ambiguous row is paired by hand with "Record Xero number…" on its row, then synced again.
+                    </p>
+                }
+            }
+        }
+    </LoadGate>
+</Modal>

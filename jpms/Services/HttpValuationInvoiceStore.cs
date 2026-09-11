@@ -107,6 +107,16 @@ public sealed class HttpValuationInvoiceStore : IValuationInvoiceStore
         return call;
     }
 
+    public Task<ValuationInvoicePaymentSyncPreview> PreviewPaymentSyncAsync(string projectId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new PreviewValuationInvoicePaymentSync(projectId), cancellationToken);
+
+    public async Task<ValuationInvoicePaymentSyncOutcome> SyncPaymentsFromXeroAsync(string projectId, CancellationToken cancellationToken = default)
+    {
+        var outcome = await commands.SendAsync(new SyncValuationInvoicePaymentsFromXero(projectId), cancellationToken);
+        OnChange?.Invoke();
+        return outcome;
+    }
+
     public async Task DeleteAsync(string valuationInvoiceId, CancellationToken cancellationToken = default)
     {
         await commands.SendAsync(new DeleteValuationInvoice(valuationInvoiceId), cancellationToken);

@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
 using Jewel.JPMS.Api.Features.ValuationInvoices.Queries;
+using Jewel.JPMS.Api.Features.ValuationInvoices.XeroPayments;
 using Jewel.JPMS.Api.Features.ValuationInvoices.XeroRaise;
 using Jewel.JPMS.Contracts.ValuationInvoices;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,6 +37,13 @@ public static class ValuationInvoicesFeatureRegistration
         services.AddScoped<ICommandHandler<RecordValuationInvoicePayment, ValuationInvoice>, RecordValuationInvoicePaymentHandler>();
         services.AddScoped<RecordValuationInvoicePaymentAuthorisation>();
         services.AddScoped<RecordValuationInvoicePaymentValidation>();
+
+        // Payments read back from Xero (2026-09-11): the preview and the sync — links matched
+        // invoices and records Paid through the RecordValuationInvoicePayment handler above.
+        services.AddScoped<IQueryHandler<PreviewValuationInvoicePaymentSync, ValuationInvoicePaymentSyncPreview>, PreviewValuationInvoicePaymentSyncHandler>();
+        services.AddScoped<ICommandHandler<SyncValuationInvoicePaymentsFromXero, ValuationInvoicePaymentSyncOutcome>, SyncValuationInvoicePaymentsFromXeroHandler>();
+        services.AddScoped<SyncValuationInvoicePaymentsAuthorisation>();
+        services.AddScoped<SyncValuationInvoicePaymentsValidation>();
 
         services.AddScoped<ICommandHandler<DeleteValuationInvoice, Acknowledgement>, DeleteValuationInvoiceHandler>();
         services.AddScoped<DeleteValuationInvoiceAuthorisation>();

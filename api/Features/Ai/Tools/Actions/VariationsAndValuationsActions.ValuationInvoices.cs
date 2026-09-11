@@ -4,6 +4,7 @@ using Jewel.JPMS.Api.Features.Lads.Commands;
 using Jewel.JPMS.Api.Features.Retention.Commands;
 using Jewel.JPMS.Api.Features.ValuationInvoices;
 using Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
+using Jewel.JPMS.Api.Features.ValuationInvoices.XeroPayments;
 using Jewel.JPMS.Api.Features.ValuationInvoices.XeroRaise;
 using Jewel.JPMS.Api.Features.Variations;
 using Jewel.JPMS.Api.Features.Variations.Commands;
@@ -174,9 +175,10 @@ internal sealed partial class VariationsAndValuationsActions
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
             Notes: "Confirm with the user before calling — certified totals move. Pass "
-                + "xeroInvoiceNumber when the user raised the invoice in Xero themselves and gave you "
-                + "its number; for an invoice already Issued or Paid use "
-                + "record_valuation_invoice_xero_number instead."),
+                + "xeroInvoiceNumber when the invoice was raised in Xero by hand — find the number by "
+                + "reading list_xero_sales_invoices (match by net amount, date and reference the way a "
+                + "person would, and propose the pairing), never by asking the user for it; for an "
+                + "invoice already Issued or Paid use record_valuation_invoice_xero_number instead."),
 
         new AiAction(
             Name: "record_valuation_invoice_xero_number",
@@ -196,7 +198,11 @@ internal sealed partial class VariationsAndValuationsActions
             NameStamps: Array.Empty<string>(),
             Notes: "valuationInvoiceId from list_valuation_invoices (rows with a blank "
                 + "xeroInvoiceNumber are the ones to back-fill); xeroInvoiceNumber exactly as Xero "
-                + "shows it (INV-0227). Confirm the pairing with the user before calling. For an "
+                + "shows it (INV-0227) — READ it from list_xero_sales_invoices for the project and "
+                + "match by net amount, then date and reference, the way a person would; never ask "
+                + "the user for the number, and never pick between two rows that both fit. Propose "
+                + "the pairing and call on the user's yes. It is also how an Ambiguous row from "
+                + "preview_valuation_invoice_payment_sync is settled before syncing again. For an "
                 + "invoice not yet issued, issue_valuation_invoice with xeroInvoiceNumber does both "
                 + "in one move."),
 
@@ -213,7 +219,43 @@ internal sealed partial class VariationsAndValuationsActions
             VisibleTo: ValuationInvoiceRoles.AllowedToManageValuationInvoices,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "Confirm the amount received with the user before calling."),
+            Notes: "Confirm the amount received with the user before calling. When Xero can be read, "
+                + "prefer sync_valuation_invoice_payments_from_xero — Xero is the home of what has been "
+                + "paid; use this only for a payment Xero does not hold."),
+
+        new AiAction(
+            Name: "sync_valuation_invoice_payments_from_xero",
+            Area: "Valuation invoices",
+            Description: "READS XERO and RECORDS PAYMENTS: for every ISSUED valuation invoice on a "
+                + "project, follows its linked Xero sales invoice (by Xero id or number) and, where "
+                + "Xero holds it PAID, records the payment here (→ Paid, the project's paid total "
+                + "moves, PaidAt = Xero's fully-paid date) through the same move as "
+                + "record_valuation_invoice_payment; an invoice with no Xero link is matched to the "
+                + "project's mapped Xero contact's invoices the way a person would (reference naming "
+                + "the valuation, else the same net to the penny) and, when the match is unique, "
+                + "linked (Xero id + number stamped) and recorded if PAID. Two candidates are never "
+                + "guessed between — the row comes back Ambiguous with nothing changed. Part paid and "
+                + "unpaid invoices are reported, nothing recorded. Nothing is written to Xero. Refused "
+                + "when the project has no Xero contact mapped or Xero cannot be read. The nightly "
+                + "worker runs the same sync for every mapped project.",
+            CommandType: typeof(SyncValuationInvoicePaymentsFromXero),
+            ResultType: typeof(ValuationInvoicePaymentSyncOutcome),
+            AuthorisationType: typeof(SyncValuationInvoicePaymentsAuthorisation),
+            ValidationType: typeof(SyncValuationInvoicePaymentsValidation),
+            VisibleTo: ValuationInvoiceRoles.AllowedToManageValuationInvoices,
+            EmailStamps: new[] { nameof(SyncValuationInvoicePaymentsFromXero.SyncedBy) },
+            NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
+            Notes: "Call preview_valuation_invoice_payment_sync first and show the user EVERY planned "
+                + "row — which valuation invoice, which Xero number, the action (Link / RecordPayment / "
+                + "LinkAndRecordPayment / None), the amount, the paid date, the note (a net that "
+                + "differs, part paid, unpaid) and the ambiguous rows with their candidates — take "
+                + "their yes, then call this with confirm true. Never ask the user whether an invoice "
+                + "was paid when Xero can be read: read it. An Ambiguous row is resolved by reading "
+                + "list_xero_sales_invoices, proposing the pairing, record_valuation_invoice_xero_number "
+                + "on the user's yes, then preview and sync again. A blocker naming the Xero contact "
+                + "mapping is fixed with list_xero_customers + set_project_xero_contact — never by "
+                + "creating a contact."),
 
         new AiAction(
             Name: "cancel_valuation_invoice",

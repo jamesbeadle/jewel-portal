@@ -46,7 +46,15 @@
                 <span class="text-content font-medium">@Money(InvoicedToDate)</span>
             </span>
         </span>
-        <ExportToExcelButton FileName="Valuation invoices" Disabled="@(invoices.Count == 0)" BuildWorkbook="BuildExportWorkbook" />
+        <Toolbar>
+            @if (CanManage)
+            {
+                @* Payments read back from Xero (2026-09-11): Xero is the home of what has been paid. *@
+                <ToolbarButton Icon="pound" Label="Sync payments from Xero…" Disabled="@busy" OnClick="OpenPaymentSync" />
+                <ToolbarDivider />
+            }
+            <ExportToExcelButton FileName="Valuation invoices" Disabled="@(invoices.Count == 0)" BuildWorkbook="BuildExportWorkbook" />
+        </Toolbar>
     </div>
 
     @if (isOpen)
@@ -248,6 +256,7 @@
 </div>
 
 <ValuationInvoiceXeroRaiseModal @ref="xeroRaiseModal" OnIssued="OnIssuedFromModalAsync" />
+<ValuationInvoicePaymentSyncModal @ref="paymentSyncModal" OnSynced="OnPaymentsSyncedAsync" />
 
 <Modal IsOpen="paymentInvoice is not null"
        Title="Record client payment"

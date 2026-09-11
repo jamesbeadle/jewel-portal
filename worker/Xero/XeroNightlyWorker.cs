@@ -1,6 +1,9 @@
 using Jewel.JPMS.Api.Cqrs;
+using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Xero;
+using Jewel.JPMS.Contracts.ValuationInvoices;
 using Jewel.JPMS.Contracts.Xero;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
@@ -21,6 +24,12 @@ namespace Jewel.JPMS.Worker.Xero;
 /// the overnight run and the page's Sync / "Allocate all matched" buttons are
 /// one code path. Failures are logged and the next night retries — the sync is
 /// a full upsert from Xero's current state, so a missed night self-heals.
+///
+/// Since 2026-09-11 it also reads the SALES side back: for every project with a Xero
+/// contact mapped, the same SyncValuationInvoicePaymentsFromXero the invoices section's
+/// "Sync payments from Xero…" runs — an issued valuation invoice Xero holds as PAID is
+/// recorded paid here, and one keyed into Xero by hand is linked when the match is
+/// unique. Xero is the home of what has been paid; the portal reads it every night.
 /// </summary>
 public sealed class XeroNightlyWorker
 {
@@ -34,6 +43,8 @@ public sealed class XeroNightlyWorker
     private readonly ICommandHandler<SyncXeroLedger, XeroLedgerSyncResult> sync;
     private readonly ICommandHandler<AllocateSuggestedXeroLines, int> allocate;
     private readonly ICommandHandler<SyncXeroSitePnl, XeroSitePnlSyncResult> sitePnl;
+    private readonly ICommandHandler<SyncValuationInvoicePaymentsFromXero, ValuationInvoicePaymentSyncOutcome> paymentSync;
+    private readonly JpmsContext db;
     private readonly IXeroClient xero;
     private readonly ILogger<XeroNightlyWorker> logger;
 
@@ -41,12 +52,16 @@ public sealed class XeroNightlyWorker
         ICommandHandler<SyncXeroLedger, XeroLedgerSyncResult> sync,
         ICommandHandler<AllocateSuggestedXeroLines, int> allocate,
         ICommandHandler<SyncXeroSitePnl, XeroSitePnlSyncResult> sitePnl,
+        ICommandHandler<SyncValuationInvoicePaymentsFromXero, ValuationInvoicePaymentSyncOutcome> paymentSync,
+        JpmsContext db,
         IXeroClient xero,
         ILogger<XeroNightlyWorker> logger)
     {
         this.sync = sync;
         this.allocate = allocate;
         this.sitePnl = sitePnl;
+        this.paymentSync = paymentSync;
+        this.db = db;
         this.xero = xero;
         this.logger = logger;
     }
@@ -110,5 +125,59 @@ public sealed class XeroNightlyWorker
                 check.StoredIncome, check.StoredCostOfSales, check.StoredOperatingExpenses,
                 check.XeroIncome, check.XeroCostOfSales, check.XeroOperatingExpenses);
         }
+
+        await SyncValuationInvoicePaymentsAsync(ct);
+    }
+
+    /// <summary>
+    /// The sales side read back, per mapped project: what Xero holds as PAID becomes Paid here,
+    /// through the one payment handler. One project's failure (Xero refusing, a refusal from the
+    /// handler) is logged and the rest still run — the change tracker is cleared so a half-saved
+    /// project never rides into the next one.
+    /// </summary>
+    private async Task SyncValuationInvoicePaymentsAsync(CancellationToken ct)
+    {
+        var projects = await db.Projects.AsNoTracking()
+            .Where(project => project.XeroContactId != null && project.XeroContactId != "")
+            .OrderBy(project => project.Name)
+            .Select(project => new { project.ProjectId, project.Name })
+            .ToListAsync(ct);
+        if (projects.Count == 0)
+        {
+            logger.LogInformation("Nightly valuation-invoice payment sync: no project has a Xero contact mapped — nothing to read.");
+            return;
+        }
+
+        int recorded = 0, linked = 0, failedProjects = 0;
+        foreach (var project in projects)
+        {
+            try
+            {
+                var outcome = await paymentSync.HandleAsync(new SyncValuationInvoicePaymentsFromXero(project.ProjectId), ct);
+                recorded += outcome.PaymentsRecorded;
+                linked += outcome.Linked;
+                if (outcome.PaymentsRecorded > 0 || outcome.Linked > 0 || outcome.Failed > 0)
+                    logger.LogInformation(
+                        "Nightly valuation-invoice payment sync for {Project}: {Paid} payment(s) recorded, {Linked} linked, {Unchanged} unchanged, {Failed} refused{Detail}.",
+                        project.Name, outcome.PaymentsRecorded, outcome.Linked, outcome.NoChange, outcome.Failed,
+                        outcome.Failed > 0
+                            ? " — " + string.Join("; ", outcome.Results.Where(r => r.Error is not null).Select(r => $"{r.Row.Reference}: {r.Error}"))
+                            : "");
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception failure)
+            {
+                failedProjects++;
+                db.ChangeTracker.Clear();
+                logger.LogWarning(failure, "Nightly valuation-invoice payment sync for {Project} did not complete: {Error}", project.Name, failure.Message);
+            }
+        }
+
+        logger.LogInformation(
+            "Nightly valuation-invoice payment sync: {Projects} project(s) read, {Paid} payment(s) recorded, {Linked} linked, {FailedProjects} project(s) failed.",
+            projects.Count, recorded, linked, failedProjects);
     }
 }

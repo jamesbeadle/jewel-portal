@@ -115,6 +115,18 @@
          fails to implement the interface. -->
     <Compile Include="..\api\Features\Xero\Ledger\XeroWriteBackService.WorkOrderBills.cs" Link="Shared\Xero\XeroWriteBackService.WorkOrderBills.cs" />
     <Compile Include="..\api\Features\Xero\SitePnl\SyncXeroSitePnlHandler.cs" Link="Shared\Xero\SyncXeroSitePnlHandler.cs" />
+    <!-- Valuation-invoice payments read back from Xero (2026-09-11): the nightly run applies the
+         SAME planner and sync handler the invoices section's modal and the connector use, over the
+         SAME RecordValuationInvoicePayment handler (status, paid total, audit) — so what the page
+         records by hand and what the night records from Xero can never drift. Endpoints, gates
+         and the preview query handler are deliberately NOT linked. -->
+    <Compile Include="..\api\Features\Xero\XeroSalesInvoices.cs" Link="Shared\Xero\XeroSalesInvoices.cs" />
+    <Compile Include="..\api\Features\ValuationInvoices\ValuationInvoiceAuditTrail.cs" Link="Shared\ValuationInvoices\ValuationInvoiceAuditTrail.cs" />
+    <Compile Include="..\api\Features\ValuationInvoices\ValuationInvoicesEntityMapping.cs" Link="Shared\ValuationInvoices\ValuationInvoicesEntityMapping.cs" />
+    <Compile Include="..\api\Features\ValuationInvoices\ValuationInvoicesIdentifierFactory.cs" Link="Shared\ValuationInvoices\ValuationInvoicesIdentifierFactory.cs" />
+    <Compile Include="..\api\Features\ValuationInvoices\Commands\RecordValuationInvoicePaymentHandler.cs" Link="Shared\ValuationInvoices\RecordValuationInvoicePaymentHandler.cs" />
+    <Compile Include="..\api\Features\ValuationInvoices\XeroPayments\ValuationInvoicePaymentSyncPlanner.cs" Link="Shared\ValuationInvoices\ValuationInvoicePaymentSyncPlanner.cs" />
+    <Compile Include="..\api\Features\ValuationInvoices\XeroPayments\SyncValuationInvoicePaymentsFromXeroHandler.cs" Link="Shared\ValuationInvoices\SyncValuationInvoicePaymentsFromXeroHandler.cs" />
     <!-- Shared Bluebeam source: the extraction consumer and the nightly token keep-alive run the
          SAME client, token service and runner the api compiles, so the two apps can never drift on
          paths, token handling, or what a stored extraction looks like. Endpoint classes are

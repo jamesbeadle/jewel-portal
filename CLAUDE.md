@@ -382,6 +382,28 @@ finds drift.
   `RaisedBy` stamped); the preview tells the model to STOP on a missing contact mapping and to
   fix it in Project settings (or `update_project_details` with the user's yes). Needs the Cost
   Integration app's `accounting.attachments` scope for the PDF.
+- **Xero is the home of what has been paid — the portal READS it, never asks** (2026-09-11, the
+  MD: "the portal can't recognise when a sales invoice is paid"). `IXeroClient.
+  GetSalesInvoicesForContactAsync` is every ACCREC invoice on a contact in ANY status but DELETED
+  (the aged receivables read is AUTHORISED/DRAFT/SUBMITTED only, so a PAID invoice was invisible),
+  read fresh; `GetSalesInvoiceAsync` is one by id or number. ONE rule,
+  `ValuationInvoicePaymentSyncPlanner` (`api/Features/ValuationInvoices/XeroPayments`), plans the
+  preview (`PreviewValuationInvoicePaymentSync`), the sync (`SyncValuationInvoicePaymentsFromXero`)
+  and the nightly worker's run over every project with a `XeroContactId`: per ISSUED invoice only
+  (Raised/Submitted/Approved are not certified; Paid/Cancelled are done), a LINKED one (Xero id,
+  else number) that Xero holds PAID (`AmountDue == 0 && AmountPaid > 0`) records the PORTAL net
+  `Amount` (the paid convention — Xero's SubTotal is a cross-check carried in the note) on
+  `FullyPaidOnDate`; an UNLINKED one is matched as a person would — Xero reference/number naming it
+  (`VI-0005`, `Valuation 05`/`Valuation 5`, whole number) outranks the same net to the penny —
+  and linked only when the match is unique; a Xero row that fits two portal invoices, or two rows
+  that fit one, is Ambiguous and nothing moves. RecordPayment goes through the EXISTING
+  `RecordValuationInvoicePayment` handler (then `PaidAt` = Xero's date, same save); a Link is
+  audited `RaisedInXero`. Page: the invoices section's toolbar "Sync payments from Xero…"
+  (`ValuationInvoicePaymentSyncModal`). Connector: `list_xero_sales_invoices` (how the model
+  finds a hand-keyed invoice's number — by net, date, reference; never "give me the INV number"),
+  `preview_valuation_invoice_payment_sync`, `sync_valuation_invoice_payments_from_xero`
+  (confirm-first, `SyncedBy` stamped). The worker links the planner, the sync handler, the payment
+  handler, the audit trail, the mapping and `XeroSalesInvoices.cs` — keep the set complete.
 
 ## Reading scans — the assistant's document reader (api)
 

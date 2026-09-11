@@ -25,7 +25,7 @@ internal static partial class AiValuationInvoiceTools
     private static string? ProjectId(AiToolContext context, JsonElement input) =>
         AiToolSchema.Text(input, "projectId") ?? context.Scope?.ProjectId;
 
-    public static IReadOnlyList<AiTool> Build() => Registers().Concat(XeroRaiseTools()).ToList();
+    public static IReadOnlyList<AiTool> Build() => Registers().Concat(XeroRaiseTools()).Concat(XeroSalesInvoiceTools()).ToList();
 
     private static IReadOnlyList<AiTool> Registers()
     {

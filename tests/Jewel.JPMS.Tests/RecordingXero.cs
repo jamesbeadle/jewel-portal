@@ -144,6 +144,26 @@ internal sealed class RecordingXero : IXeroClient
         Attached.Add(fileName);
         return Task.FromResult(XeroApprovalResult.Ok("AUTHORISED"));
     }
+    /// <summary>The sales invoices Xero "holds" per contact id (2026-09-11) — what the payment
+    /// sync reads back. A contact with no entry reads as an empty list, never a failure.</summary>
+    public Dictionary<string, List<XeroSalesInvoiceSummary>> SalesInvoicesByContact { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public Task<XeroSalesInvoiceListSnapshot> GetSalesInvoicesForContactAsync(string contactId, CancellationToken ct)
+    {
+        Calls.Add($"GetSalesInvoices:{contactId}");
+        var invoices = SalesInvoicesByContact.TryGetValue(contactId, out var held) ? held.ToList() : new List<XeroSalesInvoiceSummary>();
+        return Task.FromResult(new XeroSalesInvoiceListSnapshot(true, null, DateTimeOffset.UtcNow, invoices));
+    }
+
+    public Task<XeroSalesInvoiceSummary?> GetSalesInvoiceAsync(string invoiceIdOrNumber, CancellationToken ct)
+    {
+        Calls.Add($"GetSalesInvoice:{invoiceIdOrNumber}");
+        var found = SalesInvoicesByContact.Values.SelectMany(list => list)
+            .FirstOrDefault(invoice => invoice.InvoiceId == invoiceIdOrNumber
+                || string.Equals(invoice.Number, invoiceIdOrNumber, StringComparison.OrdinalIgnoreCase));
+        return Task.FromResult(found);
+    }
+
     public Task<IReadOnlyList<XeroSitePnlMonthFigures>> GetSiteMonthlyPnlAsync(string siteOption, DateTime fromMonth, DateTime toMonth, CancellationToken ct) => throw new NotSupportedException();
     public Task<XeroSitePnlRangeFigures?> GetSiteRangePnlAsync(string siteOption, DateTime fromDate, DateTime toDate, CancellationToken ct) => throw new NotSupportedException();
 }

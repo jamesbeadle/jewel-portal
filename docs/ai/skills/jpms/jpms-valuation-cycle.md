@@ -1,6 +1,6 @@
 ---
 name: jpms-valuation-cycle
-description: "The monthly valuation claim and invoice cycle — the money path from % complete to cash, including raising the sales invoice in Xero. Load before any valuation, claim or valuation-invoice work: recording progress, preapproving, raising/submitting/issuing invoices, raising in Xero, payments, or presenting a statement to anyone. Encodes the claim stepper, the frozen-snapshot client rule, cumulative seeding, server-stamped retention, what certified-to-date means, and the Xero raise rule: a contact that would be created is a stop, not a go."
+description: "The monthly valuation claim and invoice cycle — the money path from % complete to cash, including raising the sales invoice in Xero and reading payments back from it. Load before any valuation, claim or valuation-invoice work: recording progress, preapproving, raising/submitting/issuing invoices, raising in Xero, payments, or presenting a statement to anyone. Encodes the claim stepper, the frozen-snapshot client rule, cumulative seeding, server-stamped retention, what certified-to-date means, the Xero raise rule (a contact that would be created is a stop, not a go) and the payment rule: Xero is the home of what has been paid — read it, never ask."
 ---
 
 # JPMS — The valuation cycle
@@ -22,8 +22,10 @@ description: "The monthly valuation claim and invoice cycle — the money path f
 6. **Raise in Xero & issue** (raise_valuation_invoice_in_xero): creates the AUTHORISED sales
    invoice in Xero and issues here in one press. Issuing is what moves CERTIFIED-TO-DATE. Until
    issued, the money is exposure, not certification. See the Xero raise rules below.
-7. **Payment**: record it when it lands. Payment is NOT a gate for starting the next claim — the
-   next month begins on its own clock.
+7. **Payment**: read it from Xero — `preview_valuation_invoice_payment_sync` then
+   `sync_valuation_invoice_payments_from_xero` records Paid for every issued invoice Xero holds as
+   PAID (see Payments below). Payment is NOT a gate for starting the next claim — the next month
+   begins on its own clock.
 8. **Confirm & roll over**: confirming closes the claim into history. Confirming without an
    issued invoice earns a nudge, not a block — mention it to the user.
 
@@ -65,11 +67,38 @@ the renamed set, get the yes, then rename each one. Names only — nothing finan
 5. Take the user's explicit yes, then `raise_valuation_invoice_in_xero` with confirm true and the
    SAME invoiceDate/dueDate the preview showed. An invoice already carrying a Xero id or number is
    refused a second raise; a wrong invoice is voided in Xero, never un-raised.
-6. **A Xero invoice raised by hand is recorded, not re-raised.** If the user has already keyed
-   the invoice into Xero, issue it here with `issue_valuation_invoice` and its `xeroInvoiceNumber`
-   (INV-0227); for one already Issued or Paid whose Xero number is blank (VI-0002 to VI-0005
-   were), `record_valuation_invoice_xero_number`. Nothing is written to Xero either way, and the
-   row then reads as raised.
+6. **A Xero invoice raised by hand is recorded, not re-raised — and its number is READ, not
+   asked for.** When a valuation invoice carries no Xero number (list_valuation_invoices shows
+   `xeroInvoiceNumber` blank), read `list_xero_sales_invoices` for the project — every sales
+   invoice on the project's mapped Xero contact, paid ones included — and match it the way a
+   person reading both lists would: the net amount first (`net` against the portal invoice's
+   `Amount`), then the date and the reference ("Valuation 05"). Propose the pairing to the user
+   ("VI-0005 £12,000 net looks like INV-0227, dated 3 Sep, reference Valuation 05"), and on their
+   yes `record_valuation_invoice_xero_number` (for one not yet issued, `issue_valuation_invoice`
+   with `xeroInvoiceNumber` does both). Never pick between two rows that both fit — show both and
+   let the user choose. Nothing is written to Xero either way, and the row then reads as raised.
+
+## Payments — Xero is the home of what has been paid
+
+- **Never ask the user whether an invoice was paid when Xero can be read.** The portal READS
+  Xero rather than being told: `preview_valuation_invoice_payment_sync` (projectId) shows, per
+  ISSUED valuation invoice, what Xero holds — PAID (with the fully-paid date), part paid, unpaid
+  — and what the sync would do: record the payment on a linked invoice Xero holds as PAID; link
+  an invoice with no Xero number to the one Xero row that matches it (reference naming the
+  valuation, else the same net to the penny) and record it if PAID; nothing for the rest, with
+  the reason. Show the user every row — invoice, Xero number, action, amount, paid date, note —
+  take their yes, then `sync_valuation_invoice_payments_from_xero` with confirm true. The
+  amount recorded is the portal's net; a Xero net that differs is flagged in the note, not
+  silently taken.
+- **Ambiguous is a stop, never a guess.** A row marked Ambiguous lists the Xero invoices that
+  fit; resolve it by reading `list_xero_sales_invoices`, proposing the pairing, and
+  `record_valuation_invoice_xero_number` on the user's yes — then preview and sync again.
+- **`record_valuation_invoice_payment` is for a payment Xero does not hold** (a receipt outside
+  Xero, or Xero unreadable) — not the first move.
+- **The nightly worker does the same on its own** for every project with a Xero contact mapped,
+  so an invoice paid in Xero yesterday reads Paid here this morning without anyone asking. A
+  project with no Xero contact mapped is skipped by the night and blocked in the preview — map it
+  (`list_xero_customers` + `set_project_xero_contact`), never create a contact.
 
 ## Non-negotiables
 

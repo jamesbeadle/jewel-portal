@@ -379,6 +379,44 @@ public sealed class AiConnectorTests
     }
 
     [Fact]
+    public void MdsSeptemberEleventhAsk_paymentsReadFromXero_reachTheConnector()
+    {
+        // "The portal says it can't recognise when a sales invoice is paid" (2026-09-11). Xero is
+        // the home of what has been paid, so the connector READS it: every sales invoice on the
+        // project's contact in any status (PAID included), the payment-sync preview, and the sync
+        // itself — confirm-first, SyncedBy stamped, the FD's tool and never the site's.
+        var financeDirector = AiToolCatalogue.ForConnector(UserWith(Role.FinanceDirector));
+        var subcontractor = AiToolCatalogue.ForConnector(UserWith(Role.Subcontractor)).Select(t => t.Name).ToList();
+        foreach (var name in new[] { "list_xero_sales_invoices", "preview_valuation_invoice_payment_sync" })
+        {
+            var tool = Assert.Single(financeDirector, candidate => candidate.Name == name);
+            Assert.Equal(AiToolKind.Read, tool.Kind);
+            Assert.Contains("projectId", System.Text.Json.JsonSerializer.Serialize(tool.InputSchema));
+            Assert.DoesNotContain(name, subcontractor);
+        }
+        var list = financeDirector.Single(t => t.Name == "list_xero_sales_invoices");
+        Assert.Contains("PAID", list.Description);
+        Assert.Contains("record_valuation_invoice_xero_number", list.Description);
+        Assert.Contains("never by asking the user", list.Description);
+        var preview = financeDirector.Single(t => t.Name == "preview_valuation_invoice_payment_sync");
+        Assert.Contains("Ambiguous", preview.Description);
+        Assert.Contains("sync_valuation_invoice_payments_from_xero", preview.Description);
+
+        var sync = AiActionRegistry.Find("sync_valuation_invoice_payments_from_xero");
+        Assert.NotNull(sync);
+        Assert.Equal("Valuation invoices", sync!.Area);
+        Assert.True(sync.RequiresConfirmation, "the sync records payments — confirm-first.");
+        Assert.Contains(nameof(SyncValuationInvoicePaymentsFromXero.SyncedBy), sync.EmailStamps);
+        Assert.True(sync.VisibleTo.IncludesAny(UserWith(Role.FinanceDirector).Roles));
+        Assert.False(sync.VisibleTo.IncludesAny(UserWith(Role.Foreman).Roles));
+        Assert.Contains("preview_valuation_invoice_payment_sync", sync.Notes);
+        Assert.Contains("Never ask the user whether an invoice was paid", sync.Notes);
+        var schema = System.Text.Json.JsonSerializer.Serialize(AiActionSchema.InputSchema(sync));
+        Assert.Contains("projectId", schema);
+        Assert.DoesNotContain("syncedBy", schema);
+    }
+
+    [Fact]
     public void BidPackageContext_handsOverTheIdsItsActionsTake()
     {
         // The accountant's ask (2026-09-10): the tender list came back as company + status only,

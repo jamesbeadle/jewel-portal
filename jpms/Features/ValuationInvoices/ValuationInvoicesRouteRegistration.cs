@@ -58,6 +58,15 @@ public static class ValuationInvoicesRouteRegistration
             new CommandRoute("POST", "/api/valuation-invoices/{valuationInvoiceId}/xero-raise",
                 command => $"/api/valuation-invoices/{((RaiseValuationInvoiceInXero)command).ValuationInvoiceId}/xero-raise"));
 
+        // Payments read back from Xero (2026-09-11): the preview by project, then the sync.
+        queries.Register<PreviewValuationInvoicePaymentSync, ValuationInvoicePaymentSyncPreview>(
+            new QueryRoute("/api/valuation-invoices/payment-sync/preview",
+                query => $"/api/valuation-invoices/payment-sync/preview?projectId={Uri.EscapeDataString(((PreviewValuationInvoicePaymentSync)query).ProjectId)}"));
+
+        commands.Register<SyncValuationInvoicePaymentsFromXero, ValuationInvoicePaymentSyncOutcome>(
+            new CommandRoute("POST", "/api/valuation-invoices/payment-sync",
+                _ => "/api/valuation-invoices/payment-sync"));
+
         commands.Register<RecordValuationInvoicePayment, ValuationInvoice>(
             new CommandRoute("POST", "/api/valuation-invoices/{valuationInvoiceId}/payment",
                 command => $"/api/valuation-invoices/{((RecordValuationInvoicePayment)command).ValuationInvoiceId}/payment"));

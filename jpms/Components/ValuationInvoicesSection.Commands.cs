@@ -88,6 +88,24 @@ public partial class ValuationInvoicesSection
         await OnCertifiedChanged.InvokeAsync();
     }
 
+    // Payments read back from Xero (2026-09-11): the modal shows what Xero holds as paid for the
+    // project's issued invoices and records it through the same payment move as the row menu.
+    private ValuationInvoicePaymentSyncModal? paymentSyncModal;
+
+    private void OpenPaymentSync()
+    {
+        if (busy) return;
+        error = null;
+        isOpen = true;
+        paymentSyncModal?.Open(ProjectId);
+    }
+
+    private async Task OnPaymentsSyncedAsync(string note)
+    {
+        xeroRaiseNote = note;
+        await ReloadAsync();
+    }
+
     private void OpenXeroNumber(ValuationInvoice invoice)
     {
         if (busy) return;
