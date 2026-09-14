@@ -21,10 +21,12 @@ internal sealed partial class VariationsAndValuationsActions
         new AiAction(
             Name: "create_manual_variation_order",
             Area: "Variations",
-            Description: "Creates a standalone variation order in Quoting with no request/RFQ behind "
-                + "it — the manual route for historic or client-instructed variations. Nothing hits "
-                + "the Valuation Report, CVR or budget until approval. Recorded as created by the "
-                + "signed-in user.",
+            Description: "Creates a standalone variation order with no request/RFQ behind it — the "
+                + "manual route for historic or client-instructed variations. It lands in ISSUED "
+                + "(raised by hand means it has already gone to the client) with its priced build-up "
+                + "staged: lines is required, one per cost centre, and their total is the estimate. "
+                + "Nothing hits the Valuation Report, CVR or budget until approval. Recorded as "
+                + "created by the signed-in user.",
             CommandType: typeof(CreateManualVariationOrder),
             ResultType: typeof(VariationOrder),
             AuthorisationType: typeof(CreateManualVariationOrderAuthorisation),
@@ -32,8 +34,11 @@ internal sealed partial class VariationsAndValuationsActions
             VisibleTo: VariationRoles.AllowedToManageVariations,
             EmailStamps: new[] { "CreatedByEmail" },
             NameStamps: Array.Empty<string>(),
-            Notes: "projectId comes from list_projects. number, when supplied, fixes the VOQ number "
-                + "(and so the V-ref minted at approval); omit it to take the project's next number."),
+            Notes: "projectId comes from list_projects. lines: at least one, each with a costCode "
+                + "spelled exactly as list_cost_codes returns it, description, quantity and rate "
+                + "(negative for an omit; the total can't be zero). number, when supplied, fixes the "
+                + "VOQ number (and so the V-ref minted at approval); omit it to take the project's "
+                + "next number."),
 
         new AiAction(
             Name: "create_voq_from_rfq",

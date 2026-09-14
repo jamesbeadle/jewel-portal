@@ -3,15 +3,16 @@
 @*
     Manual variation entry: ManualVariationForm (the shared fields/validation component — the
     Control Centre's System Actions pane hosts the same form to stage a draft) inside the house
-    Modal, with this wrapper owning the SEND. Creates a standalone variation order (in Quoting)
-    with no request/RFI behind it, for reconciling historic or client-instructed variations.
+    Modal, with this wrapper owning the SEND. Creates a standalone variation order — in Issued,
+    its priced build-up captured up front (2026-09-14) — with no request/RFI behind it, for
+    reconciling historic or client-instructed variations.
 *@
 <Modal IsOpen="IsOpen"
        Title="Add variation manually"
        ConfirmLabel="@(saving ? "Adding…" : "Add variation")"
        OnCancel="Cancel"
        OnConfirm="Submit"
-       Class="max-w-xl">
+       Class="max-w-3xl">
     <ManualVariationForm @ref="form" UsedNumbers="@UsedNumbers" OnSubmit="SendAsync" />
 </Modal>
 
@@ -47,7 +48,7 @@
         try
         {
             var created = await Variations.CreateManualAsync(
-                ProjectId, draft.Title, draft.Description, draft.EstimatedValue, draft.Number,
+                ProjectId, draft.Title, draft.Description, draft.Lines, draft.Number,
                 draft.CommercialBasis, draft.ProgrammeImpact, draft.Exclusions);
             await OnCreated.InvokeAsync(created);
         }

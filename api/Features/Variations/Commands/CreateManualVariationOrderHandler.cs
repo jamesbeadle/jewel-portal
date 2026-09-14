@@ -1,11 +1,16 @@
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Commercial;
 using Jewel.JPMS.Contracts.Variations;
 
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
 /// <summary>
-/// Creates a standalone variation order (in Quoting) with no request behind it — the manual-entry
-/// route for historic / client-instructed variations that never tendered through the app. Mirrors
+/// Creates a standalone variation order — in ISSUED, with its priced build-up staged — with no
+/// request behind it: the manual-entry route for historic / client-instructed variations that never
+/// tendered through the app. Raised by hand means already sent, so it lands in Issued with IssuedAt
+/// stamped rather than in Quoting (2026-09-14). The lines are held exactly as
+/// StageVariationOrderBuildUp holds them (DraftLinesJson, estimate = their total by the same
+/// LineAmount maths approval uses), so the approve modal opens pre-seeded. Mirrors
 /// CreateVoqFromRfq's numbering and clamping, but the project comes straight off the command (there
 /// is no request to inherit it from) and RequestId is left empty. A caller-supplied Number is used
 /// as-is once it is confirmed free on the project (it fixes the VOQ number and the V-ref minted at
@@ -32,6 +37,14 @@ public sealed class CreateManualVariationOrderHandler : ICommandHandler<CreateMa
         var commercialBasis = VariationNarratives.Clean(command.CommercialBasis);
         var programmeImpact = VariationNarratives.Clean(command.ProgrammeImpact);
         var exclusions = VariationNarratives.Clean(command.Exclusions);
+
+        // The build-up, normalised the way staging normalises it; validation has already required
+        // at least one line, a cost centre on each and a non-zero total.
+        var lines = command.Lines
+            .Select(line => new VariationLineInput(line.CostCode.Trim(), (line.Description ?? "").Trim(), line.Quantity, line.Rate))
+            .ToList();
+        var estimate = lines.Sum(line => ValuationCalculations.LineAmount(
+            line.Quantity * line.Rate < 0m ? ValuationLineType.Omit : ValuationLineType.Priced, line.Quantity, line.Rate));
 
         // Numbering is per-project (references like "VOQ-0050" are only unique within a project).
         // A caller-set number is honoured once it is free; otherwise take one past the project's max.
@@ -62,8 +75,10 @@ public sealed class CreateManualVariationOrderHandler : ICommandHandler<CreateMa
             Reference = VariationsIdentifierFactory.Reference(number),
             Title = title,
             Description = description,
-            Status = (int)VariationOrderStatus.Quoting,
-            EstimatedValue = command.EstimatedValue,
+            Status = (int)VariationOrderStatus.Issued,
+            IssuedAt = DateTimeOffset.UtcNow,       // raised by hand = already with the client
+            EstimatedValue = estimate,
+            DraftLinesJson = VariationDraftLines.Serialise(lines),
             CommercialBasis = commercialBasis,
             ProgrammeImpact = programmeImpact,
             Exclusions = exclusions,

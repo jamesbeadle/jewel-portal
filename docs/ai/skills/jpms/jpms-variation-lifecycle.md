@@ -25,6 +25,10 @@ it has got to: Quoting → Issued → Awaiting AI → Approved / Rejected. Never
   instruction register: check list_architect_instructions for coverage, file the instruction from
   its email when it lands (import_architect_instruction_from_message), link it, THEN the
   variation can move.
+- **A manual variation is raised priced and Issued.** create_manual_variation_order takes the
+  build-up (lines, at least one, each on a cost centre) and lands in Issued — raised by hand means
+  it has already gone to the client — with those lines staged and their total as the estimate.
+  There is no Quoting pass to chase; the next move is the client's approval.
 - Pre-approval estimate changes use set_variation_order_estimate; the status ladder's
   side-effect-free moves use set_variation_order_status; rejection and return-to-quoting keep
   the same document alive.

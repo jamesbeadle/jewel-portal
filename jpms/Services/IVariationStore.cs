@@ -14,12 +14,12 @@ public interface IVariationStore
 
     Task<VariationOrder> CreateFromRfqAsync(string requestId, string? title = null, string? description = null, decimal? estimatedValue = null, CancellationToken cancellationToken = default);
 
-    /// <summary>Creates a standalone variation order (in Quoting) with no request behind it — the
-    /// manual-entry route for historic / client-instructed variations. A supplied number fixes the
-    /// VOQ number (and the V-ref minted at approval); null takes the project's next number. The
-    /// narrative sections (commercial basis, programme impact, exclusions) print on the official
-    /// document and can be captured here or edited later.</summary>
-    Task<VariationOrder> CreateManualAsync(string projectId, string title, string? description, decimal? estimatedValue, int? number, string? commercialBasis = null, string? programmeImpact = null, string? exclusions = null, CancellationToken cancellationToken = default);
+    /// <summary>Creates a standalone variation order with no request behind it — the manual route
+    /// for historic / client-instructed variations. It lands in Issued (raised by hand = already
+    /// with the client) with the priced build-up staged: lines is required and its total is the
+    /// estimate. Number, when set, fixes the reference. Nothing reaches the valuation report until
+    /// approval.</summary>
+    Task<VariationOrder> CreateManualAsync(string projectId, string title, string? description, IReadOnlyList<VariationLineInput> lines, int? number, string? commercialBasis = null, string? programmeImpact = null, string? exclusions = null, CancellationToken cancellationToken = default);
 
     /// <summary>Re-states the official document's narrative sections — commercial basis, programme
     /// impact and exclusions. Wording only, allowed at every stage; blank clears a section.</summary>

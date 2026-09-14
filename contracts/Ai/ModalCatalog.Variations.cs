@@ -79,9 +79,10 @@ public static partial class ModalCatalog
     public static readonly ModalDescriptor ManualVariation = new(
         "manual_variation",
         "Add variation manually",
-        "It creates a standalone variation order — in Quoting, with no RFI behind it — from data the "
-        + "user already has: an attached spreadsheet, the conversation, a client instruction. The "
-        + "user reviews every field and presses Add variation themselves; nothing exists until they do.",
+        "It creates a standalone variation order — in Issued, with no RFI behind it and its priced "
+        + "build-up captured up front — from data the user already has: an attached spreadsheet, "
+        + "the conversation, a client instruction. The user reviews every field and line and "
+        + "presses Add variation themselves; nothing exists until they do.",
         "/projects/{project}/variations",
         // Same set as variation_draft: whoever the API accepts CreateManualVariationOrder from.
         new[]
@@ -102,10 +103,20 @@ public static partial class ModalCatalog
                 "What the variation covers, plain text. Drawn from the user's data — the attached "
                 + "file or what they told you — never invented. No headings, no markdown."),
 
-            new("estimatedValue", "number",
-                "The variation's value in GBP as a plain number, NET of VAT — the ex-VAT figure, "
-                + "never the inc-VAT total. Negative for an omit. Set it only where the user's data "
-                + "actually states it; otherwise leave the field out and say so."),
+            new("lines", "array",
+                "The priced build-up, one line per cost centre — their total is the variation's "
+                + "value, NET of VAT. Only lines the user's data actually prices; an invented line "
+                + "is a real figure as far as the register is concerned. Leave a line's costCode out "
+                + "when no code clearly fits — the user picks it from a list.",
+                ItemFields: new ModalField[]
+                {
+                    new("costCode", "string",
+                        "A Code returned by list_cost_codes, spelled exactly as that tool returned "
+                        + "it. A wrong cost code sends real money to the wrong place."),
+                    new("description", "string", "What the line prices, as the client would read it.", Required: true),
+                    new("quantity", "number", "The quantity; 1 for a lump sum."),
+                    new("rate", "number", "The ex-VAT rate per unit in GBP; negative for an omit.")
+                }),
 
             new("number", "number",
                 "The variation number, only when the user's data names one (V86 → 86) — it fixes "

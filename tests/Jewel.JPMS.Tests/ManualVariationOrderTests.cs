@@ -10,14 +10,18 @@ namespace Jewel.JPMS.Tests;
 // are the contract- and model-level shapes the UI relies on.
 public sealed class ManualVariationOrderTests
 {
+    private static readonly IReadOnlyList<VariationLineInput> OneLine =
+        new[] { new VariationLineInput("CC-STONE", "Island worktop upgrade", 1m, 4_200m) };
+
     [Fact]
     public void CreateManualVariationOrder_defaultsAreEmpty_soCallersOptIn()
     {
-        var command = new CreateManualVariationOrder("proj-1", "qs@jewelbb.co.uk", "Kitchen island stone swap");
+        var command = new CreateManualVariationOrder("proj-1", "qs@jewelbb.co.uk", "Kitchen island stone swap", OneLine);
 
         Assert.Null(command.Number);          // auto-assign the project's next number
         Assert.Null(command.Description);
-        Assert.Null(command.EstimatedValue);
+        // The build-up is the one thing a manual variation must carry: its total is the estimate.
+        Assert.Single(command.Lines);
         // The document's narrative sections are optional at creation — editable at every stage.
         Assert.Null(command.CommercialBasis);
         Assert.Null(command.ProgrammeImpact);
@@ -27,18 +31,20 @@ public sealed class ManualVariationOrderTests
     [Fact]
     public void CreateManualVariationOrder_carriesACallerSetNumber()
     {
-        var command = new CreateManualVariationOrder("proj-1", "qs@jewelbb.co.uk", "Rooflight upgrade")
-            with { Number = 50, EstimatedValue = 12_500m };
+        var command = new CreateManualVariationOrder("proj-1", "qs@jewelbb.co.uk", "Rooflight upgrade",
+            new[] { new VariationLineInput("CC-ROOF", "Rooflight upgrade", 1m, 12_500m) })
+            with { Number = 50 };
 
         Assert.Equal(50, command.Number);
-        Assert.Equal(12_500m, command.EstimatedValue);
+        Assert.Equal(12_500m, command.Lines.Sum(line => line.Quantity * line.Rate)); // the estimate the handler stores
     }
 
     [Fact]
     public void StandaloneVariation_hasNoRequest_andRendersItsNumber()
     {
-        // The shape the manual handler persists: empty RequestId (the register's "No request" badge)
-        // and a Number that renders "V50" — one number for one document, shown the same way at every
+        // The shape the manual handler persists: empty RequestId (the register's "No request" badge),
+        // Issued from the off (raised by hand = already with the client, 2026-09-14) with the
+        // build-up staged, and a Number that renders "V50" — one number for one document, shown the same way at every
         // stage. The stored Reference keeps its historic "VOQ-0050" spelling because it is a
         // persisted identifier, never UI copy (see CLAUDE.md), so the two deliberately differ.
         var order = new VariationOrder(
@@ -49,7 +55,7 @@ public sealed class ManualVariationOrderTests
             Reference: "VOQ-0050",
             Title: "Rooflight upgrade",
             Description: "",
-            Status: VariationOrderStatus.Quoting,
+            Status: VariationOrderStatus.Issued,
             SelectedBidPackageId: null,
             SelectedSubcontractorId: null,
             EstimatedValue: 12_500m,
@@ -57,11 +63,15 @@ public sealed class ManualVariationOrderTests
             Value: 0m,
             CostCode: null,
             CreatedAt: DateTimeOffset.UnixEpoch,
-            CreatedByEmail: "qs@jewelbb.co.uk");
+            CreatedByEmail: "qs@jewelbb.co.uk",
+            IssuedAt: DateTimeOffset.UnixEpoch,
+            DraftLines: OneLine);
 
         Assert.True(string.IsNullOrWhiteSpace(order.RequestId));   // unlinked → "No request" in the register
         Assert.Equal("VOQ-0050", order.Reference);                 // persisted identifier, unchanged
         Assert.Equal("V50", order.DisplayNumber);                  // what a user actually reads
-        Assert.Equal(VariationOrderStatus.Quoting, order.Status); // a draft until approved
+        Assert.Equal(VariationOrderStatus.Issued, order.Status);  // sent, not yet approved
+        Assert.NotNull(order.IssuedAt);
+        Assert.Single(order.DraftLines!);                          // the build-up the approve modal opens with
     }
 }

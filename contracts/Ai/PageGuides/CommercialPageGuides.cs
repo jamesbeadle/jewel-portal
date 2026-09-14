@@ -15,7 +15,8 @@ public static class CommercialPageGuides
             + "pre-approval Rejected confirms first (terminal). Subcontractor variation requests are "
             + "accepted (creating a variation) or rejected here, and approved variations with a "
             + "selected sub get \"Issue WO\". You can open_modal manual_variation — the \"Add "
-            + "variation manually\" dialog for a standalone variation from the user's own data — and "
+            + "variation manually\" dialog for a standalone variation from the user's own data, "
+            + "priced lines up front, landing in Issued — and "
             + "read via list_variations. RFI-led drafting (variation_draft) happens on the request "
             + "page, not here.",
             Aliases: new[] { "/projects/{project}/requests/variations" }),

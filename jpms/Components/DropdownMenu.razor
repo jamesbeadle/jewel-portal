@@ -1,10 +1,15 @@
+@inject IJSRuntime Js
+@implements IAsyncDisposable
+
 @*
     The house dropdown: a toggle button and a panel of items beneath it.
 
     This markup was hand-rolled in four places (the role switcher, the request page's status pill
-    and Actions menu, the variation page's status pill) before it was pulled out here. Same
-    behaviour as those had: the toggle is also the dismiss — there is no outside-click handler, and
-    each item closes the menu before running, so a click can never leave it hanging open.
+    and Actions menu, the variation page's status pill) before it was pulled out here. Dismissal:
+    the toggle, a press anywhere outside the menu, or Escape all close it (the outside press is
+    watched at the document by dropdown-menu.js while the panel is open, and still lands on
+    whatever was pressed), and each item closes the menu before running, so a click can never
+    leave it hanging open.
 
     Two ways to use it:
       • Pass Items and let it render them — the common case, and the one that keeps every menu
@@ -13,7 +18,7 @@
         Call Close() from an @onclick if you do.
 *@
 
-<div class="relative @Class">
+<div class="relative @Class" @ref="root">
     <button type="button"
             class="@ToggleClass"
             title="@ToggleTitle"
@@ -127,8 +132,55 @@
     [Parameter] public EventCallback<bool> OnOpenChanged { get; set; }
 
     private bool open;
+    private ElementReference root;
+    private DotNetObjectReference<DropdownMenu>? selfRef;
+    private bool watching;
 
     private string AlignClass => AlignLeft ? "left-0" : "right-0";
+
+    /// <summary>Keeps the document-level outside-press watcher in step with the panel: on while
+    /// open, off once closed. Done after render so the watcher only ever sees a root that exists,
+    /// and so every way of closing (toggle, item, Close(), outside press) tears it down the same
+    /// way.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (open == watching) return;
+        watching = open;
+        if (open)
+        {
+            selfRef ??= DotNetObjectReference.Create(this);
+            await Js.InvokeVoidAsync("jpmsDropdownMenu.watch", root, selfRef);
+        }
+        else if (selfRef is not null)
+        {
+            await Js.InvokeVoidAsync("jpmsDropdownMenu.unwatch", selfRef);
+        }
+    }
+
+    /// <summary>Called from dropdown-menu.js on a press outside the menu or an Escape key.</summary>
+    [JSInvokable]
+    public async Task CloseFromOutside()
+    {
+        if (!open) return;
+        open = false;
+        await OnOpenChanged.InvokeAsync(false);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (selfRef is null) return;
+        // Take the JS listeners down BEFORE the reference is disposed, so a press during teardown
+        // can't call back into a dead object (same race UpdateToast hit).
+        if (watching)
+        {
+            try { await Js.InvokeVoidAsync("jpmsDropdownMenu.unwatch", selfRef); }
+            catch { /* Tearing down during navigation/unload — the listeners die with the page. */ }
+            watching = false;
+        }
+        selfRef.Dispose();
+        selfRef = null;
+    }
 
     private async Task Toggle()
     {
@@ -142,6 +194,7 @@
         if (!open) return;
         open = false;
         _ = OnOpenChanged.InvokeAsync(false);
+        StateHasChanged();
     }
 
     private async Task Run(Item item)

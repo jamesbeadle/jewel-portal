@@ -1,11 +1,17 @@
 @using System.Text.Json
+@using Jewel.JPMS.Contracts.Variations
 
 @*
     The manual-variation FORM — fields, validation and payload building, with no opinion about
     what happens on submit (split from AddManualVariationDialog 2026-08-10, same pattern as
     RequestForm). The dialog creates immediately; the Control Centre's System Actions pane stages
-    the draft to fire with the email's Apply. A standalone variation lands in Quoting: nothing
-    reaches the valuation report until it is approved.
+    the draft to fire with the email's Apply.
+
+    The build-up is captured HERE, up front (2026-09-14): the priced lines, one per cost centre,
+    in the same VariationApprovePanel the approve modal uses — their total is the estimate, and
+    they carry through as the staged build-up so approval opens pre-seeded. A variation raised by
+    hand has already gone to the client, so it lands in Issued, not Quoting; nothing reaches the
+    valuation report until it is approved.
 *@
 
 <div class="space-y-4">
@@ -17,9 +23,10 @@
     @if (ShowIntro)
     {
         <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-            Adds a standalone variation in <span class="font-medium text-content">Quoting</span> — no RFI needed. It won't
-            appear on the valuation report until you approve it: open it and use
-            <span class="font-medium text-content">Approve manually &amp; raise VO</span> (cost code + value).
+            Adds a standalone variation as <span class="font-medium text-content">Issued</span> — no RFI needed; raising it
+            by hand means it has already gone to the client. Build the price up from the lines below: their total is the
+            variation's value and they carry through to <span class="font-medium text-content">Approve</span>, which is
+            what writes it onto the valuation report.
         </p>
     }
 
@@ -40,9 +47,14 @@
         </FormField>
     </div>
 
-    <div>
-        <FormField Label="Estimated value (£)" Value="@valueText" OnChange="v => Set(ref valueText, v)" InputType="number" />
-        <p class="mt-1 text-xs text-content-subtle">Optional — pre-fills the value on the approve panel. Use a negative figure for an omit.</p>
+    @* The priced build-up — the same lines editor the approve modal uses, without its own button:
+       this form's submit validates the lines along with the fields. *@
+    <div class="space-y-2">
+        <h3 class="eyebrow">Build-up</h3>
+        <VariationApprovePanel @ref="linesPanel"
+                               IsManual="true" ShowHeading="false" ShowSubmitButton="false"
+                               HelpOverride="One line per cost centre. The total becomes the variation's value now and opens the approve dialog pre-filled later; a negative rate is an omit."
+                               OnLinesEdited="OnLinesEditedAsync" />
     </div>
 
     @* The official document's narrative sections — printed on the VO sheet when it is downloaded
@@ -70,9 +82,10 @@
 </div>
 
 @code {
-    /// <summary>A valid submission — the host sends it now (dialog) or stages it (System Actions).</summary>
+    /// <summary>A valid submission — the host sends it now (dialog) or stages it (System Actions).
+    /// Lines is the validated build-up (at least one, every line coded); Total is their sum.</summary>
     public sealed record Draft(
-        string Title, string? Description, decimal? EstimatedValue, int? Number,
+        string Title, string? Description, IReadOnlyList<VariationLineInput> Lines, decimal Total, int? Number,
         string? CommercialBasis, string? ProgrammeImpact, string? Exclusions);
 
     /// <summary>Raised by <see cref="TrySubmitAsync"/> when the form validates.</summary>
@@ -83,13 +96,13 @@
     [Parameter] public IReadOnlyCollection<int> UsedNumbers { get; set; } = Array.Empty<int>();
 
     /// <summary>Hosts that say what happens next in their own words (the System Actions pane's
-    /// approve-on-apply toggle) turn the standard lands-in-Quoting blurb off.</summary>
+    /// approve-on-apply toggle) turn the standard lands-in-Issued blurb off.</summary>
     [Parameter] public bool ShowIntro { get; set; } = true;
 
+    private VariationApprovePanel? linesPanel;
     private string numberText = "";
     private string title = "";
     private string description = "";
-    private string valueText = "";
     private string commercialBasis = "";
     private string programmeImpact = "";
     private string exclusions = "";
@@ -99,11 +112,8 @@
     // Shows the number the way the rest of the app shows it ("V50").
     private string Preview => ParsedNumber is { } n ? $"V{n}" : "V…";
 
-    /// <summary>What's typed right now — read by hosts that seed another panel from this form
-    /// before it is submitted (the approve-on-apply build-up seeds its first line from these).</summary>
+    /// <summary>What's typed right now — read by hosts that describe the staged action in their own words.</summary>
     public string CurrentTitle => title.Trim();
-    public decimal? CurrentEstimatedValue =>
-        !string.IsNullOrWhiteSpace(valueText) && decimal.TryParse(valueText, out var current) ? current : null;
 
     private void OnDescriptionInput(ChangeEventArgs e) => Set(ref description, e.Value?.ToString() ?? "");
 
@@ -122,20 +132,31 @@
         if (OnEdited.HasDelegate) _ = OnEdited.InvokeAsync();
     }
 
+    private Task OnLinesEditedAsync() => OnEdited.HasDelegate ? OnEdited.InvokeAsync() : Task.CompletedTask;
+
     /// <summary>The form's live state as the JSON the assistant task carries with every turn.
-    /// number and estimatedValue go out as NUMBERS (null while blank or unparseable) — the
-    /// schema declares them numeric, and serialising the raw text ("" included) taught the model
-    /// the wrong shape and read as a value someone had set.</summary>
-    public string SerialiseState() => JsonSerializer.Serialize(new
+    /// number goes out as a NUMBER (null while blank or unparseable) — the schema declares it
+    /// numeric, and serialising the raw text ("" included) taught the model the wrong shape and
+    /// read as a value someone had set. lines is the build-up as the panel snapshots it.</summary>
+    public string SerialiseState()
     {
-        number = ParsedNumber,
-        title,
-        description,
-        estimatedValue = CurrentEstimatedValue,
-        commercialBasis,
-        programmeImpact,
-        exclusions
-    });
+        JsonElement? lines = null;
+        if (linesPanel is not null)
+        {
+            using var snapshot = JsonDocument.Parse(linesPanel.SnapshotLines());
+            if (snapshot.RootElement.TryGetProperty("lines", out var rows)) lines = rows.Clone();
+        }
+        return JsonSerializer.Serialize(new
+        {
+            number = ParsedNumber,
+            title,
+            description,
+            lines,
+            commercialBasis,
+            programmeImpact,
+            exclusions
+        });
+    }
 
     /// <summary>
     /// The assistant's proposals, merged in. Only the fields it sent are touched; values arrive as
@@ -157,8 +178,9 @@
             if (ReadText(root, "commercialBasis") is { } proposedBasis) commercialBasis = proposedBasis;
             if (ReadText(root, "programmeImpact") is { } proposedImpact) programmeImpact = proposedImpact;
             if (ReadText(root, "exclusions") is { } proposedExclusions) exclusions = proposedExclusions;
-            if (ReadNumberText(root, "estimatedValue") is { } proposedValue) valueText = proposedValue;
             if (ReadNumberText(root, "number") is { } proposedNumber) numberText = proposedNumber;
+            // The build-up is the panel's: it replaces its rows from the same object (the "lines" array).
+            if (root.TryGetProperty("lines", out _)) linesPanel?.ReplaceLines(fieldsJson);
 
             StateHasChanged();
         }
@@ -200,9 +222,10 @@
 
     public void Reset()
     {
-        numberText = title = description = valueText = "";
+        numberText = title = description = "";
         commercialBasis = programmeImpact = exclusions = "";
         error = null;
+        linesPanel?.ResetLines();
         StateHasChanged();
     }
 
@@ -227,17 +250,15 @@
             error = $"V{requested} already exists on this project — choose a different number.";
             return false;
         }
-        decimal? estimate = null;
-        if (!string.IsNullOrWhiteSpace(valueText))
-        {
-            if (!decimal.TryParse(valueText, out var parsed)) { error = "The estimated value must be a number."; return false; }
-            estimate = parsed;
-        }
+        // The lines validate in the panel, which shows its own reason next to the rows.
+        var buildUp = linesPanel?.TryBuildRequest();
+        if (buildUp is null) return false;
 
         await OnSubmit.InvokeAsync(new Draft(
             title.Trim(),
             string.IsNullOrWhiteSpace(description) ? null : description.Trim(),
-            estimate,
+            buildUp.Lines,
+            buildUp.Total,
             ParsedNumber,
             string.IsNullOrWhiteSpace(commercialBasis) ? null : commercialBasis.Trim(),
             string.IsNullOrWhiteSpace(programmeImpact) ? null : programmeImpact.Trim(),

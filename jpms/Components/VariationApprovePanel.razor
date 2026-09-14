@@ -79,9 +79,12 @@
         centre. Use a negative rate for an omit — work removed from the contract scope.
     </p>
 
-    <button type="button" class="btn-primary w-full" disabled="@Busy" @onclick="Submit">
-        @(SubmitLabel ?? (IsManual ? "Approve manually & raise VO" : "Approve & raise VO"))
-    </button>
+    @if (ShowSubmitButton)
+    {
+        <button type="button" class="btn-primary w-full" disabled="@Busy" @onclick="Submit">
+            @(SubmitLabel ?? (IsManual ? "Approve manually & raise VO" : "Approve & raise VO"))
+        </button>
+    }
 </div>
 
 @code {
@@ -98,6 +101,9 @@
     [Parameter] public string? HelpOverride { get; set; }
     // Why the caller's save was refused, shown where the panel shows its own validation.
     [Parameter] public string? SubmitError { get; set; }
+    /// <summary>Off when the panel is one section of a host's form (the manual-variation form):
+    /// the host's own button drives <see cref="TryBuildRequest"/> and there is no second button.</summary>
+    [Parameter] public bool ShowSubmitButton { get; set; } = true;
 
     // ---- The assistant pipe (variation_edit_lines) ----------------------------------------------
     // Out: every edit raises OnLinesEdited so the host can republish the live rows
@@ -258,6 +264,15 @@
             .Select(centre => new SearchSelect.Option(centre.Code, $"{centre.Code} {centre.Name}"))
             .ToList();
 
+    /// <summary>Back to one empty row — a host form's Reset after it has sent or staged the lines.</summary>
+    public void ResetLines()
+    {
+        lines.Clear();
+        lines.Add(new LineRow { Description = DefaultDescription });
+        error = null;
+        StateHasChanged();
+    }
+
     private void AddLine()
     {
         lines.Add(new LineRow());
@@ -279,6 +294,16 @@
     private async Task Submit()
     {
         if (Busy) return;
+        if (TryBuildRequest() is { } request) await OnApprove.InvokeAsync(request);
+    }
+
+    /// <summary>
+    /// Validates the rows and returns the build-up, or null with the reason shown in the panel's
+    /// own Notice. The one validation pass behind the panel's button and behind a host that
+    /// submits the lines as part of a larger form (ShowSubmitButton off).
+    /// </summary>
+    public ApproveRequest? TryBuildRequest()
+    {
         error = null;
 
         var built = new List<VariationLineInput>();
@@ -296,7 +321,8 @@
             if (string.IsNullOrWhiteSpace(costCode))
             {
                 error = "Every line needs a cost centre — pick one or clear the line.";
-                return;
+                StateHasChanged();
+                return null;
             }
             built.Add(new VariationLineInput(costCode, row.Description?.Trim() ?? "", qty, rate, row.ValuationLineItemId));
         }
@@ -304,16 +330,18 @@
         if (built.Count == 0)
         {
             error = "Add at least one line with a cost centre and value.";
-            return;
+            StateHasChanged();
+            return null;
         }
 
         var total = built.Sum(line => line.Quantity * line.Rate);
         if (total == 0m)
         {
             error = "The total can't be zero — enter the agreed values (negative rate for an omit).";
-            return;
+            StateHasChanged();
+            return null;
         }
 
-        await OnApprove.InvokeAsync(new ApproveRequest(built[0].CostCode, total, built));
+        return new ApproveRequest(built[0].CostCode, total, built);
     }
 }

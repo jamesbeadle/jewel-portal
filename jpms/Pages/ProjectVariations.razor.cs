@@ -26,8 +26,8 @@ public partial class ProjectVariations
     private async Task OnManualVariationCreated(VariationOrder created)
     {
         addVariationOpen = false;
-        // The new draft appears as a "No request" row in the register; approve it there (or open it)
-        // to write it onto the valuation report.
+        // The new variation appears as a "No request" row in the register, Issued with its build-up
+        // staged; approve it there (or open it) to write it onto the valuation report.
         await LoadVariationsAsync();
     }
 

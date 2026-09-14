@@ -32,11 +32,11 @@ public sealed class HttpVariationStore : IVariationStore
         return created;
     }
 
-    public async Task<VariationOrder> CreateManualAsync(string projectId, string title, string? description, decimal? estimatedValue, int? number, string? commercialBasis = null, string? programmeImpact = null, string? exclusions = null, CancellationToken cancellationToken = default)
+    public async Task<VariationOrder> CreateManualAsync(string projectId, string title, string? description, IReadOnlyList<VariationLineInput> lines, int? number, string? commercialBasis = null, string? programmeImpact = null, string? exclusions = null, CancellationToken cancellationToken = default)
     {
         // CreatedByEmail is resolved from the signed-in user server-side, so it is a placeholder here.
         var created = await commands.SendAsync(new CreateManualVariationOrder(
-            projectId, string.Empty, title, description, estimatedValue, number,
+            projectId, string.Empty, title, lines, description, number,
             commercialBasis, programmeImpact, exclusions), cancellationToken);
         OnChange?.Invoke();
         return created;
