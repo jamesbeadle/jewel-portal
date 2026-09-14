@@ -80,6 +80,7 @@ public static partial class ProjectSupplierAccountRenderer
         AddGridRow(table, "Ordered", Money(account.Ordered), "Invoices received", Money(account.Received));
         AddGridRow(table, "Invoiced and linked", Money(account.InvoicedAndLinked), "Left to invoice", Money(account.LeftToInvoice));
         AddGridRow(table, "Paid", Money(account.Paid), "Over the orders", OverOrdersLabel(account));
+        AddGridRow(table, "Payments made", Money(account.PaymentsMade), "CIS deducted", Money(account.CisDeducted));
 
         SpaceAfterTable(section);
     }

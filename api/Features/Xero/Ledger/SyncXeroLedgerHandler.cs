@@ -169,6 +169,9 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
                 // it reaches zero when nothing further is owed, whatever was withheld.
                 entity.InvoiceTotal = transaction.Total;
                 entity.AmountDue = transaction.AmountDue;
+                entity.AmountPaid = transaction.AmountPaid;
+                entity.CisDeduction = transaction.CisDeduction;
+                entity.FullyPaidOnDate = transaction.FullyPaidOnDate;
                 entity.AccountCode = Truncate(line.AccountCode, 32);
                 entity.AccountName = Truncate(line.AccountName, 256);
                 entity.XeroSite = Truncate(line.Site, 128);

@@ -225,7 +225,9 @@ public sealed partial class XeroClient
         AmountPaid: DecimalOf(item, "AmountPaid"),
         CurrencyCode: StringOf(item, "CurrencyCode"),
         Lines: ReadLines(item, accountNames),
-        HasAttachments: BoolOf(item, "HasAttachments"));
+        HasAttachments: BoolOf(item, "HasAttachments"),
+        CisDeduction: DecimalOf(item, "CISDeduction"),
+        FullyPaidOnDate: DateOf(item, "FullyPaidOnDateString", "FullyPaidOnDate"));
 
     private IReadOnlyList<XeroTransactionLine> ReadLines(JsonElement invoice, IReadOnlyDictionary<string, string> accountNames)
     {

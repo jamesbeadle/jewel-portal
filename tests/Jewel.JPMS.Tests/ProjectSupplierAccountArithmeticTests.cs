@@ -35,6 +35,14 @@ public class ProjectSupplierAccountArithmeticTests
         Assert.Equal(0m, pending.SettledNet);
         Assert.False(pending.IsMatched);
         Assert.Equal(21_712.37m, pending.Unmatched);
+        Assert.False(pending.HasPaymentDetail);
+
+        // The actual payments made and the CIS withheld from them — Xero's figures, summed.
+        Assert.Equal(46_440.27m, account.PaymentsMade);
+        Assert.Equal(6_020.00m, account.CisDeducted);
+        var first = account.Invoices.Single(invoice => invoice.InvoiceNumber == "027021");
+        Assert.True(first.HasPaymentDetail);
+        Assert.Equal(new DateTime(2026, 3, 12), first.PaidOn);
 
         var mainOrder = account.Orders.Single(order => order.Number == 24);
         Assert.Equal(18_882.49m, mainOrder.RemainingToInvoice);
@@ -45,11 +53,16 @@ public class ProjectSupplierAccountArithmeticTests
     {
         var mainOrderShares = new[] { new ProjectSupplierAccountOrderShare("wo-24", "WO-0024", 18_611.66m) };
         var secondShares = new[] { new ProjectSupplierAccountOrderShare("wo-24", "WO-0024", 33_848.61m) };
+        // CIS at 20% of labour, withheld at payment: 027021 paid £17,411.66 after £1,200.00,
+        // 027093 paid £29,028.61 after £4,820.00; 027259 is a draft — nothing calculated or paid.
         var invoices = new[]
         {
-            Invoice("027021", new DateTime(2026, 2, 18), 6_000.00m, 12_611.66m, "PAID", amountDue: 0m, mainOrderShares),
-            Invoice("027093", new DateTime(2026, 4, 27), 24_100.00m, 9_748.61m, "PAID", amountDue: 0m, secondShares),
-            Invoice("027259", new DateTime(2026, 9, 9), 16_750.00m, 4_962.37m, "DRAFT", amountDue: 21_712.37m, Array.Empty<ProjectSupplierAccountOrderShare>())
+            Invoice("027021", new DateTime(2026, 2, 18), 6_000.00m, 12_611.66m, "PAID", amountDue: 0m,
+                amountPaid: 17_411.66m, cisDeduction: 1_200.00m, paidOn: new DateTime(2026, 3, 12), mainOrderShares),
+            Invoice("027093", new DateTime(2026, 4, 27), 24_100.00m, 9_748.61m, "PAID", amountDue: 0m,
+                amountPaid: 29_028.61m, cisDeduction: 4_820.00m, paidOn: new DateTime(2026, 5, 20), secondShares),
+            Invoice("027259", new DateTime(2026, 9, 9), 16_750.00m, 4_962.37m, "DRAFT", amountDue: 21_712.37m,
+                amountPaid: 0m, cisDeduction: 0m, paidOn: null, Array.Empty<ProjectSupplierAccountOrderShare>())
         };
         var orders = new[]
         {
@@ -71,7 +84,9 @@ public class ProjectSupplierAccountArithmeticTests
 
     private static ProjectSupplierAccountInvoice Invoice(
         string number, DateTime date, decimal labour, decimal materials, string xeroStatus, decimal amountDue,
+        decimal amountPaid, decimal cisDeduction, DateTime? paidOn,
         IReadOnlyList<ProjectSupplierAccountOrderShare> orders) =>
         new($"inv-{number}", number, null, date, IsCreditNote: false, labour, materials, NetElsewhere: 0m,
-            xeroStatus, InvoiceTotal: labour + materials, amountDue, ProjectSupplierInvoicePlacement.Allocated, orders);
+            xeroStatus, InvoiceTotal: labour + materials, amountDue, amountPaid, cisDeduction, paidOn,
+            ProjectSupplierInvoicePlacement.Allocated, orders);
 }

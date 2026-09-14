@@ -46,8 +46,9 @@ public static class ProcurementPageGuides
             + "\"Account\" on a supplier row (supplier view), or \"Supplier account…\" in any order's "
             + "Actions menu, opens that supplier's account on this project — their orders with lines, "
             + "invoiced and linked, paid, left to invoice; every invoice received (awaiting approval "
-            + "included) with its CIS labour / materials split, Xero status and the order(s) it is "
-            + "matched to; and the over-invoice, if any — with Download PDF for sending on; "
+            + "included) with its CIS labour / materials split, the CIS Xero deducted and the actual "
+            + "payment made, Xero status and the order(s) it is matched to; and the over-invoice, if "
+            + "any — with Download PDF for sending on; "
             + "get_project_supplier_account reads the same. "
             + "Awarding a tender happens on the bid package page; linking invoices happens on WO "
             + "Allocation."),

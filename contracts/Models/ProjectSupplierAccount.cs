@@ -31,6 +31,9 @@ public sealed record ProjectSupplierAccount(
     public decimal MaterialsReceived => Invoices.Sum(invoice => invoice.Materials);
     public decimal Received => Invoices.Sum(invoice => invoice.Net);
     public decimal ReceivedAndSettled => Invoices.Sum(invoice => invoice.SettledNet);
+    /// <summary>The cash actually paid out against the invoices, and the CIS withheld from it for HMRC — Xero's figures.</summary>
+    public decimal PaymentsMade => Invoices.Sum(invoice => invoice.AmountPaid);
+    public decimal CisDeducted => Invoices.Sum(invoice => invoice.CisDeduction);
 
     /// <summary>Received but not linked to any of the supplier's orders on this project — the
     /// part of the account nobody has matched yet, including bills still awaiting approval.</summary>

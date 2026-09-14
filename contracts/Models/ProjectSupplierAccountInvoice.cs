@@ -23,6 +23,13 @@ public sealed record ProjectSupplierAccountInvoice(
     string XeroStatus,
     decimal InvoiceTotal,
     decimal AmountDue,
+    // The actual payment Xero recorded against the whole bill (under CIS, short of the total by
+    // the deduction), the CIS deduction Xero calculated and withheld for HMRC (0 until the bill
+    // is approved — Xero calculates it at approval), and the date nothing further was owed.
+    // Bill-level, like the total: a bill split across projects shows its whole payment here.
+    decimal AmountPaid,
+    decimal CisDeduction,
+    DateTime? PaidOn,
     ProjectSupplierInvoicePlacement Placement,
     IReadOnlyList<ProjectSupplierAccountOrderShare> Orders)
 {
@@ -42,4 +49,10 @@ public sealed record ProjectSupplierAccountInvoice(
     public decimal SettledNet => XeroPaymentMaths.PaidPartOfSlice(Net, XeroStatus, InvoiceTotal, AmountDue);
 
     public ProjectSupplierInvoiceState State => ProjectSupplierInvoiceStates.For(XeroStatus, SettledFraction);
+
+    /// <summary>Xero has told us about a payment or a deduction on this bill. A settled bill with
+    /// neither was synced before the ledger carried them — a dash, never a zero, until the next sync.</summary>
+    public bool HasPaymentDetail => AmountPaid != 0m || CisDeduction != 0m;
+
+    public bool IsAwaitingApproval => State == ProjectSupplierInvoiceState.AwaitingApproval;
 }

@@ -64,7 +64,9 @@ public static partial class ProjectSupplierAccountRenderer
             + "labour account and materials everything else, exactly as the supplier raised it. Invoiced and "
             + "linked, paid and left to invoice are read from the bills linked to each order on the WO "
             + "Allocation tab; an invoice awaiting approval counts as received, but nothing is owed on it "
-            + "until it is approved in Xero.");
+            + "until it is approved in Xero. CIS deducted and Payment made are Xero's own figures for the "
+            + "whole bill: a dash means Xero has recorded nothing yet — no deduction is calculated until "
+            + "the bill is approved, and nothing is paid until it is paid.");
         note.Format.Font.Size = 8;
         note.Format.Font.Color = Muted;
         SpaceBefore(note, 2);

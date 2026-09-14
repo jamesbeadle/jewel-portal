@@ -256,8 +256,10 @@ per-supplier, per-project **Supplier account** (`GetProjectSupplierAccount`, the
 the supplier's live orders with their lines, invoiced-and-linked, paid and left to invoice; every
 invoice received for the project — linked, allocated or still awaiting allocation, awaiting
 approval included — with its CIS labour / materials split (by Xero account: 321 = labour, the
-rest materials), Xero status and the order(s) it is matched to; and the over-invoice (received
-less ordered) spelled out. Mirrored the same day as the read tool
+rest materials), the CIS Xero deducted and the actual payment made (his follow-up the same
+afternoon: `AmountPaid` / `CisDeduction` / `FullyPaidOnDate` now synced onto every ledger line,
+migration `AddXeroLinePaymentDetail`), Xero status and the order(s) it is matched to; and the
+over-invoice (received less ordered) spelled out. Mirrored the same day as the read tool
 **get_project_supplier_account** (AllInternal, the tab's gate; supplier by directory id or
 name), pinned in AiConnectorTests. The "ledger link slices unreadable" cell in §8's Work orders
 row is answered by this read for one supplier at a time; the whole-project slice list stays on

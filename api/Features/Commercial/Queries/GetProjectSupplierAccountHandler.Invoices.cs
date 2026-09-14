@@ -6,8 +6,8 @@ public sealed partial class GetProjectSupplierAccountHandler
 {
     private const string CreditNoteType = "ACCPAYCREDIT";
 
-    // One account row per Xero bill. Net figures follow the ledger's sign convention — a credit
-    // note subtracts — and the labour / materials split is by the account each line posts to:
+    // One account row per Xero bill. Every money figure follows the ledger's sign convention — a
+    // credit note subtracts, its payment and CIS included — and the labour / materials split is by the account each line posts to:
     // the CIS labour account is labour, everything else is materials. The order shares are the
     // bill's link slices summed per order, which is exactly what the orders' side counts.
     private ProjectSupplierAccountInvoice BuildInvoice(
@@ -33,6 +33,9 @@ public sealed partial class GetProjectSupplierAccountHandler
             head.InvoiceStatus,
             head.InvoiceTotal,
             head.AmountDue,
+            head.AmountPaid * sign,
+            head.CisDeduction * sign,
+            head.FullyPaidOnDate,
             bill.Placement,
             OrderSharesOf(bill, links, referencesByOrder));
     }
