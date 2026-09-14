@@ -3,7 +3,7 @@
 
 @if (IsOpen)
 {
-    <div class="@OverlayClass" @onclick="HandleOverlayClick">
+    <div class="@OverlayClass" data-modal-overlay @onclick="HandleOverlayClick">
         <div class="modal-panel @Class flex flex-col max-h-[85vh] outline-none" tabindex="-1"
              @ref="panelRef" @onclick:stopPropagation="true">
             @* The Figma modal: 32px padding, 24/Semi title, a hairline under the header, Large buttons
@@ -92,6 +92,9 @@
         catch { /* focus is a courtesy — never let it break the dialog */ }
     }
 
+    // Reached only by a genuine click on the backdrop. A drag that starts inside the panel and ends
+    // over the backdrop also arrives as a click on the overlay, and js/modal-overlay-click.js swallows
+    // those before Blazor sees them (keyed on data-modal-overlay) — selecting text never dismisses.
     private Task HandleOverlayClick() =>
         DismissOnOverlayClick ? OnCancel.InvokeAsync() : Task.CompletedTask;
 
