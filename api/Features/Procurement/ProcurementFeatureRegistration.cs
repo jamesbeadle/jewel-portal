@@ -136,6 +136,8 @@ public static class ProcurementFeatureRegistration
         // The automatic counterpart: SENDS the purchase-order email the moment an order is
         // released (created un-drafted, or a draft approved) — the UI warns before firing it.
         services.AddScoped<ICommandHandler<SendWorkOrderPoEmail, WorkOrderPoEmailOutcome>, SendWorkOrderPoEmailHandler>();
+        services.AddScoped<ICommandHandler<RetagWorkOrderWorkflowTags, WorkOrderRetagSummary>, RetagWorkOrderWorkflowTagsHandler>();
+        services.AddScoped<RetagWorkOrderWorkflowTagsAuthorisation>();
         services.AddScoped<SendWorkOrderPoEmailAuthorisation>();
         services.AddScoped<SendWorkOrderPoEmailValidation>();
 

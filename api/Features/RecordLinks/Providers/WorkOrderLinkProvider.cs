@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Procurement;
 
 namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 
@@ -10,6 +11,10 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 // Subcontract-side by construction: docs/Pathway-Split-Platform-Flow-Plan.md §2.2 lists "link work
 // order" in the Subcontractor pathway's action set, and TriageCategories.BucketFor maps the type to
 // JPMS/Subcontractor — so an order can never be reached from a Client thread (the wall rejects it).
+//
+// The tag stem is PROJECT-QUALIFIED ("JBB-2026-001-WO-0045", WorkOrderTags) since 2026-09-14: order
+// numbers are per project, so the flat "WO-0045" named By France's Farrant order AND Coombe Lane's
+// migrated Hamilton Glass order, and whichever row the database returned first won the resolve.
 public sealed class WorkOrderLinkProvider : ILinkableRecordProvider, ITagResolvingProvider
 {
     private readonly JpmsContext context;
@@ -31,63 +36,78 @@ public sealed class WorkOrderLinkProvider : ILinkableRecordProvider, ITagResolvi
         // stem would change, silently detaching any mail already tagged against it. A REJECTED
         // draft's stem can never change (no approval is coming), so rejected orders ARE listed —
         // flagged inactive, behind the pickers' "include closed / inactive" checkbox.
-        var rows = await context.WorkOrders.AsNoTracking()
-            .Where(o => o.ProjectId == projectId
-                        && o.Status != (int)WorkOrderStatus.Draft)
-            .OrderByDescending(o => o.Number)
-            .Select(o => new
-            {
-                Order = o,
-                CompanyName = context.Subcontractors.AsNoTracking()
-                    .Where(s => s.SubcontractorId == o.SubcontractorId)
-                    .Select(s => s.CompanyName)
-                    .FirstOrDefault()
-            })
-            .ToListAsync(ct);
-        return rows.Select(row => ToLinkable(row.Order, row.CompanyName)).ToList().AsReadOnly();
+        var projectRef = await WorkOrderTags.ProjectRefAsync(context, projectId, ct);
+        var rows = await WithSupplierAsync(
+            context.WorkOrders.AsNoTracking()
+                .Where(o => o.ProjectId == projectId
+                            && o.Status != (int)WorkOrderStatus.Draft)
+                .OrderByDescending(o => o.Number),
+            ct);
+        return rows.Select(row => ToLinkable(row.Order, row.CompanyName, projectRef)).ToList().AsReadOnly();
     }
 
     public async Task<LinkableRecord?> FindAsync(string recordId, CancellationToken ct)
     {
-        var row = await context.WorkOrders.AsNoTracking()
-            .Where(o => o.WorkOrderId == recordId)
-            .Select(o => new
-            {
-                Order = o,
-                CompanyName = context.Subcontractors.AsNoTracking()
-                    .Where(s => s.SubcontractorId == o.SubcontractorId)
-                    .Select(s => s.CompanyName)
-                    .FirstOrDefault()
-            })
-            .FirstOrDefaultAsync(ct);
-        return row is null ? null : ToLinkable(row.Order, row.CompanyName);
+        var rows = await WithSupplierAsync(
+            context.WorkOrders.AsNoTracking().Where(o => o.WorkOrderId == recordId),
+            ct);
+        return rows.Count == 0 ? null : await ToLinkableAsync(rows[0].Order, rows[0].CompanyName, ct);
     }
 
-    // "WO-0007" -> the order numbered 7. Drafts have no number so their (unstable) id-derived
-    // stems never parse here — the same reason ForProjectAsync excludes them.
+    // Reverse lookup for the tag chips and the Control Centre's "use the thread's existing tags":
+    // "JBB-2026-001-WO-0045" names the order numbered 45 on JBB-2026-001 — the candidates carrying
+    // that number are verified against their own full qualified stem, which is what tells two
+    // projects' 0045 apart. The legacy flat stem ("WO-0045", mail tagged before 2026-09-14) is
+    // accepted only when exactly ONE order carries the number; two or more is an answer nobody
+    // should guess, so it resolves to nothing and the triager picks by hand (the retag sweep,
+    // RetagWorkOrderWorkflowTags, moves such mail onto qualified stems). Drafts have no number so
+    // their (unstable) id-derived stems never parse here — the same reason ForProjectAsync
+    // excludes them.
     public async Task<LinkableRecord?> FindByTagAsync(string tagReference, CancellationToken ct)
     {
-        if (!TagReferenceParsing.TryParseNumber(tagReference, "WO", out var number)) return null;
-        var row = await context.WorkOrders.AsNoTracking()
-            .Where(o => o.Number == number)
-            .Select(o => new
+        if (WorkOrderTags.NumberOf(tagReference) is not { } number) return null;
+        var candidates = await WithSupplierAsync(
+            context.WorkOrders.AsNoTracking().Where(o => o.Number == number).Take(10),
+            ct);
+
+        if (WorkOrderTags.IsLegacyStem(tagReference))
+            return candidates.Count == 1 ? await ToLinkableAsync(candidates[0].Order, candidates[0].CompanyName, ct) : null;
+
+        foreach (var candidate in candidates)
+        {
+            var record = await ToLinkableAsync(candidate.Order, candidate.CompanyName, ct);
+            if (record.TagReference.Equals(tagReference, StringComparison.OrdinalIgnoreCase))
+                return record;
+        }
+        return null;
+    }
+
+    private async Task<List<(WorkOrderEntity Order, string? CompanyName)>> WithSupplierAsync(
+        IQueryable<WorkOrderEntity> orders, CancellationToken ct)
+    {
+        var rows = await orders
+            .Select(order => new
             {
-                Order = o,
+                Order = order,
                 CompanyName = context.Subcontractors.AsNoTracking()
-                    .Where(s => s.SubcontractorId == o.SubcontractorId)
+                    .Where(s => s.SubcontractorId == order.SubcontractorId)
                     .Select(s => s.CompanyName)
                     .FirstOrDefault()
             })
-            .FirstOrDefaultAsync(ct);
-        return row is null ? null : ToLinkable(row.Order, row.CompanyName);
+            .ToListAsync(ct);
+        return rows.Select(row => (row.Order, row.CompanyName)).ToList();
     }
 
-    private static LinkableRecord ToLinkable(WorkOrderEntity entity, string? companyName)
+    private async Task<LinkableRecord> ToLinkableAsync(WorkOrderEntity entity, string? companyName, CancellationToken ct) =>
+        ToLinkable(entity, companyName, await WorkOrderTags.ProjectRefAsync(context, entity.ProjectId, ct));
+
+    private static LinkableRecord ToLinkable(WorkOrderEntity entity, string? companyName, string? projectRef)
     {
-        // The order's sequential WO-0001 reference is the tag stem, so an email tagged to it
-        // ("JPMS/WO-0001") surfaces under the order. Seeded Buildertrend orders keep their PO number
-        // in that same sequence, and legacy rows with no Number fall back to the id-derived stem
-        // (WorkOrderEntity.Reference handles both).
+        // The order's sequential WO-0001 reference is what people say; the tag stem is that
+        // reference qualified by the project (WorkOrderTags), so an email tagged
+        // "JPMS/JBB-2026-001-WO-0001" surfaces under this project's order and no other's. Seeded
+        // Buildertrend orders keep their PO number in the project's sequence, and legacy rows with
+        // no Number fall back to the id-derived stem (WorkOrderEntity.Reference handles both).
         var reference = entity.Reference;
 
         // Orders raised straight from an award can carry an empty Title; the scope is the next-best
@@ -101,7 +121,7 @@ public sealed class WorkOrderLinkProvider : ILinkableRecordProvider, ITagResolvi
             RecordId:     entity.WorkOrderId,
             ProjectId:    entity.ProjectId,
             Reference:    reference,
-            TagReference: reference,
+            TagReference: WorkOrderTags.Stem(projectRef, entity.ProjectId, reference),
             Title:        title,
             StatusLabel:  ((WorkOrderStatus)entity.Status).ToString(),
             Summary:      RecordSummaries.Clip(companyName),

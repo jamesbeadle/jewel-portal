@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Features.Requests; // TriageRoles (internal, same assembly)
 using Jewel.JPMS.Contracts.Audit;
 
 namespace Jewel.JPMS.Api.Features.Audit;
@@ -30,22 +29,9 @@ public sealed class AuditEndpoints
         if (Opt("eventType") is { } raw && Enum.TryParse<AuditEventType>(raw, ignoreCase: true, out var parsed))
             eventType = parsed;
 
-        // The whole register is an oversight surface, gated like triage. A read narrowed to ONE
-        // record is that record's own history — the History panel on the request page — so it opens
-        // to the internal team: the people who can draft the correspondence must be able to see
-        // that it was drafted. A read narrowed to the finance reconciliation event (cost-centre
-        // recodes) is a money-facing register, not a triage one — it opens to the commercial team,
-        // mirroring the sidebar's Financials gate (the people who can see the valuation report can
-        // see where its money was moved). Anything unnarrowed still needs the triage gate.
-        var gate = !string.IsNullOrWhiteSpace(recordId) ? JpmsRoleSets.AllInternal
-            : eventType == AuditEventType.CostCentreRecoded ? JpmsRoleSets.CommercialTeam
-            : TriageRoles.AllowedToTriage;
-        if (!signedInUser.Roles.Contains(Role.Admin) && !gate.IncludesAny(signedInUser.Roles))
-            return new StatusCodeResult(403);
-        // The KPI register is administrators-only (2026-09-03); its audit rows carry only a
-        // reference, but a read NARROWED to them is a read of the register's rhythm — refused.
-        if (eventType is AuditEventType.KpiEmailMarked or AuditEventType.KpiEmailRemoved
-            && !signedInUser.Roles.Contains(Role.Admin))
+        // Who may read depends on the read's shape — one rule shared with the connector's
+        // list_audit_trail (AuditReadGate).
+        if (!AuditReadGate.Allows(signedInUser, recordId, eventType))
             return new StatusCodeResult(403);
         RecordType? recordType = null;
         if (Opt("recordType") is { } rawRecordType && Enum.TryParse<RecordType>(rawRecordType, ignoreCase: true, out var parsedRecordType))

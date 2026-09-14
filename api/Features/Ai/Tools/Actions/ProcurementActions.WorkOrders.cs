@@ -240,5 +240,29 @@ internal sealed partial class ProcurementActions
             Notes: "Confirm subcontractor, value and scope wording with the user before calling — this "
                 + "creates the work order immediately. awardedByEmail should be the signed-in user's "
                 + "email. bidPackageId from list_bid_packages; quoteId optional (the winning quote)."),
+
+        new AiAction(
+            Name: "retag_work_order_tags",
+            Area: "Procurement",
+            Description: "REWRITES MAILBOX TAGS: the one-off sweep that moves historic work-order "
+                + "mail from the legacy flat tag (JPMS/WO-0045) onto the project-qualified one "
+                + "(JPMS/JBB-2026-001-WO-0045) — order numbers are per project, so the flat tag "
+                + "could name two projects' orders (2026-09-14). Where one order carries the number "
+                + "the whole tag moves; where several do, each thread follows the order the audit "
+                + "trail linked it to, and a thread the trail cannot place is LEFT on the legacy tag "
+                + "and named in the answer for a person to file by hand — nothing is guessed. Safe "
+                + "to re-run.",
+            CommandType: typeof(RetagWorkOrderWorkflowTags),
+            ResultType: typeof(WorkOrderRetagSummary),
+            AuthorisationType: typeof(RetagWorkOrderWorkflowTagsAuthorisation),
+            ValidationType: null,
+            VisibleTo: RetagWorkOrderWorkflowTagsAuthorisation.Sweepers,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
+            Notes: "In the confirm turn say it rewrites categories across the projects mailbox and "
+                + "that threads it cannot place stay on the old tag. Afterwards read leftForAPerson "
+                + "back to the user: each names the legacy tag, the thread's subject and the "
+                + "candidate tags — the person files it from the Control Centre's Tagged view."),
     };
 }

@@ -182,8 +182,9 @@ public static class OfficePageGuides
             + "page with Load more. Manually: pathway tabs (All / Client / Subcontractor / "
             + "Internal), an event-type select and a project filter; the Email column's \"Open in "
             + "Outlook\" link opens the drafted email; request references link to the request "
-            + "detail page. You navigate_to only — the register is read-only; nothing is created "
-            + "or edited here."),
+            + "detail page. Over the connector the same register is list_audit_trail (the same "
+            + "filters, plus recordId + recordType for one record's own history). Read-only; "
+            + "nothing is created or edited here."),
 
         new("/agents/activity", "Agent activity",
             "What the assistant has done, on whose behalf, and what it cost — every agent run, "

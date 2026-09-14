@@ -407,7 +407,7 @@ ageing toggle due date ↔ invoice date; Refresh, Excel export. Read-only.
   line, from/to, value; the record finance reconciles against. Read-only.
 - **System Audit Trail** — `/audit`: append-only register of who routed,
   linked and filed what; pathway tabs, event-type and project filters; "Open
-  in Outlook" links to drafted emails.
+  in Outlook" links to drafted emails. Over the connector: `list_audit_trail`.
 - **Agent Activity** — `/agents/activity`: every assistant run — when, agent,
   who it ran as ("unattended" = nobody watching), action, outcome, tools,
   duration, tokens, cost; totals. Distinct from `/agents` (the queue of

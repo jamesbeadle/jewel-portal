@@ -60,7 +60,7 @@ public sealed class PrepareWorkOrderReplyDraftHandler : ICommandHandler<PrepareW
         {
             TriageCategories.Marker,
             TriageCategories.Subcontractor,
-            TriageCategories.ForRecord(order.Reference)
+            TriageCategories.ForRecord(await WorkOrderTags.StemAsync(context, order, cancellationToken))
         };
         if (!string.IsNullOrWhiteSpace(order.BidPackageId))
         {

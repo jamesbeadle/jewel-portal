@@ -507,4 +507,24 @@ public sealed class AiConnectorTests
         Assert.DoesNotContain("save_skill_reference",
             AiToolCatalogue.ForConnector(UserWith(Role.QuantitySurveyor)).Select(t => t.Name));
     }
+
+    [Fact]
+    public void ListAuditTrail_reachesTheConnector_behindTheEndpointsGate()
+    {
+        // 2026-09-14, the MD's rule: the connector mirrors the site — what /audit shows, the
+        // assistant can read. The catalogue offers it to everyone internal (one record's own
+        // history opens that wide) and to no external; the per-read gate is AuditReadGate,
+        // the same rule the endpoint applies.
+        foreach (var role in new[] { Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager, Role.SiteManager })
+            Assert.Contains("list_audit_trail", AiToolCatalogue.ForConnector(UserWith(role)).Select(t => t.Name));
+        foreach (var role in new[] { Role.Subcontractor, Role.Architect, Role.Client })
+            Assert.DoesNotContain("list_audit_trail", AiToolCatalogue.ForConnector(UserWith(role)).Select(t => t.Name));
+
+        var siteManager = UserWith(Role.SiteManager);
+        Assert.False(Jewel.JPMS.Api.Features.Audit.AuditReadGate.Allows(siteManager, recordId: null, eventType: null));
+        Assert.True(Jewel.JPMS.Api.Features.Audit.AuditReadGate.Allows(siteManager, recordId: "wo-1", eventType: null));
+        Assert.True(Jewel.JPMS.Api.Features.Audit.AuditReadGate.Allows(UserWith(Role.ProjectManager), recordId: null, eventType: null));
+        Assert.False(Jewel.JPMS.Api.Features.Audit.AuditReadGate.Allows(UserWith(Role.FinanceDirector), recordId: null, eventType: AuditEventType.KpiEmailMarked));
+        Assert.True(Jewel.JPMS.Api.Features.Audit.AuditReadGate.Allows(UserWith(Role.Admin), recordId: null, eventType: AuditEventType.KpiEmailMarked));
+    }
 }

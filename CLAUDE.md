@@ -48,6 +48,32 @@
   contracts/Models). RFIs are not on the chart: nothing links an RFI to a task yet.
 
 
+## Work-order mail tags are project-qualified (api + jpms)
+
+- **A work order's tag stem carries its project** (2026-09-14, the By France / Coombe Lane
+  collision): `JPMS/JBB-2026-001-WO-0045`, built by `WorkOrderTags.Stem` exactly as `RequestTags`
+  builds a request's. Order numbers are minted PER PROJECT (`CreateManualWorkOrder` /
+  `ApproveWorkOrder` take MAX within the project; the migrated Buildertrend seeds keep their PO
+  numbers), so the flat `JPMS/WO-0045` named By France's Farrant order AND Coombe Lane's Hamilton
+  Glass order, `WorkOrderLinkProvider.FindByTagAsync` returned whichever row came first, and the
+  Control Centre's "use existing tags" refused the thread as another project's. Every new link,
+  PO email and reply draft (`SendWorkOrderPoEmailHandler`, `PrepareWorkOrderReplyDraftHandler`)
+  writes the qualified tag; the resolver verifies a qualified stem against the candidate's own,
+  and accepts the bare legacy stem only when ONE order carries the number — never a guess.
+- **Historic mail moves with `RetagWorkOrderWorkflowTags`** (POST `mailbox/retag-work-orders`,
+  connector action `retag_work_order_tags`, confirm-first, triage roles): `WorkOrderRetagPlanner`
+  moves a unique number's tag whole, moves each thread of a colliding number to the order the
+  audit trail's link rows name (`RecordLinked` / `EmailTriaged` / `EmailSent`… carry the order and
+  the conversation), and LEAVES what the trail cannot place, listed in the summary
+  (`leftForAPerson`) for the Control Centre's Tagged view. Run it once after deploying; re-runs
+  are safe. Until it has run, a colliding legacy tag resolves to nothing and the triager picks
+  the records by hand.
+- **The connector reads the audit register: `list_audit_trail`** mirrors `/audit` — same
+  filters, same shape-dependent gate (`AuditReadGate`, shared with `AuditEndpoints`: the register
+  for the triage roles, one record's history for the internal team, cost-centre recodes for the
+  commercial team, KPI events for administrators). The MD's rule, 2026-09-14: if it can be read
+  on the site it can be read over the connector.
+
 ## Record tabs & the in-view toolbar (jpms)
 
 - **The request chain renders as document tabs, not chips.** `RecordTabBar` (Components) is on

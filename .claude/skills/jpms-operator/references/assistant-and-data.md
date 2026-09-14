@@ -60,8 +60,10 @@ set (`get_weekly_cashflow_grid` / `get_weekly_cashflow_plan`,
 `read_source` — attachments on a record's tagged emails, one sheet or page at
 a time; scans are OCR'd and flagged), sales (`list_leads`, `get_lead`,
 `list_sales_strategies`, `get_sales_strategy`), KPI (`list_kpi_emails`,
-`list_kpi_people`), and the guides (`load_page_guide`, `list_skills`,
-`load_skill`, `load_skill_reference`).
+`list_kpi_people`), the audit register (`list_audit_trail` — `/audit` with the
+same filters, and one record's own history by `recordId` + `recordType`: who
+tagged, linked, drafted, approved what and when), and the guides
+(`load_page_guide`, `list_skills`, `load_skill`, `load_skill_reference`).
 
 Writes: `perform_action` runs any registered action (`list_actions`,
 `describe_action` inlines the doctrine attached to it); the direct write tools

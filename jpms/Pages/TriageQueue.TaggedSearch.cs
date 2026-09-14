@@ -70,7 +70,7 @@ public partial class TriageQueue
             // and the tags pane all behave exactly as with the dropdown filter.
             if (!query.Contains(' ') && query.Contains('-'))
             {
-                var records = await Queries.AskAsync(new ResolveRecordTags(new[] { query }), token);
+                var records = await Queries.AskAsync(new ResolveRecordTags(ReferenceStemsToTry(query)), token);
                 if (token.IsCancellationRequested) return;
                 if (records.FirstOrDefault() is LinkableRecord record)
                 {
@@ -192,4 +192,14 @@ public partial class TriageQueue
         finally { busy = false; }
     }
 
+    // Work-order and request stems are project-qualified ("JBB-2026-001-WO-0045"), and the bare
+    // reference resolves only when ONE project carries it. A bare reference typed here is tried
+    // under the bar's project first, then as typed — the first stem that names a record wins.
+    private IReadOnlyList<string> ReferenceStemsToTry(string query)
+    {
+        var projectRef = AllProjects.FirstOrDefault(project => project.ProjectId == triageProjectId)?.Reference?.Trim();
+        return string.IsNullOrEmpty(projectRef) || query.StartsWith(projectRef, StringComparison.OrdinalIgnoreCase)
+            ? new[] { query }
+            : new[] { $"{projectRef}-{query}", query };
+    }
 }

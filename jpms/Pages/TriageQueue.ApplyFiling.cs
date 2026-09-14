@@ -14,14 +14,22 @@ public partial class TriageQueue
     //      themselves land with the picks. Null = stop the apply (the error is set). ----
     private async Task<IReadOnlyList<LinkableRecord>?> ResolveInheritedRecordsAsync(ApplyPlan plan)
     {
-        var stems = plan.InheritStems;
+        var stems = plan.InheritStems.Select(TriageEmailDisplay.TagLabel).Where(stem => !IsWorkflowTag(stem)).ToList();
         if (plan.Anchor is null || stems.Count == 0) return Array.Empty<LinkableRecord>();
         busyLabel = "Matching the thread's tags";
-        var inherited = await Queries.AskAsync(
-            new ResolveRecordTags(stems.Select(TriageEmailDisplay.TagLabel).ToList()), CancellationToken.None);
+        var inherited = await Queries.AskAsync(new ResolveRecordTags(stems), CancellationToken.None);
         if (inherited.Count == 0)
         {
             actionError = "The thread's existing tags couldn't be matched to records — pick this email's records by hand instead.";
+            return null;
+        }
+        // Every record stem must have matched (2026-09-14): a work-order or request stem from
+        // before project qualification can name two projects' records and the resolver refuses to
+        // guess between them — filing under the stems that did match and quietly dropping the
+        // rest would lose the link the triager thought they were keeping.
+        if (stems.FirstOrDefault(stem => !inherited.Any(record => Names(record, stem))) is { } unmatched)
+        {
+            actionError = $"The thread's existing tag {unmatched} couldn't be matched to one record — answer No to Use existing tags and pick this email's records by hand.";
             return null;
         }
         // The tags' records must be the bar's project (2026-09-07): the gate already insists a
@@ -36,6 +44,14 @@ public partial class TriageQueue
         }
         return inherited;
     }
+
+    // A resolved record answers for its stem as written (the qualified stem, or a global one like
+    // TODO-0011), for the reference people say, and for a legacy bare stem the qualified record
+    // was the only match for ("WO-0048" → "JBB-2026-001-WO-0048").
+    private static bool Names(LinkableRecord record, string stem) =>
+        record.TagReference.Equals(stem, StringComparison.OrdinalIgnoreCase)
+        || record.Reference.Equals(stem, StringComparison.OrdinalIgnoreCase)
+        || record.TagReference.EndsWith("-" + stem, StringComparison.OrdinalIgnoreCase);
 
     // ---- Document Triage: ticked attachments copy out FIRST, so the files are safely in the
     //      queue before anything else (a discard included) moves the email on. Never consumes

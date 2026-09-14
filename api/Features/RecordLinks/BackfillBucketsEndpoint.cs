@@ -208,7 +208,10 @@ public sealed class BackfillBucketsEndpoint
         if (stem.StartsWith("LAD-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client;
         if (stem.StartsWith("VAL-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client;
         if (stem.StartsWith("BPI-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Subcontractor;
-        if (stem.StartsWith("WO-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Subcontractor;
+        // Work-order stems are project-qualified since 2026-09-14 ("JBB-2026-001-WO-0045"); the
+        // bare "WO-0045" is the legacy form.
+        if (stem.StartsWith("WO-", StringComparison.OrdinalIgnoreCase)
+            || stem.Contains("-WO-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Subcontractor;
         // Materials moved to the SUPPLIER family 2026-08-27 keeping its SubComms-Mats stem —
         // its check must come before the general SubComms prefix.
         if (stem.StartsWith("SubComms-Mats", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Supplier;

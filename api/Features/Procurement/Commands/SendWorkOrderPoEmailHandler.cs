@@ -55,7 +55,7 @@ public sealed class SendWorkOrderPoEmailHandler : ICommandHandler<SendWorkOrderP
         {
             TriageCategories.Marker,
             TriageCategories.Subcontractor,
-            TriageCategories.ForRecord(order.Reference)
+            TriageCategories.ForRecord(await WorkOrderTags.StemAsync(context, order, cancellationToken))
         };
         if (!string.IsNullOrWhiteSpace(order.BidPackageId))
         {

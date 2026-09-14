@@ -119,8 +119,10 @@ per-user "Show completed" toggle (`ProjectStageFilter`).
 
 All correspondence lives in the shared projects mailbox; JPMS reads it in
 place by category tags — triage only adds/removes tags, nothing moves.
-Tag families seen in the codebase: record tags per reference (requests,
-variations `JPMS/VOQ-…`, defects DEF-####, bid packages, to-dos), the
+Tag families seen in the codebase: record tags per reference (requests
+`JPMS/JBB-2026-001-RFI-012`, variations `JPMS/VOQ-…`, work orders
+`JPMS/JBB-2026-001-WO-0045` — project-qualified since 2026-09-14 because
+order numbers are per project; defects DEF-####, bid packages, to-dos), the
 programme/scheduling bucket (`JPMS/SCH-` — "Relevant Event" tick at triage),
 and the `JPMS/SubComms` family (general + Chaser / Info request / Materials /
 H&S) feeding `/subcontractors/communications`. A record page reads its tagged
