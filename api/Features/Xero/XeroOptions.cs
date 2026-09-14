@@ -68,6 +68,11 @@ public sealed class XeroOptions
     /// the accountant's ask) — "200 Sales" in Xero's UK chart unless Xero__SalesAccountCode says otherwise.</summary>
     public string SalesAccountCode { get; set; } = "200";
 
+    /// <summary>The CIS labour account a subcontractor's labour lines post to — "321" in Jewel's chart
+    /// unless Xero__CisLabourAccountCode says otherwise (2026-09-14, the supplier account's labour /
+    /// materials split: a bill line on this account reads as labour, everything else as materials).</summary>
+    public string CisLabourAccountCode { get; set; } = "321";
+
     public bool IsConfigured =>
         !string.IsNullOrWhiteSpace(ClientId) && !string.IsNullOrWhiteSpace(ClientSecret);
 
@@ -110,6 +115,10 @@ public sealed class XeroOptions
         var salesAccountCode = section["SalesAccountCode"];
         if (!string.IsNullOrWhiteSpace(salesAccountCode))
             options.SalesAccountCode = salesAccountCode;
+
+        var cisLabourAccountCode = section["CisLabourAccountCode"];
+        if (!string.IsNullOrWhiteSpace(cisLabourAccountCode))
+            options.CisLabourAccountCode = cisLabourAccountCode;
 
         return options;
     }

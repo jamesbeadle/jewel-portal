@@ -186,4 +186,21 @@ public static class StatusTones
         ProgrammeMappingSource.Claude => Tone.Warning,
         _ => Tone.Negative
     };
+
+    // The supplier account (2026-09-14): a received invoice's standing, and how it reached the
+    // account. Awaiting approval is the one to act on — an over-invoice hides in it.
+    public static Tone ToTone(this ProjectSupplierInvoiceState state) => state switch
+    {
+        ProjectSupplierInvoiceState.Paid => Tone.Positive,
+        ProjectSupplierInvoiceState.PartPaid => Tone.Info,
+        ProjectSupplierInvoiceState.AwaitingApproval => Tone.Warning,
+        _ => Tone.Muted
+    };
+
+    public static Tone ToTone(this ProjectSupplierInvoicePlacement placement) => placement switch
+    {
+        ProjectSupplierInvoicePlacement.Disputed => Tone.Negative,
+        ProjectSupplierInvoicePlacement.Allocated => Tone.Muted,
+        _ => Tone.Warning
+    };
 }

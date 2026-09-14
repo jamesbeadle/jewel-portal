@@ -8,6 +8,12 @@
     {
         <td class="px-4 py-3 text-content font-medium whitespace-nowrap">
             <span class="inline-block w-4 text-content-subtle font-normal">@(Expanded ? "▾" : "▸")</span>@Group.Name
+            @if (OnOpenSupplierAccount.HasDelegate && IsOneDirectoryRecord)
+            {
+                <button type="button" class="ml-3 text-xs font-normal text-content-subtle hover:text-content underline underline-offset-4"
+                        title="@SupplierAccountDisplay.RowActionHint"
+                        @onclick="() => OnOpenSupplierAccount.InvokeAsync(Lines[0].Detail)" @onclick:stopPropagation>Account</button>
+            }
         </td>
     }
     else
@@ -85,4 +91,10 @@
     [Parameter, EditorRequired] public Func<WorkOrderLineEntry, IReadOnlyList<DropdownMenu.Item>> LineMenuItems { get; set; } = default!;
     /// <summary>A line's menu opened or closed, by line id — the table lifts its overflow cap while one is open.</summary>
     [Parameter] public EventCallback<(string LineId, bool Open)> OnMenuOpenChanged { get; set; }
+    /// <summary>Open the supplier's account on this project (supplier view only); given one of the group's orders, which carries the supplier.</summary>
+    [Parameter] public EventCallback<ProjectWorkOrderDetail> OnOpenSupplierAccount { get; set; }
+
+    // Groups are keyed by NAME: two directory records sharing one get no Account link, not a guess.
+    private bool IsOneDirectoryRecord =>
+        Lines.Count > 0 && Lines.All(entry => entry.Detail.Order.SubcontractorId == Lines[0].Detail.Order.SubcontractorId);
 }

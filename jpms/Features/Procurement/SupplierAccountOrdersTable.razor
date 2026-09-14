@@ -1,0 +1,83 @@
+@namespace Jewel.JPMS.Features.Procurement
+@using static Jewel.JPMS.Features.Procurement.WorkOrderDisplay
+
+@* The orders' side of the account: one row per live order with its figures, its priced lines
+   beneath at value only (invoiced and paid are the ORDER's — a bill links to an order, never to a
+   line), then the invoices linked to it, so every figure shows where it came from. *@
+<RecordsTable Dense="true" MaxHeight="" IsEmpty="@(Account.Orders.Count == 0)"
+              EmptyMessage="No live work orders are held with this supplier on the project.">
+    <thead>
+        <tr>
+            <th class="w-[90px]">Order</th>
+            <th>Description</th>
+            <th class="text-right whitespace-nowrap">Order value</th>
+            <th class="text-right whitespace-nowrap">Invoiced and linked</th>
+            <th class="text-right whitespace-nowrap">Paid</th>
+            <th class="text-right whitespace-nowrap">Left to invoice</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var order in Account.Orders)
+        {
+            <tr>
+                <td class="font-mono text-xs text-content-subtle whitespace-nowrap">@order.Reference</td>
+                <td class="text-content font-medium">
+                    @(string.IsNullOrWhiteSpace(order.Title) ? "—" : order.Title)
+                    <Pill Tone="@order.Status.ToTone()" Class="ml-1.5">@order.Status</Pill>
+                    <span class="text-xs text-content-subtle font-normal ml-1.5">awarded @DateText(order.AwardedAt)</span>
+                </td>
+                <td class="text-right font-medium">@Money(order.Value)</td>
+                <td class="text-right font-medium">@Money(order.InvoicedToDate)</td>
+                <td class="text-right font-medium @(order.IsPaymentKnown ?"" : "text-content-subtle")"
+                    title="@PaymentTitle(order.PaymentStatus)">@(order.IsPaymentKnown ? Money(order.PaidToDate) : Dash)</td>
+                <td class="text-right font-medium @(order.RemainingToInvoice < 0m ?"text-negative" : "")">@Money(order.RemainingToInvoice)</td>
+            </tr>
+            @foreach (var line in order.Lines)
+            {
+                <tr>
+                    <td></td>
+                    <td>
+                        <span class="block pl-6 text-content-subtle">
+                            @line.Title
+                            @if (!string.IsNullOrWhiteSpace(line.CostCode))
+                            {
+                                <span class="font-mono text-xs ml-1.5">@line.CostCode</span>
+                            }
+                        </span>
+                    </td>
+                    <td class="text-right"><span class="text-content-subtle">@Money(line.LineTotal)</span></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            }
+            <tr>
+                <td></td>
+                <td colspan="5">
+                    <span class="block pl-6 text-xs text-content-subtle italic">@LinkedInvoicesText(order)</span>
+                </td>
+            </tr>
+        }
+    </tbody>
+    @if (Account.Orders.Count > 0)
+    {
+        <tfoot class="border-t border-line-strong bg-surface-raised">
+            <tr class="font-semibold text-content">
+                <td colspan="2">Total</td>
+                <td class="text-right">@Money(Account.Ordered)</td>
+                <td class="text-right">@Money(Account.InvoicedAndLinked)</td>
+                <td class="text-right">@Money(Account.Paid)</td>
+                <td class="text-right @(Account.LeftToInvoice < 0m ?"text-negative" : "")">@Money(Account.LeftToInvoice)</td>
+            </tr>
+        </tfoot>
+    }
+</RecordsTable>
+
+@code {
+    [Parameter, EditorRequired] public ProjectSupplierAccount Account { get; set; } = default!;
+
+    private static string LinkedInvoicesText(ProjectSupplierAccountOrder order) =>
+        order.Invoices.Count == 0
+            ? "No invoice linked to this order yet."
+            : "Invoices linked: " + string.Join("  ·  ", order.Invoices.Select(invoice => $"{invoice.InvoiceNumber} {Money(invoice.Amount)}"));
+}

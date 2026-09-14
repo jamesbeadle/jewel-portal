@@ -1,0 +1,38 @@
+@namespace Jewel.JPMS.Features.Procurement
+@using static Jewel.JPMS.Features.Procurement.SupplierAccountDisplay
+
+@* The account in six figures and one sentence: the orders' side (ordered, invoiced and linked,
+   paid, left to invoice), the invoices' side (received) and what the two add up to — an
+   over-invoice in red, headroom otherwise. *@
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <StatTile Label="Ordered" Value="@Money(Account.Ordered)"
+              Caption="@($"{Account.Orders.Count} live order{(Account.Orders.Count == 1 ? "" : "s")}")"
+              Title="The value of the Released and Complete work orders this supplier holds on the project" />
+    <StatTile Label="Invoiced and linked" Value="@Money(Account.InvoicedAndLinked)"
+              Title="The signed net of the Xero bills linked to those orders on the WO Allocation tab" />
+    <StatTile Label="Paid" Value="@Money(Account.Paid)"
+              Title="What Xero has settled of the linked bills — CIS-safe, read off what is no longer owed" />
+    <StatTile Label="Left to invoice" Value="@Money(Account.LeftToInvoice)"
+              Title="Ordered less invoiced and linked — what the supplier may still claim against the orders" />
+    <StatTile Label="Invoices received" Value="@Money(Account.Received)"
+              Caption="@($"{Account.Invoices.Count} invoice{(Account.Invoices.Count == 1 ? "" : "s")}")"
+              Title="Every bill received from this supplier for the project, linked to an order or not, awaiting approval included" />
+    <StatTile Label="Over the orders"
+              Title="Invoices received less ordered — positive is an over-invoice to query before it is paid">
+        <p class="text-xl font-medium @(Account.IsOverInvoiced ?"text-negative" : "text-content")">
+            @(Account.IsOverInvoiced ? Money(Account.OverOrders) : "None")
+        </p>
+        <p class="text-xs font-medium text-content-subtle mt-1">
+            @(Account.IsOverInvoiced ? "invoiced beyond the orders" : $"{Money(-Account.OverOrders)} still to be claimed")
+        </p>
+    </StatTile>
+</div>
+
+<Notice Tone="@(Account.IsOverInvoiced ? Tone.Negative : Tone.Info)" Class="mt-4">
+    <p class="font-medium">@PositionText(Account)</p>
+    <p class="text-xs mt-1">@UnmatchedText(Account)</p>
+</Notice>
+
+@code {
+    [Parameter, EditorRequired] public ProjectSupplierAccount Account { get; set; } = default!;
+}

@@ -260,6 +260,36 @@ finds drift.
   the this-visit escape to the plain queue; the Allocated row's Undo becomes "Undo bill"
   (`ConfirmDialog`, Danger) when `WorkOrderApproval` is set.
 
+## The supplier account on a project (api + jpms)
+
+- **One supplier's account on one project is `GetProjectSupplierAccount`** (2026-09-14, the
+  accountant's ask: "show the invoice numbers linked to these work orders — they have
+  over-invoiced"): the supplier's LIVE orders there (Released / Complete) with their priced lines,
+  invoiced-and-linked, paid and left to invoice per order — the WO Allocation tab's own figures,
+  from the same link slices and `WorkOrderPaidPositions` — then EVERY invoice received from them
+  for the project, and the position the two halves add up to: `Received − Ordered`, positive is
+  the over-invoice. It is internal (the Work orders tab's `AllInternal` gate); the supplier-facing
+  document stays `GetSubcontractorStatement`, which is correspondence and never shows payment or
+  unmatched bills. Surfaces: `SupplierAccountModal` ("Account" on a supplier row in the supplier
+  view, "Supplier account…" in any order's Actions menu), `DownloadProjectSupplierAccountPdfEndpoint`
+  (named by `ProjectSupplierAccountFileNames`), and the connector's `get_project_supplier_account`.
+- **Which bills are "received for the project" is `SupplierBillFinder`, decided per BILL**: any bill
+  linked to one of the supplier's orders here (whoever the Xero contact is); the supplier's bills
+  (the directory record's name by `DirectoryXeroMatcher`, its linked Xero contact name, or the
+  contact of any bill already linked to their orders — `SupplierNames`) allocated to the project
+  whole or by split share, their still-pending lines riding along; and the
+  supplier's bills nobody has allocated yet that `SupplierBillPlacement` places here — the queue's
+  precedence: the project set on the bill, else its Xero Sites hint, else a WO number written on
+  it, else only when the supplier holds live orders on no other project (`AssumedFromSupplier`,
+  said on the row). A bill pointing elsewhere is not this account's; a bill in dispute is
+  `Disputed`. `NetElsewhere` says how much of a bill sits outside the project.
+- **Labour / materials is by Xero account, never by description**: a line on
+  `XeroOptions.CisLabourAccountCode` ("321" unless `Xero__CisLabourAccountCode`) is labour,
+  everything else is materials — the supplier's own CIS split, exactly as raised. An invoice's
+  `State` (`ProjectSupplierInvoiceStates.For`) reads the settled fraction first, then DRAFT /
+  SUBMITTED as "Received, awaiting approval" — received, so it counts in the over-invoice, but
+  nothing is owed on it until Xero approves it.
+
 ## Xero write-back state on a ledger line (api + jpms)
 
 - **`InvoiceStatus` is what Xero holds; `WriteBackStatus` is what the portal did.** Two facts,

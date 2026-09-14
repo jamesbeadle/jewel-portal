@@ -37,6 +37,7 @@
                                    CancelPendingFor="CancelPendingFor" CancelBusy="CancelBusy"
                                    OnCancel="OnCancel" OnKeep="OnKeep"
                                    LineMenuItems="LineMenuItems"
+                                   OnOpenSupplierAccount="OnOpenSupplierAccount"
                                    OnMenuOpenChanged="args => openRowMenuKey = args.Open ? args.LineId : (openRowMenuKey == args.LineId ? null : openRowMenuKey)" />
             }
         </tbody>
@@ -80,6 +81,8 @@
     [Parameter] public EventCallback<ProjectWorkOrderDetail> OnCancel { get; set; }
     [Parameter] public EventCallback OnKeep { get; set; }
     [Parameter, EditorRequired] public Func<WorkOrderLineEntry, IReadOnlyList<DropdownMenu.Item>> LineMenuItems { get; set; } = default!;
+    /// <summary>Open the supplier's account on this project from a supplier group row.</summary>
+    [Parameter] public EventCallback<ProjectWorkOrderDetail> OnOpenSupplierAccount { get; set; }
 
     // The line whose Actions menu is open — while set, the container's overflow cap is lifted.
     private string? openRowMenuKey;

@@ -461,6 +461,28 @@ public sealed class AiConnectorTests
     }
 
     [Fact]
+    public void AccountantsSeptemberFourteenthAsk_supplierAccount_reachesTheConnector()
+    {
+        // "Is there a way I can have the work orders as this sort of summary… and show the invoice
+        // numbers as well, linked to these work orders — they have over-invoiced" (2026-09-14).
+        // The Work orders tab's Supplier account is a read every internal role gets (the tab's own
+        // gate), never an external login: orders with their lines, every invoice received (awaiting
+        // approval included) with its CIS split and matches, and the over-invoice spelled out.
+        var financeDirector = AiToolCatalogue.ForConnector(UserWith(Role.FinanceDirector));
+        var tool = Assert.Single(financeDirector, candidate => candidate.Name == "get_project_supplier_account");
+        Assert.Equal(AiToolKind.Read, tool.Kind);
+        Assert.Contains("over-invoice", tool.Description);
+        Assert.Contains("awaiting approval", tool.Description);
+        Assert.Contains("labour", tool.Description);
+        Assert.DoesNotContain("get_project_supplier_account",
+            AiToolCatalogue.ForConnector(UserWith(Role.Subcontractor)).Select(t => t.Name));
+
+        var schema = System.Text.Json.JsonSerializer.Serialize(tool.InputSchema);
+        Assert.Contains("projectId", schema);
+        Assert.Contains("supplier", schema);
+    }
+
+    [Fact]
     public void BookkeepersSeptemberFourteenthAsk_theWholeBill_reachesTheConnector()
     {
         // "Can the description be pulled through from Dext so Nigel knows who it came from?"

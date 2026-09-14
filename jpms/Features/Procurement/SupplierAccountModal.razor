@@ -1,0 +1,100 @@
+@namespace Jewel.JPMS.Features.Procurement
+@using static Jewel.JPMS.Features.Procurement.SupplierAccountDisplay
+@using static Jewel.JPMS.Features.Procurement.WorkOrderDisplay
+@inject IQueryClient Queries
+
+@* One supplier's account on this project (2026-09-14, the accountant's ask): the orders they hold
+   here with their lines and linked invoices, every invoice received for the project — linked or
+   not — with its CIS split, Xero status and matches, and the position the two halves add up to.
+   Download PDF renders the same account server-side for sending on; nothing here changes anything. *@
+<Modal IsOpen="IsOpen" Title="@($"Supplier account · {SupplierName}")" OnCancel="Close" Class="max-w-6xl w-full">
+    <ChildContent>
+        @if (loadError is not null)
+        {
+            <Notice Tone="Tone.Negative">@loadError</Notice>
+        }
+        else
+        {
+            <LoadGate IsLoading="@(account is null)" Prominent="true" Label="Loading account">
+                @if (account is not null)
+                {
+                    <p class="text-sm text-content-subtle mb-4">
+                        <span class="font-mono text-xs mr-1.5">@account.ProjectReference</span>@account.ProjectName
+                        · account at @DateTimeText(account.GeneratedAt)
+                        @if (account.LedgerSyncedAtUtc is { } syncedAt)
+                        {
+                            <span title="Paid figures and invoice statuses come from Xero and are only as current as the last ledger sync"> · Xero synced @Ago(syncedAt)</span>
+                        }
+                    </p>
+
+                    <SupplierAccountSummary Account="account" />
+
+                    <SectionHeader Title="Work orders held" Class="mt-6" />
+                    <SupplierAccountOrdersTable Account="account" />
+
+                    <SectionHeader Title="Invoices received" Class="mt-6" />
+                    <SupplierAccountInvoicesTable Account="account" />
+
+                    <p class="text-xs text-content-subtle mt-3">
+                        All figures net of VAT; credit notes deduct. Labour is the net each bill posts to the CIS
+                        labour account, materials everything else, as the supplier raised it. Invoiced and linked,
+                        paid and left to invoice are read from the bills linked to each order on the WO Allocation
+                        tab; an invoice awaiting approval counts as received, but nothing is owed on it until it is approved in Xero.
+                    </p>
+                }
+            </LoadGate>
+        }
+    </ChildContent>
+    <FooterContent>
+        <button type="button" class="btn-secondary" @onclick="Close">Close</button>
+        <a class="btn-primary @(account is null ?"pointer-events-none opacity-50" : "")"
+           href="@PdfPath(ProjectId, SubcontractorId)" target="_blank" rel="noopener"
+           title="The account as a branded PDF, rendered from the register now — the sheet to send on">
+            Download PDF
+        </a>
+    </FooterContent>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string ProjectId { get; set; } = "";
+    /// <summary>The directory record whose account this is.</summary>
+    [Parameter] public string SubcontractorId { get; set; } = "";
+    /// <summary>Shown in the title while the account loads.</summary>
+    [Parameter] public string SupplierName { get; set; } = "";
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private ProjectSupplierAccount? account; // null until a fetch lands — the gate reads it
+    private string? loadedForKey;
+    private string? loadError;
+
+    private string LoadKey => $"{ProjectId}:{SubcontractorId}";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!IsOpen)
+        {
+            // Reload per open, so the figures never go stale between visits.
+            loadedForKey = null;
+            return;
+        }
+        var key = LoadKey;
+        if (loadedForKey == key) return;
+        loadedForKey = key;
+        account = null;
+        loadError = null;
+        try
+        {
+            var loaded = await Queries.AskAsync(new GetProjectSupplierAccount(ProjectId, SubcontractorId), CancellationToken.None);
+            // A fetch that outlived its open (closed, another supplier opened) must not land here.
+            if (loadedForKey == key) account = loaded;
+        }
+        catch
+        {
+            // HttpQueryClient has already reported this to the error toast with a reference.
+            if (loadedForKey == key) loadError = "Couldn't load the supplier account. The details are in the red bar at the top — close and try again.";
+        }
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+}

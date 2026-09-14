@@ -126,6 +126,11 @@ public static class CommercialRouteRegistration
             new QueryRoute("/api/projects/{projectId}/cost-of-sales-lines",
                 query => $"/api/projects/{((ListProjectCostOfSalesLines)query).ProjectId}/cost-of-sales-lines"));
 
+        // One supplier's account on one project — the Work orders tab's supplier account modal.
+        queries.Register<GetProjectSupplierAccount, ProjectSupplierAccount>(
+            new QueryRoute("/api/projects/{projectId}/suppliers/{subcontractorId}/account",
+                query => SupplierAccountPath((GetProjectSupplierAccount)query)));
+
         queries.Register<ListUnallocatedSiteBills, IReadOnlyList<UnallocatedSiteBill>>(
             new QueryRoute("/api/projects/{projectId}/unallocated-site-bills",
                 query => $"/api/projects/{((ListUnallocatedSiteBills)query).ProjectId}/unallocated-site-bills"));
@@ -220,4 +225,7 @@ public static class CommercialRouteRegistration
             new CommandRoute("POST", "/api/valuation-report-snapshots/{snapshotId}/draft-email",
                 command => $"/api/valuation-report-snapshots/{((PrepareValuationReportSnapshotEmailDraft)command).ValuationReportSnapshotId}/draft-email"));
     }
+
+    private static string SupplierAccountPath(GetProjectSupplierAccount query) =>
+        $"/api/projects/{query.ProjectId}/suppliers/{query.SubcontractorId}/account";
 }

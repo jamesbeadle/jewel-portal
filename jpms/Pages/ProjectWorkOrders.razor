@@ -137,7 +137,8 @@
                              Summaries="SummariesByOrder" PaymentKnown="PaymentKnown"
                              CancelPendingFor="CancelPendingFor" CancelBusy="cancelBusy" CancelError="@cancelError"
                              OnCancel="CancelAsync" OnKeep="ClearCancelPending"
-                             LineMenuItems="LineMenuItems" />
+                             LineMenuItems="LineMenuItems"
+                             OnOpenSupplierAccount="OpenSupplierAccount" />
             }
 
             @if (OrdersWithoutLines.Count > 0)
@@ -186,6 +187,13 @@
                               OnPoEmailNote="ShowPoEmailNote" />
 
         <DeleteWorkOrderModal @ref="deleteModal" ProjectId="@ProjectId" BusyChanged="busy => deleteBusy = busy" />
+
+        @* One supplier's account on this project — the accountant's reconciliation sheet (2026-09-14). *@
+        <SupplierAccountModal IsOpen="@(supplierAccountFor is not null)"
+                              ProjectId="@ProjectId"
+                              SubcontractorId="@(supplierAccountFor?.Order.SubcontractorId ?? "")"
+                              SupplierName="@(supplierAccountFor?.SubcontractorName ?? "")"
+                              OnClose="CloseSupplierAccount" />
     </ProjectPageShell>
 </Page>
 

@@ -43,6 +43,12 @@ public static class ProcurementPageGuides
             + "raises a new manual order (Add work order, empty) and work_order_edit corrects an "
             + "existing one (get_work_order_context resolves \"WO-0045\" to the id and reads its "
             + "lines; read_record_emails record_type work_order reads its correspondence). "
+            + "\"Account\" on a supplier row (supplier view), or \"Supplier account…\" in any order's "
+            + "Actions menu, opens that supplier's account on this project — their orders with lines, "
+            + "invoiced and linked, paid, left to invoice; every invoice received (awaiting approval "
+            + "included) with its CIS labour / materials split, Xero status and the order(s) it is "
+            + "matched to; and the over-invoice, if any — with Download PDF for sending on; "
+            + "get_project_supplier_account reads the same. "
             + "Awarding a tender happens on the bid package page; linking invoices happens on WO "
             + "Allocation."),
 

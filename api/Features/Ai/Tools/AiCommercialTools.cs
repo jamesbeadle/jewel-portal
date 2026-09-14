@@ -33,6 +33,7 @@ internal static partial class AiCommercialTools
         VariationContextTool()
             .Concat(ValuationContextTool())
             .Concat(CostCodeBudgetsTool())
+            .Concat(SupplierAccountTool())
             .ToList();
 
     /// <summary>"V01", "v1", "VO 1" and "V001" all mean the same line: normalised to "V1".</summary>

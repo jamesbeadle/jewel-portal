@@ -249,6 +249,20 @@ Doctrine: jpms-email-triage step 4 and a new jpms-valuation-cycle "Correspondenc
 seed script); scripts/update-jpms-skills-valuation-claims.sql moves the two LIVE skills on with
 revision rows.
 
+**2026-09-14 (Jeremy: "have the work orders as this sort of summary… show the invoice numbers
+as well, linked to these work orders — they have over-invoiced")**: the Work orders tab gained a
+per-supplier, per-project **Supplier account** (`GetProjectSupplierAccount`, the modal's
+"Account" on a supplier row / "Supplier account…" in an order's Actions menu, and its PDF):
+the supplier's live orders with their lines, invoiced-and-linked, paid and left to invoice; every
+invoice received for the project — linked, allocated or still awaiting allocation, awaiting
+approval included — with its CIS labour / materials split (by Xero account: 321 = labour, the
+rest materials), Xero status and the order(s) it is matched to; and the over-invoice (received
+less ordered) spelled out. Mirrored the same day as the read tool
+**get_project_supplier_account** (AllInternal, the tab's gate; supplier by directory id or
+name), pinned in AiConnectorTests. The "ledger link slices unreadable" cell in §8's Work orders
+row is answered by this read for one supplier at a time; the whole-project slice list stays on
+list_xero_ledger_lines.
+
 **Still open, with reasons**: the cash forecast/statement COMPUTATION (the phasing runs
 client-side over several stores; the inputs are now all readable — a server-side statement tool
 is a real build, not a wrapper); profit summary / Xero site P&L and Xero transactions reads;

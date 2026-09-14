@@ -77,6 +77,10 @@ public static class CommercialFeatureRegistration
         services.AddScoped<IQueryHandler<ListWorkOrderInvoiceSummaries, IReadOnlyList<WorkOrderInvoiceSummary>>, ListWorkOrderInvoiceSummariesHandler>();
         services.AddScoped<IQueryHandler<ListProjectCostOfSalesLines, IReadOnlyList<ProjectCostOfSalesLine>>, ListProjectCostOfSalesLinesHandler>();
 
+        // One supplier's account on one project — orders, invoices received, paid, over-invoice —
+        // behind the Work orders tab's supplier account modal, its PDF and the connector read.
+        services.AddScoped<IQueryHandler<GetProjectSupplierAccount, ProjectSupplierAccount>, GetProjectSupplierAccountHandler>();
+
         // The Cashflow tab's unallocated guard — unpaid site-tracked Xero lines nobody
         // has allocated yet, so the statement can warn instead of silently missing them.
         services.AddScoped<IQueryHandler<ListUnallocatedSiteBills, IReadOnlyList<UnallocatedSiteBill>>, ListUnallocatedSiteBillsHandler>();

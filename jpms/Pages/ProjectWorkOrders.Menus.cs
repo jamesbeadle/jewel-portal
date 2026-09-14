@@ -46,6 +46,7 @@ public partial class ProjectWorkOrders
             OnSelect: EventCallback.Factory.Create(this, () => OpenRecode(line)),
             Hint: "Move this line to another cost centre, or split its amount across several — the order's value never changes",
             Group: 1));
+        items.Add(SupplierAccountMenuItem(line.Detail));
         if (CanCancelOrders)
         {
             items.Add(new DropdownMenu.Item("Cancel order…",
@@ -73,13 +74,14 @@ public partial class ProjectWorkOrders
                     ? "This order was raised manually — edit its supplier, title, scope and priced lines"
                     : "Correct this order's supplier, title, scope and priced lines — directors only; the updated PO is downloaded and sent by hand"));
         }
+        items.Add(SupplierAccountMenuItem(detail));
         if (CanCancelOrders)
         {
             items.Add(new DropdownMenu.Item("Cancel order…",
                 OnSelect: EventCallback.Factory.Create(this, () => SetCancelPending(detail)),
                 Hint: "Cancel this issued order — void it; it keeps its number as a record but stops counting everywhere. Refused while bills are linked or money is paid against it.",
                 Destructive: true,
-                Group: 1));
+                Group: 2));
         }
         return items;
     }

@@ -1,0 +1,76 @@
+@namespace Jewel.JPMS.Features.Procurement
+@using static Jewel.JPMS.Features.Procurement.SupplierAccountDisplay
+
+@* The invoices' side of the account: every bill received for the project, linked or not, with the
+   supplier's own CIS split, where Xero says it stands, and the order(s) it pays. A bill nobody has
+   placed yet says so beneath its row rather than hiding — it is exactly the one an over-invoice
+   hides in. *@
+<RecordsTable Dense="true" MaxHeight="" IsEmpty="@(Account.Invoices.Count == 0)"
+              EmptyMessage="No invoices have been received from this supplier for the project.">
+    <thead>
+        <tr>
+            <th class="whitespace-nowrap">Invoice</th>
+            <th class="whitespace-nowrap">Date</th>
+            <th class="text-right whitespace-nowrap" title="The net posted to the CIS labour account">Labour</th>
+            <th class="text-right whitespace-nowrap" title="Everything else on the bill">Materials</th>
+            <th class="text-right whitespace-nowrap">Net</th>
+            <th class="whitespace-nowrap">Status</th>
+            <th>Matched to</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var invoice in Account.Invoices)
+        {
+            <tr>
+                <td class="font-mono text-xs whitespace-nowrap" title="@invoice.Reference">
+                    @invoice.InvoiceNumber
+                    @if (invoice.IsCreditNote)
+                    {
+                        <Pill Tone="Tone.Warning" Class="ml-1.5">Credit note</Pill>
+                    }
+                </td>
+                <td class="whitespace-nowrap">@DateText(invoice.Date)</td>
+                <td class="text-right">@Money(invoice.Labour)</td>
+                <td class="text-right">@Money(invoice.Materials)</td>
+                <td class="text-right font-medium">@Money(invoice.Net)</td>
+                <td class="whitespace-nowrap"><Pill Tone="@invoice.State.ToTone()">@invoice.State.Label()</Pill></td>
+                <td class="@(invoice.IsMatched ?"" : "text-content-subtle")">@MatchedText(invoice)</td>
+            </tr>
+            @if (invoice.Placement != ProjectSupplierInvoicePlacement.Allocated || invoice.NetElsewhere != 0m)
+            {
+                <tr>
+                    <td colspan="7">
+                        <span class="block pl-6 text-xs text-content-subtle italic">
+                            @if (invoice.Placement != ProjectSupplierInvoicePlacement.Allocated)
+                            {
+                                <Pill Tone="@invoice.Placement.ToTone()" Class="mr-1.5">@invoice.Placement.Label()</Pill>
+                            }
+                            @if (invoice.NetElsewhere != 0m)
+                            {
+                                <text>@Money(invoice.NetElsewhere) of this bill sits outside the project (another project, ignored or bucketed).</text>
+                            }
+                        </span>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+    @if (Account.Invoices.Count > 0)
+    {
+        <tfoot class="border-t border-line-strong bg-surface-raised">
+            <tr class="font-semibold text-content">
+                <td colspan="2">Received</td>
+                <td class="text-right">@Money(Account.LabourReceived)</td>
+                <td class="text-right">@Money(Account.MaterialsReceived)</td>
+                <td class="text-right">@Money(Account.Received)</td>
+                <td colspan="2" class="font-normal text-xs text-content-subtle">
+                    @Money(Account.ReceivedAndSettled) settled by Xero · @Money(Account.Unmatched) not linked to an order
+                </td>
+            </tr>
+        </tfoot>
+    }
+</RecordsTable>
+
+@code {
+    [Parameter, EditorRequired] public ProjectSupplierAccount Account { get; set; } = default!;
+}
