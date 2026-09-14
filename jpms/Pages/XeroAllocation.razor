@@ -388,6 +388,11 @@
                         @(viewLine.InvoiceNumber ?? "—") · @DateText(viewLine.Date) · @Money(SignedNet(viewLine)) net
                     </LedgerLineSummary>
 
+                    @* The rest of the bill (2026-09-14): the bookkeeper's Dext note lands on the
+                       bill's line descriptions or its Xero reference, so the card shows both for
+                       every line of the bill — whichever line this window was opened from. *@
+                    <InvoiceBillLines Line="viewLine" ProjectName="ProjectName" CostCenterText="CostCenterText" />
+
                     @* Allocate without leaving the document: the reader identifies the
                        site and cost centre from the invoice itself, so the row's choices
                        render here too, over the same page state as the line's row. *@

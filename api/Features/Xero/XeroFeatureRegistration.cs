@@ -77,6 +77,10 @@ public static class XeroFeatureRegistration
         services.AddScoped<IQueryHandler<GetXeroLedgerCounts, XeroLedgerCounts>, GetXeroLedgerCountsHandler>();
         services.AddScoped<IQueryHandler<ListXeroLedgerLinesForProject, IReadOnlyList<XeroLedgerLine>>,
             ListXeroLedgerLinesForProjectHandler>();
+        // One bill's stored lines, whatever tab each sits on — the Invoice document window's bill
+        // card (2026-09-14): the bookkeeper's Dext note, readable whichever line was opened.
+        services.AddScoped<IQueryHandler<ListXeroLedgerLinesForInvoice, IReadOnlyList<XeroLedgerLine>>,
+            ListXeroLedgerLinesForInvoiceHandler>();
         services.AddScoped<ICommandHandler<SetXeroAllocation, int>, SetXeroAllocationHandler>();
         // The gate + shape check as classes, for the connector's set_xero_allocation action
         // (2026-09-03 — the accountant could read the queue but not press Allocate). The HTTP

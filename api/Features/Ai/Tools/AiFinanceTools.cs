@@ -151,12 +151,17 @@ internal static partial class AiFinanceTools
                 + "workOrderBill (the card: the orders, the proposed per-order slices, every open "
                 + "order of the supplier); lines a candidate order refused carry "
                 + "workOrderExceptionReason; lines approved as a Work Order bill carry "
-                + "workOrderApproval.",
+                + "workOrderApproval. Pass xeroInvoiceId for ONE bill whole — every stored line "
+                + "whatever tab each sits on, plus the reference Xero holds beyond the invoice "
+                + "number: the bookkeeper's Dext description (who uploaded a receipt, what it was "
+                + "for) lands on a line's description or in that reference, so read the whole bill "
+                + "before saying it carries no note.",
                 AiToolSchema.Object(
                     ("status", "string", "Unallocated, Allocated, Bucketed, Ignored or Disputed.", false),
                     ("queue", "string", "With status Unallocated: ToCode, Labour, LabourCovered, WorkOrderBill or WorkOrderBillHeldForFinance — one tab of the page instead of the whole status.", false),
                     ("projectId", "string", "One project's allocated lines instead of a status queue.", false),
-                    ("take", "number", "With projectId only: maximum lines, default 100.", false)),
+                    ("take", "number", "With projectId only: maximum lines, default 100.", false),
+                    ("xeroInvoiceId", "string", "One bill whole: every stored line of this Xero invoice id (a line's XeroInvoiceId as this tool returns it), whatever its status.", false)),
                 AiToolKind.Read,
                 XeroLedgerRoles.AllowedToAllocate,
                 async (context, input, ct) =>
@@ -165,6 +170,10 @@ internal static partial class AiFinanceTools
                     // connector has no "viewing as", so the user's effective roles decide.
                     var viewerMayHandleUnplaced = XeroLedgerQueues.MayHandleUnplacedWorkOrderBill(context.User.Roles);
                     object Row(XeroLedgerLine line) => Line(line, viewerMayHandleUnplaced);
+
+                    var xeroInvoiceId = AiToolSchema.Text(input, "xeroInvoiceId");
+                    if (!string.IsNullOrWhiteSpace(xeroInvoiceId))
+                        return await BillAsync(context, xeroInvoiceId.Trim(), viewerMayHandleUnplaced, ct);
 
                     var projectId = AiToolSchema.Text(input, "projectId");
                     if (!string.IsNullOrWhiteSpace(projectId))

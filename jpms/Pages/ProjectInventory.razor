@@ -1,12 +1,12 @@
 @page "/projects/{ProjectId}/inventory"
 @using Jewel.JPMS.Contracts.Inventory
 @using Jewel.JPMS.Features.Inventory
+@using Jewel.JPMS.Features.Triage.Panels
 @inject AuthService Auth
 @inject SessionService Session
 @inject NavigationManager Nav
 @inject InventoryReadModel Inventory
 @inject ICommandSender Commands
-@inject IQueryClient Queries
 @implements IDisposable
 
 <PageTitle>Inventory · JPMS</PageTitle>
@@ -122,17 +122,26 @@
                                     Edit
                                 </button>
                                 <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                        @onclick="() => ToggleEmailsAsync(item.InventoryItemId)">
+                                        @onclick="() => ToggleEmails(item.InventoryItemId)">
                                     @(isExpanded ? "Hide emails" : "Emails")
                                 </button>
                             </td>
                         </tr>
                         @if (isExpanded)
                         {
-                            <tr class="bg-surface-raised/50">
+                            @* Keyed so switching items always builds a fresh section — no reply
+                               half-written under one item can carry over to the next. *@
+                            <tr @key="@($"{item.InventoryItemId}:emails")" class="bg-surface-raised/50">
                                 <td colspan="6">
-                                    <FiledEmailList Emails="@(emailsByItem.TryGetValue(item.InventoryItemId, out var filedEmails) ? filedEmails : null)"
-                                        EmptyMessage="@($"No emails filed to {item.Reference} yet — file one from the Control Centre (Supplier pathway → Inventory items).")" />
+                                    <div class="py-2">
+                                        <RecordCorrespondenceSection Type="RecordType.Inventory" RecordId="@item.InventoryItemId"
+                                                                     RecordReference="@item.Reference" ProjectId="@ProjectId">
+                                            <EmptyMessage>
+                                                No emails filed to @item.Reference yet — tag one with Find &amp; tag emails above,
+                                                or file one from the Control Centre (Supplier pathway → Inventory items).
+                                            </EmptyMessage>
+                                        </RecordCorrespondenceSection>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -159,10 +168,9 @@
     private string formLocation = "";
     private string formLocationDetails = "";
 
-    // One expanded item at a time; its emails are read live by tag (ListRecordEmails) and cached
-    // for the visit so collapsing/expanding doesn't refetch.
+    // One expanded item at a time; the expanded row's RecordCorrespondenceSection reads the
+    // item's mail live by tag, so expanding always shows what the mailbox holds now.
     private string? expandedItemId;
-    private readonly Dictionary<string, IReadOnlyList<MailboxMessage>> emailsByItem = new();
 
     private IReadOnlyList<InventoryItem> Rows => Inventory.Current(ProjectId);
 
@@ -255,22 +263,8 @@
         catch { }
     }
 
-    private async Task ToggleEmailsAsync(string itemId)
-    {
-        if (expandedItemId == itemId) { expandedItemId = null; return; }
-        expandedItemId = itemId;
-        if (emailsByItem.ContainsKey(itemId)) return;
-        try
-        {
-            var emails = await Queries.AskAsync(new ListRecordEmails(RecordType.Inventory, itemId), CancellationToken.None);
-            emailsByItem[itemId] = emails;
-        }
-        catch
-        {
-            // The toast has the detail; an empty list is the honest fallback for this visit.
-            emailsByItem[itemId] = Array.Empty<MailboxMessage>();
-        }
-    }
+    private void ToggleEmails(string itemId) =>
+        expandedItemId = expandedItemId == itemId ? null : itemId;
 
     public void Dispose() => Inventory.OnChanged -= StateHasChanged;
 }

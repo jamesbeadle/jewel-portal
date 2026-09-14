@@ -59,6 +59,15 @@ public static class XeroRouteRegistration
                 return $"/api/projects/{forProject.ProjectId}/xero/ledger?take={forProject.Take}";
             }));
 
+        // One bill's stored lines, whatever tab each sits on — the Invoice document window's
+        // bill card (2026-09-14).
+        queries.Register<ListXeroLedgerLinesForInvoice, IReadOnlyList<XeroLedgerLine>>(
+            new QueryRoute("/api/xero/invoice/lines", query =>
+            {
+                var forInvoice = (ListXeroLedgerLinesForInvoice)query;
+                return $"/api/xero/invoice/lines?id={Uri.EscapeDataString(forInvoice.XeroInvoiceId)}";
+            }));
+
         queries.Register<ListXeroInvoiceAttachments, IReadOnlyList<XeroInvoiceAttachment>>(
             new QueryRoute("/api/xero/invoice/attachments", query =>
             {

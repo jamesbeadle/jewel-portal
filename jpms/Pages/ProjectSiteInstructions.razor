@@ -1,12 +1,12 @@
 @page "/projects/{ProjectId}/site-instructions"
 @using Jewel.JPMS.Contracts.SiteInstructions
 @using Jewel.JPMS.Features.SiteInstructions
+@using Jewel.JPMS.Features.Triage.Panels
 @inject AuthService Auth
 @inject SessionService Session
 @inject NavigationManager Nav
 @inject SiteInstructionReadModel SiteInstructions
 @inject ICommandSender Commands
-@inject IQueryClient Queries
 @implements IDisposable
 
 <PageTitle>Site Instructions · JPMS</PageTitle>
@@ -114,17 +114,26 @@
                                     Edit
                                 </button>
                                 <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                        @onclick="() => ToggleEmailsAsync(row.SiteInstructionId)">
+                                        @onclick="() => ToggleEmails(row.SiteInstructionId)">
                                     @(isExpanded ? "Hide emails" : "Emails")
                                 </button>
                             </td>
                         </tr>
                         @if (isExpanded)
                         {
-                            <tr class="bg-surface-raised/50">
+                            @* Keyed so switching instructions always builds a fresh section — no reply
+                               half-written under one instruction can carry over to the next. *@
+                            <tr @key="@($"{row.SiteInstructionId}:emails")" class="bg-surface-raised/50">
                                 <td colspan="6">
-                                    <FiledEmailList Emails="@(emailsByRow.TryGetValue(row.SiteInstructionId, out var filedEmails) ? filedEmails : null)"
-                                        EmptyMessage="@($"No emails filed to {row.Reference} yet — file one from the Control Centre (Internal pathway → Site instructions).")" />
+                                    <div class="py-2">
+                                        <RecordCorrespondenceSection Type="RecordType.SiteInstruction" RecordId="@row.SiteInstructionId"
+                                                                     RecordReference="@row.Reference" ProjectId="@ProjectId">
+                                            <EmptyMessage>
+                                                No emails filed to @row.Reference yet — tag one with Find &amp; tag emails above,
+                                                or file one from the Control Centre (Internal pathway → Site instructions).
+                                            </EmptyMessage>
+                                        </RecordCorrespondenceSection>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -150,10 +159,9 @@
     private string formInstruction = "";
     private string formLocation = "";
 
-    // One expanded instruction at a time; its emails are read live by tag (ListRecordEmails) and
-    // cached for the visit so collapsing/expanding doesn't refetch.
+    // One expanded instruction at a time; the expanded row's RecordCorrespondenceSection reads
+    // the instruction's mail live by tag, so expanding always shows what the mailbox holds now.
     private string? expandedId;
-    private readonly Dictionary<string, IReadOnlyList<MailboxMessage>> emailsByRow = new();
 
     private IReadOnlyList<SiteInstruction> Rows => SiteInstructions.Current(ProjectId);
 
@@ -246,22 +254,8 @@
         catch { }
     }
 
-    private async Task ToggleEmailsAsync(string id)
-    {
-        if (expandedId == id) { expandedId = null; return; }
-        expandedId = id;
-        if (emailsByRow.ContainsKey(id)) return;
-        try
-        {
-            var emails = await Queries.AskAsync(new ListRecordEmails(RecordType.SiteInstruction, id), CancellationToken.None);
-            emailsByRow[id] = emails;
-        }
-        catch
-        {
-            // The toast has the detail; an empty list is the honest fallback for this visit.
-            emailsByRow[id] = Array.Empty<MailboxMessage>();
-        }
-    }
+    private void ToggleEmails(string id) =>
+        expandedId = expandedId == id ? null : id;
 
     public void Dispose() => SiteInstructions.OnChanged -= StateHasChanged;
 }

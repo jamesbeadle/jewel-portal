@@ -275,6 +275,28 @@ finds drift.
   `Draft in Xero` / `Write-back failed` chips (`XeroAllocation.XeroState.cs`, `FilterChips`) and
   the export's Xero status / Write-back / Last write-back error columns read the same fields.
 
+## The Invoice document window shows the whole bill (api + jpms)
+
+- **The portal never reads Dext — it reads Xero.** What the bookkeeper types in Dext's
+  Description box (2026-09-14, her ask: "Jack Uploaded - Toolstation", so Nigel knows who a
+  receipt came from) reaches the portal only as what Dext publishes onto the bill in Xero — a
+  line's description, or the bill's `Reference` — and the sync refreshes both every night.
+  Dext's Note and Messages tabs never leave Dext; nothing in the portal can show them.
+- **So the Invoice document window shows the bill, not just the line it was opened from.**
+  `InvoiceBillLines` (jpms/Features/Xero) sits under `LedgerLineSummary` and renders the Xero
+  reference when it says more than the invoice number (`XeroLedgerDisplay.ReferenceBeyondInvoiceNumber`
+  — Xero's own screens call a bill's number its reference, so a repeat is nothing) and, for a
+  bill with more than one stored line, every line with where it stands and its net, the opened
+  line marked. It reads `ListXeroLedgerLinesForInvoice` (`/api/xero/invoice/lines?id=`,
+  `IBestEffortQuery`: the window is complete without it, so a failed read says so inside the
+  card, never as a banner behind the modal). A single-line bill with no reference renders
+  nothing — a conditional card, never gated. Stored lines only, so the card never claims a bill
+  total. The connector reads the same bill whole: `list_xero_ledger_lines` with `xeroInvoiceId`.
+  Both the status read and the bill read shape a line through `XeroLedgerReads.ToModelsAsync` —
+  splits, suggestions, labour and Work Order bill recognition, the standing approval — so a bill
+  read whole lands every line in the same queue the page shows it in; never build a lighter
+  projection that leaves `queue` reading ToCode on a labour or Work Order bill.
+
 ## Directory ↔ Xero links (api + jpms)
 
 - **A directory record's Xero link is one `SubcontractorXeroLinks` row, written three ways and

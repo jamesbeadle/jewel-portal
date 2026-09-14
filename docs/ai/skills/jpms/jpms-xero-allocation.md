@@ -54,6 +54,13 @@ description: "How Xero and the portal reconcile — allocation doctrine and why 
 
 ## Reading the queue (2026-09-11)
 
+- **One bill whole: `list_xero_ledger_lines` with `xeroInvoiceId`** (2026-09-14). Every stored
+  line of the bill whatever tab each sits on, largest first, plus the `reference` Xero holds
+  beyond the invoice number. The bookkeeper's Dext description — who uploaded a receipt, what
+  it was for — lands on a line's description or in that reference, so read the whole bill
+  before saying it carries no note. The portal never reads Dext itself; Dext's Note and
+  Messages tabs never reach Xero, so they never reach here.
+
 - **The raw Unallocated count is NOT the to-do.** `list_xero_ledger_lines` with no status
   returns `tabBar` — the page's own tab bar: `toCode` (lines wanting a project + cost centre),
   `workOrderBills` (BILLS, one Approve each — not lines), `labourOutstanding`, `labourCovered`,

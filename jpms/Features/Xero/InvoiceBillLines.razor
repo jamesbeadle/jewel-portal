@@ -1,0 +1,70 @@
+@namespace Jewel.JPMS.Features.Xero
+@using static Jewel.JPMS.Features.Xero.XeroLedgerDisplay
+@inject IQueryClient Queries
+
+@* The rest of the bill beside the line that was opened (2026-09-14, the bookkeeper's ask): the
+   note she types in Dext's Description box — who uploaded a receipt, what it was for — reaches
+   the portal through Xero as the bill's line descriptions or its reference, so it has to be
+   readable whichever line of the bill was opened. Nothing renders until there is something the
+   summary card above does not already say: a reference Xero holds beyond the invoice number
+   (known from the opened line at once), or more stored lines than the one opened (fetched when
+   the window opens). A single-line bill with no reference shows nothing here — and nothing
+   waits for it, so there is no gate. *@
+@if (Reference is not null || ShowsLines)
+{
+    <div class="rounded border border-line bg-surface-raised px-4 py-3 text-sm space-y-2">
+        @if (Reference is { } reference)
+        {
+            <p class="flex items-baseline gap-2" title="The reference Xero holds on this bill, beyond its invoice number">
+                <span class="eyebrow">Xero reference</span>
+                <span class="text-content">@reference</span>
+            </p>
+        }
+        @if (ShowsLines)
+        {
+            <div class="overflow-x-auto">
+                <table class="data-table data-table-dense">
+                    <thead>
+                        <tr class="text-left eyebrow">
+                            <th>Every line on this bill</th>
+                            <th class="w-56">Where it stands</th>
+                            <th class="w-28 text-right">Net</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var line in Lines)
+                        {
+                            var isOpened = line.XeroLedgerLineId == Line.XeroLedgerLineId;
+                            <tr @key="line.XeroLedgerLineId">
+                                <td class="max-w-0">
+                                    <span class="flex items-center gap-1.5 min-w-0">
+                                        <span class="truncate min-w-0 @(isOpened ? "text-content" : "text-content-muted")"
+                                              title="@line.Description">@(line.Description ?? "—")</span>
+                                        @if (isOpened)
+                                        {
+                                            <span class="shrink-0 text-xs font-medium border border-line rounded px-1.5 py-0.5">This line</span>
+                                        }
+                                        @if (line.Type == "ACCPAYCREDIT")
+                                        {
+                                            <span class="shrink-0 text-xs font-medium border border-line rounded px-1.5 py-0.5">Credit</span>
+                                        }
+                                    </span>
+                                </td>
+                                <td class="max-w-0">
+                                    <span class="block truncate text-content-muted" title="@StandingOf(line)">@StandingOf(line)</span>
+                                </td>
+                                <td class="text-right whitespace-nowrap">
+                                    <span class="text-content font-medium">@Money(SignedNet(line))</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}
+@if (fetchFailed)
+{
+    <Notice Tone="Tone.Muted">Couldn't read the rest of this bill — close and reopen the window to try again.</Notice>
+}

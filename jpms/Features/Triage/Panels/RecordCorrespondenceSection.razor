@@ -1,0 +1,64 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@inject IQueryClient Queries
+
+@*
+    A record's correspondence that reads itself: the one element a register page drops into an
+    expanded row (Inventory, Site Instructions) to get THE record-page email widget —
+    RecordCorrespondencePanel, with its count, Find & tag, full-body cards, attachments, Reply /
+    Forward and Untag — without the page owning the read. The mail is read live by the record's
+    tag when the section first renders and re-read after every tag, untag or send, so the list
+    always says what the mailbox says. A record page that merges two tags (a variation's quoting
+    reference and its V-ref) keeps hosting the panel itself.
+*@
+
+<RecordCorrespondencePanel Type="Type" RecordId="@RecordId" RecordReference="@RecordReference"
+                           ProjectId="@ProjectId" Title="@Title" IsProminent="false"
+                           Emails="Emails" Loaded="HasAnswered" Error="@loadError"
+                           OnReload="LoadEmailsAsync" EmptyMessage="EmptyMessage" />
+
+@code {
+    /// <summary>The record whose tag the list is read by — also what Find &amp; tag files to.</summary>
+    [Parameter, EditorRequired] public RecordType Type { get; set; }
+    [Parameter, EditorRequired] public string RecordId { get; set; } = "";
+    [Parameter, EditorRequired] public string RecordReference { get; set; } = "";
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    [Parameter] public string Title { get; set; } = "Communications";
+    /// <summary>What to say when the mailbox answered "none" — how to file mail here.</summary>
+    [Parameter] public RenderFragment? EmptyMessage { get; set; }
+
+    // Null until the mailbox has ANSWERED — an empty list is a real "none", never a placeholder.
+    private IReadOnlyList<MailboxMessage>? emails;
+    private string? loadError;
+    private string loadedRecordId = "";
+
+    private IReadOnlyList<MailboxMessage> Emails => emails ?? Array.Empty<MailboxMessage>();
+    private bool HasAnswered => emails is not null || loadError is not null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (RecordId == loadedRecordId) return;
+        loadedRecordId = RecordId;
+        emails = null;
+        loadError = null;
+        await LoadEmailsAsync();
+    }
+
+    // First read and every re-read: the list on screen stays put until the mailbox answers again.
+    private async Task LoadEmailsAsync()
+    {
+        var recordId = RecordId;
+        loadError = null;
+        try
+        {
+            var answered = await Queries.AskAsync(new ListRecordEmails(Type, recordId), CancellationToken.None);
+            // A slower answer for a record no longer shown must not land on the current one.
+            if (recordId == loadedRecordId) emails = answered;
+        }
+        catch
+        {
+            // The query client has toasted the detail; the panel shows this above whatever it holds.
+            if (recordId == loadedRecordId) loadError = $"Couldn't load the emails filed to {RecordReference}. Please try again.";
+        }
+    }
+}

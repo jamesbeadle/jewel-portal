@@ -20,6 +20,17 @@ public static class XeroLedgerDisplay
     public static string LineMetaText(XeroLedgerLine line) =>
         $"{DateText(line.Date)} · {line.InvoiceNumber ?? "—"} · {line.XeroSite ?? "no site"} · {line.XeroCostCode ?? "no Xero code"}";
 
+    /// <summary>The reference Xero holds on the bill beyond its invoice number — where Dext puts
+    /// what was keyed against the document — or null when it is blank or merely repeats the
+    /// number (Xero's own screens call a bill's number its reference).</summary>
+    public static string? ReferenceBeyondInvoiceNumber(XeroLedgerLine line)
+    {
+        var reference = line.Reference?.Trim();
+        if (string.IsNullOrEmpty(reference)) return null;
+        var repeatsTheNumber = string.Equals(reference, line.InvoiceNumber?.Trim(), StringComparison.OrdinalIgnoreCase);
+        return repeatsTheNumber ? null : reference;
+    }
+
     /// <summary>The month a labour bill settles: its bill date's month.</summary>
     public static DateTimeOffset? SettlementMonthOf(XeroLedgerLine line) =>
         line.Date is { } date

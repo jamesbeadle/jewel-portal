@@ -161,6 +161,18 @@ public sealed record ListXeroLedgerLinesForProject(string ProjectId, int Take = 
     : IQuery<IReadOnlyList<XeroLedgerLine>>;
 
 /// <summary>
+/// Every stored line of one Xero bill or credit note, whatever tab each line sits on — the bill
+/// as the portal holds it (the cost-of-sales lines the sync keeps, refreshed by every sync),
+/// largest line first. Behind the Invoice document window's bill card (2026-09-14, the
+/// bookkeeper's ask): the note she types in Dext's Description box — who uploaded a receipt, what
+/// it was for — reaches the portal through Xero as the bill's line descriptions or its reference,
+/// and it has to be readable whichever line of the bill was opened. Best effort: the window is
+/// complete without it, so a failed read says so inside the card rather than over the page.
+/// </summary>
+public sealed record ListXeroLedgerLinesForInvoice(string XeroInvoiceId)
+    : IQuery<IReadOnlyList<XeroLedgerLine>>, IBestEffortQuery;
+
+/// <summary>
 /// One stored Xero purchase-invoice line. Amounts are net (pre-VAT, normalised
 /// for VAT-inclusive invoices) and positive; <see cref="Type"/> distinguishes
 /// bills (ACCPAY) from supplier credit notes (ACCPAYCREDIT), which subtract in

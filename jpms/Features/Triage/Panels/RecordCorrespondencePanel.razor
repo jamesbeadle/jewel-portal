@@ -29,7 +29,7 @@
     <Notice Tone="Tone.Negative" Class="mb-3">@Error</Notice>
 }
 
-<LoadGate IsLoading="@(!Loaded)" Prominent="true" Label="@LoadingLabel">
+<LoadGate IsLoading="@(!Loaded)" Prominent="IsProminent" Label="@LoadingLabel">
 @if (sentNote is not null)
 {
     <div class="rounded border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
@@ -81,6 +81,9 @@ else
 
     [Parameter] public string Title { get; set; } = "Communications";
     [Parameter] public string LoadingLabel { get; set; } = "Loading emails";
+    /// <summary>The loading mark's size: a record page's main panel is prominent; a register
+    /// row's expansion (RecordCorrespondenceSection) is not.</summary>
+    [Parameter] public bool IsProminent { get; set; } = true;
     /// <summary>What to say when the mailbox answered "none" — how to tag mail here.</summary>
     [Parameter] public RenderFragment? EmptyMessage { get; set; }
 

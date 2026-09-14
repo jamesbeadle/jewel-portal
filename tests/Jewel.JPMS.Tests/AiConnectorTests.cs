@@ -461,6 +461,21 @@ public sealed class AiConnectorTests
     }
 
     [Fact]
+    public void BookkeepersSeptemberFourteenthAsk_theWholeBill_reachesTheConnector()
+    {
+        // "Can the description be pulled through from Dext so Nigel knows who it came from?"
+        // (2026-09-14). The Dext description lands on the bill in Xero — a line's description or
+        // the reference — and the Invoice document window now shows the whole bill for it. The
+        // connector reads the same bill whole: list_xero_ledger_lines takes xeroInvoiceId, and
+        // its description tells the model to read every line before saying a bill carries no note.
+        var financeDirector = AiToolCatalogue.ForConnector(UserWith(Role.FinanceDirector));
+        var tool = Assert.Single(financeDirector, candidate => candidate.Name == "list_xero_ledger_lines");
+        Assert.Contains("xeroInvoiceId", System.Text.Json.JsonSerializer.Serialize(tool.InputSchema));
+        Assert.Contains("Dext description", tool.Description);
+        Assert.Contains("read the whole bill", tool.Description);
+    }
+
+    [Fact]
     public void SaveSkillReference_isAWriteToolBehindTheSkillGate()
     {
         var admin = AiToolCatalogue.ForConnector(UserWith(Role.Admin));

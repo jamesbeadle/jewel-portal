@@ -101,7 +101,7 @@
 
                         @if (IsEditing(AiActionSkillTargets.Area, area))
                         {
-                            @SkillPicker($"every action in {area}")
+                            @SkillPicker($"every action in {area}", null)
                         }
 
                         @if (IsExpanded(area))
@@ -138,7 +138,7 @@
                                         </div>
                                         @if (IsEditing(AiActionSkillTargets.Action, action.Name))
                                         {
-                                            @SkillPicker(action.Name)
+                                            @SkillPicker(action.Name, action.Area)
                                         }
                                     </div>
                                 }
@@ -169,13 +169,23 @@
             }
         </span>
     };
-    private RenderFragment SkillPicker(string targetLabel) => __builder =>
+    private RenderFragment SkillPicker(string targetLabel, string? inheritedFromArea) => __builder =>
     {
+        var inheritedSkillKeys = InheritedFrom(inheritedFromArea);
         <div class="border-t border-line bg-surface px-4 py-3">
             <p class="text-xs font-medium text-content mb-2">
                 Skills for <span class="font-mono">@targetLabel</span> — served with the action's
                 contract on every call.
             </p>
+            @if (inheritedFromArea is not null)
+            {
+                <p class="text-xs text-content-subtle mb-2 max-w-3xl">
+                    Greyed ticks come from the @inheritedFromArea area and are already served with every
+                    action in it — change those with the area's
+                    <span class="text-content">Area skills</span> button. Tick here only to add a skill
+                    this action alone needs.
+                </p>
+            }
             @if (saveErrors.Count > 0)
             {
                 <div class="rounded border border-negative/40 bg-negative/5 px-3 py-2 mb-2">
@@ -188,15 +198,22 @@
             <div class="grid gap-1 md:grid-cols-2 mb-3">
                 @foreach (var skill in skills!.OrderBy(candidate => candidate.DisplayName))
                 {
-                    <label class="inline-flex items-start gap-2 text-sm text-content">
+                    var isInherited = inheritedSkillKeys.Contains(skill.SkillKey);
+                    <label class="inline-flex items-start gap-2 text-sm @(isInherited ? "text-content-subtle" : "text-content")"
+                           title="@(isInherited ? $"Attached to the whole {inheritedFromArea} area — change it with the Area skills button." : null)">
                         <input type="checkbox" class="mt-0.5"
-                               checked="@working.Contains(skill.SkillKey)"
+                               checked="@(isInherited || working.Contains(skill.SkillKey))"
+                               disabled="@isInherited"
                                @onchange="() => ToggleSkill(skill.SkillKey)" />
                         <span>
                             @skill.DisplayName
                             <span class="text-xs text-content-subtle">
                                 — @skill.SkillKey@(skill.IsActive ? "" : " (off)")
                             </span>
+                            @if (isInherited)
+                            {
+                                <span class="text-xs text-content-subtle italic">via @inheritedFromArea area</span>
+                            }
                         </span>
                     </label>
                 }

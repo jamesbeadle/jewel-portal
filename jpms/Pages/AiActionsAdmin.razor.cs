@@ -78,6 +78,11 @@ public partial class AiActionsAdmin
             .OrderBy(skillKey => skillKey)
             .ToList();
 
+    // A per-action picker shows its area's skills ticked and locked: the area attachment already
+    // serves them with every action in the area, and only the Area skills button changes that.
+    private IReadOnlyList<string> InheritedFrom(string? area) =>
+        area is null ? Array.Empty<string>() : AttachedTo(AiActionSkillTargets.Area, area);
+
     private IReadOnlyList<AiActionSkillAttachment> OrphanedAttachments =>
         attachments
             .Where(row =>
