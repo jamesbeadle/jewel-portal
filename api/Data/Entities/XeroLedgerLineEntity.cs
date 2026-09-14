@@ -34,6 +34,16 @@ public sealed class XeroLedgerLineEntity
     // the fallback for those until the next sync fills them.
     public decimal InvoiceTotal { get; set; }
     public decimal AmountDue { get; set; }
+
+    // The bill's payment detail, per INVOICE like the two above (AddXeroLinePaymentDetail,
+    // 2026-09-14, the accountant's ask: the supplier account shows the actual payment made and
+    // the CIS deducted). AmountPaid is the cash Xero has recorded against the bill — under CIS
+    // it is short of the total by the deduction; CisDeduction is what Xero calculated and
+    // withheld for HMRC (0 until the bill is approved); FullyPaidOnDate is when nothing further
+    // was owed. All three read 0 / null on rows synced before the migration until the next sync.
+    public decimal AmountPaid { get; set; }
+    public decimal CisDeduction { get; set; }
+    public DateTime? FullyPaidOnDate { get; set; }
     [MaxLength(32)]       public string? AccountCode { get; set; }
     [MaxLength(256)]      public string? AccountName { get; set; }
 

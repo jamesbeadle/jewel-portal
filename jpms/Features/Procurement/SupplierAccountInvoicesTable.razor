@@ -2,9 +2,9 @@
 @using static Jewel.JPMS.Features.Procurement.SupplierAccountDisplay
 
 @* The invoices' side of the account: every bill received for the project, linked or not, with the
-   supplier's own CIS split, where Xero says it stands, and the order(s) it pays. A bill nobody has
-   placed yet says so beneath its row rather than hiding — it is exactly the one an over-invoice
-   hides in. *@
+   supplier's own CIS split, the CIS Xero withheld and the cash it actually paid, where Xero says
+   the bill stands, and the order(s) it pays. A bill nobody has placed yet says so beneath its row
+   rather than hiding — it is exactly the one an over-invoice hides in. *@
 <RecordsTable Dense="true" MaxHeight="" IsEmpty="@(Account.Invoices.Count == 0)"
               EmptyMessage="No invoices have been received from this supplier for the project.">
     <thead>
@@ -14,6 +14,8 @@
             <th class="text-right whitespace-nowrap" title="The net posted to the CIS labour account">Labour</th>
             <th class="text-right whitespace-nowrap" title="Everything else on the bill">Materials</th>
             <th class="text-right whitespace-nowrap">Net</th>
+            <th class="text-right whitespace-nowrap" title="@CisColumnHint">CIS deducted</th>
+            <th class="text-right whitespace-nowrap" title="@PaymentColumnHint">Payment made</th>
             <th class="whitespace-nowrap">Status</th>
             <th>Matched to</th>
         </tr>
@@ -33,13 +35,21 @@
                 <td class="text-right">@Money(invoice.Labour)</td>
                 <td class="text-right">@Money(invoice.Materials)</td>
                 <td class="text-right font-medium">@Money(invoice.Net)</td>
+                <td class="text-right whitespace-nowrap" title="@PaymentDetailTitle(invoice)">@MoneyOrDash(invoice.CisDeduction)</td>
+                <td class="text-right whitespace-nowrap" title="@PaymentDetailTitle(invoice)">
+                    @MoneyOrDash(invoice.AmountPaid)
+                    @if (invoice.AmountPaid != 0m && invoice.PaidOn is { } paidOn)
+                    {
+                        <span class="block text-xs text-content-subtle">on @DateText(paidOn)</span>
+                    }
+                </td>
                 <td class="whitespace-nowrap"><Pill Tone="@invoice.State.ToTone()">@invoice.State.Label()</Pill></td>
                 <td class="@(invoice.IsMatched ?"" : "text-content-subtle")">@MatchedText(invoice)</td>
             </tr>
             @if (invoice.Placement != ProjectSupplierInvoicePlacement.Allocated || invoice.NetElsewhere != 0m)
             {
                 <tr>
-                    <td colspan="7">
+                    <td colspan="9">
                         <span class="block pl-6 text-xs text-content-subtle italic">
                             @if (invoice.Placement != ProjectSupplierInvoicePlacement.Allocated)
                             {
@@ -47,7 +57,7 @@
                             }
                             @if (invoice.NetElsewhere != 0m)
                             {
-                                <text>@Money(invoice.NetElsewhere) of this bill sits outside the project (another project, ignored or bucketed).</text>
+                                <text>@Money(invoice.NetElsewhere) of this bill sits outside the project (another project, ignored or bucketed) — the payment and CIS figures are the whole bill's.</text>
                             }
                         </span>
                     </td>
@@ -63,6 +73,8 @@
                 <td class="text-right">@Money(Account.LabourReceived)</td>
                 <td class="text-right">@Money(Account.MaterialsReceived)</td>
                 <td class="text-right">@Money(Account.Received)</td>
+                <td class="text-right">@Money(Account.CisDeducted)</td>
+                <td class="text-right">@Money(Account.PaymentsMade)</td>
                 <td colspan="2" class="font-normal text-xs text-content-subtle">
                     @Money(Account.ReceivedAndSettled) settled by Xero · @Money(Account.Unmatched) not linked to an order
                 </td>

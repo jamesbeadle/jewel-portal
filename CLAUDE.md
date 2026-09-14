@@ -289,6 +289,17 @@ finds drift.
   `State` (`ProjectSupplierInvoiceStates.For`) reads the settled fraction first, then DRAFT /
   SUBMITTED as "Received, awaiting approval" — received, so it counts in the over-invoice, but
   nothing is owed on it until Xero approves it.
+- **The actual payment made and the CIS deducted are Xero's figures, read, never computed**
+  (2026-09-14, the accountant's second ask). The ledger sync stamps three more per-INVOICE facts
+  on every stored line beside `InvoiceTotal` / `AmountDue`: `AmountPaid` (the cash Xero recorded
+  — under CIS, short of the total by the deduction), `CisDeduction` (Xero's own `CISDeduction`,
+  calculated at approval and withheld for HMRC) and `FullyPaidOnDate` (migration
+  `AddXeroLinePaymentDetail`, script `add-xero-line-payment-detail.sql`; `XeroTransaction` carries
+  `CisDeduction` / `FullyPaidOnDate` off the paged read). They default to 0 / null, so a line synced
+  before the migration reads "no detail yet" until the next sync — the account shows a DASH, never
+  £0.00, for a bill with neither (`ProjectSupplierAccountInvoice.HasPaymentDetail`): a draft has no
+  deduction until Xero approves it, an unpaid bill no payment. Never derive CIS as labour × the
+  directory's rate — the directory holds the rate as a status string, and Xero already knows.
 
 ## Xero write-back state on a ledger line (api + jpms)
 

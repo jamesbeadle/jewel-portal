@@ -36,10 +36,11 @@
                     <SupplierAccountInvoicesTable Account="account" />
 
                     <p class="text-xs text-content-subtle mt-3">
-                        All figures net of VAT; credit notes deduct. Labour is the net each bill posts to the CIS
-                        labour account, materials everything else, as the supplier raised it. Invoiced and linked,
-                        paid and left to invoice are read from the bills linked to each order on the WO Allocation
-                        tab; an invoice awaiting approval counts as received, but nothing is owed on it until it is approved in Xero.
+                        All figures net of VAT; credit notes deduct. Labour is the net each bill posts to the CIS labour account,
+                        materials everything else, as the supplier raised it. Invoiced and linked, paid and left to invoice are read
+                        from the bills linked to each order on the WO Allocation tab; an invoice awaiting approval counts as received,
+                        but nothing is owed on it until it is approved in Xero. CIS deducted and Payment made are Xero's figures for the
+                        whole bill — a dash means Xero has recorded nothing yet (no CIS until approval, no payment until it is paid).
                     </p>
                 }
             </LoadGate>
@@ -65,8 +66,7 @@
     [Parameter] public EventCallback OnClose { get; set; }
 
     private ProjectSupplierAccount? account; // null until a fetch lands — the gate reads it
-    private string? loadedForKey;
-    private string? loadError;
+    private string? loadedForKey, loadError;
 
     private string LoadKey => $"{ProjectId}:{SubcontractorId}";
 

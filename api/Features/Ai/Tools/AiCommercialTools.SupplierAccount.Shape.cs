@@ -23,6 +23,8 @@ internal static partial class AiCommercialTools
             labourReceived = account.LabourReceived,
             materialsReceived = account.MaterialsReceived,
             settledByXero = account.ReceivedAndSettled,
+            paymentsMade = account.PaymentsMade,
+            cisDeducted = account.CisDeducted,
             notLinkedToAnOrder = account.Unmatched,
             overOrders = account.OverOrders,
             isOverInvoiced = account.IsOverInvoiced,
@@ -60,12 +62,17 @@ internal static partial class AiCommercialTools
             placement = invoice.Placement.ToString(),
             placementNote = invoice.Placement.Label(),
             settledNet = invoice.SettledNet,
+            paymentMade = invoice.HasPaymentDetail ? invoice.AmountPaid : (decimal?)null,
+            cisDeducted = invoice.HasPaymentDetail ? invoice.CisDeduction : (decimal?)null,
+            paidOn = invoice.PaidOn,
             matchedToOrders = invoice.Matched,
             notLinked = invoice.Unmatched,
             orders = invoice.Orders.Select(order => new { workOrderId = order.WorkOrderId, reference = order.Reference, amount = order.Amount }).ToList()
         }).ToList(),
         note = "All figures net of VAT and signed (credit notes negative). labour = the net on the CIS labour "
-               + "account, materials = everything else, as the supplier raised the bill. An invoice with "
+               + "account, materials = everything else, as the supplier raised the bill. paymentMade and "
+               + "cisDeducted are Xero's figures for the WHOLE bill (null = Xero has recorded nothing yet: no "
+               + "CIS is calculated until approval, nothing is paid until it is paid). An invoice with "
                + "state AwaitingApproval is received but nothing is owed on it until it is approved in Xero; "
                + "placement AwaitingAllocation / AssumedFromSupplier means nobody has coded it to the project "
                + "yet, so it is on nobody's WO Allocation queue. Linking an invoice to an order is done on the "

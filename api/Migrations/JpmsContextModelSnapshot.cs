@@ -8234,9 +8234,17 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<decimal>("AmountPaid")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
                     b.Property<string>("Bucket")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<decimal>("CisDeduction")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("ContactName")
                         .HasMaxLength(256)
@@ -8255,6 +8263,9 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<DateTimeOffset>("FirstSeenAtUtc")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTime?>("FullyPaidOnDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("HasAttachments")
                         .HasColumnType("bit");

@@ -25,6 +25,14 @@ public static partial class ProjectSupplierAccountRenderer
         if (emphasis is TextEmphasis.Indented or TextEmphasis.IndentedNote) paragraph.Format.LeftIndent = IndentWidth;
     }
 
+    /// <summary>A second, muted line under a cell's figure or reference — a status, a date.</summary>
+    private static void AddSubLine(Cell cell, string text)
+    {
+        var paragraph = cell.AddParagraph(text);
+        paragraph.Format.Font.Size = 7.5;
+        paragraph.Format.Font.Color = Muted;
+    }
+
     private static void MoneyCell(Cell cell, decimal amount, bool bold = false, Color? colour = null)
     {
         cell.Format.RightIndent = CellIndent;

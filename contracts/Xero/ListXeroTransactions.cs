@@ -60,7 +60,14 @@ public sealed record XeroTransaction(
     // Whether Xero holds one or more attachments for this transaction (the source
     // document Dext published, typically). Cheap flag off the paged read — the
     // documents themselves are fetched on demand via the attachments endpoints.
-    bool HasAttachments = false);
+    bool HasAttachments = false,
+    // The CIS deduction Xero calculated on the bill (UK CIS, its CISDeduction field — the
+    // labour × the subcontractor's rate, withheld at payment and paid over to HMRC) and the
+    // date it was settled in full (FullyPaidOnDate). Both 0 / null when Xero says nothing:
+    // a draft bill has no deduction yet, an unpaid one no date (2026-09-14, the accountant's
+    // ask: the supplier account shows the actual payment made and the CIS deducted).
+    decimal CisDeduction = 0m,
+    DateTime? FullyPaidOnDate = null);
 
 /// <summary>
 /// One invoice line. <see cref="Site"/> and <see cref="CostCode"/> come from Xero's tracking
