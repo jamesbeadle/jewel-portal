@@ -23,4 +23,9 @@ internal static class VariationsIdentifierFactory
 
     /// <summary>The V-ref minted at approval, e.g. 18 => "V18".</summary>
     public static string VariationRef(int number) => $"V{number}";
+
+    /// <summary>The reference an outgoing document goes out under, e.g. 32 => "VO32". The quoting
+    /// reference ("VOQ-0032") is internal and is never printed on anything that leaves the business
+    /// (Nigel, 2026-09-14). Empty for a record that has no number yet.</summary>
+    public static string DocumentReference(int number) => number > 0 ? $"VO{number}" : "";
 }

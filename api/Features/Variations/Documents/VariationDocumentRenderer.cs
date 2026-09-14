@@ -19,7 +19,7 @@ public static class VariationDocumentRenderer
         EnsureFonts();
 
         var document = new Document();
-        document.Info.Title = $"{model.DisplayNumber} Variation Order".Trim();
+        document.Info.Title = $"{model.DocumentReference} {VariationDocumentModel.DocumentName}".Trim();
         document.Info.Author = "Jewel Bespoke Build";
         document.Info.Subject = model.Title;
 
@@ -64,24 +64,23 @@ public static class VariationDocumentRenderer
         row.Cells[0].VerticalAlignment = VerticalAlignment.Center;
         row.Cells[1].VerticalAlignment = VerticalAlignment.Center;
 
-        // Left: official logo, white document name, gold reference line.
+        // Left: official logo, white document name, gold reference line ("VO32" — the outgoing
+        // reference alone; the internal VOQ quoting reference never prints, Nigel 2026-09-14).
         DocumentBranding.AddLogo(row.Cells[0], Unit.FromCentimeter(3.4), Unit.FromMillimeter(1.5));
 
-        var heading = row.Cells[0].AddParagraph("VARIATION ORDER");
+        var heading = row.Cells[0].AddParagraph(VariationDocumentModel.DocumentName.ToUpperInvariant());
         heading.Format.Font.Size = 17;
         heading.Format.Font.Bold = true;
         heading.Format.Font.Color = White;
         SpaceAfter(heading, 1);
 
-        var referenceLine = model.DisplayNumber.Length > 0
-            ? $"{model.DisplayNumber}  ·  {model.Reference}"
-            : model.Reference;
-        var sub = row.Cells[0].AddParagraph(referenceLine);
+        var sub = row.Cells[0].AddParagraph(model.DocumentReference);
         sub.Format.Font.Size = 9.5;
         sub.Format.Font.Bold = true;
         sub.Format.Font.Color = Gold;
 
-        // Right: status + the dates the correspondent cares about.
+        // Right: the stage the variation has reached (QUOTING / ISSUED / …) + the dates the
+        // correspondent cares about.
         var status = row.Cells[1].AddParagraph(model.StatusLabel.ToUpperInvariant());
         status.Format.Font.Size = 10;
         status.Format.Font.Bold = true;

@@ -51,8 +51,7 @@ public static class VariationDocumentBuilder
 
         return new VariationDocumentModel(
             VariationOrderId: order.VariationOrderId,
-            DisplayNumber: order.Number > 0 ? $"V{order.Number}" : "",
-            Reference: order.Reference,
+            DocumentReference: VariationsIdentifierFactory.DocumentReference(order.Number),
             Title: order.Title,
             Description: order.Description,
             StatusLabel: status.DisplayName(),

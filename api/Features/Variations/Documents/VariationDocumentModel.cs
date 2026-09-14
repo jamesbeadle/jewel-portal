@@ -9,8 +9,10 @@ namespace Jewel.JPMS.Api.Features.Variations.Documents;
 /// </summary>
 public sealed record VariationDocumentModel(
     string VariationOrderId,
-    string DisplayNumber,          // "V31" — the one number the client knows the document by
-    string Reference,              // "VOQ-0031" — the persisted quoting reference
+    // "VO31" — the reference the document goes out under (header, file name, PDF title). The
+    // quoting reference ("VOQ-0031") is internal and deliberately NOT carried on this model, so no
+    // renderer can print it on an outgoing document (Nigel, 2026-09-14).
+    string DocumentReference,
     string Title,
     string Description,
     string StatusLabel,
@@ -46,15 +48,15 @@ public sealed record VariationDocumentModel(
     /// <summary>The build-up's sum — the figure the cost breakdown totals to.</summary>
     public decimal LinesTotal => Lines.Sum(line => line.Amount);
 
-    /// <summary>A safe, human file name for the PDF — "V31 - Staircase Enclosure Ply.pdf",
-    /// falling back to the quoting reference before a number exists.</summary>
+    /// <summary>A safe, human file name for the PDF — "VO31 - Staircase Enclosure Ply.pdf",
+    /// falling back to the document name before a number exists.</summary>
     public string FileName
     {
         get
         {
             var title = Title.Trim();
             if (title.Length > 60) title = title[..60].TrimEnd();
-            var stem = DisplayNumber.Length > 0 ? DisplayNumber : Reference;
+            var stem = DocumentReference.Length > 0 ? DocumentReference : DocumentName;
             if (title.Length > 0) stem = $"{stem} - {title}";
             foreach (var invalid in Path.GetInvalidFileNameChars())
                 stem = stem.Replace(invalid, '-');
@@ -63,7 +65,10 @@ public sealed record VariationDocumentModel(
     }
 
     /// <summary>The email subject line used when the document is sent or drafted.</summary>
-    public string EmailSubject => $"{DisplayNumber} Variation Order: {Title} — {ProjectName}";
+    public string EmailSubject => $"{DocumentReference} {DocumentName}: {Title} — {ProjectName}".Trim();
+
+    /// <summary>What the document calls itself — its heading, PDF title and file-name fallback.</summary>
+    public const string DocumentName = "Variation Order";
 }
 
 /// <summary>One priced row of the cost breakdown (Cost code / Description / Qty / Unit / Rate / Amount).</summary>
