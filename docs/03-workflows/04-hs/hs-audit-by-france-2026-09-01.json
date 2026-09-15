@@ -1,0 +1,450 @@
+{
+ "project": {
+  "reference": "JBB-2026-001",
+  "name": "By France",
+  "projectId": "3490f944b29545c4b8d5a04130f42ab8"
+ },
+ "header": {
+  "siteName": "By France, Chistlehurst",
+  "siteLocation": "by France, Lea Green Chislehurst",
+  "siteManager": "James Everitt",
+  "safetyOfficer": "Katy-Louise Hicks",
+  "inspectionDate": "2026-09-01",
+  "typeOfReport": null,
+  "serialNo": null,
+  "previousAuditScore": null,
+  "emailedOn": "2026-09-01T15:38+01:00",
+  "emailSubject": "Audit for By france"
+ },
+ "score": {
+  "ratedItems": 38,
+  "sumRate": 340,
+  "sumMinus": 0,
+  "score": 0.8947,
+  "scorePercentDisplayed": "89%",
+  "overallRating": "Good"
+ },
+ "summaryFromEmail": "A few things that need to be rectified but nothing too serious. Site was in a well organised and neat condition as it always is.",
+ "items": [
+  {
+   "code": "1.01",
+   "name": "Health & Safety Plan",
+   "rate": 10,
+   "class": "E",
+   "findings": "Up to date"
+  },
+  {
+   "code": "1.02",
+   "name": "General Risk Assesments",
+   "rate": 10,
+   "class": "E",
+   "findings": "Up to date but none have been signed to show they are being used"
+  },
+  {
+   "code": "1.03",
+   "name": "Method Statements",
+   "rate": 10,
+   "class": "E",
+   "findings": "Up to date but none have been signed to show they are being used"
+  },
+  {
+   "code": "1.04",
+   "name": "Method Statement Review Checklist",
+   "rate": 10,
+   "class": "E",
+   "findings": "Up to date"
+  },
+  {
+   "code": "1.05",
+   "name": "CoSHH Assesments",
+   "rate": 10,
+   "class": "E",
+   "findings": "Up to date"
+  },
+  {
+   "code": "1.06",
+   "name": "Other Risk Assesments",
+   "rate": 10,
+   "class": "E",
+   "findings": "Up to date"
+  },
+  {
+   "code": "1.07",
+   "name": "Lifting Plans",
+   "comment": "N/S"
+  },
+  {
+   "code": "1.08",
+   "name": "Briefing Registers",
+   "comment": "N/S"
+  },
+  {
+   "code": "1.09",
+   "name": "Test Certificates",
+   "comment": "N/S"
+  },
+  {
+   "code": "1.10",
+   "name": "Inspection Records",
+   "rate": 10,
+   "class": "E"
+  },
+  {
+   "code": "1.11",
+   "name": "Permits to Work",
+   "comment": "N/S"
+  },
+  {
+   "code": "1.12",
+   "name": "Certificates of Competence",
+   "comment": "N/S"
+  },
+  {
+   "code": "1.13",
+   "name": "Induction Training",
+   "rate": 10,
+   "class": "E",
+   "findings": "Up to date"
+  },
+  {
+   "code": "1.14",
+   "name": "Toolbox Talks",
+   "rate": 5,
+   "class": "D",
+   "findings": "No recent - one needs to be done in sept",
+   "owner": "JE"
+  },
+  {
+   "code": "1.15",
+   "name": "Safety Advisor Inspection/ Audit",
+   "rate": 10
+  },
+  {
+   "code": "1.16",
+   "name": "Site Management Safety Inspections",
+   "rate": 5,
+   "class": "D",
+   "findings": "Not done",
+   "owner": "JE"
+  },
+  {
+   "code": "1.17",
+   "name": "Contractor Safety Inspections",
+   "comment": "N/S"
+  },
+  {
+   "code": "1.18",
+   "name": "Emergency Procedures",
+   "comment": "N/S"
+  },
+  {
+   "code": "1.19",
+   "name": "Visitors/ Contracts Register (PC Only)",
+   "rate": 10,
+   "class": "E",
+   "findings": "used on a daily basis"
+  },
+  {
+   "code": "1.25",
+   "name": "Accident Records",
+   "rate": 10,
+   "class": "E",
+   "findings": "nothing to report"
+  },
+  {
+   "code": "3.01",
+   "name": "F10 - HSE Notification",
+   "rate": 0,
+   "class": "C",
+   "findings": "ran out 6/5/25 need to contact alison to get her to do again",
+   "owner": "KLH"
+  },
+  {
+   "code": "3.02",
+   "name": "Health & Safety Law Poster",
+   "rate": 10,
+   "class": "E"
+  },
+  {
+   "code": "3.04",
+   "name": "Fire Plan Layout",
+   "rate": 10,
+   "class": "D",
+   "owner": "KLH"
+  },
+  {
+   "code": "3.05",
+   "name": "First Aid Notices/ Signs",
+   "rate": 10,
+   "class": "E"
+  },
+  {
+   "code": "4.01",
+   "name": "Manager/ Supervisor Training",
+   "rate": 10,
+   "class": "E",
+   "findings": "James compliant unitl 31/10/27"
+  },
+  {
+   "code": "4.10",
+   "name": "First Aid Training",
+   "rate": 10,
+   "class": "E",
+   "findings": "James compliant unitl 22/8/27"
+  },
+  {
+   "code": "4.11",
+   "name": "Fire Safety Training",
+   "rate": 10,
+   "class": "E",
+   "findings": "James compliant unitl 4/2/29"
+  },
+  {
+   "code": "4.12",
+   "name": "Asbestos Awareness/ Management",
+   "rate": 10,
+   "class": "E",
+   "findings": "James compliant unitl 19/11/29"
+  },
+  {
+   "code": "5.01",
+   "name": "General Housekeeping",
+   "rate": 10,
+   "class": "E",
+   "findings": "Clean and tidy, no rubbish, storage neat"
+  },
+  {
+   "code": "5.02",
+   "name": "Site Access/ Egress",
+   "rate": 10,
+   "class": "E",
+   "findings": "Clear"
+  },
+  {
+   "code": "5.03",
+   "name": "Perimeter Fencing/ Hoarding",
+   "rate": 5,
+   "class": "D",
+   "findings": "Heras fencing keeps coming away from the fence, there are new fence panels being stored can these be put up"
+  },
+  {
+   "code": "5.05",
+   "name": "General Site Signage",
+   "rate": 10,
+   "class": "E"
+  },
+  {
+   "code": "6.08",
+   "name": "Site Litter Free",
+   "rate": 10,
+   "class": "E"
+  },
+  {
+   "code": "6.11",
+   "name": "General Appearance of the Site",
+   "rate": 10,
+   "class": "E",
+   "findings": "exceptional"
+  },
+  {
+   "code": "8.01",
+   "name": "Scaffolding",
+   "rate": 5,
+   "class": "E",
+   "findings": "Scaffolding is in place but no scaff tags to say its been checked and no certificate to say it is safe"
+  },
+  {
+   "code": "9.05",
+   "name": "Safe Loading/ Unloading Areas",
+   "rate": 10,
+   "class": "E",
+   "findings": "All vehciled were parked neatly in the designated parking area"
+  },
+  {
+   "code": "10.01",
+   "name": "First Aid Arrangements",
+   "rate": 10,
+   "class": "E"
+  },
+  {
+   "code": "10.03",
+   "name": "Fire Alarm Systems",
+   "rate": 5,
+   "class": "D",
+   "findings": "fire bell had come off where I was orignially needds to be put back up",
+   "owner": "JE"
+  },
+  {
+   "code": "10.04",
+   "name": "Fire Prevention Measures",
+   "rate": 10,
+   "class": "E",
+   "findings": "serviced fire extignishers on each floor"
+  },
+  {
+   "code": "10.05",
+   "name": "Emergency Exits/ Escape Routes",
+   "rate": 10,
+   "class": "E",
+   "findings": "clear"
+  },
+  {
+   "code": "10.07",
+   "name": "Assembly Points",
+   "rate": 10,
+   "class": "E",
+   "findings": "Clearly sign piosted"
+  },
+  {
+   "code": "10.08",
+   "name": "Control of Smoking",
+   "rate": 10,
+   "class": "E",
+   "findings": "No one seen to be smoking on site"
+  },
+  {
+   "code": "11.01",
+   "name": "Canteen Facilities",
+   "rate": 5,
+   "class": "D",
+   "findings": "None"
+  },
+  {
+   "code": "11.02",
+   "name": "Toilets & Washing Facilities",
+   "rate": 10,
+   "class": "E"
+  },
+  {
+   "code": "11.04",
+   "name": "Offices",
+   "rate": 10,
+   "class": "E",
+   "findings": "site office in a clean and tidy state"
+  }
+ ],
+ "findings": [
+  {
+   "code": "1.14",
+   "name": "Toolbox Talks",
+   "rate": 5,
+   "class": "D",
+   "findings": "No recent - one needs to be done in sept",
+   "owner": "JE"
+  },
+  {
+   "code": "1.16",
+   "name": "Site Management Safety Inspections",
+   "rate": 5,
+   "class": "D",
+   "findings": "Not done",
+   "owner": "JE"
+  },
+  {
+   "code": "3.01",
+   "name": "F10 - HSE Notification",
+   "rate": 0,
+   "class": "C",
+   "findings": "ran out 6/5/25 need to contact alison to get her to do again",
+   "owner": "KLH"
+  },
+  {
+   "code": "3.04",
+   "name": "Fire Plan Layout",
+   "rate": 10,
+   "class": "D",
+   "owner": "KLH"
+  },
+  {
+   "code": "5.03",
+   "name": "Perimeter Fencing/ Hoarding",
+   "rate": 5,
+   "class": "D",
+   "findings": "Heras fencing keeps coming away from the fence, there are new fence panels being stored can these be put up"
+  },
+  {
+   "code": "8.01",
+   "name": "Scaffolding",
+   "rate": 5,
+   "class": "E",
+   "findings": "Scaffolding is in place but no scaff tags to say its been checked and no certificate to say it is safe"
+  },
+  {
+   "code": "10.03",
+   "name": "Fire Alarm Systems",
+   "rate": 5,
+   "class": "D",
+   "findings": "fire bell had come off where I was orignially needds to be put back up",
+   "owner": "JE"
+  },
+  {
+   "code": "11.01",
+   "name": "Canteen Facilities",
+   "rate": 5,
+   "class": "D",
+   "findings": "None"
+  }
+ ],
+ "actionsFromEmailThread": [
+  {
+   "source": "1.14 Toolbox Talks",
+   "action": "Run a toolbox talk in September",
+   "owner": "JE",
+   "decidedBy": "Katy-Louise audit + email 1 Sep"
+  },
+  {
+   "source": "1.16 Site Management Safety Inspections",
+   "action": "Fill out the weekly site manager sheets (site management safety inspections not done)",
+   "owner": "JE",
+   "decidedBy": "Katy-Louise email 1 Sep"
+  },
+  {
+   "source": "3.01 F10 - HSE Notification",
+   "action": "F10 lapsed 6/5/25 - contact Alison to arrange a renewed notification, or check whether it has already been done",
+   "owner": "KLH",
+   "decidedBy": "Nigel 2 Sep: 'Please contact Alison to resolve or ask if it has been done'"
+  },
+  {
+   "source": "5.03 Perimeter Fencing/ Hoarding",
+   "action": "Heras fencing keeps coming away - fit the new fence panels stored on site in its place",
+   "owner": "JE",
+   "decidedBy": "Nigel 2 Sep: 'Of course and James Everitt will sort if necessary'"
+  },
+  {
+   "source": "8.01 Scaffolding",
+   "action": "Scaffold in place but no scaff tags and no handover certificate - obtain inspection tags and certificate",
+   "owner": null,
+   "note": "no owner on the sheet; rated 5 but classed E"
+  },
+  {
+   "source": "10.03 Fire Alarm Systems",
+   "action": "Fire bell had come off - put it back up",
+   "owner": "JE",
+   "decidedBy": "Katy-Louise email 1 Sep"
+  },
+  {
+   "source": "11.01 Canteen Facilities",
+   "action": "No canteen facilities",
+   "owner": null,
+   "note": "rated 5 class D, no owner or timescale"
+  },
+  {
+   "source": "3.04 Fire Plan Layout",
+   "action": "Owner KLH, class D but rated 10 with no findings text - check with Katy what was meant",
+   "owner": "KLH"
+  }
+ ],
+ "peopleNotYetInPortal": [
+  {
+   "name": "Katy-Louise Hicks",
+   "email": "Katy-Louise.Hicks@JewelBB.co.uk",
+   "neededRole": "HealthSafetyOfficer"
+  },
+  {
+   "name": "James Everitt",
+   "email": "james.everitt@jewelps.co.uk",
+   "neededRole": "SiteManager",
+   "note": "Jewel Property Serve address, not JBB"
+  }
+ ]
+}

@@ -1,7 +1,8 @@
 @* The lead page's Estimates panel (2026-09-15): Jewel's own pricing of each enquiry on the
    lead, newest first — scope, price due, budget mentioned, total, and where it has got to. A
    plain record until the estimating workbook is in. The status pill is the move control; Add
-   and Edit are one modal. The host owns the read and refreshes it after every write. *@
+   and Edit are one modal; PDF downloads the estimate sheet, rendered from the register on every
+   click (2026-09-15). The host owns the read and refreshes it after every write. *@
 
 <Panel Title="Estimates" BodyClass="p-0">
     <HeaderActions>
@@ -20,7 +21,7 @@
                     <th class="text-right">Budget</th>
                     <th class="text-right">Total</th>
                     <th>Status</th>
-                    @if (CanWork) { <th></th> }
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -43,15 +44,15 @@
                                 <EstimateStatusPill Status="@estimate.Status" />
                             }
                         </td>
-                        @if (CanWork)
-                        {
-                            <td class="text-right">
-                                @if (estimate.Status.IsOpen())
-                                {
-                                    <button type="button" class="btn-secondary text-xs" @onclick="() => OpenEditor(estimate)">Edit</button>
-                                }
-                            </td>
-                        }
+                        <td class="text-right whitespace-nowrap">
+                            <a href="@($"/api/sales/estimates/{estimate.EstimateId}/document")"
+                               class="btn-secondary text-xs"
+                               title="The estimate sheet as a PDF — rendered from the register on every download">PDF</a>
+                            @if (CanWork && estimate.Status.IsOpen())
+                            {
+                                <button type="button" class="btn-secondary text-xs ml-1" @onclick="() => OpenEditor(estimate)">Edit</button>
+                            }
+                        </td>
                     </tr>
                 }
             </tbody>

@@ -94,6 +94,61 @@
             <Notice Tone="Tone.Positive" Class="mb-4" Dismissible="true" OnDismiss="() => xeroNote = null">@xeroNote</Notice>
         }
 
+        @* Details: what the purchase order prints and what the accounts side keys on — the address
+           block, phones, terms, CIS — painted on the page rather than hidden behind Edit details
+           (2026-09-15, the FD: a record imported from Xero with nothing on it looked complete until
+           its PO printed a blank address). Read-only here; Edit details is where they change. *@
+        <div class="panel p-4 mb-6">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-content">Details</h2>
+                <span class="text-xs text-content-subtle">Printed on this company's purchase orders — change them under Edit details</span>
+            </div>
+            <dl class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 text-sm">
+                <div class="col-span-2">
+                    <dt class="eyebrow">Address</dt>
+                    @if (AddressLines(subcontractor).Count == 0)
+                    {
+                        <dd class="text-content-subtle italic">Not recorded — the PO will print no address</dd>
+                    }
+                    else
+                    {
+                        @foreach (var line in AddressLines(subcontractor))
+                        {
+                            <dd class="text-content">@line</dd>
+                        }
+                    }
+                </div>
+                <div>
+                    <dt class="eyebrow">Phone</dt>
+                    <dd class="text-content">@OrNotRecorded(subcontractor.ContactPhone)</dd>
+                    @* Mobile and website are set at creation or import only — UpdateSubcontractor does
+                       not carry them — so they are shown when held and not advertised as blanks. *@
+                    @if (!string.IsNullOrWhiteSpace(subcontractor.MobileNumber))
+                    {
+                        <dt class="eyebrow mt-2">Mobile</dt>
+                        <dd class="text-content">@subcontractor.MobileNumber</dd>
+                    }
+                </div>
+                <div>
+                    <dt class="eyebrow">Payment terms</dt>
+                    <dd class="text-content">@subcontractor.PaymentTermsDays days</dd>
+                    <dt class="eyebrow mt-2">CIS status</dt>
+                    <dd class="text-content">@OrNotRecorded(subcontractor.CisStatus)</dd>
+                </div>
+                <div class="col-span-2">
+                    <dt class="eyebrow">Category</dt>
+                    <dd class="text-content">@subcontractor.Category</dd>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(subcontractor.Website))
+                {
+                    <div class="col-span-2">
+                        <dt class="eyebrow">Website</dt>
+                        <dd class="text-content truncate"><a class="underline underline-offset-4" href="@WebsiteHref(subcontractor.Website)" target="_blank" rel="noopener">@subcontractor.Website</a></dd>
+                    </div>
+                }
+            </dl>
+        </div>
+
         @* Trades are managed here: each is a chip from the curated list, so when a company changes
            what it does (no longer a bricklayer, now a hod carrier) the record is updated in place. *@
         <div class="panel p-4 mb-6">

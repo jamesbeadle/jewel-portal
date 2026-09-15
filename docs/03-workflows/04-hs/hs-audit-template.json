@@ -1,0 +1,1074 @@
+{
+ "name": "H&S Inspection Report Framework",
+ "source": "H&S Inspection Report Framework 27 aug 26.xlsm (Katy-Louise Hicks, sheet ReportForm)",
+ "templateVersion": "2026-08-27",
+ "header": {
+  "fields": [
+   "siteName",
+   "siteLocation",
+   "siteManager",
+   "safetyOfficer",
+   "safetyDirector",
+   "projectManager",
+   "contractsManager",
+   "inspectionDate",
+   "serialNo",
+   "typeOfReport",
+   "jobNo",
+   "contractEndDate",
+   "previousAuditScore",
+   "summaryOfWorkActivities",
+   "customerResponsibility",
+   "principalContractor",
+   "contractor",
+   "siteOperativeCount"
+  ],
+  "typeOfReport": [
+   "Initial",
+   "Routine",
+   "Follow-Up",
+   "Final",
+   "Other"
+  ]
+ },
+ "keys": {
+  "rate": {
+   "0": "Not in place or poor quality",
+   "5": "In place and of good quality and 1 week out of date",
+   "10": "In place and of good quality and up to date"
+  },
+  "class": {
+   "A": "Major hazard / non-compliance / potential prosecution (-25%)",
+   "B": "Major hazard / non-compliance / potential prohibition notice (-15%)",
+   "C": "Intermediate hazard / non-compliance / potential improvement notice (-5%)",
+   "D": "Minor hazard / non-compliance (-1%)",
+   "E": "Full compliance (no penalty)"
+  },
+  "timeScale": {
+   "I": "Immediately",
+   "1": "Within 24 hours",
+   "3": "Within 3 days",
+   "7": "Within 7 days",
+   "1M": "1 month",
+   "O": "Ongoing"
+  },
+  "comment": {
+   "N/A": "Not applicable",
+   "N": "Note",
+   "N/C": "Not checked",
+   "N/S": "Not seen / available",
+   "R": "Repeat (to be scored lower class than previous & 5% deduction)"
+  },
+  "overallRating": [
+   {
+    "band": "Poor (Report Required)",
+    "min": 0,
+    "max": 0.6999
+   },
+   {
+    "band": "Fair",
+    "min": 0.7,
+    "max": 0.8499
+   },
+   {
+    "band": "Good",
+    "min": 0.85,
+    "max": 0.9499
+   },
+   {
+    "band": "Very Good",
+    "min": 0.95,
+    "max": 1
+   }
+  ]
+ },
+ "scoring": {
+  "rule": "score = max(0, (sum(rate) - sum(minus)) / (count(rated items) * 10)); unrated rows (blank rate) are excluded from the denominator; class penalties in the key are NOT applied automatically - the Minus column is entered by hand (decision 2026-09-15: match the spreadsheet)",
+  "formula": "=IFERROR(MAX(0,(SUM(F29:F220)-SUM(H29:H220))/(COUNT(F29:F220)*10)),\"\")"
+ },
+ "itemColumns": [
+  "comment",
+  "rate",
+  "class",
+  "minus",
+  "timeScale",
+  "findings",
+  "owner",
+  "dateRectified"
+ ],
+ "sections": [
+  {
+   "number": 1,
+   "name": "Documentation"
+  },
+  {
+   "number": 2,
+   "name": "Temporary Works"
+  },
+  {
+   "number": 3,
+   "name": "Notices & Posters"
+  },
+  {
+   "number": 4,
+   "name": "Specific Training"
+  },
+  {
+   "number": 5,
+   "name": "General"
+  },
+  {
+   "number": 6,
+   "name": "Environment"
+  },
+  {
+   "number": 7,
+   "name": "Work Activities"
+  },
+  {
+   "number": 8,
+   "name": "Working at Heights"
+  },
+  {
+   "number": 9,
+   "name": "Traffic Management"
+  },
+  {
+   "number": 10,
+   "name": "Fire & Emergency"
+  },
+  {
+   "number": 11,
+   "name": "Offices and Welfare"
+  }
+ ],
+ "items": [
+  {
+   "code": "1.01",
+   "section": 1,
+   "name": "Health & Safety Plan"
+  },
+  {
+   "code": "1.02",
+   "section": 1,
+   "name": "General Risk Assesments"
+  },
+  {
+   "code": "1.03",
+   "section": 1,
+   "name": "Method Statements"
+  },
+  {
+   "code": "1.04",
+   "section": 1,
+   "name": "Method Statement Review Checklist"
+  },
+  {
+   "code": "1.05",
+   "section": 1,
+   "name": "CoSHH Assesments"
+  },
+  {
+   "code": "1.06",
+   "section": 1,
+   "name": "Other Risk Assesments"
+  },
+  {
+   "code": "1.07",
+   "section": 1,
+   "name": "Lifting Plans"
+  },
+  {
+   "code": "1.08",
+   "section": 1,
+   "name": "Briefing Registers"
+  },
+  {
+   "code": "1.09",
+   "section": 1,
+   "name": "Test Certificates"
+  },
+  {
+   "code": "1.10",
+   "section": 1,
+   "name": "Inspection Records"
+  },
+  {
+   "code": "1.11",
+   "section": 1,
+   "name": "Permits to Work"
+  },
+  {
+   "code": "1.12",
+   "section": 1,
+   "name": "Certificates of Competence"
+  },
+  {
+   "code": "1.13",
+   "section": 1,
+   "name": "Induction Training"
+  },
+  {
+   "code": "1.14",
+   "section": 1,
+   "name": "Toolbox Talks"
+  },
+  {
+   "code": "1.15",
+   "section": 1,
+   "name": "Safety Advisor Inspection/ Audit"
+  },
+  {
+   "code": "1.16",
+   "section": 1,
+   "name": "Site Management Safety Inspections"
+  },
+  {
+   "code": "1.17",
+   "section": 1,
+   "name": "Contractor Safety Inspections"
+  },
+  {
+   "code": "1.18",
+   "section": 1,
+   "name": "Emergency Procedures"
+  },
+  {
+   "code": "1.19",
+   "section": 1,
+   "name": "Visitors/ Contracts Register (PC Only)"
+  },
+  {
+   "code": "1.20",
+   "section": 1,
+   "name": "PPI Issue/ Held Records"
+  },
+  {
+   "code": "1.21",
+   "section": 1,
+   "name": "Vibration Exposure Records"
+  },
+  {
+   "code": "1.22",
+   "section": 1,
+   "name": "Isolation Procedures"
+  },
+  {
+   "code": "1.23",
+   "section": 1,
+   "name": "Daily Briefing Sheets"
+  },
+  {
+   "code": "1.24",
+   "section": 1,
+   "name": "Health Assesment Questionairre"
+  },
+  {
+   "code": "1.25",
+   "section": 1,
+   "name": "Accident Records"
+  },
+  {
+   "code": "2.01",
+   "section": 2,
+   "name": "TW Designs"
+  },
+  {
+   "code": "2.02",
+   "section": 2,
+   "name": "TWC/ TWS in Place"
+  },
+  {
+   "code": "2.03",
+   "section": 2,
+   "name": "TW Maintenance & Inspections"
+  },
+  {
+   "code": "2.04",
+   "section": 2,
+   "name": "TW Registers"
+  },
+  {
+   "code": "2.05",
+   "section": 2,
+   "name": "TW Permits"
+  },
+  {
+   "code": "2.06",
+   "section": 2,
+   "name": "Record of Appointments"
+  },
+  {
+   "code": "3.01",
+   "section": 3,
+   "name": "F10 - HSE Notification"
+  },
+  {
+   "code": "3.02",
+   "section": 3,
+   "name": "Health & Safety Law Poster"
+  },
+  {
+   "code": "3.03",
+   "section": 3,
+   "name": "Traffic Management Plan"
+  },
+  {
+   "code": "3.04",
+   "section": 3,
+   "name": "Fire Plan Layout"
+  },
+  {
+   "code": "3.05",
+   "section": 3,
+   "name": "First Aid Notices/ Signs"
+  },
+  {
+   "code": "3.06",
+   "section": 3,
+   "name": "Other Notices and Posters"
+  },
+  {
+   "code": "4.01",
+   "section": 4,
+   "name": "Manager/ Supervisor Training"
+  },
+  {
+   "code": "4.02",
+   "section": 4,
+   "name": "Lifting Operations"
+  },
+  {
+   "code": "4.03",
+   "section": 4,
+   "name": "Mobile Plant Operations"
+  },
+  {
+   "code": "4.04",
+   "section": 4,
+   "name": "Temporary Works"
+  },
+  {
+   "code": "4.05",
+   "section": 4,
+   "name": "Traffic Management"
+  },
+  {
+   "code": "4.06",
+   "section": 4,
+   "name": "Access Equipment"
+  },
+  {
+   "code": "4.07",
+   "section": 4,
+   "name": "Confined Spaces"
+  },
+  {
+   "code": "4.08",
+   "section": 4,
+   "name": "Abrasive Wheels"
+  },
+  {
+   "code": "4.09",
+   "section": 4,
+   "name": "Harness"
+  },
+  {
+   "code": "4.10",
+   "section": 4,
+   "name": "First Aid Training"
+  },
+  {
+   "code": "4.11",
+   "section": 4,
+   "name": "Fire Safety Training"
+  },
+  {
+   "code": "4.12",
+   "section": 4,
+   "name": "Asbestos Awareness/ Management"
+  },
+  {
+   "code": "4.13",
+   "section": 4,
+   "name": "NRSWA"
+  },
+  {
+   "code": "4.14",
+   "section": 4,
+   "name": "CAT & Genny"
+  },
+  {
+   "code": "4.15",
+   "section": 4,
+   "name": "Face Fit Testing"
+  },
+  {
+   "code": "5.01",
+   "section": 5,
+   "name": "General Housekeeping"
+  },
+  {
+   "code": "5.02",
+   "section": 5,
+   "name": "Site Access/ Egress"
+  },
+  {
+   "code": "5.03",
+   "section": 5,
+   "name": "Perimeter Fencing/ Hoarding"
+  },
+  {
+   "code": "5.04",
+   "section": 5,
+   "name": "Internal Exclusion Zones"
+  },
+  {
+   "code": "5.05",
+   "section": 5,
+   "name": "General Site Signage"
+  },
+  {
+   "code": "5.06",
+   "section": 5,
+   "name": "Protection of the Public"
+  },
+  {
+   "code": "5.07",
+   "section": 5,
+   "name": "Storage of Materials"
+  },
+  {
+   "code": "5.08",
+   "section": 5,
+   "name": "Storage of Tools"
+  },
+  {
+   "code": "5.09",
+   "section": 5,
+   "name": "CoSHH - Handling/ Storage"
+  },
+  {
+   "code": "5.10",
+   "section": 5,
+   "name": "Flammable Gas & Liquid Storage/ Use"
+  },
+  {
+   "code": "5.11",
+   "section": 5,
+   "name": "Lifting Equipment"
+  },
+  {
+   "code": "5.12",
+   "section": 5,
+   "name": "Mobile Work Equipment"
+  },
+  {
+   "code": "5.13",
+   "section": 5,
+   "name": "Other Work Equipment"
+  },
+  {
+   "code": "5.14",
+   "section": 5,
+   "name": "Electrical Systems"
+  },
+  {
+   "code": "5.15",
+   "section": 5,
+   "name": "Underground Services"
+  },
+  {
+   "code": "5.16",
+   "section": 5,
+   "name": "Overhead Services/ Obstacles"
+  },
+  {
+   "code": "5.17",
+   "section": 5,
+   "name": "Excavation Safety"
+  },
+  {
+   "code": "5.18",
+   "section": 5,
+   "name": "Ponds, Lagoons, other Watercourses"
+  },
+  {
+   "code": "5.19",
+   "section": 5,
+   "name": "Floor/ Ground Conditions/ Voids"
+  },
+  {
+   "code": "5.20",
+   "section": 5,
+   "name": "Lighting - Access/ Task"
+  },
+  {
+   "code": "5.21",
+   "section": 5,
+   "name": "Cables/ Hose Management"
+  },
+  {
+   "code": "5.22",
+   "section": 5,
+   "name": "Personal Protective Equipment"
+  },
+  {
+   "code": "5.23",
+   "section": 5,
+   "name": "Dust and Fume Control"
+  },
+  {
+   "code": "5.24",
+   "section": 5,
+   "name": "Control of Noise"
+  },
+  {
+   "code": "5.25",
+   "section": 5,
+   "name": "Control of Vibration"
+  },
+  {
+   "code": "5.26",
+   "section": 5,
+   "name": "Stockpile and Tips"
+  },
+  {
+   "code": "5.27",
+   "section": 5,
+   "name": "Guarding"
+  },
+  {
+   "code": "5.28",
+   "section": 5,
+   "name": "Protection of Protruding Items"
+  },
+  {
+   "code": "5.29",
+   "section": 5,
+   "name": "Restricted Areas"
+  },
+  {
+   "code": "5.30",
+   "section": 5,
+   "name": "Fixtures and Fittings"
+  },
+  {
+   "code": "5.31",
+   "section": 5,
+   "name": "Asbestos Containing Materials"
+  },
+  {
+   "code": "5.32",
+   "section": 5,
+   "name": "Ventilation/ Extraction"
+  },
+  {
+   "code": "6.01",
+   "section": 6,
+   "name": "Permits & Licences"
+  },
+  {
+   "code": "6.02",
+   "section": 6,
+   "name": "Waste Management"
+  },
+  {
+   "code": "6.03",
+   "section": 6,
+   "name": "Avoidance of Pollution & Nuisance"
+  },
+  {
+   "code": "6.04",
+   "section": 6,
+   "name": "Fuel/ Oil Storage/ Bunds"
+  },
+  {
+   "code": "6.05",
+   "section": 6,
+   "name": "Spill Kits Available"
+  },
+  {
+   "code": "6.06",
+   "section": 6,
+   "name": "Emissions and Discharges"
+  },
+  {
+   "code": "6.07",
+   "section": 6,
+   "name": "External Roads Clean and Unaffected"
+  },
+  {
+   "code": "6.08",
+   "section": 6,
+   "name": "Site Litter Free"
+  },
+  {
+   "code": "6.09",
+   "section": 6,
+   "name": "Flora, Fauna, Wildlife Protection"
+  },
+  {
+   "code": "6.10",
+   "section": 6,
+   "name": "Contaminated Land Control"
+  },
+  {
+   "code": "6.11",
+   "section": 6,
+   "name": "General Appearance of the Site"
+  },
+  {
+   "code": "7.01",
+   "section": 7,
+   "name": "Manual Handling"
+  },
+  {
+   "code": "7.02",
+   "section": 7,
+   "name": "Mechanical Handling (not crane)"
+  },
+  {
+   "code": "7.03",
+   "section": 7,
+   "name": "Crane Operations"
+  },
+  {
+   "code": "7.04",
+   "section": 7,
+   "name": "Loading/ Unloading of Materials"
+  },
+  {
+   "code": "7.05",
+   "section": 7,
+   "name": "Excavating/ Earthworks"
+  },
+  {
+   "code": "7.06",
+   "section": 7,
+   "name": "Plant & Machinery Operations"
+  },
+  {
+   "code": "7.07",
+   "section": 7,
+   "name": "Demolition/ Strip Out"
+  },
+  {
+   "code": "7.08",
+   "section": 7,
+   "name": "Crushing/ Screening/ Batching Operations"
+  },
+  {
+   "code": "7.09",
+   "section": 7,
+   "name": "Steel Framework"
+  },
+  {
+   "code": "7.10",
+   "section": 7,
+   "name": "Falsework/ Formwork"
+  },
+  {
+   "code": "7.11",
+   "section": 7,
+   "name": "Steel Fixing"
+  },
+  {
+   "code": "7.12",
+   "section": 7,
+   "name": "Concreting Operations"
+  },
+  {
+   "code": "7.13",
+   "section": 7,
+   "name": "Asbestos Management"
+  },
+  {
+   "code": "7.14",
+   "section": 7,
+   "name": "Welding/ Cutting/ Grinding Operations"
+  },
+  {
+   "code": "7.15",
+   "section": 7,
+   "name": "Drylining & Plastering"
+  },
+  {
+   "code": "7.16",
+   "section": 7,
+   "name": "Working Over or Near Water"
+  },
+  {
+   "code": "7.17",
+   "section": 7,
+   "name": "Confined Spaces"
+  },
+  {
+   "code": "7.18",
+   "section": 7,
+   "name": "Lone Working"
+  },
+  {
+   "code": "7.19",
+   "section": 7,
+   "name": "Glass & Glazing"
+  },
+  {
+   "code": "7.20",
+   "section": 7,
+   "name": "Paving (Blocks, Slabs, Tarmac, etc)"
+  },
+  {
+   "code": "7.21",
+   "section": 7,
+   "name": "Piling Operations"
+  },
+  {
+   "code": "7.22",
+   "section": 7,
+   "name": "Electrical Works"
+  },
+  {
+   "code": "7.23",
+   "section": 7,
+   "name": "Drainage Works"
+  },
+  {
+   "code": "7.24",
+   "section": 7,
+   "name": "Gas Works (inc. Plumbing & Heating)"
+  },
+  {
+   "code": "7.25",
+   "section": 7,
+   "name": "Brickwork and Blockwork"
+  },
+  {
+   "code": "7.26",
+   "section": 7,
+   "name": "Carpenty"
+  },
+  {
+   "code": "7.27",
+   "section": 7,
+   "name": "Cladding (incl. Fitting of Roller Doors)"
+  },
+  {
+   "code": "7.28",
+   "section": 7,
+   "name": "Fencing Operations"
+  },
+  {
+   "code": "7.29",
+   "section": 7,
+   "name": "Maintenance Activities"
+  },
+  {
+   "code": "7.30",
+   "section": 7,
+   "name": "Roofwork"
+  },
+  {
+   "code": "7.31",
+   "section": 7,
+   "name": "Decorations (Internal & External)"
+  },
+  {
+   "code": "7.32",
+   "section": 7,
+   "name": "Stonework"
+  },
+  {
+   "code": "7.33",
+   "section": 7,
+   "name": "Internal Fit-Out"
+  },
+  {
+   "code": "7.34",
+   "section": 7,
+   "name": "Ceilings"
+  },
+  {
+   "code": "7.35",
+   "section": 7,
+   "name": "Landscaping Operations"
+  },
+  {
+   "code": "7.36",
+   "section": 7,
+   "name": "Temporary Works"
+  },
+  {
+   "code": "7.37",
+   "section": 7,
+   "name": "Waterproofing"
+  },
+  {
+   "code": "7.38",
+   "section": 7,
+   "name": "Mechanical Works"
+  },
+  {
+   "code": "7.39",
+   "section": 7,
+   "name": "Water Treatment Works"
+  },
+  {
+   "code": "7.40",
+   "section": 7,
+   "name": "Installationg of Pre Cast Elements"
+  },
+  {
+   "code": "7.41",
+   "section": 7,
+   "name": "Production Activities"
+  },
+  {
+   "code": "7.42",
+   "section": 7,
+   "name": "General Labouring"
+  },
+  {
+   "code": "7.43",
+   "section": 7,
+   "name": "Installation of Insulation Materials"
+  },
+  {
+   "code": "7.44",
+   "section": 7,
+   "name": "Cooking & Other Kitchen Activities"
+  },
+  {
+   "code": "7.45",
+   "section": 7,
+   "name": "Flooring (Tiles, Carpets, Screed, etc.)"
+  },
+  {
+   "code": "7.46",
+   "section": 7,
+   "name": "Installation of Fire Safety Systems"
+  },
+  {
+   "code": "7.47",
+   "section": 7,
+   "name": "Membrane Installation (Gas/ Water)"
+  },
+  {
+   "code": "7.48",
+   "section": 7,
+   "name": "Lift Installation/ Maintenance"
+  },
+  {
+   "code": "7.49",
+   "section": 7,
+   "name": "Underpinning Work"
+  },
+  {
+   "code": "7.50",
+   "section": 7,
+   "name": "UXO Surveys/ Removal"
+  },
+  {
+   "code": "7.51",
+   "section": 7,
+   "name": "Shotblasting/ Sandblasting"
+  },
+  {
+   "code": "8.01",
+   "section": 8,
+   "name": "Scaffolding"
+  },
+  {
+   "code": "8.02",
+   "section": 8,
+   "name": "MEWPs"
+  },
+  {
+   "code": "8.03",
+   "section": 8,
+   "name": "Mobile Towers/ Podiums"
+  },
+  {
+   "code": "8.04",
+   "section": 8,
+   "name": "Ladders/ Stepladders"
+  },
+  {
+   "code": "8.05",
+   "section": 8,
+   "name": "Hop Ups/ Other Platforms"
+  },
+  {
+   "code": "8.06",
+   "section": 8,
+   "name": "Edge/ Opening Protection"
+  },
+  {
+   "code": "8.07",
+   "section": 8,
+   "name": "Safety Nets/ Air Bags/ Soft Landing Systems"
+  },
+  {
+   "code": "8.08",
+   "section": 8,
+   "name": "Fall Restraint/ Fall Arrest"
+  },
+  {
+   "code": "8.09",
+   "section": 8,
+   "name": "Fragile Materials"
+  },
+  {
+   "code": "8.10",
+   "section": 8,
+   "name": "Falling Objects"
+  },
+  {
+   "code": "8.11",
+   "section": 8,
+   "name": "Lorries & Trailers"
+  },
+  {
+   "code": "9.01",
+   "section": 9,
+   "name": "Clearly Defined Routes"
+  },
+  {
+   "code": "9.02",
+   "section": 9,
+   "name": "Vehicles/ Pedestrian Segregation"
+  },
+  {
+   "code": "9.03",
+   "section": 9,
+   "name": "Plant/ Vehicle Movements"
+  },
+  {
+   "code": "9.04",
+   "section": 9,
+   "name": "Parking/ (Private/ Site Vehicles)"
+  },
+  {
+   "code": "9.05",
+   "section": 9,
+   "name": "Safe Loading/ Unloading Areas"
+  },
+  {
+   "code": "9.06",
+   "section": 9,
+   "name": "Pedestrian Crossing Points"
+  },
+  {
+   "code": "9.07",
+   "section": 9,
+   "name": "Restrictions and Speed Limits"
+  },
+  {
+   "code": "9.08",
+   "section": 9,
+   "name": "Deliveries and Collections"
+  },
+  {
+   "code": "9.09",
+   "section": 9,
+   "name": "Use of Banksmen"
+  },
+  {
+   "code": "10.01",
+   "section": 10,
+   "name": "First Aid Arrangements"
+  },
+  {
+   "code": "10.02",
+   "section": 10,
+   "name": "Fire Points"
+  },
+  {
+   "code": "10.03",
+   "section": 10,
+   "name": "Fire Alarm Systems"
+  },
+  {
+   "code": "10.04",
+   "section": 10,
+   "name": "Fire Prevention Measures"
+  },
+  {
+   "code": "10.05",
+   "section": 10,
+   "name": "Emergency Exits/ Escape Routes"
+  },
+  {
+   "code": "10.06",
+   "section": 10,
+   "name": "Emergency Lighting"
+  },
+  {
+   "code": "10.07",
+   "section": 10,
+   "name": "Assembly Points"
+  },
+  {
+   "code": "10.08",
+   "section": 10,
+   "name": "Control of Smoking"
+  },
+  {
+   "code": "10.09",
+   "section": 10,
+   "name": "Temporary Accomodation"
+  },
+  {
+   "code": "10.10",
+   "section": 10,
+   "name": "Temporary Coverings"
+  },
+  {
+   "code": "10.11",
+   "section": 10,
+   "name": "Heaters and Cooking Appliances"
+  },
+  {
+   "code": "10.12",
+   "section": 10,
+   "name": "Other Emergency Procedures"
+  },
+  {
+   "code": "11.01",
+   "section": 11,
+   "name": "Canteen Facilities"
+  },
+  {
+   "code": "11.02",
+   "section": 11,
+   "name": "Toilets & Washing Facilities"
+  },
+  {
+   "code": "11.03",
+   "section": 11,
+   "name": "Drying/ Changing Rooms"
+  },
+  {
+   "code": "11.04",
+   "section": 11,
+   "name": "Offices"
+  }
+ ],
+ "footer": {
+  "accidentNearMissReview": {
+   "rows": 5,
+   "columns": [
+    "date",
+    "explanation",
+    "safetyConsultantComments"
+   ]
+  },
+  "furtherComments": true,
+  "declarations": [
+   "Safety Officer: I confirm that this report is a true reflection of the condition of the site and the works being undertaken during my visit",
+   "Safety Officer: I confirm that the findings of this safety report have been explained to the Manager/ Supervisor and that they have signed a Safety Inspection Declaration",
+   "Manager/ Supervisor: I confirm that the actions from the report have been completed to a satisfactory standard (name, position, signature, date)"
+  ]
+ },
+ "archiveMacro": "Archive_Submit_Clear_Final copies the header (site, manager, score, previous score, date) and every item row with a Time-Scale into sheet H&S_Archive, then clears the form"
+}

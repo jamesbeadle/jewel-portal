@@ -140,6 +140,23 @@ public partial class SubcontractorDetail
 
     public void Dispose() => SubcontractorStore.OnChange -= HandleChange;
 
+    // The Details panel's helpers. The address is the same letter block the PO prints: street
+    // line(s), town, county, postcode — blanks dropped, so a record with only a postcode shows
+    // one line rather than three empty ones.
+    private static IReadOnlyList<string> AddressLines(Subcontractor sub) =>
+        new[] { sub.AddressLine, sub.Town, sub.County, sub.Postcode }
+            .SelectMany(part => part.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .Where(part => !string.IsNullOrWhiteSpace(part))
+            .ToList();
+
+    private static string OrNotRecorded(string value) =>
+        string.IsNullOrWhiteSpace(value) ? "Not recorded" : value;
+
+    private static string WebsiteHref(string website) =>
+        website.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || website.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            ? website
+            : "https://" + website;
+
     private static string ContactLine(Subcontractor sub) =>
         string.Join(" · ", new[] { sub.TradesLabel, sub.ContactName, sub.ContactEmail }.Where(x => !string.IsNullOrWhiteSpace(x)));
 

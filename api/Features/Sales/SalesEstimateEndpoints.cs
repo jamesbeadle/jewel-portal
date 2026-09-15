@@ -23,6 +23,9 @@ public sealed partial class SalesEstimateEndpoints
     private readonly MoveEstimateStatusAuthorisation moveAuthorisation;
     private readonly MoveEstimateStatusValidation moveValidation;
     private readonly ICommandHandler<MoveEstimateStatus, LeadEstimate> move;
+    // The PDF sheet (SalesEstimateEndpoints.Document) reads the estimate and its lead straight
+    // from the register — no command, nothing stored.
+    private readonly JpmsContext context;
 
     public SalesEstimateEndpoints(
         SignedInUserResolver users,
@@ -36,8 +39,10 @@ public sealed partial class SalesEstimateEndpoints
         ICommandHandler<UpdateEstimateDetails, LeadEstimate> update,
         MoveEstimateStatusAuthorisation moveAuthorisation,
         MoveEstimateStatusValidation moveValidation,
-        ICommandHandler<MoveEstimateStatus, LeadEstimate> move)
+        ICommandHandler<MoveEstimateStatus, LeadEstimate> move,
+        JpmsContext context)
     {
+        this.context = context;
         this.users = users; this.auditActor = auditActor; this.get = get;
         this.createAuthorisation = createAuthorisation; this.createValidation = createValidation; this.create = create;
         this.updateAuthorisation = updateAuthorisation; this.updateValidation = updateValidation; this.update = update;
