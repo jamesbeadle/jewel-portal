@@ -574,6 +574,20 @@ finds drift.
   (`tenderList[].recipientId — never the company name`), not "the recipient list". Code:
   `AiRecordTools.BidPackageContext.cs` + `BidPackageContextReads.cs`; pinned by
   `BidPackageContext_handsOverTheIdsItsActionsTake`.
+- **Every lookup a create needs is a read tool, and a name in a note is a promise** (2026-09-15,
+  the accountant raising a work order on a supplier not yet in the directory). The assistant
+  stalled twice on a lookup, not a write: `add_subcontractor_to_directory`'s notes said
+  "tradeIds come from list_trades" and no such tool existed, and `import_xero_supplier` wanted a
+  Xero ContactID the model could only get by asking the user to paste it from Xero's URL — the
+  contact list was there all along under `list_xero_customers`, named for a different job.
+  From where the model sits a dangling name IS "the portal cannot", so it reports exactly that.
+  Now: `list_trades` (Masters, all internal roles) and `list_xero_suppliers` (the Import-from-Xero
+  modal's own view — ContactID, `alreadyImported`, name-matching directory record — same gate as
+  the import) exist, the import/link notes send the model to them, and
+  `EveryToolOrActionACatalogueTextNames_exists` fails the build when any tool description, action
+  description, note or input schema names a snake_case tool or action that does not resolve. Write
+  the read first, then the note that names it — and name a read for the job the model will be
+  doing when it needs it (`list_xero_suppliers`, not "use list_xero_customers with a flag").
 
 ## The sales invoice raised in Xero from the claim card (api + jpms)
 

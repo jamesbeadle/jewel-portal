@@ -42,7 +42,8 @@ actions take), `list_work_orders` / `get_work_order_context`, `list_todos` /
 / `list_document_triage`, `get_programme`, `list_progress`,
 `get_building_control`, `list_architect_instructions`, `list_calendar_events`,
 `list_project_communications`, `get_project_contract`, `list_cost_codes` /
-`get_cost_code_budgets`, `list_useful_information`, `list_clients` /
+`get_cost_code_budgets` / `list_trades` (the master trade list — the tradeIds
+`add_subcontractor_to_directory` needs), `list_useful_information`, `list_clients` /
 `list_architects` / `search_directory` / `list_unlinked_directory_records` /
 `list_compliance_register` / `list_workers` / `list_portal_users` /
 `list_company_registers` / `list_rates`, the valuation set
@@ -52,6 +53,8 @@ actions take), `list_work_orders` / `get_work_order_context`, `list_todos` /
 set (`get_weekly_cashflow_grid` / `get_weekly_cashflow_plan`,
 `get_aged_payables` / `get_aged_receivables`, `list_xero_ledger_lines`,
 `get_xero_mappings`, `get_xero_cost_code_option_gaps`, `list_xero_customers`,
+`list_xero_suppliers` (every Xero contact with its ContactID and whether the
+directory already has it — where `import_xero_supplier` gets its id),
 `preview_xero_contact_push`, `get_package_reconciliation`), labour
 (`view_labour_week`, `view_labour_chase`, `view_worker_month`,
 `view_settlement_month`), mailbox (`list_triage_queue`, `search_mailbox`,

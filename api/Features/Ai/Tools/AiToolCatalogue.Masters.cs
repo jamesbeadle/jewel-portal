@@ -40,6 +40,30 @@ public static partial class AiToolCatalogue
                     return Serialise(new { ok = true, count = codes.Count, costCodes = codes });
                 }),
             new(
+                "list_trades",
+                "The curated master trade list — every trade with its tradeId and name, as the Admin → "
+                + "Trades page shows it. tradeIds are what add_subcontractor_to_directory and "
+                + "update_subcontractor take (a subcontractor or supplier must carry at least one) and "
+                + "what rename_trade / delete_trade act on. Call this before any of those and only ever "
+                + "send a tradeId returned here — never guess one and never send a trade name in its "
+                + "place. (A bid package's trade is a name snapshot, not an id — spell it as listed here.) "
+                + "If the trade the user means is not on the list, add_trade mints it, after checking a "
+                + "near-match isn't already here under a different spelling.",
+                AiToolSchema.Empty(),
+                AiToolKind.Read,
+                // Mirrors ListTradesEndpoint (GET /api/trades): internal reference data, all internal roles.
+                JpmsRoleSets.AllInternal,
+                async (context, _, ct) =>
+                {
+                    var trades = await context.Db.Trades
+                        .AsNoTracking()
+                        .OrderBy(row => row.Name)
+                        .Select(row => new { tradeId = row.TradeId, name = row.Name })
+                        .ToListAsync(ct);
+
+                    return Serialise(new { ok = true, count = trades.Count, trades });
+                }),
+            new(
                 "get_xero_cost_code_option_gaps",
                 "The drift between the portal's cost-code master and Xero's \"Cost Code\" tracking "
                 + "category, read fresh from Xero: which active portal codes have NO option in Xero "

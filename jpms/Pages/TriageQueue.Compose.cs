@@ -235,9 +235,13 @@ public partial class TriageQueue
     // DoApplyAll, exactly like MissingDecisionNames, so the two can never drift and a new
     // project-bound staging is one line here. Record picks count only when the picked record
     // carries a project (the record-less communication registers, company-wide to-dos and leads
-    // don't — they file without one by design); the staged create is listed so its "needs a
-    // project" reads next to the button instead of leaving Apply silently disabled — unless it
-    // is a lead, which never has one.
+    // don't — they file without one by design), and the thread's existing tags by the same
+    // rule once they have been resolved (threadTagsNameAProject, 2026-09-15: a reply on a
+    // lead's LD-#### thread files to the lead with no project, exactly as picking the lead
+    // would — before this the gate counted any inherited tag as a project's and the Sales
+    // pane could never apply with Use existing tags = Yes); the staged create is listed so its
+    // "needs a project" reads next to the button instead of leaving Apply silently disabled —
+    // unless it is a lead, which never has one.
     private List<ProjectNeed> ProjectNeeds()
     {
         var needs = new List<ProjectNeed>();
@@ -245,7 +249,7 @@ public partial class TriageQueue
             needs.Add(new("a Relevant Event for the Programme", "answer No to Relevant Event"));
         if (stagedDocControlIds.Count > 0)
             needs.Add(new(stagedDocControlIds.Count == 1 ? "an attachment for Document Triage" : "attachments for Document Triage", "untick them"));
-        if (useThreadTags == true && SelectedThreadTags.Count > 0)
+        if (useThreadTags == true && SelectedThreadTags.Count > 0 && threadTagsNameAProject != false)
             needs.Add(new("the thread's existing tags", "answer No to Use existing tags"));
         if (pickedRecords.Any(record => !string.IsNullOrWhiteSpace(record.ProjectId)))
             needs.Add(new(pickedRecords.Count == 1 ? "the picked record" : "the picked records", "unpick them"));

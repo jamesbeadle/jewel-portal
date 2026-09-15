@@ -186,6 +186,7 @@ public partial class TriageQueue
         relevantEventStaged = null;
         triageEntireThread = null;
         useThreadTags = null;
+        threadTagsNameAProject = null; // re-classified for the new email by TryPrefillProjectFromEmailAsync
         // The document-triage ticks are drafted against ONE email's attachments — leaving them
         // across a selection change would send another email's attachment ids against this
         // message. Parked above, reset here, restored below like every other per-email draft.

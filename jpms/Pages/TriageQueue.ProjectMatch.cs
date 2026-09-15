@@ -37,6 +37,15 @@ public partial class TriageQueue
         await LoadLinkRecordsAsync();
     }
 
+    // Whether the open email's thread tags name any PROJECT's record — what the project gate
+    // needs to know before it insists on a project for "Use existing tags" (2026-09-15: a lead's
+    // enquiry thread carries only LD-0001, a company-wide record, and the gate refused to apply
+    // until a project was set that the lead could never have). Null = not known: no tags, the
+    // classification hasn't run for this email, or the live resolve failed — the gate then
+    // asks for a project as before, and the apply's own check settles it. Set by
+    // ProjectFromThreadTagsAsync, which already resolves the stems; reset per selection.
+    private bool? threadTagsNameAProject;
+
     // The project the chain's existing record tags name, or null when they name none or more than
     // one. Project-referenced stems ("JBB-2026-002-RFI-017", the programme bucket "SCH-JBB-2026-002")
     // are read off the project list here; any other record stems (to-dos, bid packages…) are
@@ -44,6 +53,7 @@ public partial class TriageQueue
     // failure here is simply "no opinion", never an error toast on opening an email.
     private async Task<string?> ProjectFromThreadTagsAsync(MailboxMessage anchor)
     {
+        threadTagsNameAProject = null;
         var stems = thread.Prepend(anchor)
             .SelectMany(member => member.Categories)
             .Select(TriageEmailDisplay.TagLabel)
@@ -60,6 +70,8 @@ public partial class TriageQueue
             if (byReference is not null) projectIds.Add(byReference.ProjectId);
             else unresolved.Add(stem);
         }
+        // A project-referenced stem answers the gate's question outright, whatever the rest say.
+        if (projectIds.Count > 0) threadTagsNameAProject = true;
 
         if (unresolved.Count > 0)
         {
@@ -71,11 +83,18 @@ public partial class TriageQueue
                 if (!ReferenceEquals(selected, anchor)) return null;
                 foreach (var record in records)
                     if (!string.IsNullOrWhiteSpace(record.ProjectId)) projectIds.Add(record.ProjectId);
+                // Every stem is now accounted for: the gate can trust a "no" — the thread's tags
+                // are company-wide records only (a lead, a to-do with no project).
+                threadTagsNameAProject = projectIds.Count > 0;
             }
             catch
             {
                 // No opinion from the tags — fall through to whatever the references alone said.
             }
+        }
+        else
+        {
+            threadTagsNameAProject = projectIds.Count > 0;
         }
 
         return projectIds.Count == 1 ? projectIds.First() : null;

@@ -147,8 +147,11 @@ internal sealed partial class SubcontractorsAndLeadsActions
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
             RequiresConfirmation: true,
-            Notes: "xeroContactId is Xero's contact id. Refused if the supplier is already imported or "
-                + "Xero is unreachable. The import is recorded against the signed-in user. If the "
+            Notes: "xeroContactId is Xero's contact id — list_xero_suppliers (search by a distinctive "
+                + "word of the name) returns it, with alreadyImported and any name-matching directory "
+                + "record stamped on each row; never ask the user to copy the id out of Xero. Refused "
+                + "if the supplier is already imported or Xero is unreachable. The import is recorded "
+                + "against the signed-in user. If the "
                 + "supplier is ALREADY in the directory under its own record, do not import — use "
                 + "link_directory_record_to_xero_contact (list_unlinked_directory_records suggests "
                 + "the pairings)."),
@@ -171,7 +174,8 @@ internal sealed partial class SubcontractorsAndLeadsActions
             NameStamps: Array.Empty<string>(),
             Notes: "subcontractorId comes from search_directory or list_unlinked_directory_records; "
                 + "xeroContactId is Xero's ContactID (the suggestions in list_unlinked_directory_records "
-                + "carry it). A name match is a suggestion, not proof — show the user the pairing "
+                + "carry it, and list_xero_suppliers lists every contact with it). A name match is a "
+                + "suggestion, not proof — show the user the pairing "
                 + "(record name ↔ Xero contact name) and take their yes before calling, then call "
                 + "once per confirmed pair. pullDetailsFromXero (default false) also copies Xero's "
                 + "primary person, email, phones, address and additional people onto the record where "
