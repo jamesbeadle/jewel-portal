@@ -18,8 +18,15 @@ public sealed record LinkableRecord(
     string?    Summary     = null, // optional short description shown under the title in the picker,
                                    // so similarly-titled records (e.g. two "Coombe Lane defects"
                                    // requests) can be told apart. Providers clip it server-side.
-    bool       IsActive    = true); // whether the record is live by its own type's rule (a request
+    bool       IsActive    = true,  // whether the record is live by its own type's rule (a request
                                     // that isn't Closed, a released work order, an open to-do…).
                                     // Providers list finished records too, flagged false, so every
                                     // picker can default to live work and reveal the rest behind an
                                     // "include closed / inactive" checkbox.
+    string?    Pathway     = null); // The communication pathway THIS record files its thread under
+                                    // ("Subcontractor" / "Supplier" / …) when the record type alone
+                                    // can't say. A work order follows the company it is placed with
+                                    // (2026-09-15: a Supplier-category company files under Supplier,
+                                    // any other under Subcontractor). Null = the type decides
+                                    // (TriageCategories.BucketFor / RecordLinkVocabulary), which is
+                                    // every other type today.

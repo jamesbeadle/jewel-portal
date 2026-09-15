@@ -211,8 +211,9 @@ schedule; "Record tender manually"; **Award** — raises the work order),
 ### Work Orders — `/projects/{project}/work-orders`
 Financial roll-up grouped by cost centre or supplier (remembered per user):
 committed, paid (from Xero bills), remaining, left to invoice; supplier search;
-Excel export. "Add work order" raises a manual order (same modal edits one);
-drafts await two-click **Approve** (mints the next WO number and emails the PO
+Excel export. "Add work order" raises a manual order (same modal edits one)
+with a subcontractor OR a supplier — one record, no separate purchase-order
+feature (2026-09-15); drafts await two-click **Approve** (mints the next WO number and emails the PO
 from the projects mailbox) or Reject (terminal). Issued lines offer PO
 (printable page), Re-code (move/split across cost centres without changing
 value) and Cancel (MD/FD only; refused while bills linked or money paid).

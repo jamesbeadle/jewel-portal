@@ -32,6 +32,13 @@ public sealed class StagedRecordCreate
 {
     public StagedRecordKind Kind { get; set; } = StagedRecordKind.Request;
 
+    // The pane the draft was staged from ("Subcontractor" / "Supplier" / …) — for the pathway
+    // badges, which count a drafted record where it was STAGED (2026-09-15: a work order or a
+    // defect is offered on both the Subcontractor and Supplier panes). Null = the kind's home
+    // pane (TriageQueue.StagedCreatePathway). Display only — what pathway the new record's
+    // thread files under is the server's decision.
+    public string? Pathway { get; set; }
+
     // Which request the Request kind raises: General ("Raise Request") or an official RFI
     // ("Raise RFI") — the server mints the matching reference either way (REQ-#### global, or
     // the project's own RFI sequence).

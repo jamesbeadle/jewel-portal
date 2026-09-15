@@ -3,14 +3,18 @@ using Jewel.JPMS.Api.Features.Procurement;
 
 namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 
-// Linkable-record provider for work orders (the purchase order Jewel places with a subcontractor).
-// Wraps the WorkOrders table so a triage email can be linked to an order and the order can read its
-// mail back live by tag (RecordEmailReader) — the same mechanism the Bid Package family uses, with no
-// changes to the link/read layer or triage UI.
+// Linkable-record provider for work orders (the purchase order Jewel places with a subcontractor
+// or, since 2026-09-15, a materials/goods supplier). Wraps the WorkOrders table so a triage email
+// can be linked to an order and the order can read its mail back live by tag (RecordEmailReader) —
+// the same mechanism the Bid Package family uses, with no changes to the link/read layer or triage UI.
 //
-// Subcontract-side by construction: docs/Pathway-Split-Platform-Flow-Plan.md §2.2 lists "link work
-// order" in the Subcontractor pathway's action set, and TriageCategories.BucketFor maps the type to
-// JPMS/Subcontractor — so an order can never be reached from a Client thread (the wall rejects it).
+// The pathway FOLLOWS THE COMPANY the order is placed with (WorkOrderPathways): the same record
+// is offered on the Subcontractor pane and the Supplier pane, so the type alone cannot say which
+// side a thread belongs to. Every record this provider hands out therefore carries
+// LinkableRecord.Pathway — "Supplier" for a Supplier-category company, "Subcontractor" for any
+// other — and the link layer reads it through TriageCategories.BucketFor(LinkableRecord). (The
+// defect took the other road on 2026-09-07 and files under Subcontractor whichever pane raised
+// it; see DefectLinkProvider. This is the road the per-record pathway was built for.)
 //
 // The tag stem is PROJECT-QUALIFIED ("JBB-2026-001-WO-0045", WorkOrderTags) since 2026-09-14: order
 // numbers are per project, so the flat "WO-0045" named By France's Farrant order AND Coombe Lane's
@@ -43,7 +47,7 @@ public sealed class WorkOrderLinkProvider : ILinkableRecordProvider, ITagResolvi
                             && o.Status != (int)WorkOrderStatus.Draft)
                 .OrderByDescending(o => o.Number),
             ct);
-        return rows.Select(row => ToLinkable(row.Order, row.CompanyName, projectRef)).ToList().AsReadOnly();
+        return rows.Select(row => ToLinkable(row.Order, row.Company, projectRef)).ToList().AsReadOnly();
     }
 
     public async Task<LinkableRecord?> FindAsync(string recordId, CancellationToken ct)
@@ -51,7 +55,7 @@ public sealed class WorkOrderLinkProvider : ILinkableRecordProvider, ITagResolvi
         var rows = await WithSupplierAsync(
             context.WorkOrders.AsNoTracking().Where(o => o.WorkOrderId == recordId),
             ct);
-        return rows.Count == 0 ? null : await ToLinkableAsync(rows[0].Order, rows[0].CompanyName, ct);
+        return rows.Count == 0 ? null : await ToLinkableAsync(rows[0].Order, rows[0].Company, ct);
     }
 
     // Reverse lookup for the tag chips and the Control Centre's "use the thread's existing tags":
@@ -71,37 +75,46 @@ public sealed class WorkOrderLinkProvider : ILinkableRecordProvider, ITagResolvi
             ct);
 
         if (WorkOrderTags.IsLegacyStem(tagReference))
-            return candidates.Count == 1 ? await ToLinkableAsync(candidates[0].Order, candidates[0].CompanyName, ct) : null;
+            return candidates.Count == 1 ? await ToLinkableAsync(candidates[0].Order, candidates[0].Company, ct) : null;
 
         foreach (var candidate in candidates)
         {
-            var record = await ToLinkableAsync(candidate.Order, candidate.CompanyName, ct);
+            var record = await ToLinkableAsync(candidate.Order, candidate.Company, ct);
             if (record.TagReference.Equals(tagReference, StringComparison.OrdinalIgnoreCase))
                 return record;
         }
         return null;
     }
 
-    private async Task<List<(WorkOrderEntity Order, string? CompanyName)>> WithSupplierAsync(
+    // The company alongside each order: its name (the discriminator a triager reads first) and
+    // its directory category (which side the order's mail files under). One projection, no
+    // per-row queries; both null when the order points at no directory record.
+    private async Task<List<(WorkOrderEntity Order, WorkOrderCompany? Company)>> WithSupplierAsync(
         IQueryable<WorkOrderEntity> orders, CancellationToken ct)
     {
         var rows = await orders
             .Select(order => new
             {
                 Order = order,
-                CompanyName = context.Subcontractors.AsNoTracking()
+                Company = context.Subcontractors.AsNoTracking()
                     .Where(s => s.SubcontractorId == order.SubcontractorId)
-                    .Select(s => s.CompanyName)
+                    .Select(s => new { s.CompanyName, s.Category })
                     .FirstOrDefault()
             })
             .ToListAsync(ct);
-        return rows.Select(row => (row.Order, row.CompanyName)).ToList();
+        return rows
+            .Select(row => (
+                Order: row.Order,
+                Company: row.Company is null ? (WorkOrderCompany?)null : new WorkOrderCompany(row.Company.CompanyName, row.Company.Category)))
+            .ToList();
     }
 
-    private async Task<LinkableRecord> ToLinkableAsync(WorkOrderEntity entity, string? companyName, CancellationToken ct) =>
-        ToLinkable(entity, companyName, await WorkOrderTags.ProjectRefAsync(context, entity.ProjectId, ct));
+    private sealed record WorkOrderCompany(string CompanyName, int Category);
 
-    private static LinkableRecord ToLinkable(WorkOrderEntity entity, string? companyName, string? projectRef)
+    private async Task<LinkableRecord> ToLinkableAsync(WorkOrderEntity entity, WorkOrderCompany? company, CancellationToken ct) =>
+        ToLinkable(entity, company, await WorkOrderTags.ProjectRefAsync(context, entity.ProjectId, ct));
+
+    private static LinkableRecord ToLinkable(WorkOrderEntity entity, WorkOrderCompany? company, string? projectRef)
     {
         // The order's sequential WO-0001 reference is what people say; the tag stem is that
         // reference qualified by the project (WorkOrderTags), so an email tagged
@@ -124,8 +137,10 @@ public sealed class WorkOrderLinkProvider : ILinkableRecordProvider, ITagResolvi
             TagReference: WorkOrderTags.Stem(projectRef, entity.ProjectId, reference),
             Title:        title,
             StatusLabel:  ((WorkOrderStatus)entity.Status).ToString(),
-            Summary:      RecordSummaries.Clip(companyName),
+            Summary:      RecordSummaries.Clip(company?.CompanyName),
             // Released is the one live state; Complete, Cancelled and Rejected are finished business.
-            IsActive:     entity.Status == (int)WorkOrderStatus.Released);
+            IsActive:     entity.Status == (int)WorkOrderStatus.Released,
+            // The side this order's mail files under follows its company (see the class note).
+            Pathway:      WorkOrderPathways.LabelFor(company is null ? (DirectoryCategory?)null : (DirectoryCategory)company.Category));
     }
 }

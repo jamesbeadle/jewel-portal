@@ -1,10 +1,13 @@
+using Jewel.JPMS.Features.Procurement;
+
 namespace Jewel.JPMS.Components;
 
 public partial class WorkOrderForm
 {
+    // Subcontractors AND suppliers (2026-09-15) — the shared pool, with the order's current
+    // company kept in the list whatever its category is now.
     private IEnumerable<Subcontractor> SortedSubcontractors =>
-        (Subcontractors.Current ?? Array.Empty<Subcontractor>())
-            .OrderBy(sub => sub.CompanyName, StringComparer.OrdinalIgnoreCase);
+        WorkOrderCompanies.Offered(Subcontractors.Current, subcontractorId);
 
     private async Task SetSubcontractorAsync(string? value)
     {

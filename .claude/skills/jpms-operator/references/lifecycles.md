@@ -90,7 +90,13 @@ submissions recorded/extracted → **Award raises the work order**. Closed
 packages sort last but stay reachable. Legacy columns
 (`SelectedBidPackageId`, packages' `VariationOrderQuoteId`) are data-only.
 
-Work order / purchase order status: Draft awaiting approval → (two-click
+Work order / purchase order: ONE record whether it is placed with a
+subcontractor (a trade's works) or a supplier (a merchant's materials/goods,
+2026-09-15) — the company picker offers both categories, and the Control
+Centre offers "Work Order" / "Raise Work Order" on the Subcontractor AND
+Supplier panes. Its mail files by the company: a Supplier-category company's
+order under the Supplier pathway, any other under Subcontractor.
+Status: Draft awaiting approval → (two-click
 Approve mints the next WO number, emails the PO) Awaiting supplier acceptance
 → Accepted; or Rejected (terminal) / Cancelled (MD/FD; refused while bills
 are linked or money paid). Re-code moves/splits a line across cost centres

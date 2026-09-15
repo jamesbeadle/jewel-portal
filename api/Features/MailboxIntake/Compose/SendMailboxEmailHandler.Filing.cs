@@ -52,7 +52,9 @@ public sealed partial class SendMailboxEmailHandler
             ?? throw new InvalidOperationException($"{linkType} record '{command.LinkRecordId}' not found.");
         compose.LinkedRecord = linkedRecord;
         compose.RecordTag = TriageCategories.ForRecord(linkedRecord.TagReference);
-        var recordBucket = TriageCategories.BucketFor(linkType) ?? compose.ChosenBucket;
+        // The record's own pathway first (a supplier's work order files under Supplier,
+        // 2026-09-15), else the type's; a pathway-neutral type takes the composer's choice.
+        var recordBucket = TriageCategories.BucketFor(linkedRecord) ?? compose.ChosenBucket;
 
         if (compose.ExistingBucket is not null && recordBucket is not null
             && TriageCategories.CrossesClientWall(compose.ExistingBucket, recordBucket))

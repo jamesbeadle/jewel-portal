@@ -132,7 +132,11 @@ public partial class WorkOrderForm
 
     private void ApplySupplierProposal(string proposed)
     {
-        var candidates = Subcontractors.Current ?? Array.Empty<Subcontractor>();
+        // The same pool the dropdown offers (subcontractors and suppliers, no prospects) — a
+        // match the list doesn't hold would select a company the user can't see.
+        var candidates = (Subcontractors.Current ?? Array.Empty<Subcontractor>())
+            .Where(Jewel.JPMS.Features.Procurement.WorkOrderCompanies.CanTakeOrders)
+            .ToList();
         var trimmed = proposed.Trim();
         var match = candidates.FirstOrDefault(sub =>
                         string.Equals(sub.CompanyName.Trim(), trimmed, StringComparison.OrdinalIgnoreCase))
@@ -141,7 +145,7 @@ public partial class WorkOrderForm
                         || trimmed.Contains(sub.CompanyName.Trim(), StringComparison.OrdinalIgnoreCase));
         subcontractorId = match?.SubcontractorId ?? subcontractorId;
         assistantSupplierNote = match is null
-            ? $"\"{trimmed}\" isn't in the subcontractor directory — pick the supplier from the list."
+            ? $"\"{trimmed}\" isn't in the directory as a subcontractor or supplier — pick the company from the list."
             : null;
     }
 

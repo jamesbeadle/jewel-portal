@@ -54,12 +54,15 @@ public sealed class PrepareWorkOrderReplyDraftHandler : ICommandHandler<PrepareW
         var pdf = WorkOrderPoRenderer.Render(model);
 
         // Categories on the draft = what the SENT copy should carry, so it self-files: the
-        // subcontractor pathway, the order's own record tag, and — when the order came from
-        // awarding a tender — the source package's tag (same set as SendWorkOrderPoEmailHandler).
+        // pathway of the company the order is placed with (Supplier for a merchant, else
+        // Subcontractor — WorkOrderPathways, 2026-09-15), the order's own record tag, and — when
+        // the order came from awarding a tender — the source package's tag (same set as
+        // SendWorkOrderPoEmailHandler).
+        var bucket = await WorkOrderPathways.BucketAsync(context, order, cancellationToken);
         var categories = new List<string>
         {
             TriageCategories.Marker,
-            TriageCategories.Subcontractor,
+            bucket,
             TriageCategories.ForRecord(await WorkOrderTags.StemAsync(context, order, cancellationToken))
         };
         if (!string.IsNullOrWhiteSpace(order.BidPackageId))
@@ -84,7 +87,7 @@ public sealed class PrepareWorkOrderReplyDraftHandler : ICommandHandler<PrepareW
         await audit.WriteAsync(
             AuditEventType.DraftCreated,
             $"Purchase order {order.Reference} drafted as a reply in the conversation — awaiting review and send.",
-            pathway: "Subcontractor",
+            pathway: AuditTrail.PathwayLabel(bucket),
             projectId: order.ProjectId,
             recordType: RecordType.WorkOrder,
             recordId: order.WorkOrderId,

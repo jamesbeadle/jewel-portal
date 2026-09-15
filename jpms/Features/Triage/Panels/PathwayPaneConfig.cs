@@ -76,18 +76,24 @@ public sealed record PathwayPaneConfig(
         "Supplier",
         "A materials or goods supplier, as distinct from a subcontractor",
         // Inventory (2026-08-28) is the pane's first linkable record type: goods for the job —
-        // what the product is, where it's kept. Purchase orders split from work orders remain a
-        // later phase.
+        // what the product is, where it's kept.
         // Defects joined it 2026-09-07 (James): faulty goods and short deliveries are put right by
         // the MERCHANT, not a trade, so a defect must be raisable and taggable from the supplier's
         // own email. The record is the same DEF-#### on the same Defects register — a defect names
         // the directory company it is raised with, and that company can be either category.
-        new[] { RecordType.Inventory, RecordType.Defect },
+        // Work orders joined it 2026-09-15 (Nigel): the purchase order Jewel places with a
+        // merchant is the SAME record as the one it places with a trade — one Work Orders tab,
+        // one WO sequence, one PO PDF — so rather than build a separate "purchase order" feature
+        // the one record is offered on both panes. Unlike a defect, its thread files by the
+        // COMPANY the order is placed with (a Supplier-category company → Supplier;
+        // WorkOrderPathways server-side), so a merchant's PO correspondence reads on this side.
+        new[] { RecordType.WorkOrder, RecordType.Inventory, RecordType.Defect },
         CommunicationFamily.Supplier,
         new (string, IReadOnlyList<SystemActionKind>)[]
         {
             (SystemActionGuide.RaiseGroup, new[]
             {
+                SystemActionKind.RaiseWorkOrder,
                 SystemActionKind.AddInventoryItem,
                 SystemActionKind.RaiseDefect,
                 SystemActionKind.RaiseCalendarEvent,

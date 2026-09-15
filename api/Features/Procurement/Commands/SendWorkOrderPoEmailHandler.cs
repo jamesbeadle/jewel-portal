@@ -48,13 +48,17 @@ public sealed class SendWorkOrderPoEmailHandler : ICommandHandler<SendWorkOrderP
         var purchaseOrderPdf = await RenderPurchaseOrderAsync(command.WorkOrderId, cancellationToken);
 
         // Categories on the draft = what the SENT copy should carry, so it self-files: the
-        // subcontractor pathway, the order's own record tag (replies group under the order via
-        // the shared record-link read-back), and — when the order came from awarding a tender —
-        // the source package's tag, so the thread also reads alongside the tender correspondence.
+        // pathway of the company the order is placed with (Supplier for a merchant, else
+        // Subcontractor — WorkOrderPathways, 2026-09-15), the order's own record tag (replies
+        // group under the order via the shared record-link read-back), and — when the order came
+        // from awarding a tender — the source package's tag, so the thread also reads alongside
+        // the tender correspondence.
+        var bucket = WorkOrderPathways.BucketFor((DirectoryCategory)supplier.Category);
+        var pathway = WorkOrderPathways.LabelFor((DirectoryCategory)supplier.Category);
         var categories = new List<string>
         {
             TriageCategories.Marker,
-            TriageCategories.Subcontractor,
+            bucket,
             TriageCategories.ForRecord(await WorkOrderTags.StemAsync(context, order, cancellationToken))
         };
         if (!string.IsNullOrWhiteSpace(order.BidPackageId))
@@ -83,7 +87,7 @@ public sealed class SendWorkOrderPoEmailHandler : ICommandHandler<SendWorkOrderP
             await audit.WriteAsync(
                 AuditEventType.EmailSendFailed,
                 $"Send failed for \"{command.Subject}\" (to {supplier.ContactEmail}) — the purchase-order email is saved in the mailbox's Drafts folder.",
-                pathway: "Subcontractor",
+                pathway: pathway,
                 projectId: order.ProjectId,
                 recordType: RecordType.WorkOrder,
                 recordId: order.WorkOrderId,
@@ -103,7 +107,7 @@ public sealed class SendWorkOrderPoEmailHandler : ICommandHandler<SendWorkOrderP
         await audit.WriteAsync(
             AuditEventType.EmailSent,
             $"Sent \"{command.Subject}\" to {supplier.ContactEmail}.",
-            pathway: "Subcontractor",
+            pathway: pathway,
             projectId: order.ProjectId,
             recordType: RecordType.WorkOrder,
             recordId: order.WorkOrderId,

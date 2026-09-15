@@ -55,7 +55,7 @@ public static class SystemActionGuide
     {
         SystemActionKind.RaiseRfi => "A question for the client side that needs a formal, numbered answer — an architect's detail, a spec gap, a sequencing clash.",
         SystemActionKind.RaiseVariationOrder => "The client side has asked for, or caused, extra or changed work that needs pricing and approval.",
-        SystemActionKind.RaiseWorkOrder => "You're placing work with a subcontractor — the email is the agreed scope or price; Apply emails them the purchase order.",
+        SystemActionKind.RaiseWorkOrder => "You're placing an order with the company you're emailing — a trade's works, or a merchant's materials or goods; the email is the agreed scope or price. Apply emails them the purchase order.",
         SystemActionKind.CreateBidPackageInvite => "A package of work you're about to put out to tender — sets up the package so subcontractors can be invited.",
         SystemActionKind.RaiseDefect => "Something the company you're emailing has to put right — a trade's workmanship, or a merchant's faulty or short-delivered goods. Logs it on the project's Defects tab against that company, where it is sent to them and chased.",
         SystemActionKind.AddInventoryItem => "Goods for the job worth keeping on the books — what the product is and where it's kept. Adds it to the project's Inventory tab with this email filed to it.",

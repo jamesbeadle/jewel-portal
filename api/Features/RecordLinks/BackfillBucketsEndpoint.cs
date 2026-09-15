@@ -25,16 +25,18 @@ public sealed class BackfillBucketsEndpoint
     private readonly RecordThreadTagger threadTagger;
     private readonly AuditTrail audit;
     private readonly AuditActor auditActor;
+    private readonly RecordProviderRegistry providers;
 
     public BackfillBucketsEndpoint(
         SignedInUserResolver users, IMailboxGraphClient graph, RecordThreadTagger threadTagger,
-        AuditTrail audit, AuditActor auditActor)
+        AuditTrail audit, AuditActor auditActor, RecordProviderRegistry providers)
     {
         this.users = users;
         this.graph = graph;
         this.threadTagger = threadTagger;
         this.audit = audit;
         this.auditActor = auditActor;
+        this.providers = providers;
     }
 
     public sealed record ConversationOutcome(
@@ -95,6 +97,7 @@ public sealed class BackfillBucketsEndpoint
 
         // 2. Derive + stamp per conversation.
         var outcomes = new List<ConversationOutcome>();
+        var workOrderBuckets = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
         int stamped = 0, alreadyStamped = 0, conflicts = 0, unresolved = 0, skipped = 0;
         foreach (var (conversationId, entry) in conversations)
         {
@@ -113,7 +116,7 @@ public sealed class BackfillBucketsEndpoint
             var sawCostCentre = false;
             var sawTodo = false;
             foreach (var tag in recordTags)
-                switch (BucketForTag(tag))
+                switch (await BucketForTagAsync(tag, workOrderBuckets, ct))
                 {
                     case "CC": sawCostCentre = true; break;
                     case "TODO": sawTodo = true; break;
@@ -192,11 +195,41 @@ public sealed class BackfillBucketsEndpoint
             dryRun, conversations.Count, stamped, alreadyStamped, conflicts, unresolved, skipped, more, outcomes));
     }
 
-    // Which pathway a record tag implies. Returns the bucket category, "CC"/"TODO" sentinels for the
-    // special cases, or null for tags that imply nothing. Tag shapes (see the providers'
-    // ReferencePrefixes): simple stems "JPMS/BPI-0001", "JPMS/TODO-0001", "JPMS/SCH-<proj>",
-    // "JPMS/LAD-…", "JPMS/VO-…", "JPMS/VOQ-…", "JPMS/CC-<proj>-<code>"; request stems are
-    // PROJECT-QUALIFIED ("JPMS/JBB-2026-001-RFI-012"), so the family prefix appears mid-string.
+    // Which pathway a record tag implies: BucketForTag's answer from the tag's shape, except for a
+    // work-order stem, whose pathway is the ORDER's — it follows the company the order is placed
+    // with (WorkOrderPathways, 2026-09-15: a merchant's order files under Supplier), so the stem
+    // is resolved through the provider (one lookup per distinct stem per run). A stem that
+    // resolves to nothing — a legacy flat "WO-0045" that names orders on two projects, say —
+    // falls back to Subcontractor, the pre-2026-09-15 answer for every work order.
+    private async Task<string?> BucketForTagAsync(string tag, Dictionary<string, string?> workOrderBuckets, CancellationToken ct)
+    {
+        var shaped = BucketForTag(tag);
+        if (shaped is null || !IsWorkOrderTag(tag)) return shaped;
+        if (workOrderBuckets.TryGetValue(tag, out var known)) return known;
+        string? resolved = shaped;
+        if (providers.TryGet(RecordType.WorkOrder, out var provider) && provider is ITagResolvingProvider resolver)
+        {
+            var record = await resolver.FindByTagAsync(tag[TriageCategories.WorkflowPrefix.Length..], ct);
+            if (record is not null) resolved = TriageCategories.BucketFor(record) ?? shaped;
+        }
+        workOrderBuckets[tag] = resolved;
+        return resolved;
+    }
+
+    private static bool IsWorkOrderTag(string tag)
+    {
+        if (!TriageCategories.IsWorkflowTag(tag) || TriageCategories.IsBucketTag(tag)) return false;
+        var stem = tag[TriageCategories.WorkflowPrefix.Length..];
+        return stem.StartsWith("WO-", StringComparison.OrdinalIgnoreCase)
+            || stem.Contains("-WO-", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Which pathway a record tag's SHAPE implies. Returns the bucket category, "CC"/"TODO"
+    // sentinels for the special cases, or null for tags that imply nothing. Tag shapes (see the
+    // providers' ReferencePrefixes): simple stems "JPMS/BPI-0001", "JPMS/TODO-0001",
+    // "JPMS/SCH-<proj>", "JPMS/LAD-…", "JPMS/VO-…", "JPMS/VOQ-…", "JPMS/CC-<proj>-<code>"; request
+    // stems are PROJECT-QUALIFIED ("JPMS/JBB-2026-001-RFI-012"), so the family prefix appears
+    // mid-string. Work-order stems get the type's default here; BucketForTagAsync refines them.
     private static string? BucketForTag(string tag)
     {
         if (!TriageCategories.IsWorkflowTag(tag) || TriageCategories.IsBucketTag(tag)) return null;

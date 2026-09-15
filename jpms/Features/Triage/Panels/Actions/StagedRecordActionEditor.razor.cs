@@ -1,4 +1,5 @@
 using Jewel.JPMS.Features.CostCenters;
+using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Features.Subcontractors;
 
 namespace Jewel.JPMS.Features.Triage.Panels;
@@ -21,9 +22,14 @@ public partial class StagedRecordActionEditor
     /// they can be kept on the new order as record keeping.</summary>
     [Parameter] public IReadOnlyList<IntakeAttachment> EmailAttachments { get; set; } = Array.Empty<IntakeAttachment>();
 
-    /// <summary>The selected email's sender — pre-selects the work-order subcontractor when it
+    /// <summary>The selected email's sender — pre-selects the work-order company when it
     /// matches a directory record, and pre-fills the defect assignee. Suggestions only.</summary>
     [Parameter] public string SenderEmail { get; set; } = "";
+
+    /// <summary>The pane this editor sits on ("Subcontractor", "Supplier", …) — stamped onto the
+    /// staged draft so the pathway badges count it where it was staged. Blank = unknown, the
+    /// kind's home pane.</summary>
+    [Parameter] public string Pathway { get; set; } = "";
 
     // True while the defect assignee is the sender suggestion rather than a typed value.
     private bool defectAssigneeFromSender;
@@ -71,6 +77,7 @@ public partial class StagedRecordActionEditor
         // First keystroke on the scratch form stages it; a staged form just reports the edit.
         var target = StagedCreate ?? scratchCreate;
         target.Kind = Kind;
+        target.Pathway = string.IsNullOrWhiteSpace(Pathway) ? null : Pathway;
         if (Kind == StagedRecordKind.Request) target.RequestKind = RequestKind;
         _ = StagedCreateChanged.InvokeAsync(target);
     }
@@ -140,8 +147,11 @@ public partial class StagedRecordActionEditor
     /// overrides a choice already made.</summary>
     private void TryMatchSender()
     {
-        if (string.IsNullOrWhiteSpace(SenderEmail) || Subcontractors.Current is not { } companies) return;
+        if (string.IsNullOrWhiteSpace(SenderEmail) || Subcontractors.Current is not { } directory) return;
         if (Create.SubcontractorId != "") return;
+        // Only a company an order can be placed with is suggested — a client's or architect's
+        // address matching here would pre-select a company the dropdown doesn't offer.
+        var companies = directory.Where(WorkOrderCompanies.CanTakeOrders).ToList();
         var email = SenderEmail.Trim();
         var match = companies.FirstOrDefault(company =>
             string.Equals(company.ContactEmail?.Trim(), email, StringComparison.OrdinalIgnoreCase));
@@ -165,9 +175,10 @@ public partial class StagedRecordActionEditor
         if (StagedCreate is not null) _ = StagedCreateChanged.InvokeAsync(StagedCreate);
     }
 
+    // Subcontractors AND suppliers (2026-09-15) — the pool the manual order form shares, with
+    // the staged pick kept in the list whatever its category is now.
     private IEnumerable<Subcontractor> SortedSubcontractors =>
-        (Subcontractors.Current ?? Array.Empty<Subcontractor>())
-            .OrderBy(company => company.CompanyName, StringComparer.OrdinalIgnoreCase);
+        WorkOrderCompanies.Offered(Subcontractors.Current, Create.SubcontractorId);
 
     // The work-order form's chosen supplier — what the auto-send warning names, and where the
     // purchase-order email goes when the page's Apply raises a released (non-draft) order.

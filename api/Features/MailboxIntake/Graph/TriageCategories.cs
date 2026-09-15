@@ -86,7 +86,12 @@ public static class TriageCategories
         RecordType.BuildingControlCase => Client, // statutory/consultant correspondence travels the client-side pathway
         RecordType.BuildingControlInspection => Client, // the inspector's booking/report thread — same side as the case
         RecordType.BidPackageInvite => Subcontractor,
-        RecordType.WorkOrder        => Subcontractor, // the order Jewel places with the subcontractor
+        // The TYPE's default only. Since 2026-09-15 an order follows the COMPANY it is placed
+        // with — a Supplier-category company files under Supplier — which the type cannot say:
+        // the record-level answer is LinkableRecord.Pathway (filled by WorkOrderLinkProvider from
+        // WorkOrderPathways), read through BucketFor(LinkableRecord) below. Callers holding only
+        // the type get the pre-2026-09-15 answer, right for every subcontractor order.
+        RecordType.WorkOrder        => Subcontractor,
         // The remediation is chased with the company that caused it. Raisable from the Supplier
         // pane too since 2026-09-07 (faulty goods are the merchant's to put right); the thread
         // still files under Subcontractor, because the pathway is keyed on record type — see
@@ -102,6 +107,29 @@ public static class TriageCategories
         RecordType.Todo             => null,     // neutral: never sets or changes a pathway
         _ => null
     };
+
+    /// <summary>The pathway a RECORD files its thread under: the record's own pathway when it
+    /// carries one (<see cref="LinkableRecord.Pathway"/> — a work order follows its company,
+    /// 2026-09-15), else the type's default. Null exactly when <see cref="BucketFor(RecordType)"/>
+    /// is null for the type: pathway-neutral, the triager's choice decides.</summary>
+    public static string? BucketFor(LinkableRecord record) =>
+        BucketForPathway(record.Pathway) ?? BucketFor(record.Type);
+
+    /// <summary>The bucket category for a short pathway label ("Client", "Subcontractor",
+    /// "Supplier", "Internal" — case-insensitive), or null for blank or unknown text. The
+    /// inverse of AuditTrail.PathwayLabel; what the triager's explicit pathway choice on
+    /// LinkMessageToRecord and a record's own <see cref="LinkableRecord.Pathway"/> both map
+    /// through.</summary>
+    public static string? BucketForPathway(string? pathway)
+    {
+        if (string.IsNullOrWhiteSpace(pathway)) return null;
+        var p = pathway.Trim();
+        if (p.Equals("Client", StringComparison.OrdinalIgnoreCase)) return Client;
+        if (p.Equals("Subcontractor", StringComparison.OrdinalIgnoreCase)) return Subcontractor;
+        if (p.Equals("Supplier", StringComparison.OrdinalIgnoreCase)) return Supplier;
+        if (p.Equals("Internal", StringComparison.OrdinalIgnoreCase)) return Internal;
+        return null;
+    }
 
     /// <summary>True when the two categories are pathway tags on opposite sides of the former client
     /// wall — one is <see cref="Client"/> and the other is a non-client pathway. Since 2026-08-21 this

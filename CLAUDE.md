@@ -74,6 +74,33 @@
   commercial team, KPI events for administrators). The MD's rule, 2026-09-14: if it can be read
   on the site it can be read over the connector.
 
+## Work orders are placed with suppliers as well as subcontractors (api + jpms)
+
+- **One record, both panes** (Nigel, 2026-09-15): the purchase order Jewel places with a
+  materials/goods SUPPLIER is the same `WorkOrder` as the one it places with a trade — one Work
+  Orders tab, one per-project WO sequence, one PO PDF — so there is no separate "purchase order"
+  feature. `PathwayPaneConfig.Supplier` offers Work Order for tagging and Raise Work Order in
+  Actions exactly as the Subcontractor pane does (`RecordLinkVocabulary.SupplierLinkTypes` too).
+  The company picker (`WorkOrderCompanies`, shared by `WorkOrderForm` and the Control Centre's
+  staged order) offers vetted Subcontractor AND Supplier directory records — never prospects,
+  clients or architects — under the label "Company", keeping an order's existing pick listed
+  whatever its category is now.
+- **The pathway follows the company, not the type.** `WorkOrderPathways` (api): a
+  Supplier-category company files the order's mail under `JPMS/Supplier`, any other under
+  `JPMS/Subcontractor`. The answer travels per record on `LinkableRecord.Pathway` (filled by
+  `WorkOrderLinkProvider`) and the link layer reads it through
+  `TriageCategories.BucketFor(LinkableRecord)` — `LinkMessageToRecordHandler`, the composer's
+  `LinkRecordAsync`, the backfill sweep (work-order stems resolve through the provider). Outbound
+  PO mail (`SendWorkOrderPoEmailHandler`, `PrepareWorkOrderReplyDraftHandler`) stamps the
+  company's bucket and audits under its label. `TriageCategories.BucketFor(RecordType.WorkOrder)`
+  still answers Subcontractor — the type's default for callers holding only the type — and
+  `RecordLinkVocabulary.ImpliedPathway(WorkOrder)` is null (the Tagged picker's heads-up can't
+  say). The defect (2026-09-07) still files under Subcontractor from either pane; this is the
+  per-record road it would take if that ever changes.
+- **Badges count where the draft was staged**: `StagedRecordCreate.Pathway` is stamped by
+  `StagedRecordActionEditor` from its pane, so a work order (or defect) drafted on the Supplier
+  pane counts on the Supplier badge. Display only; the server decides the filing.
+
 ## Record tabs & the in-view toolbar (jpms)
 
 - **The request chain renders as document tabs, not chips.** `RecordTabBar` (Components) is on

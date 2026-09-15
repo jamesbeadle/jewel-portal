@@ -1,11 +1,13 @@
 @using Jewel.JPMS.Features.CostCenters
 @using Jewel.JPMS.Features.Subcontractors
+@using Jewel.JPMS.Features.Procurement
 @inject SubcontractorsReadModel Subcontractors
 @inject CostCentersReadModel CostCenters
 @implements IDisposable
 
 @*
-    The work-order FORM — the core order surface (subcontractor, title, scope, programme, priced
+    The work-order FORM — the core order surface (company — a subcontractor or, since
+    2026-09-15, a supplier — title, scope, programme, priced
     lines, deposit, the draft/release decision) with its validation, and no opinion about what
     happens on submit. Split out of ManualWorkOrderModal (2026-08-10, same pattern as
     RequestForm): the modal keeps the packaging step, record-keeping attachments and the
@@ -21,10 +23,10 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-            <FormField Label="Subcontractor">
+            <FormField Label="@WorkOrderCompanies.FieldLabel">
             <select class="field"
                     disabled="@Busy" @onchange="e => SetSubcontractorAsync(e.Value?.ToString())">
-                <option value="" selected="@(subcontractorId == "")">Choose a subcontractor…</option>
+                <option value="" selected="@(subcontractorId == "")">@WorkOrderCompanies.ChoosePrompt</option>
                 @foreach (var sub in SortedSubcontractors)
                 {
                     <option value="@sub.SubcontractorId" selected="@(subcontractorId == sub.SubcontractorId)">@sub.CompanyName</option>
@@ -159,7 +161,7 @@
     @* ── Deposit: percentage of the order value, printed at the foot of the PO when required ── *@
     <div class="rounded border border-line bg-surface p-3">
         <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none"
-               title="Tick when the subcontractor requires a deposit — the percentage prints at the foot of the purchase order">
+               title="Tick when the company requires a deposit — the percentage prints at the foot of the purchase order">
             <input type="checkbox" class="cursor-pointer align-middle" disabled="@Busy" @bind="depositRequired" />
             Deposit required
         </label>
@@ -201,7 +203,7 @@
             {
                 <Notice Tone="Tone.Positive">
                     When it saves, the purchase-order email will be <strong>sent</strong> to
-                    <strong>@(SelectedSupplier?.ContactEmail ?? "the subcontractor's directory email")</strong>
+                    <strong>@(SelectedSupplier?.ContactEmail ?? "the company's directory email")</strong>
                     from the projects mailbox. Tick "Save as a draft" if it shouldn't go out yet.
                 </Notice>
             }

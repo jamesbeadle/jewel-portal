@@ -114,7 +114,8 @@
         case SystemActionKind.RaiseRfi:
             <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.Request" RequestKind="RequestType.Rfi"
                                       StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
-                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
+                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail"
+                                      Pathway="@Pathway" />
             break;
         case SystemActionKind.PromoteRequestToRfi:
         case SystemActionKind.CloseRfi:
@@ -131,12 +132,14 @@
         case SystemActionKind.RaiseWorkOrder:
             <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.WorkOrder"
                                       StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
-                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
+                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail"
+                                      Pathway="@Pathway" />
             break;
         case SystemActionKind.CreateBidPackageInvite:
             <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.BidPackage"
                                       StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
-                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
+                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail"
+                                      Pathway="@Pathway" />
             break;
         case SystemActionKind.FileBidPackageTender:
             <StageTenderResponseAction @key="kind" ProjectId="@ProjectId" SenderEmail="@SenderEmail"
@@ -145,17 +148,20 @@
         case SystemActionKind.RaiseDefect:
             <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.Defect"
                                       StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
-                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
+                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail"
+                                      Pathway="@Pathway" />
             break;
         case SystemActionKind.AddInventoryItem:
             <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.Inventory"
                                       StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
-                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
+                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail"
+                                      Pathway="@Pathway" />
             break;
         case SystemActionKind.RaiseSiteInstruction:
             <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.SiteInstruction"
                                       StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
-                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
+                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail"
+                                      Pathway="@Pathway" />
             break;
         case SystemActionKind.RaiseCalendarEvent:
             <StageCalendarEventAction @key="kind"

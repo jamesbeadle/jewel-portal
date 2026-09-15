@@ -40,8 +40,10 @@ public static class RecordLinkVocabulary
     // Jewel instructing its site, written at triage or on the project's Site Instructions page.
     public static readonly RecordType[] InternalLinkTypes = { RecordType.Todo, RecordType.SiteInstruction, RecordType.CalendarEvent };
     // Inventory (2026-08-28) is the Supplier pathway's first linkable record type — goods for the
-    // job, raised from a supplier email or on the project's Inventory tab.
-    public static readonly RecordType[] SupplierLinkTypes = { RecordType.Inventory };
+    // job, raised from a supplier email or on the project's Inventory tab. Work orders joined it
+    // 2026-09-15: a merchant's purchase order is the same WO record as a trade's, offered on both
+    // sides; its thread files by the company the order is placed with, not by the type.
+    public static readonly RecordType[] SupplierLinkTypes = { RecordType.WorkOrder, RecordType.Inventory };
 
     // The Tagged tab's "link to another record" pool: since the hard client wall was removed
     // (2026-08-21) every type is offered whatever the thread's pathway. Each option's label shows
@@ -51,11 +53,14 @@ public static class RecordLinkVocabulary
     // The pathway a record type files a thread under, as a TriagePathway — mirrors the server's
     // TriageCategories.BucketFor. Null = pathway-neutral (Todo) or per-email choice (CostCentre).
     // Drives the Tagged picker's cross-filing heads-up.
+    // WorkOrder is null here too: since 2026-09-15 an order files by the COMPANY it is placed
+    // with (Supplier or Subcontractor — LinkableRecord.Pathway carries the answer per record),
+    // which the type alone can't say, so the heads-up stays quiet rather than guess.
     public static TriagePathway? ImpliedPathway(RecordType type) => type switch
     {
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
             or RecordType.Scheduling or RecordType.Lad or RecordType.ValuationClaim => TriagePathway.Client,
-        RecordType.BidPackageInvite or RecordType.WorkOrder
+        RecordType.BidPackageInvite
             or RecordType.SubcontractorComms => TriagePathway.Subcontractor,
         RecordType.SupplierComms or RecordType.Inventory => TriagePathway.Supplier,
         RecordType.InternalComms or RecordType.SiteInstruction => TriagePathway.Internal,
@@ -69,8 +74,9 @@ public static class RecordLinkVocabulary
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
             or RecordType.Scheduling or RecordType.Lad or RecordType.ValuationClaim
             or RecordType.BuildingControlCase or RecordType.BuildingControlInspection => "Client",
-        RecordType.BidPackageInvite or RecordType.WorkOrder
+        RecordType.BidPackageInvite
             or RecordType.SubcontractorComms => "Subcontractor",
+        RecordType.WorkOrder        => "Subcontractor or Supplier", // follows the order's company (2026-09-15)
         RecordType.SupplierComms    => "Supplier",
         RecordType.Inventory        => "Supplier",
         RecordType.InternalComms    => "Internal",

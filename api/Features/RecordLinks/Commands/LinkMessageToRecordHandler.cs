@@ -10,8 +10,10 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Commands;
 // AssignMessageToRequest handler is a thin Request-typed adapter over this.
 //
 // This is also where the thread's communication PATHWAY is decided (the pathway split —
-// docs/Pathway-Split-Platform-Flow-Plan.md §2.3). The record type implies a pathway (BucketFor);
-// pathway-neutral types (CostCentre) take the triager's explicit choice from command.Pathway.
+// docs/Pathway-Split-Platform-Flow-Plan.md §2.3). The record implies a pathway (BucketFor: the
+// record's own when it carries one — a work order follows the company it is placed with,
+// 2026-09-15 — else its type's); pathway-neutral types (CostCentre) take the triager's explicit
+// choice from command.Pathway.
 // Dual filing — Client↔Subcontractor/Internal included — is simply ALLOWED (2026-08-28): the
 // pathway panes make a second filing an explicit, visible choice, so the old "Confirm the
 // cross-filing" reject (and its "File under both anyway" retry with AllowCrossPathway) was a
@@ -52,10 +54,11 @@ public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRe
         var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken)
             ?? throw new InvalidOperationException("The email could not be read from the mailbox.");
 
-        // The pathway this link would file the thread under: implied by the record type, or — for
+        // The pathway this link would file the thread under: implied by the record (its own
+        // pathway — a supplier's work order files under Supplier — else its type's), or — for
         // pathway-neutral types like CostCentre — the triager's explicit choice. Null = no pathway
         // involvement at all (e.g. a Todo link, which never sets or changes one).
-        var bucket = TriageCategories.BucketFor(record.Type) ?? MapPathway(command.Pathway);
+        var bucket = TriageCategories.BucketFor(record) ?? TriageCategories.BucketForPathway(command.Pathway);
         var existingBuckets = (snapshot.Categories ?? Array.Empty<string>())
             .Where(TriageCategories.IsBucketTag)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -121,19 +124,6 @@ public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRe
             cancellationToken: cancellationToken);
 
         return new Acknowledgement(record.RecordId);
-    }
-
-    // The triager's explicit pathway choice ("Client" / "Subcontractor" / "Supplier" / "Internal") as its bucket
-    // category. Unknown/blank → null (no pathway involvement).
-    private static string? MapPathway(string? pathway)
-    {
-        if (string.IsNullOrWhiteSpace(pathway)) return null;
-        var p = pathway.Trim();
-        if (p.Equals("Client", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client;
-        if (p.Equals("Subcontractor", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Subcontractor;
-        if (p.Equals("Supplier", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Supplier;
-        if (p.Equals("Internal", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Internal;
-        return null;
     }
 
     private static string? NullIfEmpty(string value) => string.IsNullOrWhiteSpace(value) ? null : value;

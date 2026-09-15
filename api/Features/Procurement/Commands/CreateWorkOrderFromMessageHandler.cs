@@ -61,13 +61,16 @@ public sealed class CreateWorkOrderFromMessageHandler
     public async Task<WorkOrder> HandleAsync(CreateWorkOrderFromMessage command, CancellationToken cancellationToken)
     {
         // Pre-flight the cross-pathway confirm BEFORE anything persists: a work order files the
-        // thread under Subcontractor, and a thread already filed elsewhere needs the triager's
-        // explicit "File under both anyway" — asked now, while refusing still costs nothing.
-        // (The link at the end re-checks with the same consent flag; it cannot disagree.)
+        // thread under the pathway of the company it is placed with (Supplier for a merchant,
+        // else Subcontractor — WorkOrderPathways, 2026-09-15), and a thread already filed
+        // elsewhere needs the triager's explicit "File under both anyway" — asked now, while
+        // refusing still costs nothing. (The link at the end re-checks with the same consent
+        // flag; it cannot disagree.)
         var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken)
             ?? throw new InvalidOperationException("The email could not be read from the mailbox.");
         Jewel.JPMS.Api.Features.RecordLinks.CrossPathwayGuard.EnsureConfirmed(
-            snapshot.Categories, TriageCategories.BucketFor(RecordType.WorkOrder),
+            snapshot.Categories,
+            WorkOrderPathways.BucketFor(await WorkOrderPathways.CategoryAsync(context, command.SubcontractorId, cancellationToken)),
             command.AllowCrossPathway, "the new work order");
 
         // Fetch the ticked email attachments FIRST — before anything persists — so "that

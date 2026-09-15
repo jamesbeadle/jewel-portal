@@ -1,5 +1,6 @@
 @namespace Jewel.JPMS.Features.Triage.Panels
 @using Jewel.JPMS.Features.Subcontractors
+@using Jewel.JPMS.Features.Procurement
 @using Jewel.JPMS.Features.CostCenters
 @inject SubcontractorsReadModel Subcontractors
 @inject CostCentersReadModel CostCenters
@@ -60,7 +61,7 @@ else if (Kind == StagedRecordKind.WorkOrder)
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-                <FormField Label="Subcontractor" Required>
+                <FormField Label="@WorkOrderCompanies.FieldLabel" Required>
                 <select class="field" disabled="@(Subcontractors.Current is null)"
                         @onchange="e => SetWorkOrder(c => c.SubcontractorId = e.Value?.ToString() ?? string.Empty)">
                     @if (Subcontractors.Current is null)
@@ -69,7 +70,7 @@ else if (Kind == StagedRecordKind.WorkOrder)
                     }
                     else
                     {
-                        <option value="" selected="@(Create.SubcontractorId == "")">Choose a subcontractor…</option>
+                        <option value="" selected="@(Create.SubcontractorId == "")">@WorkOrderCompanies.ChoosePrompt</option>
                         @foreach (var sub in SortedSubcontractors)
                         {
                             <option value="@sub.SubcontractorId" selected="@(Create.SubcontractorId == sub.SubcontractorId)">@sub.CompanyName</option>
@@ -156,7 +157,7 @@ else if (Kind == StagedRecordKind.WorkOrder)
         @* Deposit — percentage of the order value only, printed at the foot of the PO. *@
         <div class="rounded border border-line bg-surface p-3">
             <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none"
-                   title="Tick when the subcontractor requires a deposit — the percentage prints at the foot of the purchase order">
+                   title="Tick when the company requires a deposit — the percentage prints at the foot of the purchase order">
                 <input type="checkbox" class="cursor-pointer align-middle" checked="@Create.DepositRequired"
                        @onchange="e => SetWorkOrder(c => c.DepositRequired = e.Value is true)" />
                 Deposit required
@@ -254,7 +255,7 @@ else if (Kind == StagedRecordKind.WorkOrder)
             {
                 <Notice Tone="Tone.Positive">
                     Apply will raise the order, <strong>send</strong> the purchase order to
-                    <strong>@(WorkOrderSupplier?.ContactEmail ?? "the subcontractor's directory email")</strong>
+                    <strong>@(WorkOrderSupplier?.ContactEmail ?? "the company's directory email")</strong>
                     from the projects mailbox, tag this email to it, and send any reply you've written — all in the one go.
                 </Notice>
             }

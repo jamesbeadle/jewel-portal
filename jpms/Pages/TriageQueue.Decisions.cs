@@ -69,9 +69,13 @@ public partial class TriageQueue
             ? stagedFrom == config.Pathway
             : config.AllActionKinds.Contains(action.Kind))
         + (config.Pathway == "Internal" ? CurrentTodoDrafts().Count : 0)
-        + (StagedCreateReady && StagedCreatePathway(stagedCreate!.Kind) == config.Pathway ? 1 : 0);
+        // A drafted record counts where it was staged when the editor said (a work order or a
+        // defect is offered on the Subcontractor AND Supplier panes, 2026-09-15), else on its
+        // kind's home pane.
+        + (StagedCreateReady && (stagedCreate!.Pathway ?? StagedCreatePathway(stagedCreate.Kind)) == config.Pathway ? 1 : 0);
 
-    // Which pane's badge a drafted record counts on — mirrors which pane offers its create.
+    // Which pane's badge a drafted record counts on when the editor didn't say — the pane that
+    // first offered its create.
     private static string? StagedCreatePathway(StagedRecordKind kind) => kind switch
     {
         StagedRecordKind.Request or StagedRecordKind.BuildingControlInspection => "Client",
