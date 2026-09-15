@@ -4,8 +4,8 @@ namespace Jewel.JPMS.Api.Features.Sales;
 /// Who works the Sales section (2026-09-06). Reads are AllInternal — a lead is not a secret from
 /// staff. Writing leads, logging touches and writing strategies is the sales team: the
 /// directors, the PM and QS who qualify and price, and the Sales &amp; Marketing desk. Deciding a
-/// lead's outcome (Won creates a client and a project; Lost closes it) and changing a strategy's
-/// status is the directors'. Administrators pass every gate (SignedInUserResolver grants them
+/// lead's outcome (Won creates a client and a project; Lost closes it; Delete removes a mistaken
+/// or duplicate one, 2026-09-15) and changing a strategy's status is the directors'. Administrators pass every gate (SignedInUserResolver grants them
 /// all roles). Each set is referenced by BOTH the HTTP gates and the connector actions, so the
 /// two surfaces cannot drift.
 /// </summary>

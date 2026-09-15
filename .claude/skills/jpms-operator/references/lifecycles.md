@@ -146,6 +146,11 @@ Site visit → Proposal, ending Won (`WinLead` — creates the Client and the
 project shell, never a plain stage move) or Lost, or parks in Nurture. One
 raised from an enquiry email on the Control Centre's Sales pane
 (`CreateLeadFromMessage`) lands Engaged / Inbound with the email tagged to it.
+`DeleteLead` (2026-09-15, directors / FD; `delete_lead` over the connector,
+confirm-first) removes a lead outright with its timeline, estimates, proposals
+and imagine rounds — a mistaken capture, a duplicate, a test entry; a Won lead
+is refused, and a real lead that went nowhere is moved to Lost so the register
+keeps its history. Emails tagged JPMS/LD-#### keep their tag.
 An estimate (EST-####, `LeadEstimate`, 2026-09-15) is Jewel's own pricing of
 one enquiry on the lead: Received → Pricing → Submitted (needs a total; stamps
 SubmittedAt) → Won / Lost (closed; edits refused). Several per lead are normal

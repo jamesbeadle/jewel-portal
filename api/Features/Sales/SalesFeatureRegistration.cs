@@ -96,6 +96,7 @@ public static class SalesFeatureRegistration
         Register<MoveLeadStage, Lead, MoveLeadStageHandler, MoveLeadStageAuthorisation, MoveLeadStageValidation>(services);
         Register<WinLead, LeadWonOutcome, WinLeadHandler, WinLeadAuthorisation, WinLeadValidation>(services);
         Register<LogLeadActivity, LeadActivity, LogLeadActivityHandler, LogLeadActivityAuthorisation, LogLeadActivityValidation>(services);
+        Register<DeleteLead, Acknowledgement, DeleteLeadHandler, DeleteLeadAuthorisation, DeleteLeadValidation>(services);
         Register<CreateSalesStrategy, SalesStrategy, CreateSalesStrategyHandler, CreateSalesStrategyAuthorisation, CreateSalesStrategyValidation>(services);
         Register<UpdateSalesStrategy, SalesStrategy, UpdateSalesStrategyHandler, UpdateSalesStrategyAuthorisation, UpdateSalesStrategyValidation>(services);
         Register<SetSalesStrategyStatus, SalesStrategy, SetSalesStrategyStatusHandler, SetSalesStrategyStatusAuthorisation, SetSalesStrategyStatusValidation>(services);

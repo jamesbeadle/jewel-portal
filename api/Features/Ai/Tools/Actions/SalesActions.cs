@@ -108,6 +108,27 @@ internal sealed partial class SalesActions : IAiActionSource
             RequiresConfirmation: true),
 
         new AiAction(
+            Name: "delete_lead",
+            Area: Area,
+            Description: "Deletes a lead permanently — the lead and everything on it: its "
+                + "timeline, its estimates, its proposals and its imagine rounds. For a mistaken "
+                + "capture, a duplicate or a test entry; a real lead that went nowhere is closed "
+                + "as Lost (move_lead_stage), not deleted. Directors only. A Won lead is refused "
+                + "— it has a client and a project behind it. There is no undo.",
+            CommandType: typeof(DeleteLead),
+            ResultType: typeof(Acknowledgement),
+            AuthorisationType: typeof(DeleteLeadAuthorisation),
+            ValidationType: typeof(DeleteLeadValidation),
+            VisibleTo: SalesRoles.Deciders,
+            EmailStamps: new[] { "DeletedByEmail" },
+            NameStamps: Array.Empty<string>(),
+            Notes: "Irreversible. Read the lead (get_lead) and confirm with the user, naming its "
+                + "LD-#### reference and contact, before calling. leadId via find_by_reference or "
+                + "list_leads — never the reference. Emails tagged to the lead keep their "
+                + "JPMS/LD-#### tag in the mailbox; they are not deleted.",
+            RequiresConfirmation: true),
+
+        new AiAction(
             Name: "log_lead_activity",
             Area: Area,
             Description: "Records a touch on a lead — a call, an email, a letter or brochure "

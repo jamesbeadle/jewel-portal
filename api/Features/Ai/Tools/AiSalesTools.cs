@@ -8,7 +8,7 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools;
 /// The Sales section's reads over the connector (2026-09-06): the lead register, one lead with
 /// its timeline, the strategies with their funnels, one strategy with its leads. Visible to
 /// every internal role, mirroring SalesRoles.Readers on the endpoints. The writes are actions:
-/// capture_lead, update_lead, move_lead_stage, win_lead, log_lead_activity,
+/// capture_lead, update_lead, move_lead_stage, win_lead, delete_lead, log_lead_activity,
 /// create_sales_strategy, update_sales_strategy, set_sales_strategy_status,
 /// generate_strategy_plan, run_strategy_research (SalesActions).
 /// </summary>

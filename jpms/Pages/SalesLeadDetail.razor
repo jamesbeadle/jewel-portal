@@ -17,7 +17,10 @@
     every touch logged by hand plus every stage change. Moves along the open ladder are the sales
     team's; Lost (with a reason) and Nurture are the directors'; Won is its own button, directors
     only, because it creates the Client account and the project shell in one move and cannot be
-    undone from here. Edits are modals; the page never renders an inline form.
+    undone from here. Delete (2026-09-15) is the directors' too, never on a Won lead, and takes
+    the lead's whole timeline, estimates, proposals and imagine rounds with it — for a mistaken
+    capture or a duplicate; a real lead that went nowhere is Lost. Edits are modals; the page
+    never renders an inline form.
 *@
 
 <Page>
@@ -61,6 +64,10 @@
                         @if (CanDecide && lead.Stage != LeadStage.Won)
                         {
                             <button type="button" class="btn-primary" title="@(Proposals.Any(p => p.Status == SalesProposalStatus.Accepted) ? "The proposal is accepted — this creates the client and the project" : "Creates the client and the project")" @onclick="OpenWin">Won — create client &amp; project</button>
+                        }
+                        @if (CanDecide && lead.Stage != LeadStage.Won)
+                        {
+                            <button type="button" class="btn-secondary text-negative border-negative/40 hover:border-negative" title="Removes the lead and everything on it — no undo" @onclick="OpenDelete">Delete</button>
                         }
                     </div>
                 </Actions>
@@ -315,6 +322,23 @@
             </div>
         </Modal>
 
+        <Modal IsOpen="@deleteOpen"
+               Title="@($"Delete {lead.Reference}?")"
+               ConfirmLabel="@(busy ? "Deleting…" : "Delete lead")"
+               ConfirmDisabled="@busy"
+               OnCancel="() => deleteOpen = false"
+               OnConfirm="DeleteAsync">
+            <p class="text-sm text-content mb-4">
+                This permanently removes <span class="font-mono">@lead.Reference</span> — @Headline@(string.IsNullOrWhiteSpace(lead.Summary) ? "" : $", “{lead.Summary}”") —
+                with its whole timeline@(Estimates.Count > 0 ? $", {Estimates.Count} estimate{(Estimates.Count == 1 ? "" : "s")}" : "")@(Proposals.Count > 0 ? $", {Proposals.Count} proposal{(Proposals.Count == 1 ? "" : "s")}" : "")@(Concepts.Count > 0 ? " and its imagine concepts" : "").
+                This cannot be undone. A real lead that went nowhere should be moved to Lost instead, so the register keeps its history.
+            </p>
+            @if (actionError is not null)
+            {
+                <Notice Tone="Tone.Negative" Class="mb-4">@actionError</Notice>
+            }
+        </Modal>
+
         <Modal IsOpen="@logOpen"
                Title="Log activity"
                ConfirmLabel="@(busy ? "Saving…" : "Add to timeline")"
@@ -365,6 +389,7 @@
     private bool editOpen;
     private bool winOpen;
     private bool logOpen;
+    private bool deleteOpen;
     private LeadStage? moveTo;
     private string moveNote = "";
     private string lostReason = "";
@@ -492,6 +517,27 @@
             winOpen = false;
             actionNote = $"{outcome.Lead.Reference} is Won — the client account and project {projectReference.Trim()} are created; open the project from Details.";
             await ReloadAsync();
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private void OpenDelete()
+    {
+        actionError = null;
+        deleteOpen = true;
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (busy) return;
+        busy = true; actionError = null;
+        try
+        {
+            await Commands.SendAsync(new DeleteLead(LeadId), CancellationToken.None);
+            deleteOpen = false;
+            Nav.NavigateTo("/sales/leads");
+            Detail.Forget(LeadId);
         }
         catch (CommandFailedException ex) { actionError = ex.Message; }
         finally { busy = false; }

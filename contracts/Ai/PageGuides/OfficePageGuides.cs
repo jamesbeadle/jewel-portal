@@ -81,7 +81,9 @@ public static class OfficePageGuides
             + "search box, \"New lead\" opens the capture modal, a row opens the lead's own page. "
             + "Over the connector: list_leads (filter by stage / strategyId), get_lead, "
             + "capture_lead, update_lead, move_lead_stage, log_lead_activity, win_lead (directors: "
-            + "creates the Client and the project shell). Never file a lead as Won by hand — "
+            + "creates the Client and the project shell), delete_lead (directors: a mistaken "
+            + "capture or a duplicate, with everything on it — never a Won lead; a real lead that "
+            + "went nowhere is Lost, not deleted). Never file a lead as Won by hand — "
             + "win_lead is what creates the records."),
 
         new("/sales/leads/{leadId}", "Lead",
@@ -91,9 +93,11 @@ public static class OfficePageGuides
             + "and creates the Client account and the project shell in one move), and its "
             + "timeline — every call, email, letter, meeting, site visit, proposal and note "
             + "logged by hand plus every stage change, newest first. \"Log activity\" adds a "
-            + "touch. A Won lead links to its project. Over the connector: get_lead reads it "
+            + "touch. A Won lead links to its project. \"Delete\" (directors, not on a Won lead) "
+            + "removes the lead with its timeline, estimates, proposals and imagine rounds, for a "
+            + "mistaken capture or a duplicate — no undo. Over the connector: get_lead reads it "
             + "(an LD-#### reference resolves), log_lead_activity, move_lead_stage, update_lead, "
-            + "win_lead act on it. Below the details sit the two panels of the journey AFTER a lead "
+            + "win_lead, delete_lead act on it. Below the details sit the two panels of the journey AFTER a lead "
             + "is identified. Imagine: \"Issue link & QR code\" mints the lead's private "
             + "/imagine/{token} link (the QR code goes on the letter — only that link opens the "
             + "page, there is no general address; re-issuing kills printed codes); every round the "

@@ -30,6 +30,9 @@ public sealed class SalesLeadEndpoints
     private readonly LogLeadActivityAuthorisation logAuthorisation;
     private readonly LogLeadActivityValidation logValidation;
     private readonly ICommandHandler<LogLeadActivity, LeadActivity> log;
+    private readonly DeleteLeadAuthorisation deleteAuthorisation;
+    private readonly DeleteLeadValidation deleteValidation;
+    private readonly ICommandHandler<DeleteLead, Acknowledgement> delete;
 
     public SalesLeadEndpoints(
         SignedInUserResolver users,
@@ -50,7 +53,10 @@ public sealed class SalesLeadEndpoints
         ICommandHandler<WinLead, LeadWonOutcome> win,
         LogLeadActivityAuthorisation logAuthorisation,
         LogLeadActivityValidation logValidation,
-        ICommandHandler<LogLeadActivity, LeadActivity> log)
+        ICommandHandler<LogLeadActivity, LeadActivity> log,
+        DeleteLeadAuthorisation deleteAuthorisation,
+        DeleteLeadValidation deleteValidation,
+        ICommandHandler<DeleteLead, Acknowledgement> delete)
     {
         this.users = users; this.auditActor = auditActor; this.list = list; this.get = get;
         this.captureAuthorisation = captureAuthorisation; this.captureValidation = captureValidation; this.capture = capture;
@@ -58,6 +64,7 @@ public sealed class SalesLeadEndpoints
         this.moveAuthorisation = moveAuthorisation; this.moveValidation = moveValidation; this.move = move;
         this.winAuthorisation = winAuthorisation; this.winValidation = winValidation; this.win = win;
         this.logAuthorisation = logAuthorisation; this.logValidation = logValidation; this.log = log;
+        this.deleteAuthorisation = deleteAuthorisation; this.deleteValidation = deleteValidation; this.delete = delete;
     }
 
     [Function(nameof(ListLeads))]
@@ -162,6 +169,20 @@ public sealed class SalesLeadEndpoints
         var outcome = logValidation.Check(command);
         if (outcome.HasFailed) return new BadRequestObjectResult(outcome.Errors);
         return await Run(() => log.HandleAsync(command, request.HttpContext.RequestAborted));
+    }
+
+    [Function(nameof(DeleteLead))]
+    public async Task<IActionResult> Delete(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "sales/leads/{leadId}")] HttpRequest request, string leadId)
+    {
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        var command = new DeleteLead(leadId, signedInUser.Email);
+        auditActor.Email = signedInUser.Email;
+        if (!deleteAuthorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
+        var outcome = deleteValidation.Check(command);
+        if (outcome.HasFailed) return new BadRequestObjectResult(outcome.Errors);
+        return await Run(() => delete.HandleAsync(command, request.HttpContext.RequestAborted));
     }
 
     private static async Task<IActionResult> Run<T>(Func<Task<T>> handle)

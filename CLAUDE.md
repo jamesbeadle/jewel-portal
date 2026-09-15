@@ -14,7 +14,12 @@
   carries its strategy's id when a strategy did. One ladder for every lead: New → Contacted →
   Engaged → Site visit → Proposal → Won / Lost, Nurture for the parked (`LeadStage`, ints
   remapped from the May prototype by `AddSalesStrategies`). **Won is `WinLead`**, never a stage
-  move — it creates the Client account and the project shell in one handler. Code lives in
+  move — it creates the Client account and the project shell in one handler. **`DeleteLead`**
+  (2026-09-15; directors, `SalesRoles.Deciders`) removes a lead with everything on it — timeline,
+  estimates, proposals, imagine rows — for a mistaken capture or a duplicate; a Won lead is
+  refused (its client and project stay), and a real lead that went nowhere is Lost, not deleted.
+  Tagged emails keep their `JPMS/LD-####` category; the newest number can be re-issued once its
+  row is gone (max + 1, like every global sequence). Code lives in
   `contracts/Sales`, `api/Features/Sales`, `jpms/Features/Sales` + `jpms/Pages/Sales*.razor`;
   the prototype's satellite CRM tables (QualificationAssessments, SiteVisits, InfoChaseItems,
   BidDecisions, Proposals, LeadOutcomes) stay in the database, unread.

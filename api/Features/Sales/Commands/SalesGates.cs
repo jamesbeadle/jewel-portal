@@ -122,6 +122,18 @@ public sealed class LogLeadActivityValidation
     }
 }
 
+public sealed class DeleteLeadAuthorisation
+{
+    // Deleting a lead is a decision like closing one — the directors' (admins pass every gate).
+    public bool Allows(SignedInUser user, DeleteLead command) => SalesRoles.Deciders.IncludesAny(user.Roles);
+}
+
+public sealed class DeleteLeadValidation
+{
+    public ValidationOutcome Check(DeleteLead command) =>
+        string.IsNullOrWhiteSpace(command.LeadId) ? ValidationOutcome.Failed("LeadId is required.") : ValidationOutcome.Passed;
+}
+
 public sealed class CreateSalesStrategyAuthorisation
 {
     public bool Allows(SignedInUser user, CreateSalesStrategy command) => SalesRoles.SalesTeam.IncludesAny(user.Roles);

@@ -40,6 +40,12 @@ public sealed class LeadDetailReadModel
         byLead[leadId] = await queries.AskAsync(new GetLead(leadId), cancellationToken);
         OnChanged?.Invoke();
     }
+
+    /// <summary>After a delete: the page's "no lead with that id" is right, not the cached record.</summary>
+    public void Forget(string leadId)
+    {
+        if (byLead.Remove(leadId)) OnChanged?.Invoke();
+    }
 }
 
 /// <summary>The strategies with their funnels — the Strategies page and the lead form's

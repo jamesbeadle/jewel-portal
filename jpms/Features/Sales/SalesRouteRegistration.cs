@@ -41,6 +41,9 @@ public static class SalesRouteRegistration
         commands.Register<LogLeadActivity, LeadActivity>(
             new CommandRoute("POST", "/api/sales/leads/{leadId}/activities",
                 command => $"/api/sales/leads/{((LogLeadActivity)command).LeadId}/activities"));
+        commands.Register<DeleteLead, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/sales/leads/{leadId}",
+                command => $"/api/sales/leads/{((DeleteLead)command).LeadId}"));
 
         commands.Register<CreateSalesStrategy, SalesStrategy>(
             new CommandRoute("POST", "/api/sales/strategies", _ => "/api/sales/strategies"));

@@ -609,6 +609,29 @@ public sealed class AiConnectorTests
     }
 
     [Fact]
+    public void DeleteLead_reachesTheConnector_forDirectorsOnly()
+    {
+        // 2026-09-15, Nigel: "I need to be able to delete sales leads" — the lead page's Delete
+        // and the connector's delete_lead are the same command with the same gate: the deciders
+        // (directors, FD; admins carry every role), confirm-first, the actor stamped, never a Won
+        // lead (the handler refuses). The sales team can capture and edit but not delete.
+        var action = AiActionRegistry.Find("delete_lead");
+        Assert.NotNull(action);
+        Assert.Equal("Sales", action!.Area);
+        Assert.True(action.RequiresConfirmation);
+        Assert.Contains("DeletedByEmail", action.EmailStamps);
+        Assert.True(action.VisibleTo.IncludesAny(UserWith(Role.ManagingDirector).Roles));
+        Assert.True(action.VisibleTo.IncludesAny(UserWith(Role.FinanceDirector).Roles));
+        Assert.False(action.VisibleTo.IncludesAny(UserWith(Role.SalesMarketing).Roles));
+        Assert.False(action.VisibleTo.IncludesAny(UserWith(Role.ProjectManager).Roles));
+        Assert.Contains("Won", action.Description);
+        Assert.Contains("Lost", action.Description);
+        var schema = System.Text.Json.JsonSerializer.Serialize(AiActionSchema.InputSchema(action));
+        Assert.Contains("leadId", schema);
+        Assert.DoesNotContain("deletedByEmail", schema);
+    }
+
+    [Fact]
     public void SalesProposals_reachTheConnector()
     {
         // 2026-09-15, Nigel: "ingest the emails and attachments and prepare a proposal" — the
