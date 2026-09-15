@@ -197,9 +197,10 @@ else
     </div>
 
     @* The mail behind this statement: everything triaged to the snapshot's own tag, and to the
-       claim it was frozen from, read back live from the mailbox — the same record-agnostic
-       mechanism as the variation page's Communications. Reading only: tagging (and replying
-       from a record) stays in the Control Centre, where the pathway guards live. *@
+       claim it was frozen from — one read, merged server-side (RecordEmailReader's companion
+       read, 2026-09-15) — the same record-agnostic mechanism as the variation page's
+       Communications. Reading only: tagging (and replying from a record) stays in the Control
+       Centre, where the pathway guards live. *@
     <div class="mt-4 panel p-5">
         <h3 class="text-sm font-semibold text-content mb-3">Correspondence</h3>
         @* One gate for the region; a failed fetch opens it and says so (never pulses forever). *@
@@ -211,8 +212,8 @@ else
             else if (emails is { Count: 0 })
             {
                 <p class="text-sm text-content-subtle italic">
-                    No emails are linked to this snapshot or its claim yet. Tag one in the Control Centre —
-                    Client → Valuation claims, or Valuation report snapshots — and it appears here.
+                    No emails are linked to this snapshot or its claim yet. File one in the Control Centre —
+                    Client → Valuation reports — and it appears here.
                 </p>
             }
             else if (emails is not null)

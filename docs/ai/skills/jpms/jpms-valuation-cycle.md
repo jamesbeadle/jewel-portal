@@ -114,14 +114,17 @@ the renamed set, get the yes, then rename each one. Names only — nothing finan
 
 ## Correspondence
 
-- **The live claim is a record in its own right.** Mail about the period — what to claim, the
-  QS's working, the architect's early queries — files to the claim (file_email_to_record, type
-  ValuationClaim, recordId = the claim's ValuationClaimId from get_valuation_context) and reads
-  back with read_record_emails (recordType valuation_claim). Its mail tag is
-  JPMS/VAL-{project reference}-{claim number}.
-- **A snapshot inherits its claim's mail.** Every snapshot frozen from a claim shows the claim's
-  correspondence beside anything tagged to the snapshot itself (type ValuationReportSnapshot),
-  so the statement carries the period's whole story; the client's reply to a sent statement
-  can go on either.
+- **One row per period (2026-09-15).** A valuation email files to the period's live frozen
+  statement when one exists (file_email_to_record, type ValuationReportSnapshot, a
+  non-superseded id from list_valuation_snapshots), otherwise to the live claim (type
+  ValuationClaim, recordId = the claim's ValuationClaimId from get_valuation_context). That is
+  what the Control Centre's Client → Valuation reports section offers — never both rows for one
+  period, never a superseded statement. Tags: JPMS/VAL-{project reference}-{claim number} for
+  the claim, JPMS/VRS-{project reference}-{n} for a statement.
+- **Either row reads the whole period.** read_record_emails on a claim (recordType
+  valuation_claim) returns mail filed to the claim AND to every statement frozen from it,
+  superseded ones included; on a statement (valuation_snapshot) it returns the statement's mail
+  and its claim's. The Valuation Report's Correspondence section and the snapshot viewer show
+  the same story, so a filing to the "other" row is never lost.
 - **Roll-over moves the tag on its own.** Confirm & roll over starts the next claim with the
   next number — new mail files to the new period; nothing is re-tagged.

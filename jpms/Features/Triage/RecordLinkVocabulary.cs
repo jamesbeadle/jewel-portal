@@ -11,7 +11,10 @@ public static class RecordLinkVocabulary
     // subsets below are what the pickers normally offer.
     // Cost Centre was removed as a link target 2026-08-04 (it never earned its place as a filing
     // destination; existing CC-tagged mail keeps reading fine). VariationQuote is folded into
-    // Variation — one record, one number, per the 2026-07-23 unification.
+    // Variation — one record, one number, per the 2026-07-23 unification. ValuationClaim is the
+    // one "Valuation report" entry (2026-09-15): its list carries each period as its live frozen
+    // statement (a ValuationReportSnapshot row) or, with none, the claim — the snapshot type is
+    // never offered on its own.
     public static readonly RecordType[] RecordTypeOptions =
     {
         RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Scheduling, RecordType.Lad, RecordType.Variation, RecordType.ValuationClaim, RecordType.Todo, RecordType.CalendarEvent, RecordType.BuildingControlInspection, RecordType.BuildingControlCase, RecordType.Inventory, RecordType.SiteInstruction
@@ -59,7 +62,8 @@ public static class RecordLinkVocabulary
     public static TriagePathway? ImpliedPathway(RecordType type) => type switch
     {
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
-            or RecordType.Scheduling or RecordType.Lad or RecordType.ValuationClaim => TriagePathway.Client,
+            or RecordType.Scheduling or RecordType.Lad or RecordType.ValuationClaim
+            or RecordType.ValuationReportSnapshot => TriagePathway.Client,
         RecordType.BidPackageInvite
             or RecordType.SubcontractorComms => TriagePathway.Subcontractor,
         RecordType.SupplierComms or RecordType.Inventory => TriagePathway.Supplier,
@@ -73,6 +77,7 @@ public static class RecordLinkVocabulary
     {
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
             or RecordType.Scheduling or RecordType.Lad or RecordType.ValuationClaim
+            or RecordType.ValuationReportSnapshot
             or RecordType.BuildingControlCase or RecordType.BuildingControlInspection => "Client",
         RecordType.BidPackageInvite
             or RecordType.SubcontractorComms => "Subcontractor",
@@ -105,7 +110,8 @@ public static class RecordLinkVocabulary
         RecordType.Variation        => "Variation Order",
         RecordType.VariationQuote   => "Variation Order Quote",
         RecordType.Lad              => "LADs claim",
-        RecordType.ValuationClaim   => "Valuation claim",
+        RecordType.ValuationClaim   => "Valuation report",   // the merged list: statement when frozen, else the live period
+        RecordType.ValuationReportSnapshot => "Valuation report snapshot",
         RecordType.Todo             => "To-do item",
         RecordType.CalendarEvent    => "Calendar event",
         RecordType.BuildingControlInspection => "Building Control Inspection",

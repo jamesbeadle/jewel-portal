@@ -64,24 +64,17 @@ public partial class ValuationSnapshotViewer
     }
 
     // The emails triaged to this snapshot's tag PLUS those tagged to the claim it was frozen from
-    // (the period's correspondence travels with its statement), read live and merged — an email
-    // tagged to both appears once. A failure opens the gate with its own message rather than
-    // blocking the report above (the frozen lines are the main event).
+    // (the period's correspondence travels with its statement). Since 2026-09-15 that merge is
+    // the server's (RecordEmailReader reads a record's companions — the claim page gets the
+    // reverse for free), so this is one read; an email tagged to both arrives once. A failure
+    // opens the gate with its own message rather than blocking the report above (the frozen
+    // lines are the main event).
     private async Task LoadEmailsAsync()
     {
         try
         {
-            var tagged = new List<MailboxMessage>(await Queries.AskAsync(
-                new ListRecordEmails(RecordType.ValuationReportSnapshot, SnapshotId), CancellationToken.None));
-            if (detail?.Snapshot.ValuationClaimId is { Length: > 0 } claimId)
-            {
-                tagged.AddRange(await Queries.AskAsync(
-                    new ListRecordEmails(RecordType.ValuationClaim, claimId), CancellationToken.None));
-            }
-            emails = tagged
-                .GroupBy(email => string.IsNullOrEmpty(email.InternetMessageId) ? email.Id : email.InternetMessageId)
-                .Select(group => group.First())
-                .ToList();
+            emails = await Queries.AskAsync(
+                new ListRecordEmails(RecordType.ValuationReportSnapshot, SnapshotId), CancellationToken.None);
         }
         catch
         {

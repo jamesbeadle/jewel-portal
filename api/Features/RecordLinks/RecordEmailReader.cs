@@ -8,6 +8,10 @@ namespace Jewel.JPMS.Api.Features.RecordLinks;
 //
 // This is the record-agnostic generalisation of RequestEmailReader: it resolves the tag via the
 // record's provider instead of reading a RequestEntity directly. RequestEmailReader now delegates here.
+//
+// A provider that names COMPANIONS (ICompanionRecordProvider, 2026-09-15 — a valuation claim and
+// the statements frozen from it) has their tags read too, merged with the record's own: the two
+// rows are one period's story, and an email filed to either shows on both, once.
 public sealed class RecordEmailReader
 {
     private readonly RecordProviderRegistry providers;
@@ -30,19 +34,31 @@ public sealed class RecordEmailReader
         if (record is null)
             return Array.Empty<MailboxMessage>();
 
-        var tag = TriageCategories.ForRecord(record.TagReference);
+        var tags = new List<string> { TriageCategories.ForRecord(record.TagReference) };
+        if (provider is ICompanionRecordProvider companions)
+            foreach (var stem in await companions.CompanionTagReferencesAsync(record, ct))
+                tags.Add(TriageCategories.ForRecord(stem));
 
         var emails = new List<MailboxMessage>();
-        string? cursor = null;
-        var guard = 0;
-        do
+        foreach (var tag in tags.Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            var page = await graph.ListByTagAsync(tag, cursor, 50, ct);
-            emails.AddRange(page.Items);
-            cursor = page.NextCursor;
+            string? cursor = null;
+            var guard = 0;
+            do
+            {
+                var page = await graph.ListByTagAsync(tag, cursor, 50, ct);
+                emails.AddRange(page.Items);
+                cursor = page.NextCursor;
+            }
+            while (cursor is not null && ++guard < 20);
         }
-        while (cursor is not null && ++guard < 20);
 
-        return emails.OrderBy(e => e.ReceivedAt).ToList();
+        // An email tagged to the record AND a companion arrives from both reads — keep it once,
+        // keyed the way the snapshot viewer always did (internet message id, else the Graph id).
+        return emails
+            .GroupBy(email => string.IsNullOrEmpty(email.InternetMessageId) ? email.Id : email.InternetMessageId)
+            .Select(group => group.First())
+            .OrderBy(email => email.ReceivedAt)
+            .ToList();
     }
 }

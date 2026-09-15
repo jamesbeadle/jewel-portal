@@ -36,6 +36,19 @@ public interface ITagResolvingProvider
     Task<LinkableRecord?> FindByTagAsync(string tagReference, CancellationToken ct);
 }
 
+// Records whose tagged mail is read ALONGSIDE this record's own — one period's story told from
+// either end (2026-09-15): a valuation claim reads every statement frozen from it, a statement
+// reads the claim it was frozen from, so the two pages and the connector's read_record_emails
+// show the same correspondence whichever row the triager filed to. Optional — RecordEmailReader
+// merges the tags' mail (an email tagged to several appears once) for the providers that
+// implement it and reads the one tag for the rest. Companions are tag STEMS, not records: the
+// reader only needs the categories to page, and a provider can mint a sibling family's stem
+// without resolving its rows.
+public interface ICompanionRecordProvider
+{
+    Task<IReadOnlyList<string>> CompanionTagReferencesAsync(LinkableRecord record, CancellationToken ct);
+}
+
 // Shared parse for the simple global-sequence stems ("TODO-0011" -> 11). Project-qualified
 // families (requests, variations) carry their own grammar in their providers instead.
 internal static class TagReferenceParsing

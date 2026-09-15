@@ -1,10 +1,12 @@
 @using Jewel.JPMS.Features.Triage.Panels
 @inject IQueryClient Queries
 
-@* The mail behind the selected claim: everything tagged to the period in the Control Centre
-   (Client → Valuation claims), read back live by the claim's own tag — the snapshot viewer's
-   Correspondence mechanism, and every snapshot frozen from this claim shows the same mail beside
-   its own. Reading only: tagging and replying stay in the Control Centre. *@
+@* The mail behind the selected claim: everything filed to the period in the Control Centre
+   (Client → Valuation reports — the period's live statement, or the claim itself while none is
+   frozen), read back live by tag. The read merges the claim's own tag with every statement frozen
+   from it (RecordEmailReader's companion read, 2026-09-15), so this section and the snapshot
+   viewer show one story whichever row the triager picked. Reading only: tagging and replying
+   stay in the Control Centre. *@
 <div class="panel overflow-hidden">
     <button type="button" @onclick="Toggle" aria-expanded="@isOpen"
             class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-raised/60 transition">
@@ -41,8 +43,9 @@
                     else if (emails is { Count: 0 })
                     {
                         <p class="text-sm text-content-subtle italic">
-                            No emails are tagged to @Claim.DisplayName yet. Tag one in the Control Centre —
-                            Client → Valuation claims — and it appears here, and on every snapshot frozen from this claim.
+                            No emails are filed to @Claim.DisplayName yet — not to the period, nor to any statement
+                            frozen from it. File one in the Control Centre — Client → Valuation reports — and it appears
+                            here and on the statement.
                         </p>
                     }
                     else if (emails is not null)

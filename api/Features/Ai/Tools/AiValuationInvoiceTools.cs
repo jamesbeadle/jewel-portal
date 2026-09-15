@@ -104,7 +104,10 @@ internal static partial class AiValuationInvoiceTools
                 "A project's frozen valuation-report snapshots — each the exact statement a client "
                 + "was (or could be) sent: label, when taken, the invoice it backs, whether a later "
                 + "snapshot supersedes it, and its frozen summary figures. The live report is a "
-                + "working copy; a snapshot is the issued record.",
+                + "working copy; a snapshot is the issued record. A non-superseded snapshot is also "
+                + "where a valuation email files once the period's statement is out "
+                + "(file_email_to_record, type ValuationReportSnapshot); its read_record_emails "
+                + "(recordType valuation_snapshot) includes the claim's mail.",
                 AiToolSchema.Object(
                     ("projectId", "string", "Defaults to the project in view; pass it otherwise.", false)),
                 AiToolKind.Read,

@@ -261,8 +261,9 @@
                 <div class="mt-3">
                     <ValuationSnapshotsSection ProjectId="@ProjectId" OnView="OpenSnapshot" OnDeleted="OnSnapshotDeleted" OnEmail="OpenSnapshotEmail" />
                 </div>
-                @* The selected claim's own mail: the period is a linkable record in the Control
-                   Centre (Client → Valuation claims), and reads it back here by tag. *@
+                @* The selected claim's mail: the period is filed to in the Control Centre
+                   (Client → Valuation reports — the claim while nothing is frozen, its statement
+                   after), and reads back here by tag, statements included. *@
                 <div class="mt-3">
                     <ValuationClaimCorrespondenceSection Claim="@Selected" />
                 </div>

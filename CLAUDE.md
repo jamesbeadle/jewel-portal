@@ -101,6 +101,34 @@
   `StagedRecordActionEditor` from its pane, so a work order (or defect) drafted on the Supplier
   pane counts on the Supplier badge. Display only; the server decides the filing.
 
+## A valuation email files to ONE row per period (api + jpms)
+
+- **Statement when frozen, claim until then** (Nigel, 2026-09-15): the Control Centre's Client
+  pane has one "Valuation reports" section, not a "Valuation claims" drawer and a "Valuation
+  report snapshots" drawer. `ValuationClaimLinkProvider.ForProjectAsync` returns the merged
+  list — each period as its live (non-superseded) `ValuationReportSnapshot` row when one has
+  been frozen, otherwise as the `ValuationClaim` row; superseded statements are never offered;
+  Confirmed periods with no statement trail the list, inactive. The rule is the pure
+  `ValuationReportLinkTargets.Merge` (tests: `ValuationReportLinkTargetsTests`). Snapshot rows
+  keep their own type and id (the Scheduling picker's precedent — bucket + NOD/EOT/LAD rows), so
+  the link goes through the owning provider; `ValuationReportSnapshotLinkProvider.ForProjectAsync`
+  stays the plain register for the connector and the Explorer. `PathwayPaneConfig.Client` lists
+  `ValuationClaim` only; `PathwayPane.SectionOf` counts a snapshot pick under it;
+  `RecordLinkVocabulary` labels the entry "Valuation report" and knows the snapshot type files
+  under Client.
+- **Either row reads the whole period.** `ICompanionRecordProvider` (api/RecordLinks): a claim
+  names every statement frozen from it (superseded included), a statement names its claim, and
+  `RecordEmailReader` reads the record's tag plus its companions', de-duplicated by internet
+  message id. So the Valuation Report's Correspondence section, the snapshot viewer (now one
+  read — its client-side merge is gone) and `read_record_emails` on either type show the same
+  mail. `ListUnfiledReplies` inherits the merge: a reply filed to the statement is not "unfiled"
+  on the claim.
+- **Doctrine lives in three places** and must say the same thing: the connector descriptions
+  (`file_email_to_record` notes, `get_valuation_context`, `list_valuation_snapshots`, the
+  Valuation Report and Control Centre page guides), `docs/ai/skills/jpms/jpms-email-triage.md` +
+  `jpms-valuation-cycle.md` (re-save to the portal's stored skills with `save_skill` after the
+  deploy — the DB copy is what the connector loads), and the jpms-operator skill's references.
+
 ## Record tabs & the in-view toolbar (jpms)
 
 - **The request chain renders as document tabs, not chips.** `RecordTabBar` (Components) is on

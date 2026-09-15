@@ -31,8 +31,10 @@ internal static partial class AiCommercialTools
                 + "and the report totals. The selected claim is the newest unless claimId says "
                 + "otherwise. Filter with variationRef (\"V01\") to see one variation's lines only. "
                 + "Each claim's ValuationClaimId is also its correspondence record id: read_record_emails "
-                + "(recordType valuation_claim) reads the mail tagged to the period, and "
-                + "file_email_to_record (type ValuationClaim) files an email to it. "
+                + "(recordType valuation_claim) reads the period's mail — its own tag AND every "
+                + "statement frozen from it — and file_email_to_record (type ValuationClaim) files an "
+                + "email to it while no live statement exists; once one does, file to that snapshot "
+                + "(list_valuation_snapshots, type ValuationReportSnapshot) — one row per period. "
                 + "Call this before reviewing or correcting % complete, and before claim_progress.",
                 AiToolSchema.Object(
                     ("projectId", "string", "Defaults to the project in view.", false),

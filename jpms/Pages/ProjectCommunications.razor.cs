@@ -103,8 +103,11 @@ public partial class ProjectCommunications
         (RecordType.Defect,           "Defects"),
         (RecordType.Inventory,        "Inventory"),
         (RecordType.SiteInstruction,  "Site instructions"),
-        (RecordType.ValuationClaim,   "Valuation claims"),
-        (RecordType.ValuationReportSnapshot, "Valuation snapshots")
+        // The claim filter reads the merged "Valuation reports" pool (live statements + claims
+        // without one, 2026-09-15); the snapshot filter is the whole snapshot register, superseded
+        // statements included.
+        (RecordType.ValuationClaim,   "Valuation reports"),
+        (RecordType.ValuationReportSnapshot, "Valuation snapshots (all)")
     };
 
     protected override async Task OnInitializedAsync()

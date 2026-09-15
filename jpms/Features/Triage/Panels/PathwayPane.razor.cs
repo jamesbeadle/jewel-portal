@@ -89,12 +89,18 @@ public partial class PathwayPane
         openSections.Add($"type:{Config.LinkTypes[0]}");
     }
 
-    private int PickedCountFor(RecordType type) => Picked.Count(record => record.Type == type);
+    private int PickedCountFor(RecordType type) => Picked.Count(record => SectionOf(record.Type) == type);
 
     /// <summary>The staged picks this pane owns — its record types plus its family records.</summary>
     private int TaggedCountHere =>
-        Picked.Count(record => Config.LinkTypes.Contains(record.Type)
+        Picked.Count(record => Config.LinkTypes.Contains(SectionOf(record.Type))
             || (Config.Family is { } family && family.All.Any(familyRecord => familyRecord.RecordId == record.RecordId)));
+
+    // The section a picked record counts under. A frozen statement is picked from the one
+    // "Valuation reports" section (keyed ValuationClaim, 2026-09-15) but keeps its own type for
+    // the link, so its pick is counted where it was made.
+    private static RecordType SectionOf(RecordType type) =>
+        type == RecordType.ValuationReportSnapshot ? RecordType.ValuationClaim : type;
 
     // Counts by the pane that STAGED each action (kinds can be offered on more than one pane);
     // actions staged before the stamp existed fall back to the kind test.

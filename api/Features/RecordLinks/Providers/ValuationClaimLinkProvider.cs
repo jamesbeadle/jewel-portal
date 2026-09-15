@@ -4,15 +4,25 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 
 // Linkable-record provider for valuation claims — the live report's periods ("August 2026").
 // The claim is where a valuation's correspondence gathers BEFORE anything is put to the client;
-// the client-facing statement stays the frozen snapshot (ValuationReportSnapshotLinkProvider),
-// and a snapshot reads its claim's mail alongside its own, so everything tagged to the period
-// travels with the statement frozen from it. Confirming and rolling over mints the next claim
-// number and with it the next tag. Client-side by construction (TriageCategories.BucketFor).
+// the client-facing statement stays the frozen snapshot (ValuationReportSnapshotLinkProvider).
+// Confirming and rolling over mints the next claim number and with it the next tag. Client-side
+// by construction (TriageCategories.BucketFor).
+//
+// ForProjectAsync answers the picker's question — "what can a valuation email be filed to on this
+// project?" — with the ONE list agreed 2026-09-15 (Nigel): each period as its live frozen
+// statement when one has been taken, as the claim itself otherwise, superseded statements left
+// out (ValuationReportLinkTargets has the rule). The snapshot rows keep their own type and id,
+// exactly as the Scheduling picker lists NOD/EOT/LAD rows beside its bucket, so linking and
+// reading still go through the owning provider. FindAsync / FindByTagAsync stay claim-only.
+//
+// Either row reads the whole period: a claim reads every statement frozen from it and a statement
+// reads its claim (ICompanionRecordProvider, merged in RecordEmailReader), so the Valuation
+// Report's Correspondence, the snapshot viewer and the connector show one story.
 //
 // The stem comes from the per-project ClaimNumber (stable — the period name is renameable),
 // project-qualified like the snapshot's because JPMS tags share one flat mailbox-category space:
 //   TagReference = "VAL-{projectRef}-{ClaimNumber}"  ->  category "JPMS/VAL-{projectRef}-{ClaimNumber}".
-public sealed class ValuationClaimLinkProvider : ILinkableRecordProvider, ITagResolvingProvider
+public sealed class ValuationClaimLinkProvider : ILinkableRecordProvider, ITagResolvingProvider, ICompanionRecordProvider
 {
     private const string Prefix = "VAL";
     private readonly JpmsContext context;
@@ -23,18 +33,30 @@ public sealed class ValuationClaimLinkProvider : ILinkableRecordProvider, ITagRe
 
     public IReadOnlyCollection<string> ReferencePrefixes { get; } = new[] { Prefix };
 
+    // The merged "Valuation reports" picker list — see the class comment. Newest period first:
+    // the live period leads; confirmed ones follow for the late reply.
     public async Task<IReadOnlyList<LinkableRecord>> ForProjectAsync(string projectId, CancellationToken cancellationToken)
     {
         var projectReference = await ProjectReferenceAsync(projectId, cancellationToken);
-        // Newest first — the live period leads; confirmed ones follow for the late reply.
+
         var claims = await context.ValuationClaims.AsNoTracking()
             .Where(claim => claim.ProjectId == projectId)
             .OrderByDescending(claim => claim.ClaimNumber)
             .ToListAsync(cancellationToken);
-        return claims
-            .Select(claim => ToLinkable(projectReference, claim))
-            .ToList()
-            .AsReadOnly();
+        var claimRows = claims.Select(claim => ToLinkable(projectReference, claim)).ToList();
+
+        var snapshots = await context.ValuationReportSnapshots.AsNoTracking()
+            .Where(snapshot => snapshot.ProjectId == projectId)
+            .OrderByDescending(snapshot => snapshot.TakenAt)
+            .ToListAsync(cancellationToken);
+        var claimNames = claims.ToDictionary(c => c.ValuationClaimId, c => DisplayNameFor(c));
+        var snapshotRows = snapshots
+            .Select(snapshot => ValuationReportSnapshotLinkProvider.ToLinkable(
+                projectReference, snapshot, ValuationReportSnapshotLinkProvider.ClaimNameFor(claimNames, snapshot)))
+            .ToList();
+        var claimIdBySnapshotId = snapshots.ToDictionary(s => s.ValuationReportSnapshotId, s => s.ValuationClaimId);
+
+        return ValuationReportLinkTargets.Merge(claimRows, snapshotRows, claimIdBySnapshotId);
     }
 
     public async Task<LinkableRecord?> FindAsync(string recordId, CancellationToken cancellationToken)
@@ -64,6 +86,23 @@ public sealed class ValuationClaimLinkProvider : ILinkableRecordProvider, ITagRe
         return null;
     }
 
+    // The period's companions are every statement frozen from it, superseded ones included: the
+    // client's reply to a statement that was later re-issued is still the period's correspondence.
+    public async Task<IReadOnlyList<string>> CompanionTagReferencesAsync(LinkableRecord record, CancellationToken cancellationToken)
+    {
+        var numbers = await context.ValuationReportSnapshots.AsNoTracking()
+            .Where(snapshot => snapshot.ValuationClaimId == record.RecordId)
+            .Select(snapshot => snapshot.Number)
+            .ToListAsync(cancellationToken);
+        if (numbers.Count == 0) return Array.Empty<string>();
+        var projectReference = await ProjectReferenceAsync(record.ProjectId, cancellationToken);
+        return numbers.Select(number => ValuationReportSnapshotLinkProvider.Stem(projectReference, number)).ToList();
+    }
+
+    // "VAL-{projectRef}-{number}" — the one place the stem is spelt; the snapshot provider mints
+    // its companion's stem from here.
+    internal static string Stem(string projectReference, int claimNumber) => $"{Prefix}-{projectReference}-{claimNumber}";
+
     private async Task<string> ProjectReferenceAsync(string projectId, CancellationToken cancellationToken)
     {
         var reference = await context.Projects.AsNoTracking()
@@ -76,7 +115,7 @@ public sealed class ValuationClaimLinkProvider : ILinkableRecordProvider, ITagRe
 
     private static LinkableRecord ToLinkable(string projectReference, ValuationClaimEntity claim)
     {
-        var reference = $"{Prefix}-{projectReference}-{claim.ClaimNumber}";
+        var reference = Stem(projectReference, claim.ClaimNumber);
         var status = (ValuationClaimStatus)claim.Status;
         return new LinkableRecord(
             Type:         RecordType.ValuationClaim,

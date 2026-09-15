@@ -22,11 +22,17 @@ public sealed record PathwayPaneConfig(
     public static PathwayPaneConfig Client { get; } = new(
         "Client",
         "The client, or their architect and team",
+        // ValuationClaim is the one "Valuation reports" section (Nigel, 2026-09-15): its list
+        // shows each period as its live frozen statement when one exists and as the claim
+        // otherwise (ValuationClaimLinkProvider + ValuationReportLinkTargets), so the snapshot
+        // type no longer gets a drawer of its own — two drawers for one period was the choice
+        // triagers kept getting wrong. Snapshot rows picked from that list keep their own type;
+        // PathwayPane counts them under this section.
         new[]
         {
             RecordType.Request, RecordType.Variation,
             RecordType.BuildingControlInspection, RecordType.BuildingControlCase,
-            RecordType.Lad, RecordType.ValuationClaim, RecordType.ValuationReportSnapshot
+            RecordType.Lad, RecordType.ValuationClaim
         },
         Family: null,
         new (string, IReadOnlyList<SystemActionKind>)[]
@@ -141,7 +147,7 @@ public sealed record PathwayPaneConfig(
         RecordType.Request => "Request / RFI",
         RecordType.Variation => "Variation Order",
         RecordType.Lad => "LADs claim",
-        RecordType.ValuationClaim => "Valuation claim",
+        RecordType.ValuationClaim => "Valuation report",           // the merged section — statement or live period
         RecordType.ValuationReportSnapshot => "Valuation report snapshot",
         RecordType.Scheduling => "Relevant Event",
         RecordType.BidPackageInvite => "Bid Package Invite",

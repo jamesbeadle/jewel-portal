@@ -56,10 +56,11 @@ Invoice → Paid → Confirm & roll over**, one primary button per stage, with a
 Actions menu for rename, reopen, record rejection/payment, issue without
 approval, delete. Lines are added/edited while the claim is Draft; Valuation
 Invoices, Snapshots and Correspondence sections sit inline; working-copy
-PDF/Excel exports always available. Each claim is a linkable record in the
-Control Centre (Client → Valuation claims): mail tagged to the live claim
-reads back in Correspondence and on every snapshot frozen from it; rolling
-over starts the next claim with its own tag. Approving variations — which
+PDF/Excel exports always available. Valuation mail files in the Control
+Centre (Client → Valuation reports — one row per period: the live frozen
+statement when one exists, else the claim); Correspondence here reads mail
+filed to the claim and to every statement frozen from it; rolling over
+starts the next claim with its own tag. Approving variations — which
 writes their lines here — happens on the variation record, not here.
 
 ## Project folder
