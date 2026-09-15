@@ -9,9 +9,7 @@
 }
 else if (IsImage(Item))
 {
-    <div class="panel overflow-hidden">
-        <img src="@InlineUrl" alt="@Item.FileName" class="max-h-[50vh] w-auto mx-auto" />
-    </div>
+    <ImageViewer FileUrl="@InlineUrl" DownloadUrl="@DownloadUrl" Caption="@Item.FileName" HeightClass="h-[50vh]" />
 }
 else if (IsZip(Item) && Item.Status == DocumentControlStatus.Pending)
 {

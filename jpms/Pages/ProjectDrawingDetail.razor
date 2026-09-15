@@ -220,17 +220,11 @@
                     }
                     else if (IsImage(PreviewRevision))
                     {
-                        <div class="panel overflow-hidden">
-                            <header class="px-4 py-2.5 border-b border-line bg-surface-raised flex items-center justify-between gap-3">
-                                <span class="text-xs text-content-muted font-medium truncate">
-                                    Showing @DrawingNaming.RevisionText(PreviewRevision.RevisionLabel) · @PreviewRevision.FileName
-                                </span>
-                                <a href="@FileUrl(PreviewRevision, inline: false)" target="_blank" rel="noopener"
-                                   class="text-xs text-accent hover:underline underline-offset-2 shrink-0">Open / download</a>
-                            </header>
-                            <img src="@FileUrl(PreviewRevision, inline: true)" alt="Document preview"
-                                 class="w-full max-h-[70vh] object-contain bg-surface-raised" />
-                        </div>
+                        @* The photo viewer — PdfViewer's sibling, same toolbar (zoom, fit, rotate,
+                           fullscreen), for the scanned or photographed sheet. *@
+                        <ImageViewer FileUrl="@FileUrl(PreviewRevision, inline: true)"
+                                     DownloadUrl="@FileUrl(PreviewRevision, inline: false)"
+                                     Caption="@($"Showing {DrawingNaming.RevisionText(PreviewRevision.RevisionLabel)} · {PreviewRevision.FileName}")" />
                     }
                     else
                     {

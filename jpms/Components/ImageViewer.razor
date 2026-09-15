@@ -1,0 +1,152 @@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@*
+    The in-app photo viewer (wwwroot/js/image-viewer.js) — PdfViewer's sibling for images. A
+    site photo straight off a phone is thousands of pixels on a side; dropped into a bare <img>
+    or <iframe> it showed at native size, a corner at a time, with no way to take the whole
+    picture in. This opens fitted to the surface and carries the same toolbar as the drawing
+    viewer: zoom in/out, fit whole / fit width / actual size, rotate, fullscreen, download.
+
+    What the surface itself does: Ctrl/Cmd+wheel (or trackpad pinch) zooms around the cursor,
+    click-drag pans, double-click hops between whole-photo and actual pixels, touch pans with one
+    finger and pinches with two.
+*@
+
+<div @ref="root" class="panel overflow-hidden flex flex-col">
+    <header class="px-3 py-2 border-b border-line bg-surface-raised flex items-center justify-between gap-3 flex-wrap">
+        <span class="text-xs text-content-muted font-medium truncate min-w-0">@Caption</span>
+        <Toolbar>
+            <ToolbarButton Icon="zoom-out" Label="Zoom out" Disabled="@(!ready)" OnClick="ZoomOut" />
+            <span class="text-xs text-content-subtle tabular-nums whitespace-nowrap px-0.5 min-w-[2.75rem] text-center">@(ready ? $"{zoom}%" : "—")</span>
+            <ToolbarButton Icon="zoom-in" Label="Zoom in" Disabled="@(!ready)" OnClick="ZoomIn" />
+            <ToolbarButton Icon="fit-page" Label="Fit whole photo" Disabled="@(!ready)" OnClick="FitPage" />
+            <ToolbarButton Icon="fit-width" Label="Fit width" Disabled="@(!ready)" OnClick="FitWidth" />
+            <ToolbarButton Icon="actual-size" Label="Actual size (100%)" Disabled="@(!ready)" OnClick="ActualSize" />
+            <ToolbarDivider />
+            <ToolbarButton Icon="rotate" Label="Rotate 90°" Disabled="@(!ready)" OnClick="Rotate" />
+            <ToolbarButton Icon="fullscreen" Label="@(fullscreen ? "Exit fullscreen" : "Fullscreen")"
+                           Disabled="@(!ready)" OnClick="ToggleFullscreen" />
+            @if (DownloadUrl is not null)
+            {
+                <ToolbarDivider />
+                <ToolbarButton Icon="download" Label="Open / download" Href="@DownloadUrl" Target="_blank" />
+            }
+        </Toolbar>
+    </header>
+
+    @if (error is not null)
+    {
+        <div class="p-8 text-center text-sm text-content-subtle">
+            The preview couldn't be shown (@error).
+            @if (DownloadUrl is not null)
+            {
+                <a href="@DownloadUrl" target="_blank" rel="noopener"
+                   class="text-accent hover:underline underline-offset-2">Open the file directly</a>
+            }
+        </div>
+    }
+    else
+    {
+        @* The viewport must exist before the JS can size into it, so the jewel floats over it
+           (Overlay) rather than replacing it. touch-action:none hands touch to the pan/pinch
+           handlers instead of the page scroller. The <img> gets its src from the JS, so the
+           natural size is known before the first layout. *@
+        <LoadGate IsLoading="@(!ready)" Overlay="true" Label="Loading preview">
+            <div @ref="viewport"
+                 class="@HeightClass overflow-auto bg-canvas/60 cursor-grab select-none overscroll-contain"
+                 style="touch-action: none; padding: 12px;">
+                <div @ref="stage">
+                    <img @ref="img" alt="@Caption" />
+                </div>
+            </div>
+        </LoadGate>
+    }
+</div>
+
+@code {
+    /// <summary>The inline file URL the viewer shows.</summary>
+    [Parameter, EditorRequired] public string FileUrl { get; set; } = "";
+
+    /// <summary>The attachment-disposition URL for the Open / download toolbar button.</summary>
+    [Parameter] public string? DownloadUrl { get; set; }
+
+    /// <summary>Header text — say which file is being shown.</summary>
+    [Parameter] public string? Caption { get; set; }
+
+    /// <summary>Height of the preview surface outside fullscreen.</summary>
+    [Parameter] public string HeightClass { get; set; } = "h-[70vh]";
+
+    private ElementReference root;
+    private ElementReference viewport;
+    private ElementReference stage;
+    private ElementReference img;
+
+    private DotNetObjectReference<ImageViewer>? selfRef;
+    private string? loadedUrl;
+    private bool ready;
+    private bool fullscreen;
+    private int zoom = 100;
+    private string? error;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Init when the URL first arrives, and re-init if the previewed file changes under the
+        // same component instance (the next photo picked from the same list). A failure belongs
+        // to the URL that failed — a different file gets a fresh attempt.
+        if (loadedUrl == FileUrl || string.IsNullOrEmpty(FileUrl)) return;
+        if (error is not null)
+        {
+            error = null;
+            ready = false;
+            StateHasChanged();
+            return;
+        }
+        var previous = loadedUrl;
+        loadedUrl = FileUrl;
+        if (previous is not null)
+        {
+            await JS.InvokeVoidAsync("jpmsImageViewer.dispose", root);
+            ready = false;
+            StateHasChanged();
+        }
+        selfRef ??= DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("jpmsImageViewer.init", root, viewport, stage, img, FileUrl, selfRef);
+    }
+
+    [JSInvokable]
+    public void ViewerState(int zoomPercent, bool isFullscreen)
+    {
+        ready = true;
+        zoom = zoomPercent;
+        fullscreen = isFullscreen;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void ViewerFailed(string message)
+    {
+        error = message;
+        ready = false;
+        StateHasChanged();
+    }
+
+    private Task ZoomIn() => JS.InvokeVoidAsync("jpmsImageViewer.zoomIn", root).AsTask();
+    private Task ZoomOut() => JS.InvokeVoidAsync("jpmsImageViewer.zoomOut", root).AsTask();
+    private Task ActualSize() => JS.InvokeVoidAsync("jpmsImageViewer.actualSize", root).AsTask();
+    private Task FitWidth() => JS.InvokeVoidAsync("jpmsImageViewer.fitWidth", root).AsTask();
+    private Task FitPage() => JS.InvokeVoidAsync("jpmsImageViewer.fitPage", root).AsTask();
+    private Task Rotate() => JS.InvokeVoidAsync("jpmsImageViewer.rotate", root).AsTask();
+    private Task ToggleFullscreen() => JS.InvokeVoidAsync("jpmsImageViewer.toggleFullscreen", root).AsTask();
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (loadedUrl is not null) await JS.InvokeVoidAsync("jpmsImageViewer.dispose", root);
+        }
+        catch (JSDisconnectedException) { }
+        catch (InvalidOperationException) { }
+        selfRef?.Dispose();
+    }
+}

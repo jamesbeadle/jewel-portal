@@ -32,10 +32,12 @@ else
         }
         else
         {
-            <div class="panel overflow-hidden">
-                <iframe src="@Request.FileUrl" title="@Request.Title"
-                        class="w-full h-[calc(100vh-16rem)] bg-white"></iframe>
-            </div>
+            @* Everything a record offers to preview that isn't a PDF is an image (the callers
+               gate on pdf-or-image), so this is the photo viewer: opens fitted to the pane, with
+               zoom / fit / rotate / fullscreen — a bare iframe showed a phone photo at native
+               size, a corner at a time. *@
+            <ImageViewer FileUrl="@Request.FileUrl" DownloadUrl="@Request.DownloadUrl"
+                         Caption="@Request.Title" HeightClass="h-[calc(100vh-16rem)]" />
         }
     </div>
 }
