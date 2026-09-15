@@ -61,7 +61,9 @@ public enum LeadActivityKind
     // the proposal flow — never logged by hand.
     Imagine = 8,
     ProposalSent = 9,
-    ProposalAccepted = 10
+    ProposalAccepted = 10,
+    // Written by the estimate flow (opened, moved along its ladder) — never logged by hand.
+    Estimate = 11
 }
 
 public static class LeadActivityKindExtensions
@@ -79,6 +81,7 @@ public static class LeadActivityKindExtensions
         LeadActivityKind.Imagine     => "Imagine",
         LeadActivityKind.ProposalSent => "Proposal sent",
         LeadActivityKind.ProposalAccepted => "Proposal accepted",
+        LeadActivityKind.Estimate    => "Estimate",
         _ => kind.ToString()
     };
 
@@ -100,12 +103,14 @@ public sealed record LeadActivity(
     DateTimeOffset OccurredAt,
     string RecordedByEmail);
 
-/// <summary>A lead with its timeline, its imagine rounds and its proposals — the lead page's read.</summary>
+/// <summary>A lead with its timeline, its imagine rounds, its proposals and its estimates — the
+/// lead page's read.</summary>
 public sealed record LeadDetail(
     Lead Lead,
     IReadOnlyList<LeadActivity> Activities,
     LeadImagine? Imagine = null,
-    IReadOnlyList<SalesProposal>? Proposals = null);
+    IReadOnlyList<SalesProposal>? Proposals = null,
+    IReadOnlyList<LeadEstimate>? Estimates = null);
 
 /// <summary>What Won produced: the lead as it now stands, and the client and project it became.</summary>
 public sealed record LeadWonOutcome(Lead Lead, string ClientId, string ProjectId);
