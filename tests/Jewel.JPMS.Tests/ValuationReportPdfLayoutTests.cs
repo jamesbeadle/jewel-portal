@@ -11,8 +11,9 @@ namespace Jewel.JPMS.Tests;
 /// 2026-09-02 export had negatives printing as a bare "-" with the pounds on the line below:
 /// MigraDoc breaks after a hyphen that is not followed by a digit, and the columns were a
 /// hair too narrow for a six-figure negative in the host's DejaVu Sans. These tests render
-/// with that face (Fonts/, via RequestDocuments__FontPath) and read the PDF back, so the
-/// widths they prove are the widths production prints.
+/// with production's face (Fonts/, via RequestDocuments__FontPath — Poppins since 2026-09-15,
+/// which the api ships) and read the PDF back, so the widths they prove are the widths
+/// production prints.
 /// </summary>
 public sealed class ValuationReportPdfLayoutTests
 {
@@ -56,8 +57,9 @@ public sealed class ValuationReportPdfLayoutTests
         var texts = words.Select(word => word.Text).ToList();
 
         // Rendered with production's face, or this test is not proving production's widths.
+        // Poppins since 2026-09-15 (shipped in api/fonts, first in the resolver's candidates).
         var faces = words.SelectMany(word => word.Letters).Select(letter => letter.FontName).Distinct().ToList();
-        Assert.Contains(faces, face => face.Contains("DejaVu", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(faces, face => face.Contains("Poppins", StringComparison.OrdinalIgnoreCase));
 
         // Each figure is one word — its sign attached, nothing spilt onto a second line.
         Assert.Contains("−£117,223.37", texts);   // the V17 line and the Variations total

@@ -1,5 +1,5 @@
-using Jewel.JPMS.Api.Features.Requests.Documents;
 using MigraDoc.DocumentObjectModel;
+using MigraDoc.DocumentObjectModel.Shapes.Charts;
 using MigraDoc.DocumentObjectModel.Tables;
 using MigraDoc.Rendering;
 
@@ -8,17 +8,21 @@ using static Jewel.JPMS.Api.Features.Documents.JewelDocumentStyle;
 namespace Jewel.JPMS.Api.Features.Sales.Documents;
 
 /// <summary>
-/// The estimate sheet (2026-09-15, Nigel: "I want to see it — a PDF export from the page"): one
-/// <see cref="LeadEstimate"/> with its lead, rendered in the house style — the navy band, the
-/// details grid, the scope, and the notes laid out line by line so a breakdown typed into them
-/// (a heading, "- item: £x" lines, a total) reads as a breakdown. It is the INTERNAL record: the
-/// footer says so, and the client-facing document stays the proposal. Pure function of the model
-/// bar the generated-at stamp; regenerated on every download, nothing stored. The priced
-/// breakdown will replace the notes-as-breakdown once the estimating workbook is in.
+/// The estimate document (2026-09-15, Nigel: "make sure we complete the estimate as expected" —
+/// the shape of the Wodeland Avenue tender): a cover, the project page (what is estimated, the
+/// property, the architect, the date, who to talk to at Jewel), the executive summary with the
+/// build time and the exclusions, the breakdown chart, one itemised table per section (ID /
+/// description / quantity / unit / unit price / total, a provisional allowance said so in red,
+/// the section's total in the orange cell), the total project estimate value, and the contact
+/// page. Client-facing: the internal notes never print. Pure function of the record bar the
+/// generated-at stamp; regenerated on every download, nothing stored.
 /// </summary>
 public static class EstimateDocumentRenderer
 {
     public sealed record Model(LeadEstimate Estimate, Lead Lead, DateTimeOffset GeneratedAt);
+
+    private static readonly Color Provisional = new(0xD9, 0x2D, 0x3A);
+    private const string DocumentTitle = "Estimate for project";
 
     public static byte[] Render(Model model)
     {
@@ -28,28 +32,29 @@ public static class EstimateDocumentRenderer
         var lead = model.Lead;
 
         var document = new Document();
-        document.Info.Title = $"{estimate.Reference} — Estimate — {PropertyLine(lead)}";
+        document.Info.Title = $"{estimate.Reference} — {DocumentTitle} — {PropertyLine(lead)}";
         document.Info.Author = "Jewel Bespoke Build";
         document.Info.Subject = estimate.Scope;
 
         var normal = document.Styles["Normal"]!;
         normal.Font.Name = FontFamily;
-        normal.Font.Size = 9;
+        normal.Font.Size = 9.5;
         normal.Font.Color = Ink;
 
+        AddCover(document, model);
+
         var section = A4Page(document);
-        AddHeaderBand(section, model);
-        AddDetailsGrid(section, model);
-
-        SectionHeading(section, "Scope");
-        Panelled(section, string.IsNullOrWhiteSpace(estimate.Scope) ? "—" : estimate.Scope);
-        SpaceAfterTable(section);
-
-        AddFigures(section, estimate);
-        AddNotes(section, estimate.Notes);
-
-        HouseFooter(section,
-            $"Generated {DateAndTime(model.GeneratedAt)} · {estimate.Reference} on {lead.Reference} · internal estimate — not for issue");
+        CleanHeader(section, DocumentTitle, PropertyLine(lead),
+            new HeaderFact(estimate.Reference),
+            new HeaderFact(Date(estimate.SubmittedAt ?? model.GeneratedAt)),
+            new HeaderFact(estimate.Status.IsOpen() ? "" : estimate.Status.DisplayName().ToUpperInvariant()));
+        AddProjectBlock(section, model);
+        AddNarrative(section, model);
+        AddChart(section, estimate);
+        AddSections(section, estimate);
+        AddGrandTotal(section, estimate);
+        AddContactPage(section);
+        HouseFooter(section, $"{estimate.Reference} · {PropertyLine(lead)} · {Date(model.GeneratedAt)}");
 
         var renderer = new PdfDocumentRenderer { Document = document };
         renderer.RenderDocument();
@@ -70,240 +75,415 @@ public static class EstimateDocumentRenderer
         return new string(name.Select(character => invalid.Contains(character) ? '_' : character).ToArray());
     }
 
-    // ---- Sections -----------------------------------------------------------------------------
+    // ---- Cover --------------------------------------------------------------------------------
 
-    private static void AddHeaderBand(Section section, Model model)
+    private static void AddCover(Document document, Model model)
     {
-        var table = section.AddTable();
-        table.Borders.Width = 0;
-        table.AddColumn(Unit.FromCentimeter(11.3));
-        var right = table.AddColumn(Unit.FromCentimeter(6.5));
-        right.Format.Alignment = ParagraphAlignment.Right;
+        var cover = A4Page(document);
+        OrangeBand(cover);
 
-        var row = table.AddRow();
-        row.Shading.Color = Navy;
-        row.TopPadding = Unit.FromMillimeter(4);
-        row.BottomPadding = Unit.FromMillimeter(4);
-        row.Cells[0].Format.LeftIndent = Unit.FromMillimeter(4);
-        row.Cells[1].Format.RightIndent = Unit.FromMillimeter(4);
-        row.Cells[0].VerticalAlignment = VerticalAlignment.Center;
-        row.Cells[1].VerticalAlignment = VerticalAlignment.Center;
+        // The logo sits a little above centre with the title beneath it, as on the tender's cover.
+        var space = cover.AddParagraph();
+        space.Format.SpaceBefore = Unit.FromCentimeter(9.5);
+        space.Format.Font.Size = 2;
 
-        DocumentBranding.AddLogo(row.Cells[0], Unit.FromCentimeter(3.4), Unit.FromMillimeter(1.5));
+        var logo = cover.AddParagraph();
+        logo.Format.Alignment = ParagraphAlignment.Center;
+        var image = logo.AddImage(Requests.Documents.DocumentBranding.LogoImageName);
+        image.Width = Unit.FromCentimeter(7.6);
+        image.LockAspectRatio = true;
+        logo.Format.SpaceAfter = Unit.FromMillimeter(6);
 
-        var heading = row.Cells[0].AddParagraph("ESTIMATE");
-        heading.Format.Font.Size = 17;
-        heading.Format.Font.Bold = true;
-        heading.Format.Font.Color = White;
-        SpaceAfter(heading, 1);
+        var title = cover.AddParagraph(DocumentTitle.ToUpperInvariant());
+        title.Format.Alignment = ParagraphAlignment.Center;
+        title.Format.Font.Size = 24;
+        title.Format.Font.Color = Ink;
+        SpaceAfter(title, 4);
 
-        var sub = row.Cells[0].AddParagraph(PropertyLine(model.Lead));
-        sub.Format.Font.Size = 9.5;
-        sub.Format.Font.Bold = true;
-        sub.Format.Font.Color = Gold;
+        var property = cover.AddParagraph(PropertyLine(model.Lead));
+        property.Format.Alignment = ParagraphAlignment.Center;
+        property.Format.Font.Size = 11;
+        property.Format.Font.Color = Muted;
+        SpaceAfter(property, 1);
 
-        var reference = row.Cells[1].AddParagraph(model.Estimate.Reference);
-        reference.Format.Font.Size = 10;
+        var reference = cover.AddParagraph($"{model.Estimate.Reference}  ·  {Date(model.Estimate.SubmittedAt ?? model.GeneratedAt)}");
+        reference.Format.Alignment = ParagraphAlignment.Center;
+        reference.Format.Font.Size = 9;
+        reference.Format.Font.Color = Gold;
         reference.Format.Font.Bold = true;
-        reference.Format.Font.Color = White;
-        SpaceAfter(reference, 2);
-
-        var status = row.Cells[1].AddParagraph($"Status  {model.Estimate.Status.DisplayName()}");
-        status.Format.Font.Size = 8;
-        status.Format.Font.Color = Gold;
-
-        Hairline(section);
     }
 
-    private static void AddDetailsGrid(Section section, Model model)
+    // ---- The project page -------------------------------------------------------------------
+
+    private static void AddProjectBlock(Section section, Model model)
     {
         var estimate = model.Estimate;
         var lead = model.Lead;
 
-        var spacer = section.AddParagraph();
-        spacer.Format.SpaceAfter = Unit.FromMillimeter(1.5);
-        spacer.Format.Font.Size = 2;
+        Labelled(section, "Estimate for:", estimate.Scope);
+        Labelled(section, "Project:", PropertyLine(lead));
+        Labelled(section, "Client:", ClientLine(lead));
+        if (!string.IsNullOrWhiteSpace(estimate.ArchitectName)) Labelled(section, "Architect:", estimate.ArchitectName);
+        Labelled(section, "Date:", Date(estimate.SubmittedAt ?? model.GeneratedAt));
+        if (estimate.PriceDueOn is { } due) Labelled(section, "Price due:", due.ToString("dd MMMM yyyy", Uk));
 
-        var table = section.AddTable();
-        table.Borders.Color = Hair;
-        table.Borders.Width = 0.5;
-        var labelW = Unit.FromCentimeter(3.3);
-        var valueW = Unit.FromCentimeter(5.6);
-        table.AddColumn(labelW);
-        table.AddColumn(valueW);
-        table.AddColumn(labelW);
-        table.AddColumn(valueW);
+        var gap = section.AddParagraph();
+        gap.Format.SpaceAfter = Unit.FromMillimeter(3);
+        gap.Format.Font.Size = 2;
 
-        var contact = string.IsNullOrWhiteSpace(lead.ContactName) ? lead.CompanyName : lead.ContactName;
-        if (!string.IsNullOrWhiteSpace(lead.CompanyName) && !string.IsNullOrWhiteSpace(lead.ContactName))
-            contact = $"{lead.ContactName}, {lead.CompanyName}";
-
-        AddGridRow(table, "Lead", $"{lead.Reference} — {contact}", "Estimate", estimate.Reference);
-        AddGridRow(table, "Property", PropertyLine(lead), "Status", $"{estimate.Status.DisplayName()} since {Date(estimate.StatusChangedAt)}");
-        AddGridRow(table, "Architect", estimate.ArchitectName, "Price due", estimate.PriceDueOn is { } due ? due.ToString("dd MMM yyyy", Uk) : "—");
-        AddGridRow(table, "Contact", string.Join("  ", new[] { lead.ContactEmail, lead.ContactPhone }.Where(value => !string.IsNullOrWhiteSpace(value))),
-            "Submitted", estimate.SubmittedAt is { } submitted ? Date(submitted) : "—");
-        AddGridRow(table, "Opened by", estimate.CreatedByEmail, "Opened", Date(estimate.CreatedAt));
-
-        SpaceAfterTable(section);
-    }
-
-    /// <summary>The money, on its own: budget mentioned beside the total — the two figures anyone
-    /// picking the sheet up wants first.</summary>
-    private static void AddFigures(Section section, LeadEstimate estimate)
-    {
-        SectionHeading(section, "Figures");
-
-        var table = section.AddTable();
-        table.Borders.Color = Hair;
-        table.Borders.Width = 0.5;
-        table.AddColumn(Unit.FromCentimeter(8.9));
-        var right = table.AddColumn(Unit.FromCentimeter(8.9));
-
-        var header = table.AddRow();
-        header.Shading.Color = Panel;
-        LabelCell(header.Cells[0], "Budget the prospect mentioned");
-        LabelCell(header.Cells[1], "Estimated total (excluding VAT)");
-
-        var row = table.AddRow();
-        row.TopPadding = Unit.FromMillimeter(1.5);
-        row.BottomPadding = Unit.FromMillimeter(1.5);
-        var budget = row.Cells[0].AddParagraph(estimate.BudgetMentioned is { } mentioned ? WholeMoney(mentioned) : "—");
-        budget.Format.LeftIndent = CellIndent;
-        budget.Format.Font.Size = 12;
-        budget.Format.Font.Color = Ink;
-        var total = row.Cells[1].AddParagraph(estimate.Total is { } priced ? WholeMoney(priced) : "Not yet priced");
-        total.Format.LeftIndent = CellIndent;
-        total.Format.Font.Size = 14;
-        total.Format.Font.Bold = true;
-        total.Format.Font.Color = estimate.Total is null ? Muted : Navy;
-
-        SpaceAfterTable(section);
-    }
-
-    /// <summary>The notes, line by line. A line ending in " — £x" or in a colon-and-figure reads as
-    /// a heading with its subtotal; a "- " line is an item, indented, with its figure pushed to a
-    /// right tab; a line starting TOTAL is bold; anything else is a paragraph. Blank lines are
-    /// the gaps between blocks. Nothing is parsed into numbers — the text prints as typed.</summary>
-    private static void AddNotes(Section section, string notes)
-    {
-        var lines = (notes ?? "").Replace("\r\n", "\n").Split('\n').Select(line => line.TrimEnd()).ToList();
-        if (lines.All(string.IsNullOrWhiteSpace)) return;
-
-        SectionHeading(section, "Notes and breakdown");
-
-        var previousBlank = false;
-        foreach (var raw in lines)
+        foreach (var line in CompanyBlock(estimate))
         {
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                previousBlank = true;
-                continue;
-            }
+            var paragraph = section.AddParagraph(line);
+            paragraph.Format.Font.Size = 9.5;
+            SpaceAfter(paragraph, 0.4);
+        }
+    }
 
+    private static void Labelled(Section section, string label, string value)
+    {
+        var paragraph = section.AddParagraph();
+        paragraph.Format.Font.Size = 11;
+        paragraph.Format.LeftIndent = Unit.FromCentimeter(2.6);
+        paragraph.Format.FirstLineIndent = Unit.FromCentimeter(-2.6);
+        paragraph.Format.TabStops.AddTabStop(Unit.FromCentimeter(2.6), TabAlignment.Left);
+        paragraph.AddFormattedText(label, new Font { Bold = true, Color = Ink });
+        paragraph.AddTab();
+        paragraph.AddText(string.IsNullOrWhiteSpace(value) ? "—" : value);
+        SpaceAfter(paragraph, 2.5);
+    }
+
+    private static IEnumerable<string> CompanyBlock(LeadEstimate estimate)
+    {
+        yield return "Jewel Bespoke Build Ltd";
+        yield return "Argent House";
+        yield return "175 Hook Rise South, Surbiton";
+        yield return "KT6 7LD";
+        yield return "+44 (0)208 109 1014";
+        if (!string.IsNullOrWhiteSpace(estimate.CreatedByEmail)) yield return estimate.CreatedByEmail;
+        yield return "www.jewelbb.co.uk";
+    }
+
+    // ---- Executive summary, build time, exclusions --------------------------------------------
+
+    private static void AddNarrative(Section section, Model model)
+    {
+        var estimate = model.Estimate;
+        var hasSummary = !string.IsNullOrWhiteSpace(estimate.ExecutiveSummary);
+        var hasBuildTime = !string.IsNullOrWhiteSpace(estimate.BuildTime);
+        var hasExclusions = !string.IsNullOrWhiteSpace(estimate.Exclusions);
+        if (!hasSummary && !hasBuildTime && !hasExclusions && estimate.Total is null) return;
+
+        // Follows the project block on the same page — the tender's second page is the project
+        // and its story together; the chart and the tables get pages of their own.
+        var gap = section.AddParagraph();
+        gap.Format.SpaceBefore = Unit.FromMillimeter(6);
+        gap.Format.Font.Size = 2;
+        SectionTitle(section, "Executive summary");
+
+        if (hasSummary) Prose(section, estimate.ExecutiveSummary);
+
+        if (estimate.Total is { } total)
+        {
+            var figure = section.AddParagraph();
+            figure.Format.Font.Size = 10.5;
+            SpaceBefore(figure, hasSummary ? 3 : 0);
+            SpaceAfter(figure, 3);
+            figure.AddFormattedText("Estimated total, excluding VAT:  ", new Font { Bold = true });
+            figure.AddFormattedText(WholeMoney(total), new Font { Bold = true, Color = Navy, Size = 12 });
+            if (estimate.BudgetMentioned is { } budget)
+                figure.AddFormattedText($"    (budget mentioned {WholeMoney(budget)})", new Font { Color = Muted, Size = 9 });
+        }
+
+        if (hasBuildTime)
+        {
+            SubHeading(section, "Build time");
+            Prose(section, estimate.BuildTime);
+        }
+        if (hasExclusions)
+        {
+            SubHeading(section, "Exclusions");
+            Prose(section, estimate.Exclusions);
+        }
+    }
+
+    /// <summary>Text as typed: blank lines separate paragraphs, a "- " line is a bullet.</summary>
+    private static void Prose(Section section, string text)
+    {
+        foreach (var raw in (text ?? "").Replace("\r\n", "\n").Split('\n'))
+        {
             var line = raw.Trim();
-            var isItem = line.StartsWith("- ", StringComparison.Ordinal) || line.StartsWith("• ", StringComparison.Ordinal);
-            var isTotal = line.StartsWith("TOTAL", StringComparison.OrdinalIgnoreCase);
-            var isHeading = !isItem && !isTotal && line.Length <= 60 && line.Contains(" — £", StringComparison.Ordinal);
-            var isShout = !isItem && !isTotal && !isHeading && line.Length <= 40 && line == line.ToUpperInvariant() && line.Any(char.IsLetter);
-
-            Paragraph paragraph;
-            if (isItem)
+            if (line.Length == 0) continue;
+            var bullet = line.StartsWith("- ", StringComparison.Ordinal) || line.StartsWith("• ", StringComparison.Ordinal);
+            var paragraph = section.AddParagraph();
+            paragraph.Format.Font.Size = 9.5;
+            if (bullet)
             {
-                var body = line[2..].Trim();
-                var (label, figure) = SplitFigure(body);
-                paragraph = section.AddParagraph();
-                paragraph.Format.LeftIndent = Unit.FromMillimeter(4);
-                paragraph.Format.Font.Size = 8.8;
-                paragraph.Format.TabStops.AddTabStop(Unit.FromCentimeter(17.8), TabAlignment.Right);
-                paragraph.AddText(label);
-                if (figure is not null)
-                {
-                    paragraph.AddTab();
-                    paragraph.AddFormattedText(figure, new Font { Bold = false });
-                }
-                paragraph.Format.Borders.Bottom.Width = 0.25;
-                paragraph.Format.Borders.Bottom.Color = Hair;
-                paragraph.Format.Borders.Distance = Unit.FromMillimeter(0.8);
-                SpaceBefore(paragraph, 0.8);
-                SpaceAfter(paragraph, 0.8);
-            }
-            else if (isTotal)
-            {
-                var (label, figure) = SplitFigure(line);
-                paragraph = section.AddParagraph();
-                paragraph.Format.Font.Size = 10;
-                paragraph.Format.Font.Bold = true;
-                paragraph.Format.Font.Color = Navy;
-                paragraph.Format.TabStops.AddTabStop(Unit.FromCentimeter(17.8), TabAlignment.Right);
-                paragraph.AddText(label);
-                if (figure is not null) { paragraph.AddTab(); paragraph.AddText(figure); }
-                paragraph.Format.Borders.Top.Width = 0.75;
-                paragraph.Format.Borders.Top.Color = Orange;
-                paragraph.Format.Borders.Distance = Unit.FromMillimeter(1.2);
-                SpaceBefore(paragraph, 2);
-                SpaceAfter(paragraph, 2);
-            }
-            else if (isHeading)
-            {
-                var at = line.LastIndexOf(" — £", StringComparison.Ordinal);
-                paragraph = section.AddParagraph();
-                paragraph.Format.Font.Size = 9.5;
-                paragraph.Format.Font.Bold = true;
-                paragraph.Format.Font.Color = Navy;
-                paragraph.Format.KeepWithNext = true;
-                paragraph.Format.TabStops.AddTabStop(Unit.FromCentimeter(17.8), TabAlignment.Right);
-                paragraph.AddText(line[..at]);
+                paragraph.Format.LeftIndent = Unit.FromMillimeter(5);
+                paragraph.Format.FirstLineIndent = Unit.FromMillimeter(-3.5);
+                paragraph.Format.TabStops.AddTabStop(Unit.FromMillimeter(5), TabAlignment.Left);
+                paragraph.AddText("•");
                 paragraph.AddTab();
-                paragraph.AddText(line[(at + 3)..]);
-                paragraph.Format.Shading.Color = Panel;
-                SpaceBefore(paragraph, previousBlank ? 3 : 1.5);
-                SpaceAfter(paragraph, 1);
-            }
-            else if (isShout)
-            {
-                paragraph = section.AddParagraph(line);
-                paragraph.Format.Font.Size = 8;
-                paragraph.Format.Font.Bold = true;
-                paragraph.Format.Font.Color = Muted;
-                paragraph.Format.KeepWithNext = true;
-                SpaceBefore(paragraph, previousBlank ? 3 : 1.5);
-                SpaceAfter(paragraph, 0.8);
+                paragraph.AddText(line[2..].Trim());
             }
             else
             {
-                paragraph = section.AddParagraph(line);
-                paragraph.Format.Font.Size = 9;
-                SpaceBefore(paragraph, previousBlank ? 2 : 0);
-                SpaceAfter(paragraph, 0.8);
+                paragraph.AddText(line);
             }
-            previousBlank = false;
+            SpaceAfter(paragraph, bullet ? 0.8 : 2);
         }
+    }
+
+    // ---- The chart ----------------------------------------------------------------------------
+
+    private static void AddChart(Section section, LeadEstimate estimate)
+    {
+        var sections = estimate.Sections.Where(s => s.Lines.Count > 0).ToList();
+        if (sections.Count == 0) return;
+
+        section.AddPageBreak();
+        SectionTitle(section, "Project breakdown");
+        var intro = section.AddParagraph("What each part of the works comes to, in pounds excluding VAT.");
+        intro.Format.Font.Size = 9;
+        intro.Format.Font.Color = Muted;
+        SpaceAfter(intro, 4);
+
+        // Horizontal bars so every section name reads whole — the tender's rotated labels need a
+        // rotation MigraDoc's axes do not have.
+        var chart = section.AddChart(ChartType.Bar2D);
+        chart.Width = Unit.FromCentimeter(17.8);
+        chart.Height = Unit.FromCentimeter(Math.Clamp(1.4 + sections.Count * 0.85, 6, 18));
+        chart.Format.Font.Size = 8;
+        chart.PlotArea.LineFormat.Width = 0;
+
+        var series = chart.SeriesCollection.AddSeries();
+        series.Name = "Project breakdown £";
+        series.FillFormat.Color = Gold;
+        series.LineFormat.Width = 0;
+        var names = chart.XValues.AddXSeries();
+        // Bar2D lists categories bottom-up; feed them reversed so the first section prints first.
+        foreach (var s in Enumerable.Reverse(sections))
+        {
+            series.Add((double)s.Total);
+            names.Add(s.Provisional ? $"{s.Name} (provisional)" : s.Name);
+        }
+
+        chart.XAxis.TickLabels.Font.Size = 8;
+        chart.XAxis.MajorTickMark = TickMarkType.None;
+        chart.XAxis.LineFormat.Color = Hair;
+        chart.YAxis.TickLabels.Format = "#,##0";
+        chart.YAxis.TickLabels.Font.Size = 7.5;
+        chart.YAxis.HasMajorGridlines = true;
+        chart.YAxis.MajorGridlines.LineFormat.Color = Hair;
+        chart.YAxis.MajorTickMark = TickMarkType.None;
+        chart.YAxis.LineFormat.Width = 0;
+        chart.YAxis.MinimumScale = 0;
+        // Headroom past the longest bar so its value label has somewhere to sit.
+        chart.YAxis.MaximumScale = Math.Ceiling((double)sections.Max(s => s.Total) * 1.18 / 1000) * 1000;
+        chart.DataLabel.Type = DataLabelType.Value;
+        chart.DataLabel.Position = DataLabelPosition.OutsideEnd;
+        chart.DataLabel.Format = "  £#,##0";
+        chart.DataLabel.Font.Size = 7.5;
+        chart.DataLabel.Font.Color = Ink;
+    }
+
+    // ---- The itemised sections ----------------------------------------------------------------
+
+    private static void AddSections(Section section, LeadEstimate estimate)
+    {
+        var sections = estimate.Sections.Where(s => s.Lines.Count > 0).ToList();
+        if (sections.Count == 0) return;
+
+        section.AddPageBreak();
+        foreach (var breakdownSection in sections)
+        {
+            var title = section.AddParagraph();
+            title.Format.Font.Size = 14;
+            title.Format.Font.Color = Ink;
+            title.Format.KeepWithNext = true;
+            title.AddText(breakdownSection.Name);
+            if (breakdownSection.Provisional) title.AddFormattedText(" — Provisional allowance", new Font { Color = Provisional });
+            SpaceBefore(title, 6);
+            SpaceAfter(title, 2);
+
+            var table = section.AddTable();
+            table.Borders.Color = Hair;
+            table.Borders.Width = 0.5;
+            table.Format.Font.Size = 8.5;
+            AddColumn(table, 2.7, ParagraphAlignment.Center);
+            AddColumn(table, 6.5, ParagraphAlignment.Left);
+            AddColumn(table, 1.8, ParagraphAlignment.Center);
+            AddColumn(table, 1.8, ParagraphAlignment.Center);
+            AddColumn(table, 2.5, ParagraphAlignment.Right);
+            AddColumn(table, 2.5, ParagraphAlignment.Right);
+
+            var header = table.AddRow();
+            header.HeadingFormat = true;
+            header.Shading.Color = Gold;
+            header.TopPadding = Unit.FromMillimeter(1.6);
+            header.BottomPadding = Unit.FromMillimeter(1.6);
+            var headings = new[] { "ID", "Description", "Quantity", "Unit", "Unit price (£)", "Total (£)" };
+            for (var i = 0; i < headings.Length; i++)
+            {
+                var paragraph = header.Cells[i].AddParagraph(headings[i]);
+                paragraph.Format.Font.Color = White;
+                paragraph.Format.Font.Size = 8.5;
+                paragraph.Format.LeftIndent = CellIndent;
+                paragraph.Format.RightIndent = CellIndent;
+            }
+
+            foreach (var line in breakdownSection.Lines)
+            {
+                var row = table.AddRow();
+                row.TopPadding = Unit.FromMillimeter(1.4);
+                row.BottomPadding = Unit.FromMillimeter(1.4);
+                row.VerticalAlignment = VerticalAlignment.Center;
+                Cell(row.Cells[0], line.CostCode);
+                row.Cells[0].Format.Font.Size = 7.5;
+                Cell(row.Cells[1], line.Description);
+                Cell(row.Cells[2], Quantity(line.Quantity));
+                Cell(row.Cells[3], line.Unit);
+                Cell(row.Cells[4], Pence(line.UnitPrice));
+                Cell(row.Cells[5], Pence(line.Total));
+            }
+
+            var totalRow = table.AddRow();
+            totalRow.TopPadding = Unit.FromMillimeter(1.6);
+            totalRow.BottomPadding = Unit.FromMillimeter(1.6);
+            totalRow.Cells[4].Shading.Color = Orange;
+            var label = totalRow.Cells[4].AddParagraph("Total cost:");
+            label.Format.Font.Bold = true;
+            label.Format.Font.Color = White;
+            label.Format.Alignment = ParagraphAlignment.Center;
+            var total = totalRow.Cells[5].AddParagraph(Pence(breakdownSection.Total));
+            total.Format.Font.Bold = true;
+            total.Format.RightIndent = CellIndent;
+
+            SpaceAfterTable(section);
+        }
+    }
+
+    private static void AddGrandTotal(Section section, LeadEstimate estimate)
+    {
+        var sections = estimate.Sections.Where(s => s.Lines.Count > 0).ToList();
+        if (sections.Count == 0) return;
+
+        var title = section.AddParagraph("Total project estimate value");
+        title.Format.Font.Size = 14;
+        title.Format.KeepWithNext = true;
+        SpaceBefore(title, 8);
+        SpaceAfter(title, 2);
+
+        var table = section.AddTable();
+        table.Borders.Color = Hair;
+        table.Borders.Width = 0.5;
+        AddColumn(table, 5.0, ParagraphAlignment.Left);
+        AddColumn(table, 7.8, ParagraphAlignment.Right);
+        AddColumn(table, 2.5, ParagraphAlignment.Right);
+        AddColumn(table, 2.5, ParagraphAlignment.Right);
+
+        var provisional = sections.Where(s => s.Provisional).Sum(s => s.Total);
+        foreach (var s in sections)
+        {
+            var row = table.AddRow();
+            row.TopPadding = Unit.FromMillimeter(1);
+            row.BottomPadding = Unit.FromMillimeter(1);
+            Cell(row.Cells[0], s.Name);
+            Cell(row.Cells[1], s.Provisional ? "Provisional allowance" : "");
+            if (s.Provisional) row.Cells[1].Format.Font.Color = Provisional;
+            Cell(row.Cells[3], Pence(s.Total));
+        }
+
+        var totalRow = table.AddRow();
+        totalRow.TopPadding = Unit.FromMillimeter(1.8);
+        totalRow.BottomPadding = Unit.FromMillimeter(1.8);
+        totalRow.Cells[2].Shading.Color = Orange;
+        var label = totalRow.Cells[2].AddParagraph("Total cost:");
+        label.Format.Font.Bold = true;
+        label.Format.Font.Color = White;
+        label.Format.Alignment = ParagraphAlignment.Center;
+        var total = totalRow.Cells[3].AddParagraph(Pence(sections.Sum(s => s.Total)));
+        total.Format.Font.Bold = true;
+        total.Format.Font.Size = 10;
+        total.Format.RightIndent = CellIndent;
+
+        var note = section.AddParagraph(provisional > 0
+            ? $"All figures exclude VAT. Provisional allowances ({Pence(provisional)}) are to be confirmed once the design and the site conditions are known."
+            : "All figures exclude VAT.");
+        note.Format.Font.Size = 8;
+        note.Format.Font.Color = Muted;
+        SpaceBefore(note, 2);
+    }
+
+    // ---- Contact ------------------------------------------------------------------------------
+
+    private static void AddContactPage(Section section)
+    {
+        section.AddPageBreak();
+        SectionTitle(section, "Contact us");
+        var blurb = section.AddParagraph(
+            "Reach out to us to discuss your upcoming projects. We can demonstrate how our expertise "
+            + "perfectly matches your specific needs.");
+        blurb.Format.Font.Size = 9.5;
+        SpaceAfter(blurb, 3);
+        var blurb2 = section.AddParagraph(
+            "Experience the quality and craftsmanship we bring to every project by visiting one of our "
+            + "current sites. Witness our dedication to excellence in construction firsthand. Feel free "
+            + "to get in touch with us.");
+        blurb2.Format.Font.Size = 9.5;
+        SpaceAfter(blurb2, 5);
+
+        ContactLine(section, "Call us:", "0208 109 1015");
+        ContactLine(section, "Email us:", "sales@jewelbb.co.uk");
+        ContactLine(section, "Website:", "www.jewelbb.co.uk");
+        ContactLine(section, "Address:", "Jewel Bespoke Build, Argent House, Surbiton, KT6 7LD");
+    }
+
+    private static void ContactLine(Section section, string label, string value)
+    {
+        var heading = section.AddParagraph(label);
+        heading.Format.Font.Bold = true;
+        heading.Format.Font.Size = 9.5;
+        heading.Format.KeepWithNext = true;
+        var line = section.AddParagraph(value);
+        line.Format.Font.Size = 9.5;
+        SpaceAfter(line, 3);
     }
 
     // ---- Helpers ------------------------------------------------------------------------------
 
-    /// <summary>"Label: £9,500" → ("Label", "£9,500"); a line without a trailing figure keeps its
-    /// text whole. The figure is whatever follows the last ": £" — text, not a parsed number.</summary>
-    private static (string Label, string? Figure) SplitFigure(string text)
+    private static void SectionTitle(Section section, string text)
     {
-        var at = text.LastIndexOf(": £", StringComparison.Ordinal);
-        if (at < 0) at = text.LastIndexOf(" £", StringComparison.Ordinal) is var space && space > 0 && text[(space + 1)..].Skip(1).All(c => char.IsDigit(c) || c == ',' || c == '.') ? space : -1;
-        if (at < 0) return (text, null);
-        var label = text[..at].TrimEnd(':', ' ');
-        var figure = text[at..].TrimStart(':', ' ');
-        return (label, figure);
+        var title = section.AddParagraph(text);
+        title.Format.Font.Size = 16;
+        title.Format.Font.Bold = true;
+        title.Format.Font.Color = Ink;
+        title.Format.KeepWithNext = true;
+        SpaceAfter(title, 3);
     }
 
-    private static void AddGridRow(Table table, string label1, string value1, string label2, string value2)
+    private static void SubHeading(Section section, string text)
     {
-        var row = table.AddRow();
-        row.TopPadding = Unit.FromMillimeter(1);
-        row.BottomPadding = Unit.FromMillimeter(1);
-        LabelCell(row.Cells[0], label1);
-        ValueCell(row.Cells[1], value1);
-        LabelCell(row.Cells[2], label2);
-        ValueCell(row.Cells[3], value2);
+        var heading = section.AddParagraph(text);
+        heading.Format.Font.Size = 11;
+        heading.Format.Font.Bold = true;
+        heading.Format.Font.Color = Navy;
+        heading.Format.KeepWithNext = true;
+        SpaceBefore(heading, 4);
+        SpaceAfter(heading, 1.5);
+    }
+
+    private static void AddColumn(Table table, double widthCm, ParagraphAlignment alignment)
+    {
+        var column = table.AddColumn(Unit.FromCentimeter(widthCm));
+        column.Format.Alignment = alignment;
+    }
+
+    private static void Cell(Cell cell, string text)
+    {
+        var paragraph = cell.AddParagraph(string.IsNullOrWhiteSpace(text) ? "" : text);
+        paragraph.Format.LeftIndent = CellIndent;
+        paragraph.Format.RightIndent = CellIndent;
+        paragraph.Format.Font.Size = 8.5;
     }
 
     private static string PropertyLine(Lead lead)
@@ -314,5 +494,14 @@ public static class EstimateDocumentRenderer
         return string.IsNullOrWhiteSpace(lead.ContactName) ? lead.CompanyName : lead.ContactName;
     }
 
+    private static string ClientLine(Lead lead)
+    {
+        if (!string.IsNullOrWhiteSpace(lead.CompanyName) && !string.IsNullOrWhiteSpace(lead.ContactName))
+            return $"{lead.ContactName}, {lead.CompanyName}";
+        return string.IsNullOrWhiteSpace(lead.ContactName) ? lead.CompanyName : lead.ContactName;
+    }
+
     private static string WholeMoney(decimal value) => value.ToString("C0", Uk);
+    private static string Pence(decimal value) => value.ToString("N2", Uk);
+    private static string Quantity(decimal value) => value == decimal.Truncate(value) ? value.ToString("N0", Uk) : value.ToString("0.##", Uk);
 }

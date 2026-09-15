@@ -141,9 +141,9 @@
                                                         <td class="px-4 py-1">
                                                             <select class="field w-full text-xs" value="@l.CostCode" @onchange="e => { l.CostCode = e.Value?.ToString() ?? string.Empty; Touch(); }">
                                                                 <option value="">—</option>
-                                                                @foreach (var code in CostCenters.Alphabetical)
+                                                                @foreach (var centre in CostCenters.Alphabetical)
                                                                 {
-                                                                    <option value="@code.Code">@code.Code — @code.Name</option>
+                                                                    <option value="@centre.Code">@centre.Code — @centre.Name</option>
                                                                 }
                                                             </select>
                                                         </td>

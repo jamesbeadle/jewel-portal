@@ -118,12 +118,15 @@ internal static class JewelDocumentStyle
     /// </summary>
     public static void CleanHeader(Section section, string title, string? subtitle, params HeaderFact[] facts)
     {
-        var logo = section.AddParagraph();
+        // The logo is the page header, so every page of the document carries it, centred, as the
+        // tender's pages do; the body starts 3.3 cm down to clear it.
+        var logo = section.Headers.Primary.AddParagraph();
         logo.Format.Alignment = ParagraphAlignment.Center;
         var image = logo.AddImage(DocumentBranding.LogoImageName);
         image.Width = Unit.FromCentimeter(4.2);
         image.LockAspectRatio = true;
-        logo.Format.SpaceAfter = Unit.FromMillimeter(5);
+        section.PageSetup.HeaderDistance = Unit.FromCentimeter(1.0);
+        section.PageSetup.TopMargin = Unit.FromCentimeter(3.3);
 
         var table = section.AddTable();
         table.Borders.Width = 0;
