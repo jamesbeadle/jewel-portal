@@ -5,7 +5,15 @@ import re
 
 from ..source_files import SourceFile
 
-BOOLEAN_DECLARATION = re.compile(r"\bbool\??\s+(\w+)")
+BOOLEAN_DECLARATION = re.compile(
+    r"\bbool\??\s+(\w+)"
+    r"|\b(?:const|let|var)\s+(\w+)\s*(?::\s*boolean)?\s*=\s*(?:\$state\()?(?:true|false)\b"
+    r"|\b(\w+)\s*:\s*boolean\b"
+)
+
+
+def declaredBooleanName(match: re.Match) -> str:
+    return next(group for group in match.groups() if group is not None)
 
 
 def buildAbbreviationPattern(bannedAbbreviations: list[str]) -> re.Pattern:
@@ -28,9 +36,10 @@ def check(sourceFiles: list[SourceFile], rules: dict) -> dict:
             if abbreviationPattern.search(line):
                 abbreviationHits.append({"file": sourceFile.relative, "line": lineNumber})
             for match in BOOLEAN_DECLARATION.finditer(line):
-                if not hasBooleanPrefix(match.group(1), prefixes):
+                name = declaredBooleanName(match)
+                if not hasBooleanPrefix(name, prefixes):
                     unprefixedBooleans.append(
-                        {"file": sourceFile.relative, "line": lineNumber, "name": match.group(1)}
+                        {"file": sourceFile.relative, "line": lineNumber, "name": name}
                     )
     return {
         "name": "naming",

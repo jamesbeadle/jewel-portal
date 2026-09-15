@@ -1,16 +1,24 @@
-"""Heuristic function-length and else-block measurements for C-family sources."""
+"""Heuristic function-length and else-block measurements for C-family and TypeScript sources."""
 from __future__ import annotations
 
 import re
 
 from ..source_files import SourceFile
 
-FUNCTION_SIGNATURE = re.compile(
+C_FAMILY_SIGNATURE = re.compile(
     r"^\s*(?:public|private|protected|internal|static|async|override|sealed|partial|virtual)"
     r"[\w\s<>,\[\]\?]*\s+\w+\s*\([^;]*$|^\s*(?:public|private|protected|internal)"
     r"[\w\s<>,\[\]\?]*\s+\w+\s*\([^)]*\)\s*$"
 )
+TYPESCRIPT_SIGNATURE = re.compile(
+    r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s*\*?\s*\w*\s*(?:<[^>]*>)?\s*\("
+    r"|^\s*(?:export\s+)?(?:const|let)\s+\w+\s*(?::[^=]+)?=\s*(?:async\s*)?(?:\([^)]*\)|\w+)\s*(?::\s*[^=]+)?=>\s*\{\s*$"
+)
 ELSE_BLOCK = re.compile(r"^\s*}?\s*else\b")
+
+
+def isFunctionSignature(line: str) -> bool:
+    return bool(C_FAMILY_SIGNATURE.match(line) or TYPESCRIPT_SIGNATURE.match(line))
 
 
 def measureFunctionLengths(lines: list[str]) -> list[int]:
@@ -19,7 +27,7 @@ def measureFunctionLengths(lines: list[str]) -> list[int]:
     depth = 0
     startLine = 0
     for lineNumber, line in enumerate(lines):
-        if depthAtFunctionStart is None and FUNCTION_SIGNATURE.match(line):
+        if depthAtFunctionStart is None and isFunctionSignature(line):
             depthAtFunctionStart = depth
             startLine = lineNumber
         depth += line.count("{") - line.count("}")

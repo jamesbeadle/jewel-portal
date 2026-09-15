@@ -3,12 +3,13 @@ from __future__ import annotations
 
 import re
 
-from ..source_files import SourceFile
+from ..source_files import SourceFile, matchesAny
 
 MEMBER_ACCESS = re.compile(r"\w\.\w")
 STRING_LITERAL = re.compile(r'"(?:[^"\\]|\\.)*"|@"[^"]*"')
-COMMENT_ONLY = re.compile(r"^\s*(//|///|@\*|\*)")
-IMPORT_LINE = re.compile(r"^\s*(using|namespace|@using|@namespace|global using)\b")
+COMMENT_ONLY = re.compile(r"^\s*(//|///|@\*|\*|<!--)")
+IMPORT_LINE = re.compile(r"^\s*(using|namespace|@using|@namespace|global using|import|export \* from)\b")
+INDENTED_FILE_GLOBS_WHEN_UNSET = ["**/*.cs"]
 
 
 def stripStringsAndComments(line: str) -> str:
@@ -24,8 +25,10 @@ def memberAccessCount(line: str) -> int:
 
 
 def indentDepth(line: str, indentWidth: int) -> int:
-    leadingSpaces = len(line) - len(line.lstrip(" "))
-    return leadingSpaces // indentWidth
+    leadingWhitespace = line[: len(line) - len(line.lstrip(" \t"))]
+    tabDepth = leadingWhitespace.count("\t")
+    spaceDepth = leadingWhitespace.count(" ") // indentWidth
+    return tabDepth + spaceDepth
 
 
 def isMeasurableCodeLine(line: str) -> bool:
@@ -38,17 +41,18 @@ def check(sourceFiles: list[SourceFile], rules: dict) -> dict:
     maxLineLength = proseRules["maxLineLength"]
     maxIndentDepth = proseRules["maxIndentDepth"]
     indentWidth = proseRules["indentWidth"]
+    indentedFileGlobs = proseRules.get("indentedFileGlobs", INDENTED_FILE_GLOBS_WHEN_UNSET)
     longChains = []
     deepLines = []
     overlongLines = []
     for sourceFile in sourceFiles:
-        isCSharp = sourceFile.relative.endswith(".cs")
+        isMeasuredForIndentation = matchesAny(sourceFile.relative, indentedFileGlobs)
         for lineNumber, line in enumerate(sourceFile.lines, start=1):
             if not isMeasurableCodeLine(line):
                 continue
             if memberAccessCount(line) > maxMemberAccesses:
                 longChains.append({"file": sourceFile.relative, "line": lineNumber})
-            if isCSharp and indentDepth(line, indentWidth) > maxIndentDepth:
+            if isMeasuredForIndentation and indentDepth(line, indentWidth) > maxIndentDepth:
                 deepLines.append({"file": sourceFile.relative, "line": lineNumber})
             if len(line) > maxLineLength:
                 overlongLines.append({"file": sourceFile.relative, "line": lineNumber})

@@ -8,12 +8,17 @@ from ..source_files import SourceFile
 TASK_MARKER = re.compile(r"\b(TODO|FIXME|HACK)\b", re.IGNORECASE)
 
 
+def markersAsList(marker: str | list[str]) -> list[str]:
+    if isinstance(marker, list):
+        return marker
+    return [marker]
+
+
 def isExplanatoryComment(strippedLine: str, markers: dict) -> bool:
-    lineMarker = markers["line"]
-    documentationMarker = markers["documentation"]
-    if strippedLine.startswith(documentationMarker):
+    if any(strippedLine.startswith(marker) for marker in markersAsList(markers["documentation"])):
         return False
-    return strippedLine.startswith(lineMarker) or strippedLine.startswith(markers["markup"])
+    explanatoryMarkers = markersAsList(markers["line"]) + markersAsList(markers["markup"])
+    return any(strippedLine.startswith(marker) for marker in explanatoryMarkers)
 
 
 def check(sourceFiles: list[SourceFile], rules: dict) -> dict:
