@@ -198,11 +198,13 @@ public partial class TriageQueue
     // The blank pairs still awaiting an answer, by their on-screen names — one list feeds both
     // the amber hint next to Apply and the belt-and-braces error inside DoApplyAll, so the two
     // can never drift. "Use existing tags" counts only while its row is on show (the thread
-    // actually carries tags to inherit).
+    // actually carries tags to inherit), and "Relevant Event" only while the email has a
+    // project — a programme is a project's, so with none picked the row is not asked
+    // (2026-09-15: a lead's enquiry on the Sales pane never has one).
     private List<string> MissingDecisionNames()
     {
         var missing = new List<string>();
-        if (relevantEventStaged is null) missing.Add("Relevant Event for Programme");
+        if (relevantEventStaged is null && !string.IsNullOrWhiteSpace(triageProjectId)) missing.Add("Relevant Event for Programme");
         if (triageEntireThread is null) missing.Add("Entire thread");
         if (SelectedThreadTags.Count > 0 && useThreadTags is null) missing.Add("Use existing tags");
         return missing;

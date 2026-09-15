@@ -3,15 +3,25 @@
 @* One of the triage bar's Yes/No pairs: two joined pill halves, neither lit until the triager
    picks a side (null = blank) — the bar's Apply stands down until every pair on show is
    answered, so each apply carries decisions someone actually made. Clicking the picked side
-   again is a no-op, not a clear: "no answer" isn't a state anyone can put back. *@
+   again is a no-op, not a clear: "no answer" isn't a state anyone can put back. A pair that
+   does not apply to this email (a Relevant Event with no project to have a programme, 2026-09-15)
+   is NotAsked: it stays on show so the bar reads the same every time, but says why it is
+   quiet instead of offering a Yes that could never file. *@
 <div class="flex items-center justify-between gap-3" title="@Title">
-    <span class="text-sm text-content">@ChildContent</span>
-    <div class="flex items-center shrink-0">
-        <button type="button" class="@HalfClass(answer: true, first: true)"
-                @onclick="() => ValueChanged.InvokeAsync(true)">Yes</button>
-        <button type="button" class="@HalfClass(answer: false, first: false)"
-                @onclick="() => ValueChanged.InvokeAsync(false)">No</button>
-    </div>
+    <span class="text-sm @(NotAsked ? "text-content-subtle" : "text-content")">@ChildContent</span>
+    @if (NotAsked)
+    {
+        <span class="text-xs text-content-subtle shrink-0">@NotAskedNote</span>
+    }
+    else
+    {
+        <div class="flex items-center shrink-0">
+            <button type="button" class="@HalfClass(answer: true, first: true)"
+                    @onclick="() => ValueChanged.InvokeAsync(true)">Yes</button>
+            <button type="button" class="@HalfClass(answer: false, first: false)"
+                    @onclick="() => ValueChanged.InvokeAsync(false)">No</button>
+        </div>
+    }
 </div>
 
 @code {
@@ -21,6 +31,11 @@
 
     /// <summary>The full wording of what Yes and No each do, shown on hover.</summary>
     [Parameter] public string? Title { get; set; }
+
+    /// <summary>True when the question does not apply to this email — the Yes/No is replaced by
+    /// <see cref="NotAskedNote"/> and the answer is not awaited.</summary>
+    [Parameter] public bool NotAsked { get; set; }
+    [Parameter] public string NotAskedNote { get; set; } = "";
 
     /// <summary>Null until the triager picks a side.</summary>
     [Parameter] public bool? Value { get; set; }

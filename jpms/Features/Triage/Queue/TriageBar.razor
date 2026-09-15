@@ -36,8 +36,14 @@
            would sweep, once the thread has been read (staging tags themselves lives on the
            System Tags window). *@
         <div class="flex flex-col gap-1.5">
+            @* A Relevant Event is a question about the PROJECT's programme, so with no project
+               picked it is not asked (2026-09-15, the Sales pane: a lead's enquiry has no
+               project, and a Yes here could only ever block Apply). *@
             <TriageDecisionRow Value="RelevantEventStaged" ValueChanged="RelevantEventStagedChanged"
-                               Title="Yes tags the email to the project's programme — it appears in the Programme tab's Relevant Events. No leaves the programme out of it">
+                               NotAsked="@string.IsNullOrWhiteSpace(ProjectId)" NotAskedNote="Needs a project"
+                               Title="@(string.IsNullOrWhiteSpace(ProjectId)
+                                   ? "Only a project has a programme — pick the email's Project and this is asked"
+                                   : "Yes tags the email to the project's programme — it appears in the Programme tab's Relevant Events. No leaves the programme out of it")">
                 Relevant Event for Programme
             </TriageDecisionRow>
             <TriageDecisionRow Value="TriageEntireThread" ValueChanged="TriageEntireThreadChanged"

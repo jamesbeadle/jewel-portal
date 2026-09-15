@@ -169,7 +169,12 @@ public partial class TriageQueue
         triageProjectId = projectId;
         projectAutoMatched = false; // an explicit choice replaces the guess
         linkRecordId = "";
-        pickedRecords.Clear();
+        // A project's records cannot follow the email to another project; a company-wide pick
+        // (a lead) belongs to no project and stays. With no project there is no programme, so
+        // the Relevant Event answer goes back to blank rather than standing as a Yes that
+        // could never file.
+        pickedRecords.RemoveAll(record => !string.IsNullOrWhiteSpace(record.ProjectId));
+        if (string.IsNullOrWhiteSpace(projectId)) relevantEventStaged = null;
         await LoadLinkRecordsAsync();
     }
 
