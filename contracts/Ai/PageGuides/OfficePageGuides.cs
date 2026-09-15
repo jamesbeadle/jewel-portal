@@ -115,7 +115,12 @@ public static class OfficePageGuides
             + "drawings and specs), get_lead lists estimates[] with estimateId, create_estimate / "
             + "update_estimate_details / move_estimate_status act on them, find_by_reference "
             + "resolves EST-####. The priced breakdown is not built yet — it will follow Nigel's "
-            + "estimating workbook."),
+            + "estimating workbook. The Proposals panel is on the connector too: get_lead lists "
+            + "proposals[] with proposalId, save_sales_proposal drafts one (from the enquiry mail, "
+            + "its attachments and the estimate — show the user the draft first), "
+            + "send_sales_proposal emails the prospect their imagine page (confirm-first; the lead "
+            + "needs an imagine link and a contact email), withdraw_sales_proposal is the "
+            + "directors' undo."),
 
         new("/sales/inbox", "Sales inbox",
             "Sales → Inbox: sales@jewelbb.co.uk read live from the mailbox — deliberately its own "

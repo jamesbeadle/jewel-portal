@@ -73,9 +73,12 @@ internal static class AiSalesTools
             "One lead in full with its timeline — every touch (calls, emails, letters, meetings, "
             + "site visits, proposals, notes) and every stage change, newest first — and its "
             + "estimates (EST-####: scope, architect, price due date, budget mentioned, total, "
-            + "status Received → Pricing → Submitted → Won / Lost), newest first. Takes the "
-            + "leadId from list_leads, or an LD-#### reference. The enquiry mail tagged to the "
-            + "lead is read_record_emails record_type lead.",
+            + "status Received → Pricing → Submitted → Won / Lost), newest first, and its "
+            + "proposals (what the prospect sees: title, scope, base price, options, schedule, "
+            + "terms, status Draft → Sent → Accepted / Declined / Superseded). Takes the leadId "
+            + "from list_leads, or an LD-#### reference. The enquiry mail tagged to the lead is "
+            + "read_record_emails record_type lead; imagineLinkIssued says whether "
+            + "send_sales_proposal has a page to send to.",
             AiToolSchema.Object(
                 ("leadId", "string", "The lead's id (list_leads) or its LD-#### reference.", true)),
             AiToolKind.Read,
@@ -103,7 +106,9 @@ internal static class AiSalesTools
                         activity.OccurredAt,
                         activity.RecordedByEmail
                     }),
-                    estimates = (detail.Estimates ?? Array.Empty<LeadEstimate>()).Select(EstimateRow)
+                    estimates = (detail.Estimates ?? Array.Empty<LeadEstimate>()).Select(EstimateRow),
+                    imagineLinkIssued = detail.Lead.ImagineToken is not null,
+                    proposals = (detail.Proposals ?? Array.Empty<SalesProposal>()).Select(AiSalesProposalRows.ProposalRow)
                 });
             }),
 

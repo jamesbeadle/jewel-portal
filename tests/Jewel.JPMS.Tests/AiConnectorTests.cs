@@ -607,4 +607,30 @@ public sealed class AiConnectorTests
         Assert.True(AiRecordTools.TryMapRecordType("lead", out var lead) && lead == RecordType.Lead);
         Assert.True(AiRecordTools.TryMapRecordType("LD", out var ld) && ld == RecordType.Lead);
     }
+
+    [Fact]
+    public void SalesProposals_reachTheConnector()
+    {
+        // 2026-09-15, Nigel: "ingest the emails and attachments and prepare a proposal" — the
+        // lead page's Proposals panel (save a draft, send it, withdraw it) over the connector, with
+        // get_lead handing over the proposalId the send and withdraw take. Sending emails the
+        // prospect, so it is confirm-first; withdrawing is the directors' call.
+        var names = AiActionRegistry.All.Select(a => a.Name).ToList();
+        foreach (var name in new[] { "save_sales_proposal", "send_sales_proposal", "withdraw_sales_proposal" })
+        {
+            Assert.Contains(name, names);
+            Assert.Equal("Sales", AiActionRegistry.Find(name)!.Area);
+        }
+        Assert.Contains("SavedByEmail", AiActionRegistry.Find("save_sales_proposal")!.EmailStamps);
+        Assert.Contains("read_record_emails", AiActionRegistry.Find("save_sales_proposal")!.Notes);
+        Assert.False(AiActionRegistry.Find("save_sales_proposal")!.RequiresConfirmation);
+        Assert.True(AiActionRegistry.Find("send_sales_proposal")!.RequiresConfirmation);
+        Assert.Contains("proposalId", AiActionRegistry.Find("send_sales_proposal")!.Notes);
+        Assert.True(AiActionRegistry.Find("withdraw_sales_proposal")!.RequiresConfirmation);
+        Assert.False(AiActionRegistry.Find("withdraw_sales_proposal")!.VisibleTo.IncludesAny(UserWith(Role.ProjectManager).Roles));
+        Assert.True(AiActionRegistry.Find("withdraw_sales_proposal")!.VisibleTo.IncludesAny(UserWith(Role.ManagingDirector).Roles));
+
+        var director = AiToolCatalogue.ForConnector(UserWith(Role.ManagingDirector));
+        Assert.Contains("proposals", director.Single(t => t.Name == "get_lead").Description);
+    }
 }

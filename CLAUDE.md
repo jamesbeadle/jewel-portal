@@ -94,7 +94,11 @@
   `update_estimate_details`, `move_estimate_status` (each takes `estimateId`, never the
   reference), and `get_lead` lists `estimates[]` with their ids. Every write is a
   `LeadActivityKind.Estimate` entry on the lead's timeline. Never call this record a
-  "quote" or a "proposal" in copy — the `SalesProposal` is a different record.
+  "quote" or a "proposal" in copy — the `SalesProposal` is a different record, and it is on the
+  connector too (`SalesActions.Proposals`: `save_sales_proposal` drafts, `send_sales_proposal`
+  emails the prospect — confirm-first — `withdraw_sales_proposal` is `Deciders`; `get_lead`
+  lists `proposals[]` with ids and `imagineLinkIssued`), so the assistant can read the enquiry
+  and prepare the proposal a person then reads on the lead's page before it goes.
 
 ## Work-order mail tags are project-qualified (api + jpms)
 

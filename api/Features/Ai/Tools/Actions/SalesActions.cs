@@ -10,7 +10,8 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 /// Authorisation class checks, and the stamps copy exactly what SalesLeadEndpoints /
 /// SalesStrategyEndpoints stamp server-side. Reads: list_leads, get_lead, list_sales_strategies,
 /// get_sales_strategy (AiSalesTools). The Sales pane's lead-from-email is
-/// SalesActions.LeadFromMessage and the estimates on a lead are SalesActions.Estimates (2026-09-15).
+/// SalesActions.LeadFromMessage, the estimates on a lead are SalesActions.Estimates and the
+/// proposals the prospect sees are SalesActions.Proposals (2026-09-15).
 /// </summary>
 internal sealed partial class SalesActions : IAiActionSource
 {
@@ -26,7 +27,7 @@ internal sealed partial class SalesActions : IAiActionSource
         + "staff member working it — the signed-in user unless they say otherwise).";
 
     public IEnumerable<AiAction> Build() =>
-        LeadAndStrategyActions().Concat(LeadFromMessageActions()).Concat(EstimateActions());
+        LeadAndStrategyActions().Concat(LeadFromMessageActions()).Concat(EstimateActions()).Concat(ProposalActions());
 
     private static IEnumerable<AiAction> LeadAndStrategyActions() => new AiAction[]
     {
