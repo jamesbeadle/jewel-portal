@@ -20,14 +20,22 @@ cp tools/refactor/audit-output/audit.json tools/refactor/baseline.json
 
 Do this once per refactor round, at the end, never mid-round, and rewrite `baseline-report.md` in the shape the `refactor-round` skill gives.
 
-## Gate a change (CI or local)
+## Gate a change
 
 ```
 python3 -m tools.refactor.audit.run_audit . --output tools/refactor/audit-output
 python3 -m tools.refactor.audit.gate tools/refactor/baseline.json tools/refactor/audit-output/audit.json
 ```
 
-Exit code 1 when any ratcheted figure is worse than the baseline: files over the length limit, worst file length, over-long functions, else blocks, duplication percentage, explanatory comment lines, inline hex colours, orphan components, long member chains, deep indentation, overlong function names. The `code-audit` workflow runs exactly this on every pull request and every push to the default branch.
+Exit code 1 when any ratcheted figure is worse than the baseline: files over the length limit, worst file length, over-long functions, else blocks, duplication percentage, explanatory comment lines, inline hex colours, orphan components, long member chains, deep indentation, overlong function names. The `end-of-day` and `refactor-round` skills run exactly this; nothing runs on GitHub unless the kit was installed with `--with-ci-gate`.
+
+## Is a round due?
+
+```
+tools/refactor/deploys_since_baseline.sh        # or: … 5, for a rhythm of five
+```
+
+Counts the commits on the current branch since `baseline.json` was last committed and exits 0 when a round is due.
 
 ## Point it at another repository
 

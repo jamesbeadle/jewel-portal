@@ -1,5 +1,5 @@
 <!-- project-process:begin -->
-<!-- project-process kit v1.0.0 — refreshed by bootstrap.sh; edit the kit, not this block -->
+<!-- project-process kit v1.1.0 — refreshed by bootstrap.sh; edit the kit, not this block -->
 
 # How We Work
 
@@ -14,13 +14,13 @@ Every piece of work on this repository is done on a task in Your Business Today 
 3. **Leave a work log when the work stops.** One message on the task's conversation: what changed, which files or records, decisions taken and why, what is left. Then mark it done if it is done, or leave it in progress and say what is next.
 4. **A question for another member goes on the task or goal,** naming them. Their Claude brings it to them through `read_latest_messages` and posts the answer back. Never relay through chat apps.
 
-## The code stays at the standard by itself
+## The code stays at the standard through Claude scripts, not CI
 
-The repository carries `tools/refactor/` — an audit that measures the code against the rules below and a gate that fails any change that makes a ratcheted figure worse. Every pull request and every push to the default branch runs it (`.github/workflows/code-audit.yml`). YBT counts pushes to the default branch and, every N deploys (10 by default, set on the project), raises `REFACTOR: round N` on the project and sends it to the Builder; the round runs `.claude/skills/refactor-round/SKILL.md`. Never raise a refactor round by hand — change the rhythm on the project instead. Refactor rounds never add behaviour and never change the schema.
+The repository carries `tools/refactor/` — an audit that measures the code against the rules below and a gate that fails when a ratcheted figure is worse than the committed baseline. Nothing runs on GitHub: the gate is run by the Claude scripts in `.claude/skills/` — `refactor-round` (one measured round: baseline first, worst files first, behaviour unchanged, baseline last) and `end-of-day` (the day's close: the round if one is due, the connector check, the plain-English summary on the day's tasks). A round is due when `tools/refactor/deploys_since_baseline.sh` says so: the commits on the default branch since the baseline was last committed, ten or more unless the project says otherwise. Your Business Today can also raise `REFACTOR: round N` on the project as the reminder when its own deploy count reaches N. Either way a person's Claude runs the round in the working tree and the person commits — the scripts never commit, push or open pull requests, and refactor rounds never add behaviour or change the schema.
 
 ## The rules travel with the repository
 
-The coding rules that follow are the whole standard. They live here, in the repository, because a machine-level `~/.claude/CLAUDE.md` does not reach cloud sessions, the Builder, or anyone else's machine. Repository-specific conventions belong below the block, in this file's own notes; decisions worth keeping belong in `docs/`.
+The coding rules that follow are the whole standard. They live here, in the repository, because a machine-level `~/.claude/CLAUDE.md` does not reach cloud sessions or anyone else's machine. Repository-specific conventions belong below the block, in this file's own notes; decisions worth keeping belong in `docs/`.
 
 # How I Write Code
 

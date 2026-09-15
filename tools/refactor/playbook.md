@@ -6,7 +6,7 @@ The premise: a refactor without a feature freeze is a treadmill, and a refactor 
 
 **The engine, in one sentence: shrink first, abstract second, let patterns arrive third.** On the backend, big files are broken into functions each with one purpose; in the UI, big pages are broken into components each with one purpose. Abstraction is never attempted against a large unit — it is only once the units are small that common functionality becomes visible, and only once enough commonality has been extracted that design patterns appear, because patterns are exactly the shapes that handle common functionality abstractly. Nothing in the stages below reverses this order: the taxonomy and lifecycle stages give extraction a *direction*, but the abstractions themselves are discovered from the shrunken code, never imposed on the large.
 
-Stages 0 to 3 are done once per repository. Stage 4 is the **round** — the unit of work the project-process cadence runs by itself every N deploys (see `.claude/skills/refactor-round/SKILL.md`). Stages 5 to 8 are rounds of a different shape, taken when the extraction loop has made them visible. Stage 9 never ends.
+Stages 0 to 3 are done once per repository. Stage 4 is the **round** — the unit of work run every N commits on the default branch (see `.claude/skills/refactor-round/SKILL.md`; `deploys_since_baseline.sh` says when). Stages 5 to 8 are rounds of a different shape, taken when the extraction loop has made them visible. Stage 9 never ends.
 
 ## Stage 0 — Baseline
 
@@ -17,7 +17,7 @@ python3 -m tools.refactor.audit.run_audit . --output tools/refactor/audit-output
 cp tools/refactor/audit-output/audit.json tools/refactor/baseline.json
 ```
 
-`audit-report.md` is the human summary; `audit.json` holds every offender list. From this commit onwards, CI runs the audit and `gate.py` fails any change that makes a ratcheted figure worse. Refactoring can now proceed in any order without the codebase regressing behind it. When a stage improves the numbers, re-copy `audit.json` over `baseline.json` to lock in the gain. The bootstrap does Stage 0 for a repository that has no baseline yet.
+`audit-report.md` is the human summary; `audit.json` holds every offender list. From this commit onwards the `end-of-day` script runs the audit and `gate.py` fails the day that made a ratcheted figure worse, so it is fixed while it is small. Refactoring can now proceed in any order without the codebase regressing behind it. When a stage improves the numbers, re-copy `audit.json` over `baseline.json` to lock in the gain. The bootstrap does Stage 0 for a repository that has no baseline yet.
 
 ## Stage 1 — Recover the product model
 
@@ -78,7 +78,7 @@ With the widget set consolidated, compare against the source designs (design-too
 
 ## Stage 9 — Hold the line
 
-The gate stays in CI permanently. New code obeys the rules from birth; the ratchet means the numbers only travel one way. The cadence keeps Stage 4 running by itself. Revisit the baseline quarterly: tighten any figure that has headroom (for instance, lower `maxFunctionLines` once the worst offenders are gone).
+The gate runs at the end of every working day. New code obeys the rules from birth; the ratchet means the numbers only travel one way. The deploy count keeps Stage 4 coming round. Revisit the baseline quarterly: tighten any figure that has headroom (for instance, lower `maxFunctionLines` once the worst offenders are gone).
 
 ## Adapting this to another repository
 
