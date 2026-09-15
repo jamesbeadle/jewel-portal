@@ -150,13 +150,13 @@ public static class StatusTones
     };
 
     /// <summary>The triage pathways as a categorical: Client positive, Subcontractor warning,
-    /// Supplier info, Sales negative — the same reading TriagePathways gives the pathway chips.</summary>
+    /// Supplier info, Sales accent — the same reading TriagePathways gives the pathway chips.</summary>
     public static Tone PathwayTone(string? pathway) => pathway switch
     {
         "Client" => Tone.Positive,
         "Subcontractor" => Tone.Warning,
         "Supplier" => Tone.Info,
-        "Sales" => Tone.Negative,
+        "Sales" => Tone.Accent,
         _ => Tone.Muted
     };
 

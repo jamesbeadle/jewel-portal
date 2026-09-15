@@ -13,6 +13,12 @@ A reference defined by a client architect, used to categorise work for the archi
 **Drawing**
 A construction drawing attached to a tender (CAD export, PDF, etc.) defining what needs to be built.
 
+**Estimate**
+Jewel's own pricing of one enquiry, held on the sales lead it came from (Sales → Leads; reference EST-####). It carries the scope, the architect or consultant, the date the price is due, the budget the prospect mentioned and the total once priced, and climbs Received → Pricing → Submitted → Won / Lost. The priced breakdown will follow the estimator's Excel workbook once that is in the portal. Distinct from a **Proposal**, which is the document the prospect sees, and from a **Tender**, which is the architect's package that the estimate prices.
+
+**Lead**
+A person we might convince to build with Jewel, and the property or site the work would be on (Sales → Leads; reference LD-####). An enquiry email forwarded to the projects mailbox is tagged to its lead on the Control Centre's Sales pane, so the lead — which belongs to no project — reads its mail live. Won creates the Client and the project shell.
+
 **Line Item / Tender Line Item**
 A discrete unit of priced work within a tender (e.g. "install kitchen worktop"). Used for both pricing and completion tracking. Updated by VOs when scope changes.
 

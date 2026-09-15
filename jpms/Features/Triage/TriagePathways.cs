@@ -39,16 +39,16 @@ public static class TriagePathways
     }
 
     /// <summary>The pathway's Tone — Client positive, Subcontractor warning, Supplier info,
-    /// Sales negative (the one tone left that reads apart from the other four: here it is a
-    /// colour for the prospect side, not a verdict), Internal muted — so the pathway pill reads
-    /// the same in the queue, the reading pane and every register (Pill + StatusTones.PathwayTone
-    /// share this reading).</summary>
+    /// Sales accent (the brand colour: the prospect side is a category, not a verdict, and the
+    /// four verdict tones were taken), Internal muted — so the pathway pill reads the same in the
+    /// queue, the reading pane and every register (Pill + StatusTones.PathwayTone share this
+    /// reading).</summary>
     public static Jewel.JPMS.Components.Tone Tone(TriagePathway pathway) => pathway switch
     {
         TriagePathway.Client        => Jewel.JPMS.Components.Tone.Positive,
         TriagePathway.Subcontractor => Jewel.JPMS.Components.Tone.Warning,
         TriagePathway.Supplier      => Jewel.JPMS.Components.Tone.Info,
-        TriagePathway.Sales         => Jewel.JPMS.Components.Tone.Negative,
+        TriagePathway.Sales         => Jewel.JPMS.Components.Tone.Accent,
         _                           => Jewel.JPMS.Components.Tone.Muted
     };
 }

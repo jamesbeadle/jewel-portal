@@ -18,7 +18,10 @@ public enum Tone
     /// <summary>Needs a look but nothing is broken — amber.</summary>
     Warning,
     /// <summary>Failed, rejected, overdue — the Figma's Status/Negative red.</summary>
-    Negative
+    Negative,
+    /// <summary>The brand accent — a category the verdict colours do not cover (the Sales
+    /// pathway, 2026-09-15): a highlight, never a verdict.</summary>
+    Accent
 }
 
 public static class ToneClasses
@@ -30,6 +33,7 @@ public static class ToneClasses
         Tone.Warning => "bg-warning/10 border-warning/30 text-warning",
         Tone.Positive => "bg-positive/10 border-positive/30 text-positive",
         Tone.Info => "bg-info/10 border-info/30 text-info",
+        Tone.Accent => "bg-accent/10 border-accent/30 text-accent",
         _ => "bg-surface-raised border-line text-content-muted"
     };
 
@@ -40,6 +44,7 @@ public static class ToneClasses
         Tone.Warning => "bg-warning/10 text-warning",
         Tone.Positive => "bg-positive/10 text-positive",
         Tone.Info => "bg-info/10 text-info",
+        Tone.Accent => "bg-accent/10 text-accent",
         _ => "bg-surface-raised text-content-subtle"
     };
 
@@ -50,6 +55,7 @@ public static class ToneClasses
         Tone.Warning => "bg-warning",
         Tone.Positive => "bg-positive",
         Tone.Info => "bg-info",
+        Tone.Accent => "bg-accent",
         _ => "bg-content-faint"
     };
 
@@ -60,6 +66,7 @@ public static class ToneClasses
         Tone.Warning => "text-warning",
         Tone.Positive => "text-positive",
         Tone.Info => "text-info",
+        Tone.Accent => "text-accent",
         _ => "text-content-subtle"
     };
 }

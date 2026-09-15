@@ -48,6 +48,54 @@
   contracts/Models). RFIs are not on the chart: nothing links an RFI to a task yet.
 
 
+## The Sales pane: an enquiry tagged to its lead, and the estimate on it (api + jpms)
+
+- **A fifth pathway, Sales** (Nigel, 2026-09-15, the estimating brief): an estimate enquiry
+  forwarded to the projects mailbox is tagged in the Control Centre to the sales LEAD it is about
+  — an existing lead, or one raised from the email — so the lead reads its mail live and the
+  assistant reads the enquiry and its attachments through the connector before pricing it. The
+  bucket is `JPMS/Sales` (`TriageCategories.Sales`, `TriagePathway.Sales`, in display order
+  Client → Subcontractor → Supplier → Sales → Internal); the tag stem is `JPMS/LD-0012`
+  (`LeadLinkProvider`, global number, `RecordType.Lead = 21`). The pane is
+  `PathwayPaneConfig.Sales`: Tagging offers Lead, Actions offers Raise Lead, and its Tone is
+  `Tone.Accent` — the brand colour, added for it because the four verdict tones were taken and a
+  pathway is a category, not a verdict. Existing Control Centre roles only
+  (`TriageRoles.AllowedToTriage`); the sales team works leads from the Sales pages.
+- **A lead belongs to no project, and the tagging path knows it.** `LinkableRecord.ProjectId` is
+  `""` on every lead — even a Won one, whose project's records own the mail from then on — and
+  `RecordLinkVocabulary.IsCompanyWide(RecordType.Lead)` is the ONE rule the pane, the Tagged
+  picker, the record explorer and the composer read to list a register without a project
+  (`GET records?type=Lead`, the blank-project `ListLinkableRecords`; `RecordLinkSection` then
+  says "in the register"). A staged lead create is `StagedRecordCreate.BelongsToProject == false`,
+  which is what exempts it from `ProjectNeeds()`, `ApplyPlan.CreateReady` and Create now's
+  project check. Never add a project-less record type without going through these two flags.
+- **Raise Lead is `CreateLeadFromMessage`** (`POST mailbox/message/create-lead`, connector
+  `create_lead_from_message`, confirm-first): the SAME `CaptureLead` handler as the Leads
+  register (LD numbering, first timeline entry), landing **Engaged, Source Inbound** — an enquiry
+  is already a conversation — with the owner the command names, else whoever tags it; then
+  `LinkMessageToRecord(Lead, Pathway "Sales")`. The draft (`StagedLeadDraft`, fields in
+  `StagedLeadFields`) pre-fills the contact from the sender and the summary from the subject.
+  Tagging to an EXISTING lead is the ordinary pick — and `file_email_to_record` with type `lead`
+  on the connector. `find_by_reference` resolves `LD-####` and `EST-####`; `read_record_emails`
+  takes `lead`.
+- **An estimate is Jewel's OWN pricing of one enquiry; a proposal is what the prospect sees.**
+  `LeadEstimate` (table `LeadEstimates`, migration `AddLeadEstimates`, script
+  `add-lead-estimates.sql`; `EST-####` global) hangs off the lead: scope, the architect or
+  consultant, the date the price is due, the budget the prospect mentioned, the total once priced,
+  notes, and `EstimateStatus` Received → Pricing → Submitted → Won / Lost (`StatusChangedAt`;
+  Submitted needs a `Total` and stamps `SubmittedAt`; Won/Lost close it and refuse edits). It is
+  deliberately a plain record: the priced breakdown is built on Nigel's estimating workbook once
+  that is in the portal, and MUST follow its structure, rates and calculations — get the workbook
+  before designing it. Commands `CreateEstimate` / `UpdateEstimateDetails` / `MoveEstimateStatus`
+  (`SalesRoles.SalesTeam`), `GetEstimate` (`Readers`); `GetLead` carries `Estimates` newest
+  first. Page: `LeadEstimatesPanel` on the lead (Add / Edit modal, the status pill is the move,
+  Won/Lost through `ConfirmDialog`), beside the lead's "Enquiry emails"
+  (`RecordCorrespondenceSection`, type Lead). Connector: `create_estimate`,
+  `update_estimate_details`, `move_estimate_status` (each takes `estimateId`, never the
+  reference), and `get_lead` lists `estimates[]` with their ids. Every write is a
+  `LeadActivityKind.Estimate` entry on the lead's timeline. Never call this record a
+  "quote" or a "proposal" in copy — the `SalesProposal` is a different record.
+
 ## Work-order mail tags are project-qualified (api + jpms)
 
 - **A work order's tag stem carries its project** (2026-09-14, the By France / Coombe Lane
