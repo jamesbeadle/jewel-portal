@@ -13,6 +13,18 @@ public static class TriageEmailDisplay
 
     public static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 
+    /// <summary>The subject without its FW: / FWD: / RE: prefixes, however many were stacked —
+    /// what a record drafted from the email takes as its title (calendar event, inspection,
+    /// lead summary).</summary>
+    public static string StripReplyPrefixes(string subject)
+    {
+        const string prefixPattern = @"^(fw|fwd|re)\s*:\s*";
+        var cleaned = subject.Trim();
+        while (System.Text.RegularExpressions.Regex.IsMatch(cleaned, prefixPattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, prefixPattern, "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return cleaned;
+    }
+
     public static string Date(DateTimeOffset value) => DateTimeText(value);
 
     /// <summary>

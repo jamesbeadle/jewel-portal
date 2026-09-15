@@ -52,8 +52,8 @@ public interface IIntakeQueue
         IReadOnlyList<(string PartName, Microsoft.AspNetCore.Components.Forms.IBrowserFile File)> files,
         CancellationToken cancellationToken = default);
 
-    // Record-agnostic linking: list the records of a type on a project (for the category-first picker),
-    // and link a message to one. The link tags "JPMS/<ref>" identically for every record type, and the
+    // Record-agnostic linking: list the records of a type on a project (for the category-first picker)
+    // — or, with a blank project id, a company-wide type's own register (leads) — and link a message to one. The link tags "JPMS/<ref>" identically for every record type, and the
     // record reads its mail back live by that tag. AssignMessageAsync is the Request-only special case.
     Task<IReadOnlyList<LinkableRecord>> ListLinkableRecordsAsync(string projectId, RecordType type, CancellationToken cancellationToken = default);
     // Pathway (docs/Pathway-Split-Platform-Flow-Plan.md §2.3): pathway names the triager's explicit
@@ -96,6 +96,13 @@ public interface IIntakeQueue
     // — the email is tagged "JPMS/INV-####", so the item reads its mail back live by tag.
     Task<Jewel.JPMS.Models.InventoryItem> CreateInventoryItemFromMessageAsync(
         Jewel.JPMS.Contracts.Inventory.CreateInventoryItemFromMessage command, CancellationToken cancellationToken = default);
+
+    // Raise a sales lead from an enquiry email (2026-09-15) — the lead captured exactly as a
+    // manual one, landing Engaged / Inbound, plus the email linked to it (JPMS/LD-####) so the
+    // lead reads its enquiry mail live. The Sales pathway's "create a new record from this
+    // email"; a lead belongs to no project, so the command carries none.
+    Task<Lead> CreateLeadFromMessageAsync(
+        Jewel.JPMS.Contracts.Sales.CreateLeadFromMessage command, CancellationToken cancellationToken = default);
 
     // Raise a site instruction from the email that prompted it (2026-09-03) — the instruction
     // written by the triager, raised exactly as one on the project's Site Instructions page, plus

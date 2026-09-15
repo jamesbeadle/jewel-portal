@@ -180,7 +180,9 @@ public partial class TriageQueue
     // call backs both the Link panel and the Tagged tab's "link to another record" control.
     private async Task LoadLinkRecordsAsync()
     {
-        if (string.IsNullOrWhiteSpace(triageProjectId))
+        // A company-wide type (a lead) lists its register with no project (2026-09-15).
+        var poolProjectId = RecordLinkVocabulary.IsCompanyWide(linkRecordType) ? "" : triageProjectId;
+        if (string.IsNullOrWhiteSpace(poolProjectId) && !RecordLinkVocabulary.IsCompanyWide(linkRecordType))
         {
             linkRecords = Array.Empty<LinkableRecord>();
             return;
@@ -191,7 +193,7 @@ public partial class TriageQueue
             linkRecordId = "";
             pickedRecords.Clear();
             StateHasChanged(); // show the loading state while the fetch is in flight
-            linkRecords = await Intake.ListLinkableRecordsAsync(triageProjectId, linkRecordType);
+            linkRecords = await Intake.ListLinkableRecordsAsync(poolProjectId, linkRecordType);
         }
         catch
         {

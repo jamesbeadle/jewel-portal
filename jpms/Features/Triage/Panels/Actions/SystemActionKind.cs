@@ -46,7 +46,12 @@ public enum SystemActionKind
     // other role. The mark lives in the KPI register (Admin → KPI emails) alone; the email is
     // tagged only JPMS/Admin (+ Internal pathway) so it leaves the queue — nobody else can tell
     // it is a KPI. Spread follows the Control Centre's "Entire thread" answer at Apply.
-    MarkAsKpi
+    MarkAsKpi,
+    // An estimate enquiry from someone who might build with Jewel (2026-09-15, Nigel): raises
+    // the sales lead — who, where, what — Engaged / Inbound, with the email tagged to it
+    // (JPMS/LD-####) so the lead reads its enquiry mail live. A lead belongs to no project. The
+    // estimate itself is opened on the lead's page.
+    RaiseLead
 }
 
 public static class SystemActionKinds
@@ -70,6 +75,7 @@ public static class SystemActionKinds
         SystemActionKind.RaiseSiteInstruction,
         SystemActionKind.RaiseCalendarEvent,
         SystemActionKind.RaiseBuildingControlInspection,
+        SystemActionKind.RaiseLead,
         SystemActionKind.CreateTodos,
         SystemActionKind.CompleteTodo,
         SystemActionKind.AddDirectoryContact,
@@ -97,6 +103,7 @@ public static class SystemActionKinds
         SystemActionKind.CompleteTodo => "Mark To-do Done",
         SystemActionKind.AddDirectoryContact => "Add Directory Contact",
         SystemActionKind.MarkAsKpi => "Mark as KPI",
+        SystemActionKind.RaiseLead => "Raise Lead",
         _ => kind.ToString()
     };
 }

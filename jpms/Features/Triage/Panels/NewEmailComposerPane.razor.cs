@@ -41,7 +41,10 @@ public partial class NewEmailComposerPane
         MailCompose.ParseRecipients(toField).Count > 0
         && !string.IsNullOrWhiteSpace(subject)
         && MailCompose.HtmlHasContent(body)
-        && (!fileToRecord || (!string.IsNullOrEmpty(projectId) && !string.IsNullOrEmpty(recordId)));
+        && (!fileToRecord || (HasRecordPool && !string.IsNullOrEmpty(recordId)));
+
+    // A project names the pool — or the type is company-wide (a lead, 2026-09-15) and needs none.
+    private bool HasRecordPool => !string.IsNullOrEmpty(projectId) || RecordLinkVocabulary.IsCompanyWide(recordType);
 
     // Pressed as Cancel, and after a successful send: clear the form, hand the window back.
     private async Task Close()
@@ -81,9 +84,9 @@ public partial class NewEmailComposerPane
     private async Task LoadRecordsAsync()
     {
         records = Array.Empty<LinkableRecord>();
-        if (string.IsNullOrEmpty(projectId)) return;
+        if (!HasRecordPool) return;
         recordsLoading = true;
-        try { records = await Intake.ListLinkableRecordsAsync(projectId, recordType); }
+        try { records = await Intake.ListLinkableRecordsAsync(RecordLinkVocabulary.IsCompanyWide(recordType) ? "" : projectId, recordType); }
         catch { error = "Couldn't load the records for that project. Please try again."; }
         finally { recordsLoading = false; }
     }

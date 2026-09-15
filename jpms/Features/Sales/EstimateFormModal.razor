@@ -1,0 +1,98 @@
+@using Jewel.JPMS.Contracts.Sales
+@using static Jewel.JPMS.Features.Sales.EstimateFigures
+@inject ICommandSender Commands
+
+@*
+    Open or edit an estimate on a lead (2026-09-15) — the one form for both (Existing null =
+    opening). A plain record for now: what is to be priced, who it came through, when the price
+    is due, the budget mentioned, the total once priced, notes. The priced breakdown comes later,
+    once the estimating workbook is in. Validation mirrors the server's: a scope is required.
+*@
+
+<Modal IsOpen="@IsOpen"
+       Title="@(Existing is null ? "Add estimate" : $"Edit {Existing.Reference}")"
+       ConfirmLabel="@(busy ? "Saving…" : Existing is null ? "Add estimate" : "Save changes")"
+       ConfirmDisabled="@(busy || !FormReady)"
+       OnCancel="Cancel"
+       OnConfirm="SaveAsync"
+       Class="max-w-2xl">
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
+    }
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FormField Label="Scope" Class="sm:col-span-2" Required="true">
+            <textarea class="field w-full" rows="3" maxlength="4000" placeholder="What is to be priced — the type of work and its extent, in your words"
+                      value="@scope" @oninput="e => scope = e.Value?.ToString() ?? string.Empty"></textarea>
+        </FormField>
+        <FormField Label="Architect / consultant" Value="@architectName" OnChange="v => architectName = v" Placeholder="Who the enquiry came through, if anyone" />
+        <FormField Label="Price due" Value="@priceDueText" OnChange="v => priceDueText = v" InputType="date" Hint="Blank when no date was given" />
+        <FormField Label="Budget mentioned (£)" Value="@budgetText" OnChange="v => budgetText = v" InputType="number"
+                   Placeholder="Blank when none was mentioned" Error="@MoneyError(budgetText)" />
+        <FormField Label="Total (£)" Value="@totalText" OnChange="v => totalText = v" InputType="number"
+                   Placeholder="Blank until priced" Error="@MoneyError(totalText)" />
+        <FormField Label="Notes" Class="sm:col-span-2">
+            <textarea class="field w-full" rows="3" maxlength="4000" placeholder="Anything else on the pricing — exclusions, assumptions, who is doing what"
+                      value="@notes" @oninput="e => notes = e.Value?.ToString() ?? string.Empty"></textarea>
+        </FormField>
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter, EditorRequired] public string LeadId { get; set; } = "";
+    /// <summary>Null = opening a new estimate; otherwise the estimate being edited.</summary>
+    [Parameter] public LeadEstimate? Existing { get; set; }
+    [Parameter] public EventCallback<LeadEstimate> OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool busy;
+    private string? error;
+    private string? seededFor;
+
+    private string scope = "";
+    private string architectName = "";
+    private string priceDueText = "";
+    private string budgetText = "";
+    private string totalText = "";
+    private string notes = "";
+
+    private bool FormReady =>
+        !string.IsNullOrWhiteSpace(scope) && MoneyError(budgetText) is null && MoneyError(totalText) is null;
+
+    // Re-seed the fields each time the modal opens (or opens for a different estimate), never
+    // while it is open — a re-render must not wipe what is being typed.
+    protected override void OnParametersSet()
+    {
+        var key = IsOpen ? Existing?.EstimateId ?? "new" : null;
+        if (key == seededFor) return;
+        seededFor = key;
+        if (key is null) return;
+        error = null;
+        scope = Existing?.Scope ?? "";
+        architectName = Existing?.ArchitectName ?? "";
+        priceDueText = DateInputText(Existing?.PriceDueOn);
+        budgetText = MoneyText(Existing?.BudgetMentioned);
+        totalText = MoneyText(Existing?.Total);
+        notes = Existing?.Notes ?? "";
+    }
+
+    private Task Cancel() => busy ? Task.CompletedTask : OnCancel.InvokeAsync();
+
+    private async Task SaveAsync()
+    {
+        if (busy || !FormReady) return;
+        busy = true; error = null;
+        try
+        {
+            var saved = Existing is null
+                ? await Commands.SendAsync(new CreateEstimate(LeadId, scope.Trim(), architectName.Trim(),
+                    ParseDate(priceDueText), ParseMoney(budgetText), ParseMoney(totalText), notes.Trim()), CancellationToken.None)
+                : await Commands.SendAsync(new UpdateEstimateDetails(Existing.EstimateId, scope.Trim(), architectName.Trim(),
+                    ParseDate(priceDueText), ParseMoney(budgetText), ParseMoney(totalText), notes.Trim()), CancellationToken.None);
+            await OnSaved.InvokeAsync(saved);
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+}

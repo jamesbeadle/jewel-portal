@@ -90,16 +90,7 @@
     // Suggestions only, filled WITHOUT staging: the subject (minus FW:/RE:) as the stage name.
     private void PrefillFromEmail(StagedRecordCreate target)
     {
-        target.BuildingControlInspection.StageName = StripReplyPrefixes(EmailSubject);
-    }
-
-    private static string StripReplyPrefixes(string subject)
-    {
-        const string prefixPattern = @"^(fw|fwd|re)\s*:\s*";
-        var cleaned = subject.Trim();
-        while (System.Text.RegularExpressions.Regex.IsMatch(cleaned, prefixPattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
-            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, prefixPattern, "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        return cleaned;
+        target.BuildingControlInspection.StageName = TriageEmailDisplay.StripReplyPrefixes(EmailSubject);
     }
 
     private void Set(Action<StagedBuildingControlInspectionDraft> edit)

@@ -26,8 +26,9 @@ public partial class TriageQueue
             Replying: ReplyDraftPending && anchorEmail is not null,
             Drafts: anchorEmail is null ? new List<TodoItemDraft>() : CurrentTodoDrafts(),
             Picks: pickedRecords.ToList(),
+            // A lead (company-wide) is the one create that needs no project.
             CreateReady: anchorEmail is not null && StagedCreateReady
-                && !string.IsNullOrWhiteSpace(triageProjectId),
+                && (!stagedCreate!.BelongsToProject || !string.IsNullOrWhiteSpace(triageProjectId)),
             RelevantEvent: relevantEventStaged == true && anchorEmail is not null,
             Discarding: discardArmed && anchorEmail is not null,
             // "Use existing tags" answered Yes: the thread's tag stems, captured now so the apply
@@ -135,6 +136,8 @@ public partial class TriageQueue
             return $"The staged calendar event isn't ready — {calendarProblem} Finish it in the pathway pane's Actions, or remove it.";
         if (StagedBuildingControlInspectionProblem is { } inspectionProblem)
             return $"The staged inspection isn't ready — {inspectionProblem} Finish it in the pathway pane's Actions, or remove it.";
+        if (StagedLeadProblem is { } leadProblem)
+            return $"The staged lead isn't ready — {leadProblem} Finish it in the Sales pane's Actions, or remove it.";
         return null;
     }
 }

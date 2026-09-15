@@ -12,7 +12,8 @@ public static class ExplorerRecordTypes
     {
         RecordType.Request, RecordType.Variation, RecordType.WorkOrder,
         RecordType.BidPackageInvite, RecordType.Defect, RecordType.Inventory, RecordType.SiteInstruction, RecordType.Lad, RecordType.Todo,
-        RecordType.CalendarEvent, RecordType.BuildingControlInspection, RecordType.BuildingControlCase
+        RecordType.CalendarEvent, RecordType.BuildingControlInspection, RecordType.BuildingControlCase,
+        RecordType.Lead
     };
 
     public static string Label(RecordType type) => type switch
@@ -29,6 +30,7 @@ public static class ExplorerRecordTypes
         RecordType.CalendarEvent => "Calendar events",
         RecordType.BuildingControlInspection => "Building Control Inspections",
         RecordType.BuildingControlCase => "Building Control Cases",
+        RecordType.Lead => "Leads",
         _ => type.ToString()
     };
 
@@ -52,6 +54,7 @@ public static class ExplorerRecordTypes
         RecordType.CalendarEvent => $"/projects/{record.ProjectId}/calendar?event={record.RecordId}",
         RecordType.BuildingControlInspection => $"/projects/{record.ProjectId}/building-control/inspections/{record.RecordId}",
         RecordType.BuildingControlCase => $"/projects/{record.ProjectId}/building-control",
+        RecordType.Lead => $"/sales/leads/{record.RecordId}",
         _ => null
     };
 }

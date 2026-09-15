@@ -1,0 +1,9 @@
+@* The status pill every estimate row shows — a Pill wrapper, the status → tone mapping in
+   StatusTones. With OnClick it is the transition menu trigger: the row's status move. *@
+<Pill Tone="@Status.ToTone()" Title="@Status.Meaning()" OnClick="OnClick" Disabled="@Disabled">@Status.DisplayName()</Pill>
+
+@code {
+    [Parameter, EditorRequired] public EstimateStatus Status { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+}

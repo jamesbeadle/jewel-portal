@@ -7,7 +7,7 @@
     The record explorer: search any system document and read it in this window — built for the
     side-by-side flow (an email one side, the RFI it answers the other). Pick a project and a
     record type, narrow by text, open a record. With no project chosen, Requests / RFIs searches
-    the register across every project. Reading is this pane's job; editing stays on the record's
+    the register across every project, and Leads (which belong to no project) their own. Reading is this pane's job; editing stays on the record's
     own page (linked from the open document).
 *@
 
@@ -20,7 +20,7 @@ else
     <div class="space-y-3">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <select class="field" value="@projectId" @onchange="OnProjectChanged">
-                <option value="">All projects (RFIs only)…</option>
+                <option value="">All projects (RFIs and leads)…</option>
                 @foreach (var project in Projects)
                 {
                     <option value="@project.ProjectId">@project.Reference — @project.Name</option>
@@ -50,7 +50,7 @@ else
         <LoadGate IsLoading="loading" Label="Searching records">
         @if (records is null)
         {
-            <p class="text-sm text-content-subtle">Pick a project (or search RFIs across all projects) to list records.</p>
+            <p class="text-sm text-content-subtle">Pick a project (or search RFIs across all projects, or leads) to list records.</p>
         }
         else if (FilteredRecords.Count == 0)
         {

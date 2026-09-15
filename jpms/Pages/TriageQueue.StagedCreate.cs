@@ -167,6 +167,18 @@ public partial class TriageQueue
                 new CreatedNowRecord(calendarEvent.Reference, "calendar event", calendarEvent.Title), null);
         }
 
+        if (staged.Kind == StagedRecordKind.Lead)
+        {
+            // The lead drafted on the Sales pane, captured through the same rules as one added
+            // on the Leads register (LD numbering; Engaged / Inbound server-side) with the
+            // enquiry email tagged to it. No project: a lead is company-wide.
+            busyLabel = "Raising lead";
+            var lead = await Intake.CreateLeadFromMessageAsync(
+                staged.Lead.ToCommand(anchor.Id, anchor.InternetMessageId, scope, allowCrossPathway: true));
+            return new StagedCreateOutcome(
+                new CreatedNowRecord(lead.Reference, "lead", staged.Lead.DisplayTitle), null);
+        }
+
         if (staged.Kind == StagedRecordKind.BuildingControlInspection)
         {
             // The inspection staged in System Actions, raised through the same rules as one added
@@ -217,11 +229,12 @@ public partial class TriageQueue
                 StagedRecordKind.Defect => "Describe the defect first — then Create now.",
                 StagedRecordKind.Inventory => "Name the product first — then Create now.",
                 StagedRecordKind.SiteInstruction => "Give the instruction a title first — then Create now.",
+                StagedRecordKind.Lead => "Name the contact and say what the work might be first — then Create now.",
                 _ => "Give the staged record a title first — then Create now."
             };
             return;
         }
-        if (string.IsNullOrWhiteSpace(triageProjectId))
+        if (staged.BelongsToProject && string.IsNullOrWhiteSpace(triageProjectId))
         {
             actionError = "To create the record now, set the email's Project in the bar above first.";
             return;
@@ -259,6 +272,11 @@ public partial class TriageQueue
             && stagedInstruction.SiteInstructionProblem is { } instructionProblem)
         {
             actionError = $"The staged site instruction isn't ready — {instructionProblem}";
+            return;
+        }
+        if (StagedLeadProblem is { } leadNowProblem)
+        {
+            actionError = $"The staged lead isn't ready — {leadNowProblem}";
             return;
         }
         // Creating now tags the email to the new record, so the thread-spread decision must be

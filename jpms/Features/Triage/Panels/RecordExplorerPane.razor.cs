@@ -72,9 +72,7 @@ public partial class RecordExplorerPane
         loading = true;
         try
         {
-            records = string.IsNullOrWhiteSpace(projectId)
-                ? recordType == RecordType.Request ? await LoadRfisAcrossProjectsAsync() : null
-                : await Intake.ListLinkableRecordsAsync(projectId, recordType);
+            records = await LoadForContextAsync();
         }
         catch
         {
@@ -84,6 +82,17 @@ public partial class RecordExplorerPane
         {
             loading = false;
         }
+    }
+
+    // With a project: that project's records. Without one: the RFI register across every
+    // project, or a company-wide type's own register (leads, 2026-09-15) — anything else
+    // waits for a project.
+    private async Task<IReadOnlyList<LinkableRecord>?> LoadForContextAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(projectId)) return await Intake.ListLinkableRecordsAsync(projectId, recordType);
+        if (recordType == RecordType.Request) return await LoadRfisAcrossProjectsAsync();
+        if (RecordLinkVocabulary.IsCompanyWide(recordType)) return await Intake.ListLinkableRecordsAsync("", recordType);
+        return null;
     }
 
     // The cross-project RFI register, reshaped into the explorer's record-agnostic rows.

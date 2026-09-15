@@ -58,6 +58,8 @@ public partial class PathwayPane
     [Parameter] public string? TodoProjectNote { get; set; }
     [Parameter] public IReadOnlyList<IntakeAttachment> EmailAttachments { get; set; } = Array.Empty<IntakeAttachment>();
     [Parameter] public string SenderEmail { get; set; } = "";
+    /// <summary>The sender's display name — the Sales pane's lead draft suggests it as the contact.</summary>
+    [Parameter] public string SenderName { get; set; } = "";
     /// <summary>The open email's stable internet message id and its To/Cc addresses — passed
     /// down to the Actions section for "Mark as KPI" (EmailKey is its live Graph id).</summary>
     [Parameter] public string? InternetMessageId { get; set; }
@@ -65,6 +67,9 @@ public partial class PathwayPane
 
     private bool HasOpenEmail => !string.IsNullOrWhiteSpace(EmailSubject);
     private bool HasActionsTab => Config.ActionGroups.Count > 0;
+
+    // A pane whose record types all belong to no project (Sales: leads) never asks for one.
+    private bool NeedsProject => Config.LinkTypes.Any(type => !RecordLinkVocabulary.IsCompanyWide(type));
 
     private PaneTab activeTab = PaneTab.Tagging;
 
@@ -82,7 +87,8 @@ public partial class PathwayPane
     // not a wall of closed drawers. The triager's own opens/closes are never overridden.
     protected override void OnParametersSet()
     {
-        if (!HasOpenEmail || string.IsNullOrWhiteSpace(ProjectId) || Config.LinkTypes.Count == 0) return;
+        if (!HasOpenEmail || Config.LinkTypes.Count == 0) return;
+        if (NeedsProject && string.IsNullOrWhiteSpace(ProjectId)) return;
         var key = $"{EmailKey}|{ProjectId}";
         if (autoExpandedFor == key) return;
         autoExpandedFor = key;

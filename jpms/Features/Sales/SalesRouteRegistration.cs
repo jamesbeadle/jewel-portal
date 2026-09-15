@@ -57,6 +57,25 @@ public static class SalesRouteRegistration
             new CommandRoute("POST", "/api/sales/strategies/{strategyId}/plan",
                 command => $"/api/sales/strategies/{((GenerateStrategyApproachPlan)command).StrategyId}/plan"));
 
+        // ---- The Control Centre's Sales pane (2026-09-15): raise a lead from an enquiry email,
+        //      with the email linked to it. No project id anywhere — a lead is company-wide. ----
+        commands.Register<CreateLeadFromMessage, Lead>(
+            new CommandRoute("POST", "/api/mailbox/message/create-lead", _ => "/api/mailbox/message/create-lead"));
+
+        // ---- Estimates (2026-09-15): Jewel's own pricing of one enquiry, opened on the lead ----
+        queries.Register<GetEstimate, LeadEstimate?>(
+            new QueryRoute("/api/sales/estimates/{estimateId}",
+                query => $"/api/sales/estimates/{((GetEstimate)query).EstimateId}"));
+        commands.Register<CreateEstimate, LeadEstimate>(
+            new CommandRoute("POST", "/api/sales/leads/{leadId}/estimates",
+                command => $"/api/sales/leads/{((CreateEstimate)command).LeadId}/estimates"));
+        commands.Register<UpdateEstimateDetails, LeadEstimate>(
+            new CommandRoute("PUT", "/api/sales/estimates/{estimateId}",
+                command => $"/api/sales/estimates/{((UpdateEstimateDetails)command).EstimateId}"));
+        commands.Register<MoveEstimateStatus, LeadEstimate>(
+            new CommandRoute("POST", "/api/sales/estimates/{estimateId}/status",
+                command => $"/api/sales/estimates/{((MoveEstimateStatus)command).EstimateId}/status"));
+
         // ---- Imagine + proposals (2026-09-06): the journey after a lead is identified ----
         commands.Register<IssueImagineLink, Lead>(
             new CommandRoute("POST", "/api/sales/leads/{leadId}/imagine/link",

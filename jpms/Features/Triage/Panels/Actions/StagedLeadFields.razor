@@ -1,0 +1,64 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+
+@* The Raise Lead form (2026-09-15): the same surface as LeadFormModal — who, where, what — bound
+   to the staged draft. Every edit reports through OnEdited so the first keystroke stages the
+   draft, exactly as the other record forms do. The lead lands Engaged / Inbound server-side, so
+   no stage or source is asked for here; the estimate is opened on the lead's page. *@
+
+<div class="space-y-3">
+    <p class="text-xs text-content-subtle">The lead is raised (numbered LD-####, Engaged, from an inbound enquiry) and this email is tagged to it on apply — it appears under Sales → Leads, where its enquiry emails read back live and the estimate is opened. A lead belongs to no project.</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+            <FormField Label="Contact name" Value="@Draft.ContactName" OnChange="v => Edit(d => d.ContactName = v)" Placeholder="Who we would be talking to" />
+            @if (ContactFromSender && !string.IsNullOrWhiteSpace(Draft.ContactName))
+            {
+                <p class="text-xs text-content-subtle mt-1">Pre-filled from the sender</p>
+            }
+        </div>
+        <FormField Label="Email" Value="@Draft.ContactEmail" OnChange="v => Edit(d => d.ContactEmail = v)" InputType="email" />
+        <FormField Label="Phone" Value="@Draft.ContactPhone" OnChange="v => Edit(d => d.ContactPhone = v)" InputType="tel" />
+        <FormField Label="Company / practice" Value="@Draft.CompanyName" OnChange="v => Edit(d => d.CompanyName = v)" Placeholder="Blank for a private homeowner" />
+        <FormField Label="Who they are">
+            <select class="field" value="@Draft.ProspectKind" @onchange="e => Edit(d => d.ProspectKind = ParseKind(e.Value))">
+                @foreach (var kind in Enum.GetValues<LeadProspectKind>())
+                {
+                    <option value="@kind">@kind.DisplayName()</option>
+                }
+            </select>
+        </FormField>
+        <FormField Label="Estimated value (£)" Value="@Draft.EstimatedValueText" OnChange="v => Edit(d => d.EstimatedValueText = v)" InputType="number" Placeholder="Rough, if known (optional)" />
+        <FormField Label="Property / site address" Class="sm:col-span-2" Value="@Draft.PropertyAddress" OnChange="v => Edit(d => d.PropertyAddress = v)" Placeholder="Where the work would be" />
+        <FormField Label="Postcode" Value="@Draft.Postcode" OnChange="v => Edit(d => d.Postcode = v)" Placeholder="e.g. GU10 1AA" />
+        <FormField Label="What the work might be" Class="sm:col-span-2" Value="@Draft.Summary" OnChange="v => Edit(d => d.Summary = v)" Required="true" Placeholder="Rear extension and loft; new build on the plot" />
+    </div>
+    <FormField Label="Notes">
+        <textarea class="field" rows="3" maxlength="4000" placeholder="Anything else from the enquiry worth keeping on the lead (optional)"
+                  value="@Draft.Notes" @oninput="e => Edit(d => d.Notes = e.Value?.ToString() ?? string.Empty)"></textarea>
+    </FormField>
+
+    @if (IsStaged && Draft.Problem is { } problem)
+    {
+        <p class="text-xs text-warning">@problem</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public StagedLeadDraft Draft { get; set; } = new();
+    /// <summary>True once the page holds the draft — the readiness hint shows only then, so an
+    /// untouched form never scolds.</summary>
+    [Parameter] public bool IsStaged { get; set; }
+    /// <summary>True while the contact name is still the sender suggestion rather than typed.</summary>
+    [Parameter] public bool ContactFromSender { get; set; }
+    /// <summary>Every edit, after it has been applied — the editor stages or reports it.</summary>
+    [Parameter] public EventCallback OnEdited { get; set; }
+
+    private void Edit(Action<StagedLeadDraft> change)
+    {
+        change(Draft);
+        _ = OnEdited.InvokeAsync();
+    }
+
+    private static LeadProspectKind ParseKind(object? value) =>
+        Enum.TryParse<LeadProspectKind>(value?.ToString(), out var kind) ? kind : LeadProspectKind.Homeowner;
+}

@@ -38,6 +38,7 @@ public partial class TriageQueue
         TriagePathway.Client        => ClientLinkTypes,
         TriagePathway.Subcontractor => SubcontractorLinkTypes,
         TriagePathway.Supplier      => SupplierLinkTypes,
+        TriagePathway.Sales         => SalesLinkTypes,
         TriagePathway.Internal      => InternalLinkTypes,
         _                           => Array.Empty<RecordType>()
     };

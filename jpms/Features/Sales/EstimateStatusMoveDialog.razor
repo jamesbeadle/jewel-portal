@@ -1,0 +1,98 @@
+@using Jewel.JPMS.Contracts.Sales
+@inject ICommandSender Commands
+
+@*
+    Move an estimate along its ladder (2026-09-15): the rungs after the current one, an optional
+    note for the lead's timeline, one Move button. Won and Lost close the estimate, so they go
+    through the Danger confirm — a closed estimate is history and cannot be reopened here.
+*@
+
+<Modal IsOpen="@(Estimate is not null && pendingClose is null)"
+       Title="@(Estimate is { } e ? $"Move {e.Reference}" : "")"
+       ConfirmLabel="@(busy ? "Saving…" : $"Move to {target.DisplayName()}")"
+       ConfirmDisabled="@busy"
+       OnCancel="Cancel"
+       OnConfirm="ConfirmAsync">
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
+    }
+    <FormField Label="Move to" Class="mb-4">
+        <select class="field w-full" value="@target" @onchange="e => target = ParseStatus(e.Value)">
+            @foreach (var status in NextStatuses)
+            {
+                <option value="@status">@status.DisplayName() — @status.Meaning()</option>
+            }
+        </select>
+    </FormField>
+    @if (target == EstimateStatus.Submitted && Estimate?.Total is null)
+    {
+        <Notice Tone="Tone.Warning" Class="mb-4">Submitted needs a total — edit the estimate and price it first.</Notice>
+    }
+    <FormField Label="Note">
+        <textarea class="field w-full" rows="3" maxlength="4000" placeholder="Optional — goes on the lead's timeline with the move"
+                  value="@note" @oninput="e => note = e.Value?.ToString() ?? string.Empty"></textarea>
+    </FormField>
+</Modal>
+
+<ConfirmDialog IsOpen="@(pendingClose is not null)"
+               Title="@($"Mark {Estimate?.Reference} {pendingClose?.DisplayName()}?")"
+               ConfirmLabel="@($"Mark {pendingClose?.DisplayName()}")" BusyLabel="Saving…"
+               Danger="true" Busy="@busy"
+               OnConfirm="MoveAsync" OnCancel="() => pendingClose = null">
+    @(pendingClose?.Meaning()) This closes the estimate — it stays on the lead as history and cannot be reopened; a re-price is a new estimate.
+</ConfirmDialog>
+
+@code {
+    /// <summary>The estimate being moved — null closes the dialog.</summary>
+    [Parameter] public LeadEstimate? Estimate { get; set; }
+    [Parameter] public EventCallback<LeadEstimate> OnMoved { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool busy;
+    private string? error;
+    private string note = "";
+    private EstimateStatus target;
+    private EstimateStatus? pendingClose;
+    private string? openedFor;
+
+    private IReadOnlyList<EstimateStatus> NextStatuses => Estimate is { } estimate
+        ? EstimateStatusExtensions.Ladder.SkipWhile(status => status != estimate.Status).Skip(1).ToList()
+        : Array.Empty<EstimateStatus>();
+
+    protected override void OnParametersSet()
+    {
+        var key = Estimate?.EstimateId;
+        if (key == openedFor) return;
+        openedFor = key;
+        error = null; note = ""; pendingClose = null;
+        target = NextStatuses.FirstOrDefault();
+    }
+
+    private static EstimateStatus ParseStatus(object? value) =>
+        Enum.TryParse<EstimateStatus>(value?.ToString(), out var status) ? status : EstimateStatus.Pricing;
+
+    private Task Cancel() => busy ? Task.CompletedTask : OnCancel.InvokeAsync();
+
+    private Task ConfirmAsync()
+    {
+        if (target.IsOpen()) return MoveAsync();
+        pendingClose = target;
+        return Task.CompletedTask;
+    }
+
+    private async Task MoveAsync()
+    {
+        if (busy || Estimate is not { } estimate) return;
+        busy = true; error = null;
+        try
+        {
+            var moved = await Commands.SendAsync(
+                new MoveEstimateStatus(estimate.EstimateId, target, string.IsNullOrWhiteSpace(note) ? null : note.Trim()), CancellationToken.None);
+            pendingClose = null;
+            await OnMoved.InvokeAsync(moved);
+        }
+        catch (CommandFailedException ex) { error = ex.Message; pendingClose = null; }
+        finally { busy = false; }
+    }
+}

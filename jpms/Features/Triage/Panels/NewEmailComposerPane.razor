@@ -72,8 +72,8 @@
                         <option value="@((int)option)">@RecordTypeLabel(option)</option>
                     }
                 </select>
-                <select class="field" value="@recordId" @onchange="e => recordId = e.Value?.ToString() ?? string.Empty" disabled="@(string.IsNullOrEmpty(projectId))">
-                    <option value="">@(string.IsNullOrEmpty(projectId) ? "Select a project first…" : recordsLoading ? "Loading…" : "Select a record…")</option>
+                <select class="field" value="@recordId" @onchange="e => recordId = e.Value?.ToString() ?? string.Empty" disabled="@(!HasRecordPool)">
+                    <option value="">@(!HasRecordPool ? "Select a project first…" : recordsLoading ? "Loading…" : "Select a record…")</option>
                     @foreach (var record in records)
                     {
                         <option value="@record.RecordId">@record.Reference — @record.Title</option>

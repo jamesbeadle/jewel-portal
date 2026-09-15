@@ -296,6 +296,7 @@
                             ClientBadge="@PathwayBadge(PathwayPaneConfig.Client)"
                             SubcontractorBadge="@PathwayBadge(PathwayPaneConfig.Subcontractor)"
                             SupplierBadge="@PathwayBadge(PathwayPaneConfig.Supplier)"
+                            SalesBadge="@PathwayBadge(PathwayPaneConfig.Sales)"
                             InternalBadge="@PathwayBadge(PathwayPaneConfig.Internal)"
                             OutboxBadge="@OutboxSendCount">
                 <InboxContent>@InboxPaneContent</InboxContent>
@@ -319,6 +320,7 @@
                 <ClientContent>@PathwayPaneFragment(PathwayPaneConfig.Client, PanelKind.Client)</ClientContent>
                 <SubcontractorContent>@PathwayPaneFragment(PathwayPaneConfig.Subcontractor, PanelKind.Subcontractor)</SubcontractorContent>
                 <SupplierContent>@PathwayPaneFragment(PathwayPaneConfig.Supplier, PanelKind.Supplier)</SupplierContent>
+                <SalesContent>@PathwayPaneFragment(PathwayPaneConfig.Sales, PanelKind.Sales)</SalesContent>
                 <InternalContent>@PathwayPaneFragment(PathwayPaneConfig.Internal, PanelKind.Internal)</InternalContent>
                 <RecordsContent>
                     <RecordExplorerPane Projects="@ProjectOptionsFor(null)" OnPreview="OpenRecordPreview"
@@ -394,6 +396,7 @@
                      TodoProjectNote="@TodoProjectNote"
                      EmailAttachments="@(detail?.Attachments ?? Array.Empty<IntakeAttachment>())"
                      SenderEmail="@(selected?.FromEmail ?? "")"
+                     SenderName="@(selected?.FromName ?? "")"
                      InternetMessageId="@selected?.InternetMessageId"
                      RecipientEmails="@OpenEmailRecipients" />
     };

@@ -119,6 +119,10 @@ public sealed class HttpIntakeQueue : IIntakeQueue
         Jewel.JPMS.Contracts.Inventory.CreateInventoryItemFromMessage command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
 
+    public Task<Lead> CreateLeadFromMessageAsync(
+        Jewel.JPMS.Contracts.Sales.CreateLeadFromMessage command, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(command, cancellationToken);
+
     public Task<Jewel.JPMS.Models.SiteInstruction> CreateSiteInstructionFromMessageAsync(
         Jewel.JPMS.Contracts.SiteInstructions.CreateSiteInstructionFromMessage command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);

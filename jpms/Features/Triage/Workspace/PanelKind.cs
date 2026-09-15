@@ -24,6 +24,9 @@ public enum PanelKind
     /// <summary>The Supplier pathway pane: supplier-side tagging (the SupComms category
     /// registers — Materials first) and actions. New pathway 2026-08-27.</summary>
     Supplier,
+    /// <summary>The Sales pathway pane: the prospect side — tagging an enquiry to the sales lead
+    /// it is about (or raising one from it). New pathway 2026-09-15; a lead has no project.</summary>
+    Sales,
     /// <summary>The Internal pathway pane: staff-to-staff tagging (to-dos, calendar events, the
     /// IntComms category registers) and actions.</summary>
     Internal,

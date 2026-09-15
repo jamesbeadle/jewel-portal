@@ -101,6 +101,7 @@ public partial class TriageQueue
                     StagedRecordKind.SiteInstruction => "raise the site instruction from this email",
                     StagedRecordKind.CalendarEvent => "raise the calendar event from this email",
                     StagedRecordKind.BuildingControlInspection => "raise the building control inspection from this email",
+                    StagedRecordKind.Lead => "raise the lead from this email",
                     _ => stagedCreate.RequestKind == RequestType.Rfi
                         ? "raise the RFI from this email"
                         : "create the request from this email"
@@ -231,9 +232,10 @@ public partial class TriageQueue
     // made. Now one list feeds both the amber hint next to Apply and the refusal inside
     // DoApplyAll, exactly like MissingDecisionNames, so the two can never drift and a new
     // project-bound staging is one line here. Record picks count only when the picked record
-    // carries a project (the record-less communication registers and company-wide to-dos don't
-    // — they file without one by design); the staged create is listed so its "needs a project"
-    // reads next to the button instead of leaving Apply silently disabled.
+    // carries a project (the record-less communication registers, company-wide to-dos and leads
+    // don't — they file without one by design); the staged create is listed so its "needs a
+    // project" reads next to the button instead of leaving Apply silently disabled — unless it
+    // is a lead, which never has one.
     private List<ProjectNeed> ProjectNeeds()
     {
         var needs = new List<ProjectNeed>();
@@ -245,7 +247,7 @@ public partial class TriageQueue
             needs.Add(new("the thread's existing tags", "answer No to Use existing tags"));
         if (pickedRecords.Any(record => !string.IsNullOrWhiteSpace(record.ProjectId)))
             needs.Add(new(pickedRecords.Count == 1 ? "the picked record" : "the picked records", "unpick them"));
-        if (StagedCreateReady)
+        if (StagedCreateReady && stagedCreate!.BelongsToProject)
             needs.Add(new("the staged record", "remove it in the pathway pane's Actions"));
         return needs;
     }

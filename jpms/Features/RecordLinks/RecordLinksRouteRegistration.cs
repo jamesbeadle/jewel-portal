@@ -19,7 +19,11 @@ public static class RecordLinksRouteRegistration
                 query =>
                 {
                     var q = (ListLinkableRecords)query;
-                    return $"/api/projects/{q.ProjectId}/records?type={q.Type}";
+                    // No project = the company-wide register of a project-less type (leads,
+                    // 2026-09-15) — same row shape, read off the records root.
+                    return string.IsNullOrWhiteSpace(q.ProjectId)
+                        ? $"/api/records?type={q.Type}"
+                        : $"/api/projects/{q.ProjectId}/records?type={q.Type}";
                 }));
 
         queries.Register<ListSchedulingEmails, IReadOnlyList<MailboxMessage>>(

@@ -71,15 +71,19 @@
                     }
                 </select>
 
-                <select class="field" value="@ProjectId" @onchange="OnProjectChanged">
-                    <option value="">Select a project…</option>
-                    @foreach (var project in ProjectOptions)
-                    {
-                        <option value="@project.ProjectId">@project.Reference — @project.Name</option>
-                    }
-                </select>
+                @* A company-wide type (a lead) has no project to pick — its register lists outright. *@
+                @if (!IsCompanyWide(LinkRecordType))
+                {
+                    <select class="field" value="@ProjectId" @onchange="OnProjectChanged">
+                        <option value="">Select a project…</option>
+                        @foreach (var project in ProjectOptions)
+                        {
+                            <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                        }
+                    </select>
+                }
 
-                @if (!string.IsNullOrWhiteSpace(ProjectId))
+                @if (!string.IsNullOrWhiteSpace(ProjectId) || IsCompanyWide(LinkRecordType))
                 {
                     @if (RecordsLoading)
                     {

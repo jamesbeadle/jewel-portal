@@ -27,6 +27,7 @@ public static class SystemActionGuide
                 SystemActionKind.RaiseSiteInstruction,
                 SystemActionKind.RaiseCalendarEvent,
                 SystemActionKind.RaiseBuildingControlInspection,
+                SystemActionKind.RaiseLead,
             }),
             (MoveGroup, new[]
             {
@@ -71,6 +72,7 @@ public static class SystemActionGuide
         SystemActionKind.CreateTodos => "Something for someone at Jewel to do — the catch-all when no record fits.",
         SystemActionKind.CompleteTodo => "This email shows a to-do is done — tick it off.",
         SystemActionKind.AddDirectoryContact => "A new supplier, subcontractor or contact to keep on file from this email.",
+        SystemActionKind.RaiseLead => "An enquiry from someone who might build with Jewel — a homeowner, an architect asking for a price, a referral — and no lead exists for them yet. Raises the lead (Engaged, Inbound) with this email filed to it; open the estimate on the lead's page. No project: a lead is company-wide. (A prospect already on the Leads register is tagged in the Tagging tab instead.)",
         SystemActionKind.MarkAsKpi => "This email is evidence of how someone at Jewel is performing — good or bad. Files it as a KPI under that person in the administrators-only register (Admin → KPI emails). Nothing is tagged in the mailbox; nobody else sees the mark.",
         _ => ""
     };

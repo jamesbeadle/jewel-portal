@@ -1,6 +1,7 @@
 @page "/sales/leads/{LeadId}"
 @using Jewel.JPMS.Contracts.Sales
 @using Jewel.JPMS.Features.Sales
+@using Jewel.JPMS.Features.Triage.Panels
 @inject AuthService Auth
 @inject SessionService Session
 @inject NavigationManager Nav
@@ -152,6 +153,19 @@
                         </Panel>
                     }
 
+                    @* The enquiry's pricing (2026-09-15): the estimates opened on the lead, and the
+                       enquiry mail read live by the lead's tag — filed from the Control Centre's
+                       Sales pane, never from here (a lead has no project). *@
+                    <LeadEstimatesPanel LeadId="@LeadId" Estimates="@Estimates" CanWork="@CanWork" OnChanged="ReloadAsync" />
+                    <Panel BodyClass="p-5">
+                        <RecordCorrespondenceSection Type="RecordType.Lead" RecordId="@LeadId" RecordReference="@lead.Reference"
+                                                     ProjectId="" Title="Enquiry emails">
+                            <EmptyMessage>
+                                No emails filed to @lead.Reference yet. Open the enquiry in the Control Centre and tag it to this lead on the Sales pane — the email then reads here, live.
+                            </EmptyMessage>
+                        </RecordCorrespondenceSection>
+                    </Panel>
+
                     @* The journey after identification (2026-09-06): the QR-coded imagine link and
                        its rounds, then the proposals — acceptance there is what Won builds on. *@
                     <LeadImaginePanel LeadId="@LeadId" LeadReference="@lead.Reference" Imagine="@Detail.Current(LeadId)?.Imagine" CanWork="@CanWork" OnChanged="ReloadAsync" />
@@ -173,7 +187,7 @@
                                             @DateText(activity.OccurredAt)<br />@activity.OccurredAt.ToLocalTime().ToString("HH:mm")
                                         </div>
                                         <div class="min-w-0">
-                                            <p class="text-xs font-medium @(activity.Kind is LeadActivityKind.StageChange or LeadActivityKind.ProposalAccepted ? "text-accent" : activity.Kind is LeadActivityKind.Imagine or LeadActivityKind.ProposalSent ? "text-info" : "text-content-subtle")">@activity.Kind.DisplayName()</p>
+                                            <p class="text-xs font-medium @ActivityKindClass(activity.Kind)">@activity.Kind.DisplayName()</p>
                                             <p class="text-sm text-content whitespace-pre-wrap">@activity.Summary</p>
                                             @if (!string.IsNullOrWhiteSpace(activity.RecordedByEmail))
                                             {
@@ -365,8 +379,18 @@
     private Lead? Lead => Detail.Current(LeadId)?.Lead;
     private IReadOnlyList<LeadActivity> Activities => Detail.Current(LeadId)?.Activities ?? Array.Empty<LeadActivity>();
     private IReadOnlyList<SalesProposal> Proposals => Detail.Current(LeadId)?.Proposals ?? Array.Empty<SalesProposal>();
+    private IReadOnlyList<LeadEstimate> Estimates => Detail.Current(LeadId)?.Estimates ?? Array.Empty<LeadEstimate>();
     private IReadOnlyList<ImagineImageView> Concepts =>
         Detail.Current(LeadId)?.Imagine?.Rounds.SelectMany(round => round.Concepts).ToList() ?? new List<ImagineImageView>();
+
+    // The timeline's kind label: the lead's own milestones read in the accent, the things sent
+    // out or priced (imagine, proposals, estimates) in info, everything else quietly.
+    private static string ActivityKindClass(LeadActivityKind kind) => kind switch
+    {
+        LeadActivityKind.StageChange or LeadActivityKind.ProposalAccepted => "text-accent",
+        LeadActivityKind.Imagine or LeadActivityKind.ProposalSent or LeadActivityKind.Estimate => "text-info",
+        _ => "text-content-subtle"
+    };
 
     private string Headline => Lead is { } lead
         ? (string.IsNullOrWhiteSpace(lead.ContactName) ? lead.CompanyName : lead.ContactName)

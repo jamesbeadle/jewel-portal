@@ -81,6 +81,7 @@ public partial class TriageQueue
         StagedRecordKind.Request or StagedRecordKind.BuildingControlInspection => "Client",
         StagedRecordKind.BidPackage or StagedRecordKind.WorkOrder or StagedRecordKind.Defect => "Subcontractor",
         StagedRecordKind.Inventory => "Supplier",
+        StagedRecordKind.Lead => "Sales", // the prospect side (2026-09-15): a lead has no project
         StagedRecordKind.CalendarEvent => "Internal", // raised from the Internal pane, beside the Calendar
         StagedRecordKind.SiteInstruction => "Internal", // Jewel instructing its own site (2026-09-03)
         _ => null
@@ -92,6 +93,9 @@ public partial class TriageQueue
         stagedCreate is { Kind: StagedRecordKind.CalendarEvent } stagedEvent
             ? stagedEvent.CalendarEvent.Problem
             : null;
+
+    private string? StagedLeadProblem =>
+        stagedCreate is { Kind: StagedRecordKind.Lead } stagedLead ? stagedLead.Lead.Problem : null;
 
     private string? StagedBuildingControlInspectionProblem =>
         stagedCreate is { Kind: StagedRecordKind.BuildingControlInspection } stagedInspection

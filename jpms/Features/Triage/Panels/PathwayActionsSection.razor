@@ -163,6 +163,13 @@
                                       EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail"
                                       Pathway="@Pathway" />
             break;
+        case SystemActionKind.RaiseLead:
+            <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.Lead"
+                                      StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail"
+                                      SenderName="@SenderName" EmailSubject="@EmailSubject"
+                                      Pathway="@Pathway" />
+            break;
         case SystemActionKind.RaiseCalendarEvent:
             <StageCalendarEventAction @key="kind"
                                       StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"

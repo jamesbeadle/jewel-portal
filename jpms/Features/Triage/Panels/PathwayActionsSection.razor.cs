@@ -53,7 +53,8 @@ public partial class PathwayActionsSection
             or SystemActionKind.AddInventoryItem
             or SystemActionKind.RaiseSiteInstruction
             or SystemActionKind.RaiseCalendarEvent
-            or SystemActionKind.RaiseBuildingControlInspection;
+            or SystemActionKind.RaiseBuildingControlInspection
+            or SystemActionKind.RaiseLead;
 
     /// <summary>Page-owned to-do draft rows — "Create To-do Items". One to-do per assignee per
     /// row on Apply, the email tagged to every one.</summary>
@@ -65,9 +66,11 @@ public partial class PathwayActionsSection
     /// tick-boxes.</summary>
     [Parameter] public IReadOnlyList<IntakeAttachment> EmailAttachments { get; set; } = Array.Empty<IntakeAttachment>();
 
-    /// <summary>The selected email's sender — pre-fills the work-order subcontractor and the
-    /// defect assignee. Suggestions only.</summary>
+    /// <summary>The selected email's sender — pre-fills the work-order subcontractor, the
+    /// defect assignee and the lead's contact. Suggestions only.</summary>
     [Parameter] public string SenderEmail { get; set; } = "";
+    /// <summary>The sender's display name — the lead's contact name suggestion.</summary>
+    [Parameter] public string SenderName { get; set; } = "";
 
     /// <summary>The dropdown's groups — the pane's own side of the action set. Null = the full
     /// guide (every group), which no pane uses but keeps the component honest standalone.</summary>
@@ -108,11 +111,11 @@ public partial class PathwayActionsSection
         set => chosenKind = value;
     }
 
-    // To-dos are company-wide until a project is set and a directory contact has no project at
-    // all — everything else raises on the email's project.
+    // To-dos are company-wide until a project is set, a directory contact has no project at
+    // all, and a lead never has one — everything else raises on the email's project.
     private static bool NeedsProject(SystemActionKind actionKind) =>
         actionKind is not (SystemActionKind.AddDirectoryContact or SystemActionKind.CreateTodos
-            or SystemActionKind.MarkAsKpi);
+            or SystemActionKind.MarkAsKpi or SystemActionKind.RaiseLead);
 
     /// <summary>The open email's mailbox ids — "Mark as KPI" files the email by them (no tag, so
     /// the page's link path is not involved).</summary>

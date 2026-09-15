@@ -1,0 +1,95 @@
+@* The lead page's Estimates panel (2026-09-15): Jewel's own pricing of each enquiry on the
+   lead, newest first — scope, price due, budget mentioned, total, and where it has got to. A
+   plain record until the estimating workbook is in. The status pill is the move control; Add
+   and Edit are one modal. The host owns the read and refreshes it after every write. *@
+
+<Panel Title="Estimates" BodyClass="p-0">
+    <HeaderActions>
+        @if (CanWork)
+        {
+            <button type="button" class="btn-secondary text-sm" @onclick="() => OpenEditor(null)">Add estimate</button>
+        }
+    </HeaderActions>
+    <ChildContent>
+        <RecordsTable IsEmpty="@(Estimates.Count == 0)" EmptyMessage="No estimates yet" Class="border-0">
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Scope</th>
+                    <th>Price due</th>
+                    <th class="text-right">Budget</th>
+                    <th class="text-right">Total</th>
+                    <th>Status</th>
+                    @if (CanWork) { <th></th> }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Estimates)
+                {
+                    var estimate = row;
+                    <tr @key="estimate.EstimateId">
+                        <td class="whitespace-nowrap">@estimate.Reference</td>
+                        <td class="max-w-md truncate" title="@estimate.Scope">@estimate.Scope</td>
+                        <td class="whitespace-nowrap">@DateText(estimate.PriceDueOn)</td>
+                        <td class="text-right whitespace-nowrap">@(estimate.BudgetMentioned is { } budget ? Money(budget) : "—")</td>
+                        <td class="text-right whitespace-nowrap">@(estimate.Total is { } total ? Money(total) : "—")</td>
+                        <td>
+                            @if (CanWork && estimate.Status.IsOpen())
+                            {
+                                <EstimateStatusPill Status="@estimate.Status" OnClick="() => moving = estimate" />
+                            }
+                            else
+                            {
+                                <EstimateStatusPill Status="@estimate.Status" />
+                            }
+                        </td>
+                        @if (CanWork)
+                        {
+                            <td class="text-right">
+                                @if (estimate.Status.IsOpen())
+                                {
+                                    <button type="button" class="btn-secondary text-xs" @onclick="() => OpenEditor(estimate)">Edit</button>
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </RecordsTable>
+    </ChildContent>
+</Panel>
+
+<EstimateFormModal IsOpen="@editorOpen" LeadId="@LeadId" Existing="@editing" OnSaved="OnSavedAsync" OnCancel="() => editorOpen = false" />
+<EstimateStatusMoveDialog Estimate="@moving" OnMoved="OnMovedAsync" OnCancel="() => moving = null" />
+
+@code {
+    [Parameter, EditorRequired] public string LeadId { get; set; } = "";
+    /// <summary>The lead's estimates, newest first. The host renders this panel only once the
+    /// lead has loaded (the page's own gate), so an empty list here is a real "none".</summary>
+    [Parameter] public IReadOnlyList<LeadEstimate> Estimates { get; set; } = Array.Empty<LeadEstimate>();
+    [Parameter] public bool CanWork { get; set; }
+    /// <summary>After every write — the host re-reads the lead.</summary>
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool editorOpen;
+    private LeadEstimate? editing;
+    private LeadEstimate? moving;
+
+    private void OpenEditor(LeadEstimate? estimate)
+    {
+        editing = estimate;
+        editorOpen = true;
+    }
+
+    private async Task OnSavedAsync(LeadEstimate _)
+    {
+        editorOpen = false;
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task OnMovedAsync(LeadEstimate _)
+    {
+        moving = null;
+        await OnChanged.InvokeAsync();
+    }
+}

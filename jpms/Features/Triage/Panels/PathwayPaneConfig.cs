@@ -4,8 +4,8 @@ namespace Jewel.JPMS.Features.Triage.Panels;
 /// <summary>
 /// What one pathway pane contains (the 2026-08-27 Control Centre restructure): which record types
 /// its tagging sections link to, which record-less communication family gives it category
-/// registers, and which system actions belong to its side. The four panes are one component
-/// (PathwayPane) fed by these four constants, so the pathway split lives in data, not in four
+/// registers, and which system actions belong to its side. The five panes are one component
+/// (PathwayPane) fed by these five constants, so the pathway split lives in data, not in five
 /// hand-written panes.
 /// </summary>
 public sealed record PathwayPaneConfig(
@@ -107,6 +107,21 @@ public sealed record PathwayPaneConfig(
             (SystemActionGuide.PeopleGroup, new[] { SystemActionKind.AddDirectoryContact }),
         });
 
+    // The prospect side (2026-09-15, Nigel): an estimate enquiry forwarded to the projects mailbox
+    // is tagged to the sales lead it is about — an existing lead, or a new one raised from the
+    // email — so the lead reads its mail live like every record, and the estimate is opened on
+    // the lead's page. A lead belongs to NO project (RecordLinkVocabulary.IsCompanyWide), so the
+    // pane never asks for the email's project. No record-less registers on this side.
+    public static PathwayPaneConfig Sales { get; } = new(
+        "Sales",
+        "A prospect — someone who might build with Jewel",
+        new[] { RecordType.Lead },
+        Family: null,
+        new (string, IReadOnlyList<SystemActionKind>)[]
+        {
+            (SystemActionGuide.RaiseGroup, new[] { SystemActionKind.RaiseLead }),
+        });
+
     // Bid packages and work orders came OUT of the Internal link types in this restructure
     // (Nigel, 2026-08-27): they are subcontractor records and live on the Subcontractor pane.
     // Site instructions (2026-09-03, James) became a real record here — like a to-do, raised
@@ -137,7 +152,7 @@ public sealed record PathwayPaneConfig(
         });
 
     public static IReadOnlyList<PathwayPaneConfig> All { get; } =
-        new[] { Client, Subcontractor, Supplier, Internal };
+        new[] { Client, Subcontractor, Supplier, Sales, Internal };
 
     /// <summary>Singular UI label for a link type's section — Relevant Event (not Scheduling),
     /// LADs claim, Variation Order (one record): the same terminology map the old System Tags
@@ -157,6 +172,7 @@ public sealed record PathwayPaneConfig(
         RecordType.SiteInstruction => "Site instruction",
         RecordType.Todo => "To-do item",
         RecordType.CalendarEvent => "Calendar event",
+        RecordType.Lead => "Lead",
         RecordType.BuildingControlInspection => "Building Control Inspection",
         RecordType.BuildingControlCase => "Building Control Case",
         RecordType.SubcontractorComms => "Subcontractor communication",

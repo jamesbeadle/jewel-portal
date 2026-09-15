@@ -26,6 +26,11 @@ public partial class StagedRecordActionEditor
     /// matches a directory record, and pre-fills the defect assignee. Suggestions only.</summary>
     [Parameter] public string SenderEmail { get; set; } = "";
 
+    /// <summary>The sender's display name and the email's subject — the lead draft's contact
+    /// name and summary suggestions (the estimate enquiry is usually the subject line).</summary>
+    [Parameter] public string SenderName { get; set; } = "";
+    [Parameter] public string EmailSubject { get; set; } = "";
+
     /// <summary>The pane this editor sits on ("Subcontractor", "Supplier", …) — stamped onto the
     /// staged draft so the pathway badges count it where it was staged. Blank = unknown, the
     /// kind's home pane.</summary>
@@ -33,6 +38,8 @@ public partial class StagedRecordActionEditor
 
     // True while the defect assignee is the sender suggestion rather than a typed value.
     private bool defectAssigneeFromSender;
+    // True while the lead's contact name is the sender suggestion rather than a typed value.
+    private bool leadContactFromSender;
     private bool workOrderLookupsRequested;
     private string? senderMatchedCompany;
 
@@ -51,9 +58,11 @@ public partial class StagedRecordActionEditor
         {
             scratchCreate = new StagedRecordCreate { ResponseDue = RequestDefaults.ResponseDue() };
             defectAssigneeFromSender = false;
+            leadContactFromSender = false;
             senderMatchedCompany = null;
             if (Kind == StagedRecordKind.Defect) TryPrefillDefectAssignee();
             if (Kind == StagedRecordKind.WorkOrder) TryMatchSender();
+            if (Kind == StagedRecordKind.Lead) TryPrefillLead();
         }
         lastStaged = StagedCreate;
     }
@@ -70,6 +79,7 @@ public partial class StagedRecordActionEditor
             NotifyCreate();
         if (Kind == StagedRecordKind.WorkOrder) _ = EnsureWorkOrderLookupsAsync();
         if (Kind == StagedRecordKind.Defect) TryPrefillDefectAssignee();
+        if (Kind == StagedRecordKind.Lead) TryPrefillLead();
     }
 
     private void NotifyCreate()
@@ -99,6 +109,42 @@ public partial class StagedRecordActionEditor
         if (defectAssigneeFromSender && Create.DefectAssignedTo != suggestedAssignee)
             defectAssigneeFromSender = false;
         NotifyCreate();
+    }
+
+    /// <summary>Every lead form edit funnels through here — the fields component has already
+    /// applied it. A typed contact name replaces the sender suggestion, so the hint stops
+    /// claiming it.</summary>
+    private void SetLead()
+    {
+        if (leadContactFromSender && Create.Lead.ContactName != SenderName.Trim())
+            leadContactFromSender = false;
+        NotifyCreate();
+    }
+
+    /// <summary>Pre-fill the lead's contact from the sender and its summary from the subject —
+    /// suggestions only (never over a value already there), filling the scratch form WITHOUT
+    /// staging it.</summary>
+    private void TryPrefillLead()
+    {
+        var lead = Create.Lead;
+        var filled = false;
+        if (lead.ContactName == "" && !string.IsNullOrWhiteSpace(SenderName))
+        {
+            lead.ContactName = SenderName.Trim();
+            leadContactFromSender = true;
+            filled = true;
+        }
+        if (lead.ContactEmail == "" && !string.IsNullOrWhiteSpace(SenderEmail))
+        {
+            lead.ContactEmail = SenderEmail.Trim();
+            filled = true;
+        }
+        if (lead.Summary == "" && !string.IsNullOrWhiteSpace(EmailSubject))
+        {
+            lead.Summary = TriageEmailDisplay.StripReplyPrefixes(EmailSubject);
+            filled = true;
+        }
+        if (filled && StagedCreate is not null) _ = StagedCreateChanged.InvokeAsync(StagedCreate);
     }
 
     /// <summary>Pre-fill the defect's assignee from the email's sender — a suggestion only (never

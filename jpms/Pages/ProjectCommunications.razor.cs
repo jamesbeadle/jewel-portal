@@ -350,6 +350,7 @@ public partial class ProjectCommunications
         RecordType.SubcontractorComms => "Subcontractor comms",
         RecordType.SupplierComms    => "Supplier comms",
         RecordType.InternalComms    => "Internal comms",
+        RecordType.Lead             => "Lead",
         _                           => type.ToString()
     };
 

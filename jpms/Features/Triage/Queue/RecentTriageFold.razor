@@ -54,6 +54,9 @@
         if (entry.RecordType == RecordType.SubcontractorComms) return "/subcontractors/communications";
         if (entry.RecordType == RecordType.SupplierComms) return "/suppliers/communications";
         if (entry.RecordType == RecordType.InternalComms) return "/internal/communications";
+        // A lead has no project — its page is under Sales, keyed by the record alone.
+        if (entry.RecordType == RecordType.Lead)
+            return string.IsNullOrEmpty(entry.RecordId) ? "/sales/leads" : $"/sales/leads/{entry.RecordId}";
         if (string.IsNullOrEmpty(entry.ProjectId))
             return entry.RecordType == RecordType.Todo ? "/todos" : null;
         var projectId = entry.ProjectId;

@@ -6,7 +6,7 @@
 @inject CostCentersReadModel CostCenters
 
 @* The email-linked record creates, moved here from System Tags (2026-08-10): Raise Request /
-   Raise RFI, Create Bid Package Invite, Raise Work Order and Raise Defect all draft the ONE
+   Raise RFI, Create Bid Package Invite, Raise Work Order, Raise Defect and Raise Lead all draft the ONE
    page-owned StagedRecordCreate, and the page's Apply raises the record through the intake
    commands — so the email is tagged to the new record, exactly as the tags pane's "Create new"
    always did. Which form shows is the pane's action dropdown (this editor's Kind); switching
@@ -322,6 +322,11 @@ else if (Kind == StagedRecordKind.Inventory)
             <p class="text-xs text-warning">@inventoryProblem</p>
         }
     </div>
+}
+else if (Kind == StagedRecordKind.Lead)
+{
+    <StagedLeadFields Draft="@Create.Lead" IsStaged="@(StagedCreate is not null)"
+                      ContactFromSender="@leadContactFromSender" OnEdited="SetLead" />
 }
 else
 {

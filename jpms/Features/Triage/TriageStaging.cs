@@ -26,7 +26,8 @@ public sealed class TodoDraftRow
 /// request carries the request fields; a Subcontractor bid package carries Title + Trade; a
 /// Subcontractor work order carries the full manual-order surface (subcontractor, scope,
 /// programme, priced lines, deposit, draft flag); a Subcontractor defect carries location,
-/// description and assigned-to.
+/// description and assigned-to; a Sales lead carries its own draft (StagedLeadDraft) and needs
+/// no project.
 /// </summary>
 public sealed class StagedRecordCreate
 {
@@ -102,6 +103,14 @@ public sealed class StagedRecordCreate
     //      project's building control case; kept as its own draft so this class stays readable. ----
     public StagedBuildingControlInspectionDraft BuildingControlInspection { get; } = new();
 
+    // ---- Sales lead (Kind == Lead, 2026-09-15) — the prospect an enquiry email is about;
+    //      belongs to no project. Kept as its own draft so this class stays readable. ----
+    public StagedLeadDraft Lead { get; } = new();
+
+    /// <summary>A lead is company-wide: the one staged record Apply and Create now raise with
+    /// no project set on the email.</summary>
+    public bool BelongsToProject => Kind != StagedRecordKind.Lead;
+
     public string Label => Kind switch
     {
         StagedRecordKind.BidPackage => "new bid package",
@@ -111,6 +120,7 @@ public sealed class StagedRecordCreate
         StagedRecordKind.SiteInstruction => "new site instruction",
         StagedRecordKind.CalendarEvent => "new calendar event",
         StagedRecordKind.BuildingControlInspection => "new building control inspection",
+        StagedRecordKind.Lead => "new lead",
         _ => RequestKind == Jewel.JPMS.Models.RequestType.Rfi ? "new RFI" : "new request"
     };
 
@@ -123,6 +133,7 @@ public sealed class StagedRecordCreate
             : Description.Length > 48 ? Description[..48] + "…" : Description,
         StagedRecordKind.CalendarEvent => CalendarEvent.Title,
         StagedRecordKind.BuildingControlInspection => BuildingControlInspection.StageName,
+        StagedRecordKind.Lead => Lead.DisplayTitle,
         _ => Title
     };
 
@@ -133,6 +144,7 @@ public sealed class StagedRecordCreate
         StagedRecordKind.Defect => !string.IsNullOrWhiteSpace(Description),
         StagedRecordKind.CalendarEvent => !string.IsNullOrWhiteSpace(CalendarEvent.Title),
         StagedRecordKind.BuildingControlInspection => !string.IsNullOrWhiteSpace(BuildingControlInspection.StageName),
+        StagedRecordKind.Lead => Lead.IsReady,
         _ => !string.IsNullOrWhiteSpace(Title)
     };
 
@@ -179,6 +191,7 @@ public sealed class StagedRecordCreate
             if (Kind == StagedRecordKind.SiteInstruction) return SiteInstructionProblem;
             if (Kind == StagedRecordKind.CalendarEvent) return CalendarEvent.Problem;
             if (Kind == StagedRecordKind.BuildingControlInspection) return BuildingControlInspection.Problem;
+            if (Kind == StagedRecordKind.Lead) return Lead.Problem;
             if (string.IsNullOrWhiteSpace(Title)) return Kind == StagedRecordKind.WorkOrder ? "Give the work order a title." : "Give it a title.";
             return WorkOrderProblem;
         }
@@ -193,6 +206,7 @@ public sealed class StagedRecordCreate
         StagedRecordKind.SiteInstruction => "raise the site instruction and tag this email to it",
         StagedRecordKind.CalendarEvent => CalendarEvent.Outcome,
         StagedRecordKind.BuildingControlInspection => BuildingControlInspection.Outcome,
+        StagedRecordKind.Lead => Lead.Outcome,
         StagedRecordKind.WorkOrder => SaveAsDraft
             ? "raise the work order as a draft — no purchase-order email until it's approved — and tag this email to it"
             : "raise the work order, email the purchase order to the subcontractor and tag this email to it",
@@ -270,7 +284,7 @@ public sealed class StagedWorkOrderLine
     public decimal? Amount => StagedRecordCreate.ParseDecimal(AmountText);
 }
 
-public enum StagedRecordKind { Request, BidPackage, WorkOrder, Defect, CalendarEvent, BuildingControlInspection, Inventory, SiteInstruction }
+public enum StagedRecordKind { Request, BidPackage, WorkOrder, Defect, CalendarEvent, BuildingControlInspection, Inventory, SiteInstruction, Lead }
 
 /// <summary>
 /// A record ALREADY raised from the selected email — by System Actions' "Create now", or by the

@@ -6,8 +6,8 @@
     history. The Email and Preview icons only exist while there is an email / a document to show.
 
     Rail order is the triager's mental path (2026-08-27 restructure): the inbox and the open
-    email, then the four pathway panes — "here's how I deal with this email on the client /
-    subcontractor / supplier / internal side" — then the reference tools.
+    email, then the five pathway panes — "here's how I deal with this email on the client /
+    subcontractor / supplier / sales / internal side" — then the reference tools.
 *@
 
 <div class="flex items-center gap-1 flex-wrap">
@@ -19,6 +19,7 @@
     @RailButton(PanelKind.Client, "Client — tag and action this email on the client side")
     @RailButton(PanelKind.Subcontractor, "Subcontractor — tag and action this email on the subcontractor side")
     @RailButton(PanelKind.Supplier, "Supplier — tag and action this email on the supplier side")
+    @RailButton(PanelKind.Sales, "Sales — tag this enquiry to the prospect's lead, or raise one")
     @RailButton(PanelKind.Internal, "Internal — tag and action this email on the staff side")
     @RailButton(PanelKind.Records, "Record explorer")
     @RailButton(PanelKind.Xero, "Xero explorer")
@@ -45,6 +46,7 @@
     [Parameter] public int ClientBadge { get; set; }
     [Parameter] public int SubcontractorBadge { get; set; }
     [Parameter] public int SupplierBadge { get; set; }
+    [Parameter] public int SalesBadge { get; set; }
     [Parameter] public int InternalBadge { get; set; }
 
     /// <summary>How many emails are lined up to send — badged on the Outbox icon.</summary>
@@ -76,6 +78,7 @@
         PanelKind.Client => ClientBadge,
         PanelKind.Subcontractor => SubcontractorBadge,
         PanelKind.Supplier => SupplierBadge,
+        PanelKind.Sales => SalesBadge,
         PanelKind.Internal => InternalBadge,
         PanelKind.Outbox => OutboxBadge,
         _ => 0

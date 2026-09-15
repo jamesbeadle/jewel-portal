@@ -149,13 +149,26 @@ public static class StatusTones
         _ => Tone.Muted
     };
 
-    /// <summary>The three triage pathways as a categorical: Client positive, Subcontractor warning,
-    /// Supplier info — the same reading TriagePathways gives the pathway chips.</summary>
+    /// <summary>The triage pathways as a categorical: Client positive, Subcontractor warning,
+    /// Supplier info, Sales negative — the same reading TriagePathways gives the pathway chips.</summary>
     public static Tone PathwayTone(string? pathway) => pathway switch
     {
         "Client" => Tone.Positive,
         "Subcontractor" => Tone.Warning,
         "Supplier" => Tone.Info,
+        "Sales" => Tone.Negative,
+        _ => Tone.Muted
+    };
+
+    /// <summary>An estimate's ladder (2026-09-15): Received is waiting for someone to start
+    /// pricing, Pricing and Submitted are in flight, Won positive, Lost negative.</summary>
+    public static Tone ToTone(this EstimateStatus status) => status switch
+    {
+        EstimateStatus.Received => Tone.Warning,
+        EstimateStatus.Pricing => Tone.Info,
+        EstimateStatus.Submitted => Tone.Info,
+        EstimateStatus.Won => Tone.Positive,
+        EstimateStatus.Lost => Tone.Negative,
         _ => Tone.Muted
     };
 

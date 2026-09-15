@@ -17,7 +17,7 @@ public static class RecordLinkVocabulary
     // never offered on its own.
     public static readonly RecordType[] RecordTypeOptions =
     {
-        RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Scheduling, RecordType.Lad, RecordType.Variation, RecordType.ValuationClaim, RecordType.Todo, RecordType.CalendarEvent, RecordType.BuildingControlInspection, RecordType.BuildingControlCase, RecordType.Inventory, RecordType.SiteInstruction
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Scheduling, RecordType.Lad, RecordType.Variation, RecordType.ValuationClaim, RecordType.Todo, RecordType.CalendarEvent, RecordType.BuildingControlInspection, RecordType.BuildingControlCase, RecordType.Inventory, RecordType.SiteInstruction, RecordType.Lead
     };
 
     // What each pathway's "Link to existing" offers (the pathway filters the actions — the plan's
@@ -47,6 +47,13 @@ public static class RecordLinkVocabulary
     // 2026-09-15: a merchant's purchase order is the same WO record as a trade's, offered on both
     // sides; its thread files by the company the order is placed with, not by the type.
     public static readonly RecordType[] SupplierLinkTypes = { RecordType.WorkOrder, RecordType.Inventory };
+    // The Sales pathway (2026-09-15): an enquiry email is tagged to the sales lead it is about.
+    public static readonly RecordType[] SalesLinkTypes = { RecordType.Lead };
+
+    /// <summary>A record type that belongs to no project — its pool is the company-wide
+    /// register (GET records?type=), never a project's — so the pane offers it whatever the
+    /// email's project says and the project gates let its picks through. Only leads so far.</summary>
+    public static bool IsCompanyWide(RecordType type) => type == RecordType.Lead;
 
     // The Tagged tab's "link to another record" pool: since the hard client wall was removed
     // (2026-08-21) every type is offered whatever the thread's pathway. Each option's label shows
@@ -67,6 +74,7 @@ public static class RecordLinkVocabulary
         RecordType.BidPackageInvite
             or RecordType.SubcontractorComms => TriagePathway.Subcontractor,
         RecordType.SupplierComms or RecordType.Inventory => TriagePathway.Supplier,
+        RecordType.Lead => TriagePathway.Sales,
         RecordType.InternalComms or RecordType.SiteInstruction => TriagePathway.Internal,
         _ => null
     };
@@ -86,6 +94,7 @@ public static class RecordLinkVocabulary
         RecordType.Inventory        => "Supplier",
         RecordType.InternalComms    => "Internal",
         RecordType.SiteInstruction  => "Internal",
+        RecordType.Lead             => "Sales",
         RecordType.CostCentre       => "Client or Subcontractor",
         RecordType.Todo             => "Neutral",
         RecordType.CalendarEvent    => "Neutral",
@@ -121,6 +130,7 @@ public static class RecordLinkVocabulary
         RecordType.InternalComms    => "Internal communication",
         RecordType.Inventory        => "Inventory item",
         RecordType.SiteInstruction  => "Site instruction",
+        RecordType.Lead             => "Lead",
         _                           => type.ToString()
     };
 

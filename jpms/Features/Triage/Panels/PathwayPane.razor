@@ -77,7 +77,7 @@
         @* ---------------- TAGGING ---------------- *@
         @if (activeTab == PaneTab.Tagging || !HasActionsTab)
         {
-            @if (HasOpenEmail && Config.LinkTypes.Count > 0 && string.IsNullOrWhiteSpace(ProjectId))
+            @if (HasOpenEmail && NeedsProject && string.IsNullOrWhiteSpace(ProjectId))
             {
                 <Notice Tone="Tone.Warning">
                     Set the email's <span class="font-medium">Project</span> in the bar above — the record sections below fill with that project's records.
@@ -94,7 +94,7 @@
                 var typeKey = $"type:{type}";
                 <div @key="typeKey" class="rounded border border-line">
                     <button type="button" class="w-full flex items-center gap-2 px-3 py-2 text-left"
-                            title="@($"The project's {PathwayPaneConfig.TypeLabelPlural(type)} — pick to tag the email")"
+                            title="@($"{(RecordLinkVocabulary.IsCompanyWide(type) ? "The register's" : "The project's")} {PathwayPaneConfig.TypeLabelPlural(type)} — pick to tag the email")"
                             @onclick="() => Toggle(typeKey)">
                         @Chevron(IsOpenSection(typeKey))
                         <span class="text-sm font-medium text-content flex-1">@PathwayPaneConfig.TypeLabelPlural(type)</span>
@@ -110,13 +110,15 @@
                             {
                                 <p class="text-xs text-content-subtle">Open a queue email first — these records are tagged against the email being triaged.</p>
                             }
-                            else if (string.IsNullOrWhiteSpace(ProjectId))
+                            else if (string.IsNullOrWhiteSpace(ProjectId) && !RecordLinkVocabulary.IsCompanyWide(type))
                             {
                                 <p class="text-xs text-content-subtle">Set the email's Project in the bar above to see this project's @PathwayPaneConfig.TypeLabelPlural(type).</p>
                             }
                             else
                             {
-                                <RecordLinkSection Type="type" ProjectId="@ProjectId" EmailSubject="@EmailSubject"
+                                @* A company-wide type (a lead) lists its register with no project — the
+                                   section reads the pool from the type alone. *@
+                                <RecordLinkSection Type="type" ProjectId="@(RecordLinkVocabulary.IsCompanyWide(type) ? "" : ProjectId)" EmailSubject="@EmailSubject"
                                                    Picked="Picked" OnStagingChanged="StagingChangedAsync" />
                             }
                         </div>
@@ -212,6 +214,7 @@
                                        TodoProjectNote="@TodoProjectNote"
                                        EmailAttachments="@EmailAttachments"
                                        SenderEmail="@SenderEmail"
+                                       SenderName="@SenderName"
                                        EmailSubject="@EmailSubject"
                                        MessageId="@EmailKey"
                                        InternetMessageId="@InternetMessageId"
