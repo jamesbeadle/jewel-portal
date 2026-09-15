@@ -1,0 +1,442 @@
+@page "/sales/leads/{LeadId}/estimates/{EstimateId}"
+@using System.Globalization
+@using Jewel.JPMS.Contracts.Sales
+@using Jewel.JPMS.Features.Sales
+@using Jewel.JPMS.Features.CostCenters
+@using static Jewel.JPMS.Features.Sales.EstimateFigures
+@inject AuthService Auth
+@inject SessionService Session
+@inject NavigationManager Nav
+@inject LeadDetailReadModel Detail
+@inject CostCentersReadModel CostCenters
+@inject ICommandSender Commands
+@implements IDisposable
+
+<PageTitle>@(Estimate?.Reference ?? "Estimate") · JPMS</PageTitle>
+
+@*
+    One estimate (2026-09-15, Nigel: the estimate document in the tender's shape): the priced
+    breakdown — sections of lines, cost code / description / quantity / unit / unit price, the
+    total computed as you type — with the client-facing narrative beside it (executive summary,
+    build time, exclusions) and the PDF that prints them. The breakdown is a full-record save:
+    what is on the page is what the estimate becomes. Details (scope, architect, dates, budget)
+    and the status move stay in their modals. Everything here is the sales team's; readers see
+    it read-only.
+*@
+
+<Page>
+    @if (!Detail.LoadedFor(LeadId) && !dataFailed)
+    {
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading estimate" />
+    }
+    else if (Lead is null || Estimate is null)
+    {
+        <WorkspaceSectionNav />
+        <div class="panel p-6">
+            <p class="text-sm text-content-muted">
+                @(dataFailed ? "The estimate couldn't be loaded — the error banner has the detail. Reload the page to retry." : "There is no estimate with that id on this lead.")
+                <a href="/sales/leads/@LeadId" class="text-info underline underline-offset-4 ml-1">Back to the lead</a>
+            </p>
+        </div>
+    }
+    else
+    {
+        var lead = Lead;
+        var estimate = Estimate;
+        <div>
+            <WorkspaceSectionNav />
+            <PageHeader>
+                <TitleContent>
+                    <span>@estimate.Reference</span>
+                    <EstimateStatusPill Status="@estimate.Status" />
+                </TitleContent>
+                <EyebrowContent>
+                    <a href="/sales/leads" class="hover:text-content">Leads</a> ·
+                    <a href="/sales/leads/@LeadId" class="hover:text-content">@lead.Reference</a> · Estimate
+                </EyebrowContent>
+                <SubtitleContent>@estimate.Scope</SubtitleContent>
+                <Actions>
+                    <div class="flex flex-wrap items-center gap-2 shrink-0">
+                        @if (CanWork && estimate.Status.IsOpen())
+                        {
+                            <button type="button" class="btn-primary" disabled="@(busy || !dirty)" title="@(dirty ? "Saves every section and line as shown" : "Nothing changed")" @onclick="SaveBreakdownAsync">
+                                @(busy ? "Saving…" : "Save breakdown")
+                            </button>
+                        }
+                        <DropdownMenu Label="Actions" WidthClass="w-64" Disabled="@busy" Items="ActionMenuItems" />
+                    </div>
+                </Actions>
+            </PageHeader>
+
+            @if (actionNote is not null)
+            {
+                <Notice Tone="Tone.Positive" Class="mb-4">@actionNote</Notice>
+            }
+            @if (actionError is not null)
+            {
+                <Notice Tone="Tone.Negative" Class="mb-4">@actionError</Notice>
+            }
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div class="xl:col-span-2 space-y-6">
+                    <Panel Title="Priced breakdown" BodyClass="p-0">
+                        <HeaderActions>
+                            <span class="text-sm text-content-muted mr-3">Total <span class="text-content font-semibold">@Money(GrandTotal)</span> ex VAT</span>
+                            @if (Editable)
+                            {
+                                <button type="button" class="btn-secondary text-sm" @onclick="AddSection">Add section</button>
+                            }
+                        </HeaderActions>
+                        <ChildContent>
+                            @if (sections.Count == 0)
+                            {
+                                <p class="p-6 text-sm text-content-muted">
+                                    No priced lines yet. @(Editable ? "Add a section — Preliminaries & preambles, Demolition & stripping out, Structural steelwork… — then its lines; the total follows." : "")
+                                </p>
+                            }
+                            @foreach (var section in sections)
+                            {
+                                var s = section;
+                                <div class="border-b border-line last:border-b-0">
+                                    <div class="flex flex-wrap items-center gap-2 px-4 py-3 bg-surface-raised/40">
+                                        @if (Editable)
+                                        {
+                                            <input type="text" class="field flex-1 min-w-[16rem] font-semibold" maxlength="256" placeholder="Section — e.g. Structural steelwork"
+                                                   value="@s.Name" @oninput="e => { s.Name = e.Value?.ToString() ?? string.Empty; Touch(); }" />
+                                            <label class="flex items-center gap-1.5 text-xs text-content-muted whitespace-nowrap">
+                                                <input type="checkbox" checked="@s.Provisional" @onchange="e => { s.Provisional = e.Value is true; Touch(); }" />
+                                                Provisional allowance
+                                            </label>
+                                            <span class="text-sm font-semibold whitespace-nowrap ml-auto">@Money(s.Total)</span>
+                                            <button type="button" class="btn-ghost text-xs" title="Move up" disabled="@(sections.IndexOf(s) == 0)" @onclick="() => Move(s, -1)">↑</button>
+                                            <button type="button" class="btn-ghost text-xs" title="Move down" disabled="@(sections.IndexOf(s) == sections.Count - 1)" @onclick="() => Move(s, 1)">↓</button>
+                                            <button type="button" class="btn-ghost text-xs text-negative" title="Remove the section and its lines" @onclick="() => RemoveSection(s)">Remove</button>
+                                        }
+                                        else
+                                        {
+                                            <span class="font-semibold">@s.Name</span>
+                                            @if (s.Provisional) { <span class="text-xs text-negative">Provisional allowance</span> }
+                                            <span class="text-sm font-semibold whitespace-nowrap ml-auto">@Money(s.Total)</span>
+                                        }
+                                    </div>
+                                    <table class="w-full text-sm">
+                                        <thead class="text-xs text-content-subtle">
+                                            <tr>
+                                                <th class="text-left px-4 py-1.5 w-40">Cost code</th>
+                                                <th class="text-left px-2 py-1.5">Description</th>
+                                                <th class="text-right px-2 py-1.5 w-20">Qty</th>
+                                                <th class="text-left px-2 py-1.5 w-20">Unit</th>
+                                                <th class="text-right px-2 py-1.5 w-28">Unit price £</th>
+                                                <th class="text-right px-2 py-1.5 w-28">Total £</th>
+                                                @if (Editable) { <th class="w-16"></th> }
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var line in s.Lines)
+                                            {
+                                                var l = line;
+                                                <tr class="border-t border-line/60">
+                                                    @if (Editable)
+                                                    {
+                                                        <td class="px-4 py-1">
+                                                            <select class="field w-full text-xs" value="@l.CostCode" @onchange="e => { l.CostCode = e.Value?.ToString() ?? string.Empty; Touch(); }">
+                                                                <option value="">—</option>
+                                                                @foreach (var code in CostCenters.Alphabetical)
+                                                                {
+                                                                    <option value="@code.Code">@code.Code — @code.Name</option>
+                                                                }
+                                                            </select>
+                                                        </td>
+                                                        <td class="px-2 py-1"><input type="text" class="field w-full text-sm" maxlength="1024" placeholder="What is priced" value="@l.Description" @oninput="e => { l.Description = e.Value?.ToString() ?? string.Empty; Touch(); }" /></td>
+                                                        <td class="px-2 py-1"><input type="number" class="field w-full text-sm text-right" min="0" step="any" value="@l.QuantityText" @oninput="e => { l.QuantityText = e.Value?.ToString() ?? string.Empty; Touch(); }" /></td>
+                                                        <td class="px-2 py-1"><input type="text" class="field w-full text-sm" maxlength="32" list="estimate-units" placeholder="m²" value="@l.Unit" @oninput="e => { l.Unit = e.Value?.ToString() ?? string.Empty; Touch(); }" /></td>
+                                                        <td class="px-2 py-1"><input type="number" class="field w-full text-sm text-right" min="0" step="any" value="@l.UnitPriceText" @oninput="e => { l.UnitPriceText = e.Value?.ToString() ?? string.Empty; Touch(); }" /></td>
+                                                        <td class="px-2 py-1 text-right whitespace-nowrap">@Pence(l.Total)</td>
+                                                        <td class="px-2 py-1 text-right"><button type="button" class="btn-ghost text-xs text-negative" title="Remove line" @onclick="() => { s.Lines.Remove(l); Touch(); }">✕</button></td>
+                                                    }
+                                                    else
+                                                    {
+                                                        <td class="px-4 py-1.5 font-mono text-xs">@l.CostCode</td>
+                                                        <td class="px-2 py-1.5">@l.Description</td>
+                                                        <td class="px-2 py-1.5 text-right">@l.QuantityText</td>
+                                                        <td class="px-2 py-1.5">@l.Unit</td>
+                                                        <td class="px-2 py-1.5 text-right">@Pence(l.UnitPrice)</td>
+                                                        <td class="px-2 py-1.5 text-right">@Pence(l.Total)</td>
+                                                    }
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                    @if (Editable)
+                                    {
+                                        <div class="px-4 py-2">
+                                            <button type="button" class="btn-ghost text-xs" @onclick="() => AddLine(s)">+ Add line</button>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            <datalist id="estimate-units">
+                                <option value="m²"></option><option value="m³"></option><option value="m"></option><option value="nr"></option>
+                                <option value="item"></option><option value="week"></option><option value="day"></option><option value="kg"></option><option value="skips"></option>
+                            </datalist>
+                        </ChildContent>
+                    </Panel>
+                </div>
+
+                <div class="space-y-6">
+                    <Panel Title="Details">
+                        <dl class="grid grid-cols-1 gap-y-3 text-sm">
+                            <div><dt class="eyebrow">Property</dt><dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(lead.PropertyAddress) ? "—" : lead.PropertyAddress) @lead.Postcode</dd></div>
+                            <div><dt class="eyebrow">Contact</dt><dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(lead.ContactName) ? lead.CompanyName : lead.ContactName)</dd></div>
+                            <div><dt class="eyebrow">Architect</dt><dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(estimate.ArchitectName) ? "—" : estimate.ArchitectName)</dd></div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div><dt class="eyebrow">Price due</dt><dd class="text-content mt-1">@(estimate.PriceDueOn is { } due ? due.ToString("dd MMM yyyy") : "—")</dd></div>
+                                <div><dt class="eyebrow">Budget mentioned</dt><dd class="text-content mt-1">@(estimate.BudgetMentioned is { } budget ? Money(budget) : "—")</dd></div>
+                            </div>
+                            <div><dt class="eyebrow">Total</dt><dd class="text-content mt-1 text-lg font-semibold">@(estimate.Total is { } total ? Money(total) : "Not yet priced")</dd></div>
+                            @if (!string.IsNullOrWhiteSpace(estimate.Notes))
+                            {
+                                <div><dt class="eyebrow">Internal notes</dt><dd class="text-content-muted mt-1 whitespace-pre-line text-xs">@estimate.Notes</dd></div>
+                            }
+                        </dl>
+                    </Panel>
+
+                    <Panel Title="What the document says">
+                        <HeaderActions>
+                            @if (Editable)
+                            {
+                                <button type="button" class="btn-secondary text-sm" disabled="@(busy || !narrativeDirty)" @onclick="SaveNarrativeAsync">@(busy ? "Saving…" : "Save")</button>
+                            }
+                        </HeaderActions>
+                        <ChildContent>
+                            <p class="text-xs text-content-muted mb-3">These print on the estimate PDF, after the project page. Blank lines separate paragraphs; a line starting "- " is a bullet.</p>
+                            <div class="space-y-3">
+                                <FormField Label="Executive summary">
+                                    <textarea class="field w-full text-sm" rows="8" disabled="@(!Editable)" placeholder="What we understand the project to be, how we would approach it, what is included"
+                                              value="@executiveSummary" @oninput="e => { executiveSummary = e.Value?.ToString() ?? string.Empty; narrativeDirty = true; }"></textarea>
+                                </FormField>
+                                <FormField Label="Build time">
+                                    <textarea class="field w-full text-sm" rows="3" maxlength="1024" disabled="@(!Editable)" placeholder="How long on site, and when, given the start the prospect wants"
+                                              value="@buildTime" @oninput="e => { buildTime = e.Value?.ToString() ?? string.Empty; narrativeDirty = true; }"></textarea>
+                                </FormField>
+                                <FormField Label="Exclusions">
+                                    <textarea class="field w-full text-sm" rows="4" maxlength="4000" disabled="@(!Editable)" placeholder="What the figure leaves out — VAT, kitchens, fees, party wall…"
+                                              value="@exclusions" @oninput="e => { exclusions = e.Value?.ToString() ?? string.Empty; narrativeDirty = true; }"></textarea>
+                                </FormField>
+                            </div>
+                        </ChildContent>
+                    </Panel>
+                </div>
+            </div>
+        </div>
+
+        <EstimateFormModal IsOpen="@editOpen" LeadId="@LeadId" Existing="@estimate" OnSaved="OnEditedAsync" OnCancel="() => editOpen = false" />
+        <EstimateStatusMoveDialog Estimate="@moving" OnMoved="OnMovedAsync" OnCancel="() => moving = null" />
+    }
+</Page>
+
+@code {
+    [Parameter] public string LeadId { get; set; } = "";
+    [Parameter] public string EstimateId { get; set; } = "";
+
+    private bool sessionReady;
+    private bool dataFailed;
+    private bool busy;
+    private bool dirty;
+    private bool narrativeDirty;
+    private string? actionError;
+    private string? actionNote;
+    private string loadedForId = "";
+    private string seededFor = "";
+
+    private bool editOpen;
+    private LeadEstimate? moving;
+
+    private readonly List<SectionDraft> sections = new();
+    private string executiveSummary = "";
+    private string buildTime = "";
+    private string exclusions = "";
+
+    private Lead? Lead => Detail.Current(LeadId)?.Lead;
+    private LeadEstimate? Estimate => Detail.Current(LeadId)?.Estimates?.FirstOrDefault(e => e.EstimateId == EstimateId);
+
+    // Client-side mirror of SalesRoles.SalesTeam — visibility only, the API is the gate.
+    private bool CanWork => Session.ActiveRole is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
+        or Role.ProjectManager or Role.QuantitySurveyor or Role.SalesMarketing;
+    private bool Editable => CanWork && Estimate is { } e && e.Status.IsOpen();
+
+    private decimal GrandTotal => sections.Sum(s => s.Total);
+
+    private List<DropdownMenu.Item> ActionMenuItems
+    {
+        get
+        {
+            var items = new List<DropdownMenu.Item>();
+            if (Estimate is not { } estimate) return items;
+            items.Add(new(Label: "Download PDF", Href: $"/api/sales/estimates/{estimate.EstimateId}/document",
+                Hint: "The estimate document — cover, summary, breakdown chart, itemised sections, contact page — rendered from the register on every download"));
+            if (CanWork && estimate.Status.IsOpen())
+            {
+                items.Add(new(Label: "Edit details…", OnSelect: EventCallback.Factory.Create(this, () => { editOpen = true; }),
+                    Hint: "Scope, architect, price due, budget mentioned, notes", Group: 1));
+                items.Add(new(Label: "Move status…", OnSelect: EventCallback.Factory.Create(this, () => { moving = estimate; }),
+                    Hint: "Received → Pricing → Submitted → Won / Lost", Group: 1));
+            }
+            return items;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Detail.OnChanged += StateHasChanged;
+        CostCenters.OnChanged += StateHasChanged;
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        sessionReady = true;
+        await LoadAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!sessionReady || loadedForId == EstimateId) return;
+        dataFailed = false;
+        actionNote = null;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loadedForId = EstimateId;
+        try
+        {
+            await Task.WhenAll(
+                Detail.RefreshAsync(LeadId, CancellationToken.None),
+                CostCenters.IsLoaded ? Task.CompletedTask : CostCenters.RefreshAsync(CancellationToken.None));
+            Seed();
+        }
+        catch { dataFailed = true; }
+    }
+
+    // The drafts are seeded from the record once per load (and after every save) — never on a
+    // re-render, so a keystroke is never wiped by the read model waking up.
+    private void Seed()
+    {
+        if (Estimate is not { } estimate) return;
+        seededFor = estimate.EstimateId;
+        sections.Clear();
+        foreach (var section in estimate.Sections)
+            sections.Add(new SectionDraft
+            {
+                Name = section.Name,
+                Provisional = section.Provisional,
+                Lines = section.Lines.Select(line => new LineDraft
+                {
+                    CostCode = line.CostCode, Description = line.Description, Unit = line.Unit,
+                    QuantityText = line.Quantity.ToString("0.####", CultureInfo.InvariantCulture),
+                    UnitPriceText = line.UnitPrice.ToString("0.##", CultureInfo.InvariantCulture)
+                }).ToList()
+            });
+        executiveSummary = estimate.ExecutiveSummary;
+        buildTime = estimate.BuildTime;
+        exclusions = estimate.Exclusions;
+        dirty = false;
+        narrativeDirty = false;
+    }
+
+    private async Task ReloadAsync()
+    {
+        try { await Detail.RefreshAsync(LeadId, CancellationToken.None); Seed(); }
+        catch (OperationCanceledException) { throw; }
+        catch { }
+    }
+
+    private void Touch() => dirty = true;
+
+    private void AddSection()
+    {
+        sections.Add(new SectionDraft { Lines = { new LineDraft() } });
+        Touch();
+    }
+
+    private void RemoveSection(SectionDraft section) { sections.Remove(section); Touch(); }
+
+    private void Move(SectionDraft section, int delta)
+    {
+        var at = sections.IndexOf(section);
+        var to = at + delta;
+        if (at < 0 || to < 0 || to >= sections.Count) return;
+        sections.RemoveAt(at);
+        sections.Insert(to, section);
+        Touch();
+    }
+
+    private void AddLine(SectionDraft section) { section.Lines.Add(new LineDraft()); Touch(); }
+
+    private async Task SaveBreakdownAsync()
+    {
+        if (busy || Estimate is null) return;
+        busy = true; actionError = null; actionNote = null;
+        try
+        {
+            var payload = sections.Select(s => new EstimateBreakdownSection(
+                s.Name.Trim(), s.Provisional,
+                s.Lines.Where(l => !l.IsBlank)
+                    .Select(l => new EstimateBreakdownLine(l.CostCode.Trim(), l.Description.Trim(), l.Quantity, l.Unit.Trim(), l.UnitPrice))
+                    .ToList())).ToList();
+            var saved = await Commands.SendAsync(new SetEstimateBreakdown(EstimateId, payload), CancellationToken.None);
+            actionNote = $"{saved.Reference} breakdown saved — {payload.Count} section{(payload.Count == 1 ? "" : "s")}, total {Money(saved.Total ?? 0)} ex VAT.";
+            await ReloadAsync();
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task SaveNarrativeAsync()
+    {
+        if (busy || Estimate is not { } estimate) return;
+        busy = true; actionError = null; actionNote = null;
+        try
+        {
+            await Commands.SendAsync(new UpdateEstimateDetails(estimate.EstimateId, estimate.Scope, estimate.ArchitectName,
+                estimate.PriceDueOn, estimate.BudgetMentioned, estimate.Total, estimate.Notes,
+                executiveSummary.Trim(), buildTime.Trim(), exclusions.Trim()), CancellationToken.None);
+            actionNote = "The document text is saved.";
+            await ReloadAsync();
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task OnEditedAsync(LeadEstimate _) { editOpen = false; await ReloadAsync(); }
+    private async Task OnMovedAsync(LeadEstimate _) { moving = null; await ReloadAsync(); }
+
+    private static string Money(decimal value) => value.ToString("C0", CultureInfo.GetCultureInfo("en-GB"));
+    private static string Pence(decimal value) => value.ToString("N2", CultureInfo.GetCultureInfo("en-GB"));
+
+    public void Dispose()
+    {
+        Detail.OnChanged -= StateHasChanged;
+        CostCenters.OnChanged -= StateHasChanged;
+    }
+
+    private sealed class SectionDraft
+    {
+        public string Name { get; set; } = "";
+        public bool Provisional { get; set; }
+        public List<LineDraft> Lines { get; set; } = new();
+        public decimal Total => Lines.Sum(line => line.Total);
+    }
+
+    private sealed class LineDraft
+    {
+        public string CostCode { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string QuantityText { get; set; } = "1";
+        public string Unit { get; set; } = "";
+        public string UnitPriceText { get; set; } = "";
+        public decimal Quantity => ParseMoney(QuantityText) ?? 0m;
+        public decimal UnitPrice => ParseMoney(UnitPriceText) ?? 0m;
+        public decimal Total => decimal.Round(Quantity * UnitPrice, 2, MidpointRounding.AwayFromZero);
+        public bool IsBlank => string.IsNullOrWhiteSpace(Description) && string.IsNullOrWhiteSpace(UnitPriceText);
+    }
+}

@@ -117,6 +117,10 @@ public sealed class LeadEstimateEntity
     public DateTimeOffset? SubmittedAt { get; set; }
     [MaxLength(256)]     public string CreatedByEmail { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
+    // The client-facing narrative (2026-09-15): nvarchar(max) — the summary can run to a page.
+    public string ExecutiveSummary { get; set; } = "";
+    [MaxLength(1024)]    public string BuildTime { get; set; } = "";
+    [MaxLength(4000)]    public string Exclusions { get; set; } = "";
 
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string Reference => $"EST-{Number:0000}";
@@ -151,4 +155,23 @@ public sealed class SalesProposalEntity
     [MaxLength(64)]      public string? AcceptedClientHash { get; set; }
     public DateTimeOffset? DeclinedAt { get; set; }
     [MaxLength(1024)]    public string? DeclineReason { get; set; }
+}
+
+// One line of an estimate's priced breakdown (see Jewel.JPMS.Models.EstimateLine, 2026-09-15):
+// the tender's row, carrying the section it prints under. Replaced whole by SetEstimateBreakdown.
+// Money and quantities decimal(18,4) like every other; no FKs, as everywhere else.
+public sealed class LeadEstimateLineEntity
+{
+    [Key, MaxLength(64)] public string LineId { get; set; } = "";
+    [MaxLength(64)]      public string EstimateId { get; set; } = "";
+    [MaxLength(256)]     public string Section { get; set; } = "";
+    public int SectionOrder { get; set; }
+    public bool SectionProvisional { get; set; }
+    [MaxLength(32)]      public string CostCode { get; set; } = "";
+    [MaxLength(1024)]    public string Description { get; set; } = "";
+    public decimal Quantity { get; set; }
+    [MaxLength(32)]      public string Unit { get; set; } = "";
+    public decimal UnitPrice { get; set; }
+    public decimal Total { get; set; }
+    public int SortOrder { get; set; }
 }

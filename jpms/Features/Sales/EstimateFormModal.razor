@@ -30,7 +30,8 @@
         <FormField Label="Budget mentioned (£)" Value="@budgetText" OnChange="v => budgetText = v" InputType="number"
                    Placeholder="Blank when none was mentioned" Error="@MoneyError(budgetText)" />
         <FormField Label="Total (£)" Value="@totalText" OnChange="v => totalText = v" InputType="number"
-                   Placeholder="Blank until priced" Error="@MoneyError(totalText)" />
+                   Placeholder="Blank until priced" Error="@MoneyError(totalText)"
+                   Hint="@(Existing?.BreakdownLines.Count > 0 ? "The breakdown sets the total — this is ignored while it has lines" : null)" />
         <FormField Label="Notes" Class="sm:col-span-2">
             <textarea class="field w-full" rows="3" maxlength="4000" placeholder="Anything else on the pricing — exclusions, assumptions, who is doing what"
                       value="@notes" @oninput="e => notes = e.Value?.ToString() ?? string.Empty"></textarea>
@@ -89,7 +90,8 @@
                 ? await Commands.SendAsync(new CreateEstimate(LeadId, scope.Trim(), architectName.Trim(),
                     ParseDate(priceDueText), ParseMoney(budgetText), ParseMoney(totalText), notes.Trim()), CancellationToken.None)
                 : await Commands.SendAsync(new UpdateEstimateDetails(Existing.EstimateId, scope.Trim(), architectName.Trim(),
-                    ParseDate(priceDueText), ParseMoney(budgetText), ParseMoney(totalText), notes.Trim()), CancellationToken.None);
+                    ParseDate(priceDueText), ParseMoney(budgetText), ParseMoney(totalText), notes.Trim(),
+                    Existing.ExecutiveSummary, Existing.BuildTime, Existing.Exclusions), CancellationToken.None);
             await OnSaved.InvokeAsync(saved);
         }
         catch (CommandFailedException ex) { error = ex.Message; }

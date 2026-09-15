@@ -78,4 +78,63 @@ public sealed record LeadEstimate(
     // When the price went to the prospect — stamped by the move to Submitted.
     DateTimeOffset? SubmittedAt,
     string CreatedByEmail,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    // The client-facing narrative (2026-09-15, the tender's shape): what we understand the
+    // project to be and how we would approach it; how long it takes; what the figure leaves out.
+    string ExecutiveSummary = "",
+    string BuildTime = "",
+    string Exclusions = "",
+    // The priced breakdown — sections of lines, in print order. Empty until SetEstimateBreakdown;
+    // when it has lines, Total is their sum.
+    IReadOnlyList<EstimateLine>? Lines = null)
+{
+    public IReadOnlyList<EstimateLine> BreakdownLines => Lines ?? Array.Empty<EstimateLine>();
+
+    /// <summary>The lines grouped into their sections in print order — what the sheet and the
+    /// editor both walk.</summary>
+    public IReadOnlyList<EstimateBreakdownSection> Sections =>
+        BreakdownLines
+            .GroupBy(line => (line.SectionOrder, line.Section, line.SectionProvisional))
+            .OrderBy(group => group.Key.SectionOrder)
+            .Select(group => new EstimateBreakdownSection(
+                group.Key.Section,
+                group.Key.SectionProvisional,
+                group.OrderBy(line => line.SortOrder)
+                    .Select(line => new EstimateBreakdownLine(line.CostCode, line.Description, line.Quantity, line.Unit, line.UnitPrice))
+                    .ToList()))
+            .ToList();
+}
+
+/// <summary>
+/// One priced line of an estimate's breakdown (2026-09-15): the tender's row — a cost code from
+/// the cost-centre master (the ID column; blank allowed), what, how many, of what, at what rate,
+/// and the line total (quantity × unit price, computed server-side). Section is the heading the
+/// line prints under ("Preliminaries &amp; preambles", "Structural steelwork"), carried on every
+/// line with its order and its provisional flag; SortOrder is the line's place in it.
+/// </summary>
+public sealed record EstimateLine(
+    string LineId,
+    string EstimateId,
+    string Section,
+    int SectionOrder,
+    bool SectionProvisional,
+    string CostCode,
+    string Description,
+    decimal Quantity,
+    string Unit,
+    decimal UnitPrice,
+    decimal Total,
+    int SortOrder);
+
+/// <summary>A section of the breakdown as written — the shape SetEstimateBreakdown takes and the
+/// editor edits. Provisional marks an allowance (the tender prints it in red).</summary>
+public sealed record EstimateBreakdownSection(string Name, bool Provisional, IReadOnlyList<EstimateBreakdownLine> Lines)
+{
+    public decimal Total => Lines.Sum(line => line.Total);
+}
+
+/// <summary>A line as written: quantity × unit price is its total.</summary>
+public sealed record EstimateBreakdownLine(string CostCode, string Description, decimal Quantity, string Unit, decimal UnitPrice)
+{
+    public decimal Total => decimal.Round(Quantity * UnitPrice, 2, MidpointRounding.AwayFromZero);
+}

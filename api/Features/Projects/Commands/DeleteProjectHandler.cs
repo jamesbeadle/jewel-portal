@@ -95,6 +95,10 @@ public sealed class DeleteProjectHandler : ICommandHandler<DeleteProject, Acknow
             var hsRecordIds = context.HsRecords.Where(h => h.ProjectId == projectId).Select(h => h.HsRecordId);
             await context.HsRecordAttendance.Where(x => hsRecordIds.Contains(x.HsRecordId)).ExecuteDeleteAsync(cancellationToken);
 
+            var hsAuditIds = context.HsAudits.Where(a => a.ProjectId == projectId).Select(a => a.HsAuditId);
+            await context.HsAuditItems.Where(x => hsAuditIds.Contains(x.HsAuditId)).ExecuteDeleteAsync(cancellationToken);
+            await context.HsAudits.Where(a => a.ProjectId == projectId).ExecuteDeleteAsync(cancellationToken);
+
             var baselineIds = context.ProgrammeBaselines.Where(b => b.ProjectId == projectId).Select(b => b.ProgrammeBaselineId);
             await context.ProgrammeBaselineTasks.Where(x => baselineIds.Contains(x.ProgrammeBaselineId)).ExecuteDeleteAsync(cancellationToken);
 

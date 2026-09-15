@@ -110,6 +110,19 @@ without changing order value. An order can never be invoiced past its value.
 `DEF-####` sequential reference, which is also the mailbox tag stem. Status
 walks Open → In progress → Resolved → Verified.
 
+## H&S audits and the register
+
+`HSA-####` per project (`contracts/Models/HsAudit.cs`). Draft → Issued (the
+officer's declaration; mints `HsRecord` CorrectiveAction rows, one per finding,
+linked from the item's `HsRecordId`) → Closed (the manager's declaration;
+refused while a minted action is open). Score = `HsAuditScoring` — the
+spreadsheet's rule, class penalties never applied. `HsRecord` status Open →
+InProgress → Closed; assignee is `AssignedToEmail` OR `AssignedToName`.
+Connector: `list_hs_audits`, `get_hs_audit`, `list_hs_records`,
+`create_hs_audit`, `update_hs_audit_details`, `update_hs_audit_items`,
+`issue_hs_audit` (confirm-first), `close_hs_audit`, `log_hs_record`,
+`update_hs_record`.
+
 ## Projects
 
 `ProjectStage`: Lead → PreConstruction → Procurement → Mobilisation →

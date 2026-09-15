@@ -189,6 +189,37 @@ public static class SitePageGuides
             + "the inspector's report and photos off a linked email into the stage's files; Reply/"
             + "Forward under an email sends from the projects mailbox and files itself back here."),
 
+        new("/projects/{project}/hs", "H&S",
+            "The project's health & safety in three panes (2026-09-15). Audits: the officer's site "
+            + "inspection reports (HSA-####), each planted from the inspection framework — 11 "
+            + "sections, 182 items — and scored exactly as her spreadsheet scores it: (sum of "
+            + "rates − sum of minus) ÷ (rated items × 10), unrated items excluded, banded Poor "
+            + "under 70% / Fair / Good 85–94 / Very good 95+; status Draft → Issued → Closed; a row "
+            + "click opens the audit's form. Actions: the corrective actions on the H&S register, "
+            + "most minted by an audit's Issue (one per item with an owner or a rate below 10, not "
+            + "N/A), owned by a named person who needs no login, overdue rows in warning, status "
+            + "changed on the row (Open / In progress / Closed). Register: observations, near "
+            + "misses, incidents, toolbox talks, permits, logged here with \"Log record\". "
+            + "Manually: \"New audit\" takes the type, date, officer and site manager and opens "
+            + "the form. Assistant: list_hs_audits, get_hs_audit, list_hs_records, create_hs_audit, "
+            + "update_hs_audit_items, issue_hs_audit (confirm-first), close_hs_audit, "
+            + "log_hs_record, update_hs_record."),
+
+        new("/projects/{project}/hs/audits/{audit}", "H&S Audit",
+            "One site audit — the inspection report form. The Report panel is the front sheet "
+            + "(type, inspection date, officer, site manager, operatives, summary, further "
+            + "comments; the previous audit's score and the framework version read-only). The "
+            + "score pill is live as rows change. Each section below is one block of the "
+            + "framework: per item a comment code (N/A, N, N/C, N/S, R), rate 0 / 5 / 10, class "
+            + "A–E, minus, time-scale (I, 1, 3, 7, 1M, O), findings, owner name, date rectified — "
+            + "saved a section at a time (\"Save section\"). \"Issue audit\" is the officer's "
+            + "declaration: Draft → Issued, and every finding becomes a corrective action on the "
+            + "Actions pane, linked back to its row (an \"Action\" pill). \"Close audit\" is "
+            + "the manager's declaration and is refused while any of those actions is still open; "
+            + "closing an action on the register stamps the row's date rectified. A Closed audit "
+            + "is read-only. Assistant: get_hs_audit (every item with its hsAuditItemId), "
+            + "update_hs_audit_details, update_hs_audit_items, issue_hs_audit, close_hs_audit."),
+
         new("/projects/{project}/useful-information", "Useful Information",
             "Titled free-text notes for the office's own use — door codes, key safe locations, "
             + "site access. Strictly internal: the API gates reads and writes to internal roles, so "

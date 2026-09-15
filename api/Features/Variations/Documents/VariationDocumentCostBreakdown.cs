@@ -34,7 +34,7 @@ internal static class VariationDocumentCostBreakdown
         table.AddColumn(Unit.FromCentimeter(2.1));   // Amount
 
         var head = table.AddRow();
-        head.Shading.Color = Navy;
+        head.Shading.Color = Gold;
         head.HeadingFormat = true;                   // repeat the header when the table breaks pages
         HeaderCell(head.Cells[0], "Cost code");
         HeaderCell(head.Cells[1], "Description");

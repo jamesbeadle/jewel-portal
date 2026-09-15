@@ -39,6 +39,7 @@ public sealed partial class JpmsContext : DbContext
     public DbSet<ImagineImageEntity> ImagineImages => Set<ImagineImageEntity>();
     public DbSet<SalesProposalEntity> SalesProposals => Set<SalesProposalEntity>();
     public DbSet<LeadEstimateEntity> LeadEstimates => Set<LeadEstimateEntity>();
+    public DbSet<LeadEstimateLineEntity> LeadEstimateLines => Set<LeadEstimateLineEntity>();
 
     public DbSet<BoqLineItemEntity> BoqLineItems => Set<BoqLineItemEntity>();
     public DbSet<BoqSignOffEntity> BoqSignOffs => Set<BoqSignOffEntity>();
@@ -66,6 +67,8 @@ public sealed partial class JpmsContext : DbContext
 
     public DbSet<HsRecordEntity> HsRecords => Set<HsRecordEntity>();
     public DbSet<HsRecordAttendanceEntity> HsRecordAttendance => Set<HsRecordAttendanceEntity>();
+    public DbSet<HsAuditEntity> HsAudits => Set<HsAuditEntity>();
+    public DbSet<HsAuditItemEntity> HsAuditItems => Set<HsAuditItemEntity>();
     public DbSet<MobilisationItemEntity> MobilisationItems => Set<MobilisationItemEntity>();
 
     public DbSet<BidPackageEntity> BidPackages => Set<BidPackageEntity>();

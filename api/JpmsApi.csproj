@@ -78,6 +78,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Never</CopyToPublishDirectory>
     </None>
+    <!-- Poppins (OFL, fonts/LICENCE-Poppins.txt): the brand face every generated document is set in
+         (2026-09-15). DocumentFontResolver probes the fonts folder beside the application first. -->
+    <None Include="fonts\*.ttf;fonts\*.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

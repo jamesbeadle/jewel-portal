@@ -124,6 +124,9 @@ public sealed class HsRecordEntity
     public int Severity { get; set; }
     public int Status { get; set; }
     [MaxLength(256)]     public string AssignedToEmail { get; set; } = "";
+    // The owner as a name when they have no portal login — the site manager on the audit sheet's
+    // "Owner" column (2026-09-15). Either this or the email names the assignee.
+    [MaxLength(256)]     public string AssignedToName { get; set; } = "";
     public DateTimeOffset RaisedAt { get; set; }
     public DateTimeOffset? DueAt { get; set; }
     public DateTimeOffset? ClosedAt { get; set; }

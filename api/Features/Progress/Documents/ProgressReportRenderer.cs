@@ -53,50 +53,10 @@ public static class ProgressReportRenderer
 
     // ---- Sections -----------------------------------------------------------------------------
 
-    private static void AddHeaderBand(Section section, ProgressReportDocumentModel model)
-    {
-        var table = section.AddTable();
-        table.Borders.Width = 0;
-        var left = table.AddColumn(Unit.FromCentimeter(11.3));
-        var right = table.AddColumn(Unit.FromCentimeter(6.5));
-        right.Format.Alignment = ParagraphAlignment.Right;
-
-        var row = table.AddRow();
-        row.Shading.Color = Navy;
-        row.TopPadding = Unit.FromMillimeter(4);
-        row.BottomPadding = Unit.FromMillimeter(4);
-        row.Cells[0].Format.LeftIndent = Unit.FromMillimeter(4);
-        row.Cells[1].Format.RightIndent = Unit.FromMillimeter(4);
-        row.Cells[0].VerticalAlignment = VerticalAlignment.Center;
-        row.Cells[1].VerticalAlignment = VerticalAlignment.Center;
-
-        // The official Jewel Bespoke Build logo leads the band — the gold/orange registered
-        // artwork reads directly on the navy ground (embedded once in DocumentBranding).
-        DocumentBranding.AddLogo(row.Cells[0], Unit.FromCentimeter(3.4), Unit.FromMillimeter(1.5));
-
-        var heading = row.Cells[0].AddParagraph("PROGRESS REPORT");
-        heading.Format.Font.Size = 17;
-        heading.Format.Font.Bold = true;
-        heading.Format.Font.Color = White;
-        SpaceAfter(heading, 1);
-
-        var sub = row.Cells[0].AddParagraph(model.Title);
-        sub.Format.Font.Size = 9.5;
-        sub.Format.Font.Bold = true;
-        sub.Format.Font.Color = Gold;
-
-        var project = row.Cells[1].AddParagraph(model.ProjectReference.ToUpperInvariant());
-        project.Format.Font.Size = 10;
-        project.Format.Font.Bold = true;
-        project.Format.Font.Color = White;
-        SpaceAfter(project, 2);
-
-        var period = row.Cells[1].AddParagraph($"Period  {Period(model.PeriodStart, model.PeriodEnd)}");
-        period.Format.Font.Size = 8;
-        period.Format.Font.Color = Gold;
-
-        Hairline(section);
-    }
+    private static void AddHeaderBand(Section section, ProgressReportDocumentModel model) =>
+        CleanHeader(section, "Progress report", model.Title,
+            new HeaderFact(model.ProjectReference.ToUpperInvariant()),
+            new HeaderFact($"Period  {Period(model.PeriodStart, model.PeriodEnd)}"));
 
     private static void AddDetailsGrid(Section section, ProgressReportDocumentModel model)
     {

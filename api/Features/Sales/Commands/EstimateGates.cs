@@ -35,6 +35,45 @@ public sealed class UpdateEstimateDetailsValidation
         if (string.IsNullOrWhiteSpace(command.EstimateId)) errors.Add("EstimateId is required.");
         if (string.IsNullOrWhiteSpace(command.Scope)) errors.Add("Say what is to be priced (scope).");
         EstimateFieldLimits.Check(errors, command.Scope, command.ArchitectName, command.Notes, command.BudgetMentioned, command.Total);
+        SalesFieldLimits.Check(errors, command.ExecutiveSummary, 20000, "Executive summary");
+        SalesFieldLimits.Check(errors, command.BuildTime, 1024, "Build time");
+        SalesFieldLimits.Check(errors, command.Exclusions, 4000, "Exclusions");
+        return errors.Count == 0 ? ValidationOutcome.Passed : new ValidationOutcome(errors);
+    }
+}
+
+public sealed class SetEstimateBreakdownAuthorisation
+{
+    public bool Allows(SignedInUser user, SetEstimateBreakdown command) => SalesRoles.SalesTeam.IncludesAny(user.Roles);
+}
+
+public sealed class SetEstimateBreakdownValidation
+{
+    public ValidationOutcome Check(SetEstimateBreakdown command)
+    {
+        var errors = new List<string>();
+        if (string.IsNullOrWhiteSpace(command.EstimateId)) errors.Add("EstimateId is required.");
+        if (command.Sections is null) { errors.Add("Sections are required (an empty list clears the breakdown)."); return new ValidationOutcome(errors); }
+        var sectionNumber = 0;
+        foreach (var section in command.Sections)
+        {
+            sectionNumber++;
+            if (string.IsNullOrWhiteSpace(section.Name)) errors.Add($"Section {sectionNumber} needs a name.");
+            SalesFieldLimits.Check(errors, section.Name, 256, $"Section {sectionNumber} name");
+            if (section.Lines is null) { errors.Add($"Section {sectionNumber} needs its lines (an empty list is allowed)."); continue; }
+            var lineNumber = 0;
+            foreach (var line in section.Lines)
+            {
+                lineNumber++;
+                var where = $"Section {sectionNumber} line {lineNumber}";
+                if (string.IsNullOrWhiteSpace(line.Description)) errors.Add($"{where} needs a description.");
+                SalesFieldLimits.Check(errors, line.Description, 1024, $"{where} description");
+                SalesFieldLimits.Check(errors, line.CostCode, 32, $"{where} cost code");
+                SalesFieldLimits.Check(errors, line.Unit, 32, $"{where} unit");
+                if (line.Quantity < 0) errors.Add($"{where}: quantity cannot be negative.");
+                if (line.UnitPrice < 0) errors.Add($"{where}: unit price cannot be negative.");
+            }
+        }
         return errors.Count == 0 ? ValidationOutcome.Passed : new ValidationOutcome(errors);
     }
 }

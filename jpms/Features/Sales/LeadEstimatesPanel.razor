@@ -29,7 +29,7 @@
                 {
                     var estimate = row;
                     <tr @key="estimate.EstimateId">
-                        <td class="whitespace-nowrap">@estimate.Reference</td>
+                        <td class="whitespace-nowrap"><a href="/sales/leads/@LeadId/estimates/@estimate.EstimateId" class="text-info hover:underline underline-offset-4" title="Open the estimate — the priced breakdown and the document text">@estimate.Reference</a></td>
                         <td class="max-w-md truncate" title="@estimate.Scope">@estimate.Scope</td>
                         <td class="whitespace-nowrap">@DateText(estimate.PriceDueOn)</td>
                         <td class="text-right whitespace-nowrap">@(estimate.BudgetMentioned is { } budget ? Money(budget) : "—")</td>
@@ -45,9 +45,10 @@
                             }
                         </td>
                         <td class="text-right whitespace-nowrap">
+                            <a href="/sales/leads/@LeadId/estimates/@estimate.EstimateId" class="btn-secondary text-xs" title="The priced breakdown and the document text">Open</a>
                             <a href="@($"/api/sales/estimates/{estimate.EstimateId}/document")"
-                               class="btn-secondary text-xs"
-                               title="The estimate sheet as a PDF — rendered from the register on every download">PDF</a>
+                               class="btn-secondary text-xs ml-1"
+                               title="The estimate document as a PDF — rendered from the register on every download">PDF</a>
                             @if (CanWork && estimate.Status.IsOpen())
                             {
                                 <button type="button" class="btn-secondary text-xs ml-1" @onclick="() => OpenEditor(estimate)">Edit</button>

@@ -213,6 +213,21 @@ public sealed partial class JpmsContext
         modelBuilder.Entity<HsRecordEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_HsRecords_ProjectId");
+        // Audits read per project (the H&S tab's list); items per audit (the form); the record
+        // link resolves a closed corrective action back to its item.
+        modelBuilder.Entity<HsAuditEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_HsAudits_ProjectId");
+        modelBuilder.Entity<HsAuditEntity>()
+            .Property(row => row.Score).HasPrecision(18, 4);
+        modelBuilder.Entity<HsAuditEntity>()
+            .Property(row => row.PreviousScore).HasPrecision(18, 4);
+        modelBuilder.Entity<HsAuditItemEntity>()
+            .HasIndex(row => row.HsAuditId)
+            .HasDatabaseName("IX_HsAuditItems_HsAuditId");
+        modelBuilder.Entity<HsAuditItemEntity>()
+            .HasIndex(row => row.HsRecordId)
+            .HasDatabaseName("IX_HsAuditItems_HsRecordId");
         modelBuilder.Entity<TodoItemEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_TodoItems_ProjectId");
@@ -310,6 +325,10 @@ public sealed partial class JpmsContext
         modelBuilder.Entity<LeadEstimateEntity>()
             .HasIndex(row => row.Number)
             .HasDatabaseName("IX_LeadEstimates_Number");
+        // The breakdown's lines (2026-09-15) read per estimate, replaced whole.
+        modelBuilder.Entity<LeadEstimateLineEntity>()
+            .HasIndex(row => row.EstimateId)
+            .HasDatabaseName("IX_LeadEstimateLines_EstimateId");
 
         // ---- Draft programme updates (2026-09-08) ---------------------------------------------
         // Mappings read per project (the draft capture and the programme detail) and are replaced

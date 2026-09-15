@@ -29,7 +29,25 @@ public sealed record UpdateEstimateDetails(
     DateOnly? PriceDueOn,
     decimal? BudgetMentioned,
     decimal? Total,
-    string Notes) : ICommand<LeadEstimate>;
+    string Notes,
+    // The client-facing narrative (2026-09-15) — see LeadEstimate.
+    string ExecutiveSummary = "",
+    string BuildTime = "",
+    string Exclusions = "") : ICommand<LeadEstimate>;
+
+/// <summary>
+/// Replaces an estimate's priced breakdown with the sections given, in order (2026-09-15, the
+/// tender's shape). A full-record write: every section and line is applied as supplied and
+/// anything not listed is gone. Line totals are quantity × unit price, computed here; when the
+/// breakdown has lines the estimate's Total becomes their sum, and when it is emptied the Total
+/// is left as it was. Cost codes, where given, must be in the cost-centre master. A Won or Lost
+/// estimate is history and is refused. Writes an Estimate activity on the lead's timeline.
+/// ChangedByEmail is stamped by the server.
+/// </summary>
+public sealed record SetEstimateBreakdown(
+    string EstimateId,
+    IReadOnlyList<EstimateBreakdownSection> Sections,
+    string ChangedByEmail = "") : ICommand<LeadEstimate>;
 
 /// <summary>
 /// Moves an estimate along its ladder. Submitted needs a Total and stamps SubmittedAt; Won and

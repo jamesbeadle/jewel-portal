@@ -73,7 +73,9 @@ internal static class AiSalesTools
             "One lead in full with its timeline — every touch (calls, emails, letters, meetings, "
             + "site visits, proposals, notes) and every stage change, newest first — and its "
             + "estimates (EST-####: scope, architect, price due date, budget mentioned, total, "
-            + "status Received → Pricing → Submitted → Won / Lost), newest first, and its "
+            + "status Received → Pricing → Submitted → Won / Lost, the client-facing executive "
+            + "summary, build time and exclusions, and the priced breakdown as sections[] of "
+            + "lines — costCode, description, quantity, unit, unitPrice, total), newest first, and its "
             + "proposals (what the prospect sees: title, scope, base price, options, schedule, "
             + "terms, status Draft → Sent → Accepted / Declined / Superseded). Takes the leadId "
             + "from list_leads, or an LD-#### reference. The enquiry mail tagged to the lead is "
@@ -249,7 +251,17 @@ internal static class AiSalesTools
         estimate.StatusChangedAt,
         estimate.SubmittedAt,
         estimate.CreatedByEmail,
-        estimate.CreatedAt
+        estimate.CreatedAt,
+        estimate.ExecutiveSummary,
+        estimate.BuildTime,
+        estimate.Exclusions,
+        sections = estimate.Sections.Select(section => new
+        {
+            section.Name,
+            section.Provisional,
+            total = section.Total,
+            lines = section.Lines.Select(line => new { line.CostCode, line.Description, line.Quantity, line.Unit, line.UnitPrice, total = line.Total })
+        })
     };
 
     /// <summary>An id as given, or an LD-#### (or bare number) reference resolved through the

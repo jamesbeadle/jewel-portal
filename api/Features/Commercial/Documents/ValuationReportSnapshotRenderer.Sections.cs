@@ -17,61 +17,17 @@ public static partial class ValuationReportSnapshotRenderer
     private static void AddHeaderBand(Section section, ValuationReportSnapshotDocument document)
     {
         var snapshot = document.Detail.Snapshot;
-
-        var table = section.AddTable();
-        table.Borders.Width = 0;
-        var left = table.AddColumn(Unit.FromCentimeter(11.3));
-        var right = table.AddColumn(Unit.FromCentimeter(6.5));
-        right.Format.Alignment = ParagraphAlignment.Right;
-
-        var row = table.AddRow();
-        row.Shading.Color = Navy;
-        row.TopPadding = Unit.FromMillimeter(4);
-        row.BottomPadding = Unit.FromMillimeter(4);
-        row.Cells[0].Format.LeftIndent = Unit.FromMillimeter(4);
-        row.Cells[1].Format.RightIndent = Unit.FromMillimeter(4);
-        row.Cells[0].VerticalAlignment = VerticalAlignment.Center;
-        row.Cells[1].VerticalAlignment = VerticalAlignment.Center;
-
-        // The official Jewel Bespoke Build logo leads the band — the gold/orange registered
-        // artwork reads directly on the navy ground (embedded once in DocumentBranding).
-        DocumentBranding.AddLogo(row.Cells[0], Unit.FromCentimeter(3.4), Unit.FromMillimeter(1.5));
-
-        var heading = row.Cells[0].AddParagraph("VALUATION REPORT");
-        heading.Format.Font.Size = 17;
-        heading.Format.Font.Bold = true;
-        heading.Format.Font.Color = White;
-        SpaceAfter(heading, 1);
-
-        var sub = row.Cells[0].AddParagraph(string.IsNullOrWhiteSpace(document.ProjectReference)
-            ? document.ProjectName
-            : $"{document.ProjectReference} — {document.ProjectName}");
-        sub.Format.Font.Size = 9.5;
-        sub.Format.Font.Bold = true;
-        sub.Format.Font.Color = Gold;
-
-        var stamp = row.Cells[1].AddParagraph(snapshot.Label.ToUpperInvariant());
-        stamp.Format.Font.Size = 10;
-        stamp.Format.Font.Bold = true;
-        stamp.Format.Font.Color = White;
-        SpaceAfter(stamp, 2);
-
-        var date = row.Cells[1].AddParagraph(document.IsDraft
-            ? $"Prepared  {DateAndTime(snapshot.TakenAt)}"
-            : $"Snapshot taken  {DateAndTime(snapshot.TakenAt)}");
-        date.Format.Font.Size = 8;
-        date.Format.Font.Color = Gold;
-
-        if (document.IsDraft)
+        var facts = new List<HeaderFact>
         {
-            var draft = row.Cells[1].AddParagraph("WORKING COPY OF THE LIVE REPORT");
-            draft.Format.Font.Size = 8;
-            draft.Format.Font.Bold = true;
-            draft.Format.Font.Color = Orange;
-            SpaceBefore(draft, 1.5);
-        }
-
-        Hairline(section);
+            new(snapshot.Label.ToUpperInvariant()),
+            new(document.IsDraft
+                ? $"Prepared  {DateAndTime(snapshot.TakenAt)}"
+                : $"Snapshot taken  {DateAndTime(snapshot.TakenAt)}")
+        };
+        if (document.IsDraft) facts.Add(new HeaderFact("WORKING COPY OF THE LIVE REPORT", Orange, Bold: true));
+        CleanHeader(section, "Valuation report",
+            string.IsNullOrWhiteSpace(document.ProjectReference) ? document.ProjectName : $"{document.ProjectReference} — {document.ProjectName}",
+            facts.ToArray());
     }
 
     private static void AddDetailsGrid(Section section, ValuationReportSnapshotDocument document)

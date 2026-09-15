@@ -37,7 +37,7 @@ internal static class SalesEntityMapping
         new(entity.LeadActivityId, entity.LeadId, (LeadActivityKind)entity.Kind, entity.Summary,
             entity.OccurredAt, entity.RecordedByEmail);
 
-    public static LeadEstimate ToModel(this LeadEstimateEntity entity) =>
+    public static LeadEstimate ToModel(this LeadEstimateEntity entity, IEnumerable<LeadEstimateLineEntity>? lines = null) =>
         new(
             entity.EstimateId,
             entity.LeadId,
@@ -52,7 +52,15 @@ internal static class SalesEntityMapping
             entity.StatusChangedAt,
             entity.SubmittedAt,
             entity.CreatedByEmail,
-            entity.CreatedAt);
+            entity.CreatedAt,
+            entity.ExecutiveSummary,
+            entity.BuildTime,
+            entity.Exclusions,
+            lines?.OrderBy(line => line.SectionOrder).ThenBy(line => line.SortOrder).Select(ToModel).ToList());
+
+    public static EstimateLine ToModel(this LeadEstimateLineEntity entity) =>
+        new(entity.LineId, entity.EstimateId, entity.Section, entity.SectionOrder, entity.SectionProvisional,
+            entity.CostCode, entity.Description, entity.Quantity, entity.Unit, entity.UnitPrice, entity.Total, entity.SortOrder);
 
     public static SalesStrategy ToModel(this SalesStrategyEntity entity) =>
         new(

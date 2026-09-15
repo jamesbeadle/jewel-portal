@@ -10,57 +10,11 @@ public static partial class WorkOrderPoRenderer
 {
     private static void AddHeaderBand(Section section, WorkOrderPoDocumentModel model)
     {
-        var table = section.AddTable();
-        table.Borders.Width = 0;
-        table.AddColumn(Unit.FromCentimeter(11.3));
-        var right = table.AddColumn(Unit.FromCentimeter(6.5));
-        right.Format.Alignment = ParagraphAlignment.Right;
-
-        var row = table.AddRow();
-        row.Shading.Color = Navy;
-        row.TopPadding = Unit.FromMillimeter(4);
-        row.BottomPadding = Unit.FromMillimeter(4);
-        row.Cells[0].Format.LeftIndent = Unit.FromMillimeter(4);
-        row.Cells[1].Format.RightIndent = Unit.FromMillimeter(4);
-        row.Cells[0].VerticalAlignment = VerticalAlignment.Center;
-        row.Cells[1].VerticalAlignment = VerticalAlignment.Center;
-
-        AddHeaderTitle(row.Cells[0], model);
-        AddCompanyBlock(row.Cells[1], model);
-        Hairline(section);
-    }
-
-    private static void AddHeaderTitle(Cell cell, WorkOrderPoDocumentModel model)
-    {
-        DocumentBranding.AddLogo(cell, Unit.FromCentimeter(3.4), Unit.FromMillimeter(1.5));
-
-        var heading = cell.AddParagraph("PURCHASE ORDER");
-        heading.Format.Font.Size = 17;
-        heading.Format.Font.Bold = true;
-        heading.Format.Font.Color = White;
-        SpaceAfter(heading, 1);
-
-        var sub = cell.AddParagraph(TitleOrSupplier(model));
-        sub.Format.Font.Size = 9.5;
-        sub.Format.Font.Bold = true;
-        sub.Format.Font.Color = Gold;
-    }
-
-    // The sheet's top-right identity, letter-style: the reference, then the company block.
-    private static void AddCompanyBlock(Cell cell, WorkOrderPoDocumentModel model)
-    {
-        var stamp = cell.AddParagraph(model.Order.Reference);
-        stamp.Format.Font.Size = 13;
-        stamp.Format.Font.Bold = true;
-        stamp.Format.Font.Color = White;
-        SpaceAfter(stamp, 2);
-
-        foreach (var line in CompanyAddress)
-        {
-            var p = cell.AddParagraph(line);
-            p.Format.Font.Size = 7.5;
-            p.Format.Font.Color = Gold;
-        }
+        // The clean house top (2026-09-15): the sheet's top-right identity stays letter-style —
+        // the reference, then the company block.
+        var facts = new List<HeaderFact> { new(model.Order.Reference) };
+        facts.AddRange(CompanyAddress.Select(line => new HeaderFact(line)));
+        CleanHeader(section, "Purchase order", TitleOrSupplier(model), facts.ToArray());
     }
 
     private static readonly string[] CompanyAddress =

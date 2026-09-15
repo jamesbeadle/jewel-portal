@@ -49,57 +49,15 @@ public static class VariationDocumentRenderer
 
     private static void AddHeaderBand(Section section, VariationDocumentModel model)
     {
-        var table = section.AddTable();
-        table.Borders.Width = 0;
-        var left = table.AddColumn(Unit.FromCentimeter(11.3));
-        var right = table.AddColumn(Unit.FromCentimeter(6.5));
-        right.Format.Alignment = ParagraphAlignment.Right;
-
-        var row = table.AddRow();
-        row.Shading.Color = Navy;
-        row.TopPadding = Unit.FromMillimeter(4);
-        row.BottomPadding = Unit.FromMillimeter(4);
-        row.Cells[0].Format.LeftIndent = Unit.FromMillimeter(4);
-        row.Cells[1].Format.RightIndent = Unit.FromMillimeter(4);
-        row.Cells[0].VerticalAlignment = VerticalAlignment.Center;
-        row.Cells[1].VerticalAlignment = VerticalAlignment.Center;
-
-        // Left: official logo, white document name, gold reference line ("VO32" — the outgoing
-        // reference alone; the internal VOQ quoting reference never prints, Nigel 2026-09-14).
-        DocumentBranding.AddLogo(row.Cells[0], Unit.FromCentimeter(3.4), Unit.FromMillimeter(1.5));
-
-        var heading = row.Cells[0].AddParagraph(VariationDocumentModel.DocumentName.ToUpperInvariant());
-        heading.Format.Font.Size = 17;
-        heading.Format.Font.Bold = true;
-        heading.Format.Font.Color = White;
-        SpaceAfter(heading, 1);
-
-        var sub = row.Cells[0].AddParagraph(model.DocumentReference);
-        sub.Format.Font.Size = 9.5;
-        sub.Format.Font.Bold = true;
-        sub.Format.Font.Color = Gold;
-
-        // Right: the stage the variation has reached (QUOTING / ISSUED / …) + the dates the
-        // correspondent cares about.
-        var status = row.Cells[1].AddParagraph(model.StatusLabel.ToUpperInvariant());
-        status.Format.Font.Size = 10;
-        status.Format.Font.Bold = true;
-        status.Format.Font.Color = White;
-        SpaceAfter(status, 2);
-
-        var issued = row.Cells[1].AddParagraph($"Issued  {Date(model.IssuedDisplayDate)}");
-        issued.Format.Font.Size = 8;
-        issued.Format.Font.Color = White;
-
-        if (model.ApprovedAt is { } approvedAt)
+        // The clean house top (2026-09-15). The reference is the outgoing one alone ("VO32" — the
+        // internal VOQ quoting reference never prints, Nigel 2026-09-14); on the right the stage
+        // the variation has reached and the dates the correspondent cares about.
+        var facts = new List<HeaderFact>
         {
-            SpaceAfter(issued, 0.5);
-            var approved = row.Cells[1].AddParagraph($"Approved  {Date(approvedAt)}");
-            approved.Format.Font.Size = 8;
-            approved.Format.Font.Color = Gold;
-        }
-
-        // Orange hairline directly beneath the band.
-        Hairline(section);
+            new(model.StatusLabel.ToUpperInvariant()),
+            new($"Issued  {Date(model.IssuedDisplayDate)}")
+        };
+        if (model.ApprovedAt is { } approvedAt) facts.Add(new HeaderFact($"Approved  {Date(approvedAt)}", Gold));
+        CleanHeader(section, VariationDocumentModel.DocumentName, model.DocumentReference, facts.ToArray());
     }
 }

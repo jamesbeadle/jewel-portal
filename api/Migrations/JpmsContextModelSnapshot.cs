@@ -2544,6 +2544,162 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("HsRecordAttendance");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.HsAuditEntity", b =>
+                {
+                    b.Property<string>("HsAuditId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("FurtherComments")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTimeOffset>("InspectionDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("IssuedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ManagerName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("PreviousScore")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("SafetyOfficerName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<decimal?>("Score")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("SiteManagerName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int?>("SiteOperativeCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SummaryOfWorkActivities")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("TemplateVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("HsAuditId");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_HsAudits_ProjectId");
+
+                    b.ToTable("HsAudits");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.HsAuditItemEntity", b =>
+                {
+                    b.Property<string>("HsAuditItemId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int?>("Class")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<int?>("Comment")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("DateRectified")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Findings")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("HsAuditId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("HsRecordId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("Minus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("OwnerName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int?>("Rate")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Section")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TimeScale")
+                        .HasColumnType("int");
+
+                    b.HasKey("HsAuditItemId");
+
+                    b.HasIndex("HsAuditId")
+                        .HasDatabaseName("IX_HsAuditItems_HsAuditId");
+
+                    b.HasIndex("HsRecordId")
+                        .HasDatabaseName("IX_HsAuditItems_HsRecordId");
+
+                    b.ToTable("HsAuditItems");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.HsRecordEntity", b =>
                 {
                     b.Property<string>("HsRecordId")
@@ -2551,6 +2707,11 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<string>("AssignedToEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("AssignedToName")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
@@ -3344,6 +3505,11 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<string>("BuildTime")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -3351,6 +3517,15 @@ namespace Jewel.JPMS.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Exclusions")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("ExecutiveSummary")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("LeadId")
                         .IsRequired()
@@ -3395,6 +3570,66 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasDatabaseName("IX_LeadEstimates_Number");
 
                     b.ToTable("LeadEstimates");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.LeadEstimateLineEntity", b =>
+                {
+                    b.Property<string>("LineId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("CostCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("EstimateId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("Section")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("SectionOrder")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("SectionProvisional")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.HasKey("LineId");
+
+                    b.HasIndex("EstimateId")
+                        .HasDatabaseName("IX_LeadEstimateLines_EstimateId");
+
+                    b.ToTable("LeadEstimateLines");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.LeadActivityEntity", b =>

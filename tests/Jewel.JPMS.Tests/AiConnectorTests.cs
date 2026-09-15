@@ -724,4 +724,35 @@ public sealed class AiConnectorTests
 
         Assert.True(dangling.Count == 0, "Catalogue text names tools that do not exist:\n" + string.Join("\n", dangling.Distinct()));
     }
+
+    [Fact]
+    public void HsAudits_reachTheConnector_behindTheirPagesGates()
+    {
+        // 2026-09-15: the H&S site audit (Katy-Louise's workbook brought into the portal) and the
+        // register it mints onto. The reads mirror the pages' gates — the whole internal team
+        // reads audits and the register; a foreman reads them, a subcontractor does not — and the
+        // writes are the auditors' (the H&S officer, the directors, the PM, the site manager, the
+        // compliance coordinator). Issue is the declaration that mints corrective actions, so it
+        // is confirm-first; the register write's notes send the model to the new read.
+        var officer = AiToolCatalogue.ForConnector(UserWith(Role.HealthSafetyOfficer)).Select(t => t.Name).ToList();
+        Assert.Contains("list_hs_audits", officer);
+        Assert.Contains("get_hs_audit", officer);
+        Assert.Contains("list_hs_records", officer);
+        Assert.Contains("list_hs_audits", AiToolCatalogue.ForConnector(UserWith(Role.Foreman)).Select(t => t.Name));
+        Assert.DoesNotContain("list_hs_audits", AiToolCatalogue.ForConnector(UserWith(Role.Subcontractor)).Select(t => t.Name));
+        Assert.Equal(AiToolKind.Read, AiToolCatalogue.Find("get_hs_audit")!.Kind);
+
+        foreach (var name in new[] { "create_hs_audit", "update_hs_audit_details", "update_hs_audit_items", "issue_hs_audit", "close_hs_audit" })
+        {
+            var action = AiActionRegistry.Find(name);
+            Assert.NotNull(action);
+            Assert.True(action!.VisibleTo.Includes(Role.HealthSafetyOfficer), name);
+            Assert.True(action.VisibleTo.Includes(Role.ManagingDirector), name);
+            Assert.False(action.VisibleTo.Includes(Role.Foreman), name);
+        }
+        Assert.True(AiActionRegistry.Find("issue_hs_audit")!.RequiresConfirmation);
+        Assert.Contains("IssuedByEmail", AiActionRegistry.Find("issue_hs_audit")!.EmailStamps);
+        Assert.Contains("list_hs_records", AiActionRegistry.Find("log_hs_record")!.Notes);
+        Assert.Contains("assignedToName", AiActionRegistry.Find("log_hs_record")!.Notes);
+    }
 }

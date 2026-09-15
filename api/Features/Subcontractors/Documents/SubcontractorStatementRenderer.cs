@@ -71,50 +71,10 @@ public static class SubcontractorStatementRenderer
 
     // ---- Sections -----------------------------------------------------------------------------
 
-    private static void AddHeaderBand(Section section, SubcontractorStatement statement)
-    {
-        var table = section.AddTable();
-        table.Borders.Width = 0;
-        var left = table.AddColumn(Unit.FromCentimeter(11.3));
-        var right = table.AddColumn(Unit.FromCentimeter(6.5));
-        right.Format.Alignment = ParagraphAlignment.Right;
-
-        var row = table.AddRow();
-        row.Shading.Color = Navy;
-        row.TopPadding = Unit.FromMillimeter(4);
-        row.BottomPadding = Unit.FromMillimeter(4);
-        row.Cells[0].Format.LeftIndent = Unit.FromMillimeter(4);
-        row.Cells[1].Format.RightIndent = Unit.FromMillimeter(4);
-        row.Cells[0].VerticalAlignment = VerticalAlignment.Center;
-        row.Cells[1].VerticalAlignment = VerticalAlignment.Center;
-
-        // The official Jewel Bespoke Build logo leads the band — the gold/orange registered
-        // artwork reads directly on the navy ground (embedded once in DocumentBranding).
-        DocumentBranding.AddLogo(row.Cells[0], Unit.FromCentimeter(3.4), Unit.FromMillimeter(1.5));
-
-        var heading = row.Cells[0].AddParagraph("STATEMENT OF ACCOUNT");
-        heading.Format.Font.Size = 17;
-        heading.Format.Font.Bold = true;
-        heading.Format.Font.Color = White;
-        SpaceAfter(heading, 1);
-
-        var sub = row.Cells[0].AddParagraph(statement.CompanyName);
-        sub.Format.Font.Size = 9.5;
-        sub.Format.Font.Bold = true;
-        sub.Format.Font.Color = Gold;
-
-        var stamp = row.Cells[1].AddParagraph("SUBCONTRACTOR ACCOUNT");
-        stamp.Format.Font.Size = 10;
-        stamp.Format.Font.Bold = true;
-        stamp.Format.Font.Color = White;
-        SpaceAfter(stamp, 2);
-
-        var date = row.Cells[1].AddParagraph($"Statement date  {Date(statement.GeneratedAt)}");
-        date.Format.Font.Size = 8;
-        date.Format.Font.Color = Gold;
-
-        Hairline(section);
-    }
+    private static void AddHeaderBand(Section section, SubcontractorStatement statement) =>
+        CleanHeader(section, "Statement of account", statement.CompanyName,
+            new HeaderFact("SUBCONTRACTOR ACCOUNT"),
+            new HeaderFact($"Statement date  {Date(statement.GeneratedAt)}"));
 
     private static void AddDetailsGrid(Section section, SubcontractorStatement statement)
     {

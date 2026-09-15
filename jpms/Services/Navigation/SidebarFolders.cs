@@ -126,6 +126,10 @@ public static class SidebarFolders
                 // BCI-#### inspection stages (plus each inspection's own detail page).
                 new SidebarRow(new NavigationItem("Building Control", "/projects/{project}/building-control"),
                     DesktopNavigation.DirectorRoles),
+                // Health & safety (2026-09-15): the officer's site audits (HSA-####, scored as her
+                // workbook scores them), the corrective actions they mint, and the H&S register.
+                new SidebarRow(new NavigationItem("H&S", "/projects/{project}/hs"),
+                    DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Communications", "/projects/{project}/communications"),
                     DesktopNavigation.DirectorRoles),
                 // Internal-only titled free-text notes for the office — door codes, key safes,

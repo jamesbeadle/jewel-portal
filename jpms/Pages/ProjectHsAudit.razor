@@ -1,0 +1,152 @@
+@page "/projects/{ProjectId}/hs/audits/{HsAuditId}"
+@using Jewel.JPMS.Contracts.Hs
+@using Jewel.JPMS.Features.Hs.Audits
+@inject AuthService Auth
+@inject SessionService Session
+@inject NavigationManager Nav
+@inject HsAuditReadModel Audits
+@inject ICommandSender Commands
+@implements IDisposable
+
+<PageTitle>H&S Audit · JPMS</PageTitle>
+
+@*
+    One site audit — the officer's inspection report form (2026-09-15, the workbook Katy-Louise
+    was filing by email, item for item). The header is the report's front sheet; the score chip is
+    the spreadsheet's figure, live as the rows change; each section below is one block of the
+    framework, saved a section at a time. Issue is the officer's declaration and mints the
+    corrective actions onto the project's H&S register; Close is the manager's declaration that
+    they are done, and the register has to agree before it is accepted.
+*@
+
+<Page>
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="hs">
+        <LoadGate IsLoading="@(!Audits.ViewLoadedFor(HsAuditId) && !dataFailed)" Prominent="true" Label="Loading the audit">
+        @if (dataFailed && !Audits.ViewLoadedFor(HsAuditId))
+        {
+            <p class="text-sm text-content-muted">The audit couldn't be loaded just now — the error toast has the detail. Reload the page to retry.</p>
+        }
+        else if (View is { } view)
+        {
+            <PageHeader Title="@($"{view.Audit.Reference} · {view.Audit.Type.DisplayName()} audit")"
+                        Eyebrow="H&S site audit"
+                        Subtitle="@SubtitleFor(view.Audit)">
+                <Actions>
+                    <Pill Tone="@view.Audit.Status.ToTone()">@view.Audit.Status.DisplayName()</Pill>
+                    @if (LiveScore is { } score)
+                    {
+                        <Pill Tone="@HsAuditScoring.RatingOf(score).ToTone()" Title="@HsAuditScoring.RatingOf(score).DisplayName()">
+                            @HsAuditScoring.PercentText(score) · @HsAuditScoring.RatingOf(score).DisplayName()
+                        </Pill>
+                    }
+                    else
+                    {
+                        <Pill Tone="Tone.Muted">Not yet scored</Pill>
+                    }
+                    <Toolbar>
+                        <ToolbarButton Icon="chevron-left" Label="Back to the H&S tab" OnClick="BackToTab" />
+                    </Toolbar>
+                </Actions>
+                <Primary>
+                    @if (view.Audit.Status == HsAuditStatus.Draft)
+                    {
+                        <button type="button" class="btn-primary" disabled="@(busy || LiveScore is null)" @onclick="() => issueOpen = true">Issue audit</button>
+                    }
+                    else if (view.Audit.Status == HsAuditStatus.Issued)
+                    {
+                        <button type="button" class="btn-primary" disabled="@busy" @onclick="() => closeOpen = true">Close audit</button>
+                    }
+                </Primary>
+            </PageHeader>
+
+            @if (actionError is { } error)
+            {
+                <Notice Tone="Tone.Negative" Class="mb-4" Dismissible OnDismiss="() => actionError = null">@error</Notice>
+            }
+            @if (HasUnsavedChanges)
+            {
+                <Notice Tone="Tone.Warning" Class="mb-4">Unsaved changes — save each section before issuing.</Notice>
+            }
+
+            <Panel Title="Report" Class="mb-5">
+                <HeaderActions>
+                    @if (IsEditable)
+                    {
+                        <button type="button" class="btn-secondary" disabled="@busy" @onclick="SaveDetailsAsync">Save report details</button>
+                    }
+                </HeaderActions>
+                <ChildContent>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <FormField Label="Type of report">
+                            <select class="field" disabled="@(!IsEditable)" value="@((int)formType)" @onchange="e => formType = ParseType(e)">
+                                @foreach (var type in Enum.GetValues<HsAuditType>())
+                                {
+                                    <option value="@((int)type)">@type.DisplayName()</option>
+                                }
+                            </select>
+                        </FormField>
+                        <FormField Label="Inspection date" Required>
+                            <input type="date" class="field" disabled="@(!IsEditable)" value="@formInspectionDate"
+                                   @onchange="e => formInspectionDate = e.Value?.ToString() ?? string.Empty" />
+                        </FormField>
+                        <FormField Label="Safety officer / inspector" Value="@formSafetyOfficer" OnChange="v => formSafetyOfficer = v" Disabled="@(!IsEditable)" />
+                        <FormField Label="Site manager / supervisor" Value="@formSiteManager" OnChange="v => formSiteManager = v" Disabled="@(!IsEditable)" />
+                        <FormField Label="No. of site operatives">
+                            <input type="number" min="0" class="field" disabled="@(!IsEditable)" value="@formOperatives"
+                                   @onchange="e => formOperatives = e.Value?.ToString() ?? string.Empty" />
+                        </FormField>
+                        <FormField Label="Previous audit score">
+                            <input type="text" class="field" disabled value="@(view.Audit.PreviousScore is { } previous ? HsAuditScoring.PercentText(previous) : "—")" />
+                        </FormField>
+                        <FormField Label="Framework version">
+                            <input type="text" class="field" disabled value="@view.Audit.TemplateVersion" />
+                        </FormField>
+                        <FormField Label="Issued">
+                            <input type="text" class="field" disabled value="@DateText(view.Audit.IssuedAt)" />
+                        </FormField>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-3">
+                        <FormField Label="Summary of work activities">
+                            <textarea class="field" rows="3" maxlength="4000" disabled="@(!IsEditable)"
+                                      value="@formSummary" @oninput="e => formSummary = e.Value?.ToString() ?? string.Empty"></textarea>
+                        </FormField>
+                        <FormField Label="Any further comments">
+                            <textarea class="field" rows="3" maxlength="4000" disabled="@(!IsEditable)"
+                                      value="@formFurtherComments" @oninput="e => formFurtherComments = e.Value?.ToString() ?? string.Empty"></textarea>
+                        </FormField>
+                    </div>
+                </ChildContent>
+            </Panel>
+
+            <Notice Tone="Tone.Muted" Class="mb-5">
+                Rate 0 not in place · 5 in place but a week out of date · 10 up to date. Class A prosecution · B prohibition · C improvement notice · D minor · E compliant.
+                Time-scale I immediately · 1 within 24 hours · 3 / 7 days · 1M a month · O ongoing. Comment N/A · N note · N/C not checked · N/S not seen · R repeat.
+                Score = (Σ rate − Σ minus) ÷ (rated items × 10); unrated items don't count. Under 70% poor · 70–84 fair · 85–94 good · 95+ very good.
+            </Notice>
+
+            @foreach (var section in HsAuditTemplate.Sections)
+            {
+                <HsAuditSectionPanel Section="section" Drafts="DraftsFor(section.Number)" ReadOnly="@(!IsEditable)" Busy="@busy"
+                                     OnSave="entries => SaveItemsAsync(entries)" OnScoreChanged="StateHasChanged" />
+            }
+
+            <ConfirmDialog IsOpen="@issueOpen" Title="Issue this audit?" ConfirmLabel="Issue audit" BusyLabel="Issuing…" Busy="@busy"
+                           OnConfirm="IssueAsync" OnCancel="() => issueOpen = false">
+                <p class="text-sm text-content">
+                    I confirm that this report is a true reflection of the condition of the site and the works being undertaken during my visit,
+                    and that its findings have been explained to the site manager.
+                </p>
+                <p class="text-sm text-content-muted mt-2">
+                    Issuing puts @FindingCount finding@(FindingCount == 1 ? "" : "s") on the project's H&S register as corrective actions — one for every item with an owner or a rate below 10.
+                </p>
+            </ConfirmDialog>
+
+            <Modal IsOpen="@closeOpen" Title="Close the audit" ConfirmLabel="Close audit" ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(managerName))"
+                   OnConfirm="CloseAsync" OnCancel="() => closeOpen = false">
+                <p class="text-sm text-content mb-3">Manager's declaration: I confirm that the actions from the report have been completed to a satisfactory standard.</p>
+                <FormField Label="Name" Required Value="@managerName" OnChange="v => managerName = v" Hint="The audit closes only once every corrective action minted from it is closed on the register." />
+            </Modal>
+        }
+        </LoadGate>
+    </ProjectPageShell>
+</Page>

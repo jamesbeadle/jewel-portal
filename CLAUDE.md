@@ -105,6 +105,57 @@
   lists `proposals[]` with ids and `imagineLinkIssued`), so the assistant can read the enquiry
   and prepare the proposal a person then reads on the lead's page before it goes.
 
+## H&S site audits and the register they mint onto (contracts + api + jpms)
+
+- **A site audit is the officer's inspection workbook, item for item** (Nigel, 2026-09-15, from
+  Katy-Louise's emailed "H&S Inspection Report Framework 27 aug 26.xlsm" and his reply "how we
+  can make the attached work in the portal on the H&S phase"). `HsAudit` (per-project `HSA-####`,
+  `HsAuditStatus` Draft → Issued → Closed, the front-sheet fields, `Score`, `PreviousScore`,
+  `TemplateVersion`) and `HsAuditItem` (one row per framework item: `HsAuditComment`,
+  `HsAuditRate` 0 / 5 / 10, `HsAuditClass` A–E, hand-keyed `Minus`, `HsAuditTimeScale`, findings,
+  `OwnerName`, `DateRectified`, `HsRecordId`). `HsAuditTemplate` (contracts/Models) IS the
+  workbook — 11 sections, 182 items, `Version` "2026-08-27" stamped on every audit planted from
+  it; a change to the framework is a new version, never an edit of a planted audit. The
+  machine-readable extract and the scoping note live in `docs/03-workflows/04-hs/`.
+- **The score is the spreadsheet's, exactly** (`HsAuditScoring`, the one rule, pinned by
+  `HsAuditTests.Score_isTheSpreadsheets_onByFrance`): `max(0, (Σ rate − Σ minus) ÷ (rated items
+  × 10))`, unrated rows out of the denominator, banded Poor < 70% / Fair / Good 85–94 / Very good
+  95+. The class penalties her key describes (A −25% …) are NOT applied by the portal — Nigel's
+  decision, "match the spreadsheet for now"; `Minus` is whatever the officer keys. Recomputed on
+  every `UpdateHsAuditItems` and on Issue; never computed client-side except as the form's live
+  chip (`HsAuditItemDraft.LiveScore`, same rule).
+- **Issue is the officer's declaration and mints the corrective actions** (`IssueHsAuditHandler`
+  → `HsAuditCorrectiveActions`, pure): one `HsRecord` of kind `CorrectiveAction` per FINDING — an
+  item with an owner named OR a rate below 10, unless marked N/A — derived from the row's own
+  facts, not the time-scale (her own archive macro keyed off time-scale alone and would have
+  captured nothing from the By France audit). Severity from class (A Critical, B High, C Medium,
+  else Low), due date from time-scale off the issue date (I today, 1 / 3 / 7 days, 1M = 30, O
+  none), `AssignedToName` = the owner. The item keeps the link (`HsRecordId`); closing that
+  record (`UpdateHsRecordHandler`) stamps the item's `DateRectified`; `CloseHsAudit` (the
+  manager's declaration) is refused while any minted action is still open. One save — an audit
+  is never Issued with half its actions minted.
+- **An H&S record's owner is a person, not a login.** `HsRecord.AssignedToName` (migration
+  `AddHsAudits`, script `add-hs-audits.sql`) beside `AssignedToEmail`; `HsAssignees.IsUnassigned`
+  is the one rule (one of the two is required). The site manager on the sheet's Owner column has
+  no portal account and needs none — the officer tracks the action, he hears about it as he does
+  today. Never require a login to name who owns a finding.
+- **Surfaces.** Project folder → **H&S** (`/projects/{id}/hs`, `ProjectHs`): Audits · Actions
+  (corrective actions, status changed on the row, overdue in warning) · Register (everything
+  else, "Log record"); the audit form is `/projects/{id}/hs/audits/{id}` (`ProjectHsAudit`,
+  sections as `HsAuditSectionPanel`s saved one at a time, Issue via `ConfirmDialog`, Close via a
+  named-manager `Modal`). Gates: `HsAuditRoles.Readers` = AllInternal, `Auditors` = Admin,
+  Director, PM, Site Manager, H&S officer, compliance coordinator. Connector: `list_hs_audits`,
+  `get_hs_audit` (items with the `hsAuditItemId` the write takes), `list_hs_records` (the
+  register was write-only over the connector until now), `create_hs_audit`,
+  `update_hs_audit_details`, `update_hs_audit_items`, `issue_hs_audit` (confirm-first),
+  `close_hs_audit`; page guides on both routes. Seed for the first record:
+  `scripts/2026-09-15-seed-by-france-hs-audit.sql` (HSA-0001 on By France, Draft, her rows —
+  a person presses Issue).
+- **Not built yet (workflow 04 keeps them):** mobilisation checklist and gate, scheduled
+  inspections with overdue escalation, incident investigation, permits-to-work, temporary works,
+  subcontractor RAMS/induction acceptance, the H&S officer's role-home tiles, a printable report
+  in her layout, `create_hs_audit_from_message` for the next audit she emails.
+
 ## Work-order mail tags are project-qualified (api + jpms)
 
 - **A work order's tag stem carries its project** (2026-09-14, the By France / Coombe Lane

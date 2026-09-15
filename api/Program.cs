@@ -27,6 +27,7 @@ using Jewel.JPMS.Api.Features.Directory;
 using Jewel.JPMS.Api.Features.DocumentControl;
 using Jewel.JPMS.Api.Features.Drawings;
 using Jewel.JPMS.Api.Features.Hs;
+using Jewel.JPMS.Api.Features.Hs.Audits;
 using Jewel.JPMS.Api.Features.Inventory;
 using Jewel.JPMS.Api.Features.SiteInstructions;
 using Jewel.JPMS.Api.Features.Kpi;
@@ -108,6 +109,7 @@ var host = new HostBuilder()
         services.AddPortalFeature();
         services.AddClientPortalFeature();
         services.AddHsFeature();
+        services.AddHsAuditFeature();
         services.AddMobilisationFeature();
         services.AddSiteFeature();
         services.AddCommercialFeature();

@@ -12,61 +12,17 @@ public static partial class RequestDocumentRenderer
 {
     private static void AddHeaderBand(Section section, RequestDocumentModel model)
     {
-        var table = section.AddTable();
-        table.Borders.Width = 0;
-        var left = table.AddColumn(Unit.FromCentimeter(11.3));
-        var right = table.AddColumn(Unit.FromCentimeter(6.5));
-        right.Format.Alignment = ParagraphAlignment.Right;
-
-        var row = table.AddRow();
-        row.Shading.Color = Navy;
-        row.TopPadding = Unit.FromMillimeter(4);
-        row.BottomPadding = Unit.FromMillimeter(4);
-        row.Cells[0].Format.LeftIndent = Unit.FromMillimeter(4);
-        row.Cells[1].Format.RightIndent = Unit.FromMillimeter(4);
-        row.Cells[0].VerticalAlignment = VerticalAlignment.Center;
-        row.Cells[1].VerticalAlignment = VerticalAlignment.Center;
-
-        // Left: official logo, white type name, gold reference line.
-        // The official Jewel Bespoke Build logo leads the band — the gold/orange registered
-        // artwork reads directly on the navy ground (embedded once in DocumentBranding).
-        DocumentBranding.AddLogo(row.Cells[0], Unit.FromCentimeter(3.4), Unit.FromMillimeter(1.5));
-
-        var heading = row.Cells[0].AddParagraph(model.TypeLong.ToUpperInvariant());
-        heading.Format.Font.Size = 17;
-        heading.Format.Font.Bold = true;
-        heading.Format.Font.Color = White;
-        SpaceAfter(heading, 1);
-
+        // The clean house top (2026-09-15): logo, the document name and its reference on the
+        // left; the status and the dates the correspondent cares about on the right. The issued
+        // date is the recorded issue date when one has been set, else the raised date
+        // (IssuedDisplayDate); overdue reads in orange.
         var refLine = string.IsNullOrEmpty(model.DisplayReference)
             ? model.TypeShort
             : $"{model.DisplayReference}  ·  {model.TypeShort}";
-        var sub = row.Cells[0].AddParagraph(refLine);
-        sub.Format.Font.Size = 9.5;
-        sub.Format.Font.Bold = true;
-        sub.Format.Font.Color = Gold;
-
-        // Right: status + key dates.
-        var status = row.Cells[1].AddParagraph(model.StatusLabel.ToUpperInvariant());
-        status.Format.Font.Size = 10;
-        status.Format.Font.Bold = true;
-        status.Format.Font.Color = model.IsOverdue ? Orange : White;
-        SpaceAfter(status, 2);
-
-        // The issued date is what the correspondent cares about; the recorded issue date when one has
-        // been set on the request, falling back to the raised date until then (see IssuedDisplayDate).
-        var issued = row.Cells[1].AddParagraph($"Issued  {Date(model.IssuedDisplayDate)}");
-        issued.Format.Font.Size = 8;
-        issued.Format.Font.Color = White;
-        SpaceAfter(issued, 0.5);
-
-        var dueText = model.ResponseDue is { } due ? Date(due) : "—";
-        var due2 = row.Cells[1].AddParagraph($"Response due  {dueText}");
-        due2.Format.Font.Size = 8;
-        due2.Format.Font.Color = model.IsOverdue ? Orange : Gold;
-
-        // Orange hairline directly beneath the band.
-        Hairline(section);
+        CleanHeader(section, model.TypeLong, refLine,
+            new HeaderFact(model.StatusLabel.ToUpperInvariant(), model.IsOverdue ? Orange : null),
+            new HeaderFact($"Issued  {Date(model.IssuedDisplayDate)}"),
+            new HeaderFact($"Response due  {(model.ResponseDue is { } due ? Date(due) : "—")}", model.IsOverdue ? Orange : null, Bold: model.IsOverdue));
     }
 
     private static void AddTitleBlock(Section section, RequestDocumentModel model)
@@ -192,7 +148,7 @@ public static partial class RequestDocumentRenderer
             table.AddColumn(Unit.FromCentimeter(4.1));   // Response
 
             var head = table.AddRow();
-            head.Shading.Color = Navy;
+            head.Shading.Color = Gold;
             head.HeadingFormat = true;                   // repeat the header when the table breaks pages
             HeaderCell(head.Cells[0], "Item");
             HeaderCell(head.Cells[1], "Drawing ref");
@@ -330,7 +286,7 @@ public static partial class RequestDocumentRenderer
         table.AddColumn(Unit.FromCentimeter(2.8));
 
         var head = table.AddRow();
-        head.Shading.Color = Navy;
+        head.Shading.Color = Gold;
         HeaderCell(head.Cells[0], "Name");
         HeaderCell(head.Cells[1], "Email");
         HeaderCell(head.Cells[2], "Organisation");

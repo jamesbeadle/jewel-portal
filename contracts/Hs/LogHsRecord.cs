@@ -9,4 +9,5 @@ public sealed record LogHsRecord(
     string Summary,
     HsSeverity Severity,
     string AssignedToEmail,
-    DateTimeOffset? DueAt) : ICommand<HsRecord>;
+    DateTimeOffset? DueAt,
+    string AssignedToName = "") : ICommand<HsRecord>;

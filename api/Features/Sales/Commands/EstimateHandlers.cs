@@ -40,7 +40,7 @@ public sealed class CreateEstimateHandler : ICommandHandler<CreateEstimate, Lead
         context.LeadEstimates.Add(entity);
         EstimateTimeline.Write(context, entity, $"Estimate {entity.Reference} opened", command.CreatedByEmail, now);
         await context.SaveChangesAsync(cancellationToken);
-        return entity.ToModel();
+        return entity.ToModel(Array.Empty<LeadEstimateLineEntity>());
     }
 }
 
@@ -52,7 +52,10 @@ public sealed class GetEstimateHandler : IQueryHandler<GetEstimate, LeadEstimate
     public async Task<LeadEstimate?> HandleAsync(GetEstimate query, CancellationToken cancellationToken)
     {
         var entity = await EstimateLookup.FindAsync(context.LeadEstimates.AsNoTracking(), query.EstimateId, cancellationToken);
-        return entity?.ToModel();
+        if (entity is null) return null;
+        var lines = await context.LeadEstimateLines.AsNoTracking()
+            .Where(line => line.EstimateId == entity.EstimateId).ToListAsync(cancellationToken);
+        return entity.ToModel(lines);
     }
 }
 

@@ -21,6 +21,23 @@ public sealed partial class SalesEstimateEndpoints
         return await Run(() => update.HandleAsync(command, request.HttpContext.RequestAborted));
     }
 
+    [Function(nameof(SetEstimateBreakdown))]
+    public async Task<IActionResult> Breakdown(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "sales/estimates/{estimateId}/breakdown")] HttpRequest request, string estimateId)
+    {
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        var posted = await request.ReadFromJsonAsync<SetEstimateBreakdown>();
+        if (posted is null) return new BadRequestResult();
+        if (posted.EstimateId != estimateId) return new BadRequestObjectResult("Route estimateId does not match body.");
+        var command = posted with { ChangedByEmail = signedInUser.Email };
+        auditActor.Email = signedInUser.Email;
+        if (!breakdownAuthorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
+        var outcome = breakdownValidation.Check(command);
+        if (outcome.HasFailed) return new BadRequestObjectResult(outcome.Errors);
+        return await Run(() => breakdown.HandleAsync(command, request.HttpContext.RequestAborted));
+    }
+
     [Function(nameof(MoveEstimateStatus))]
     public async Task<IActionResult> Move(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "sales/estimates/{estimateId}/status")] HttpRequest request, string estimateId)

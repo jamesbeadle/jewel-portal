@@ -171,6 +171,29 @@ Open → In progress → Resolved → Verified; "Emails" expands a row to its ta
 correspondence. Also raised from a subcontractor email in the Control Centre
 (System Tags → Create new → Defect); further tagging happens there too.
 
+### H&S — `/projects/{project}/hs`
+Health & safety in three panes (2026-09-15). **Audits**: the officer's site
+inspection reports, **HSA-####** per project, planted from the inspection
+framework (11 sections, 182 items — Katy-Louise's workbook item for item) and
+scored exactly as her spreadsheet scores it: (Σ rate − Σ minus) ÷ (rated × 10),
+unrated rows excluded, banded Poor < 70% / Fair / Good 85–94 / Very good 95+.
+Status Draft → Issued → Closed. "New audit" (type, date, officer, site manager)
+opens the form. **Actions**: the corrective actions on the H&S register, most
+minted by an audit's Issue; owner is a person's NAME (no login needed); status
+changed on the row; overdue rows in warning. **Register**: observations, near
+misses, incidents, toolbox talks, permits — "Log record".
+
+### H&S Audit — `/projects/{project}/hs/audits/{audit}`
+The inspection report form: Report panel (front sheet), live score pill, then
+one panel per section with the row's comment code (N/A, N, N/C, N/S, R), rate
+0 / 5 / 10, class A–E, minus, time-scale (I, 1, 3, 7, 1M, O), findings, owner,
+date rectified — "Save section" per panel. "Issue audit" = the officer's
+declaration: Draft → Issued and one corrective action per finding (owner named
+or rate below 10, not N/A) — severity from class, due date from time-scale,
+linked back to its row (an "Action" pill). "Close audit" = the manager's
+declaration, refused while any minted action is open; closing an action on the
+register stamps the row's date rectified. Closed audits are read-only.
+
 ### Communications — `/projects/{project}/communications`
 Roll-up of ALL correspondence tagged to this project's records, read live,
 newest first. Pathway filter (Client / Subcontractor / Internal) and "Tagged

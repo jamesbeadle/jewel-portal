@@ -57,13 +57,13 @@ public sealed class HttpHsRegister : IHsRegister
 
     private async Task LogAsync(HsRecord record)
     {
-        await commands.SendAsync(new LogHsRecord(record.ProjectId, record.Kind, record.Summary, record.Severity, record.AssignedToEmail, record.DueAt), CancellationToken.None);
+        await commands.SendAsync(new LogHsRecord(record.ProjectId, record.Kind, record.Summary, record.Severity, record.AssignedToEmail, record.DueAt, record.AssignedToName), CancellationToken.None);
         await readModel.RefreshAsync(CancellationToken.None);
     }
 
     private async Task UpdateAsync(HsRecord record)
     {
-        await commands.SendAsync(new UpdateHsRecord(record.HsRecordId, record.Summary, record.Severity, record.Status, record.AssignedToEmail, record.DueAt), CancellationToken.None);
+        await commands.SendAsync(new UpdateHsRecord(record.HsRecordId, record.Summary, record.Severity, record.Status, record.AssignedToEmail, record.DueAt, record.AssignedToName), CancellationToken.None);
         await readModel.RefreshAsync(CancellationToken.None);
     }
 }

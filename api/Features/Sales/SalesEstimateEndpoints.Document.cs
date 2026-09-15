@@ -23,7 +23,9 @@ public sealed partial class SalesEstimateEndpoints
             .FirstOrDefaultAsync(row => row.LeadId == estimateEntity.LeadId, cancellationToken);
         if (leadEntity is null) return new NotFoundObjectResult($"Lead {estimateEntity.LeadId} not found.");
 
-        var estimate = estimateEntity.ToModel();
+        var lines = await context.LeadEstimateLines.AsNoTracking()
+            .Where(line => line.EstimateId == estimateEntity.EstimateId).ToListAsync(cancellationToken);
+        var estimate = estimateEntity.ToModel(lines);
         var lead = leadEntity.ToModel(null);
         var pdf = EstimateDocumentRenderer.Render(new EstimateDocumentRenderer.Model(estimate, lead, DateTimeOffset.UtcNow));
         return new FileContentResult(pdf, "application/pdf") { FileDownloadName = EstimateDocumentRenderer.FileName(estimate, lead) };

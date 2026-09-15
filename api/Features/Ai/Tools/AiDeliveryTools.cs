@@ -41,6 +41,9 @@ internal static partial class AiDeliveryTools
     {
         ListCalendarEvents(),
         GetBuildingControl(),
+        ListHsAudits(),
+        GetHsAudit(),
+        ListHsRecords(),
         GetProgramme(),
         ListArchitectInstructions(),
         ListProgress(),

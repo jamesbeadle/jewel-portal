@@ -28,14 +28,16 @@ public sealed class DocumentFontResolver : IFontResolver
 
     private static readonly string[] RegularCandidates =
     {
-        "DejaVuSans.ttf", "LiberationSans-Regular.ttf", "Lato-Regular.ttf",
+        // Poppins first (2026-09-15, Nigel: the documents follow the tender's branding) — shipped
+        // in the API's fonts folder under the OFL; the rest are the host fallbacks.
+        "Poppins-Regular.ttf", "DejaVuSans.ttf", "LiberationSans-Regular.ttf", "Lato-Regular.ttf",
         "Arial.ttf", "arial.ttf", "Helvetica.ttf", "Verdana.ttf", "verdana.ttf",
         "FreeSans.ttf", "NotoSans-Regular.ttf", "OpenSans-Regular.ttf"
     };
 
     private static readonly string[] BoldCandidates =
     {
-        "DejaVuSans-Bold.ttf", "LiberationSans-Bold.ttf", "Lato-Bold.ttf",
+        "Poppins-Bold.ttf", "DejaVuSans-Bold.ttf", "LiberationSans-Bold.ttf", "Lato-Bold.ttf",
         "Arial-Bold.ttf", "arialbd.ttf", "Helvetica-Bold.ttf", "Verdana-Bold.ttf", "verdanab.ttf",
         "FreeSansBold.ttf", "NotoSans-Bold.ttf", "OpenSans-Bold.ttf"
     };

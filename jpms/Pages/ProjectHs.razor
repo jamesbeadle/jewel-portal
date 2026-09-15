@@ -1,0 +1,176 @@
+@page "/projects/{ProjectId}/hs"
+@using Jewel.JPMS.Contracts.Hs
+@using Jewel.JPMS.Features.Hs
+@using Jewel.JPMS.Features.Hs.Audits
+@inject AuthService Auth
+@inject SessionService Session
+@inject NavigationManager Nav
+@inject HsAuditReadModel Audits
+@inject HsRecordsReadModel Records
+@inject IHsRegister Register
+@inject ICommandSender Commands
+@implements IDisposable
+
+<PageTitle>H&S · JPMS</PageTitle>
+
+@*
+    The project's health & safety (2026-09-15): three panes over two records. Audits — the
+    officer's site inspection reports (HSA-####, the workbook brought into the portal), each
+    scored as her spreadsheet scores it. Actions — the corrective actions on the H&S register,
+    most of them minted by an audit's Issue, each owned by a person and closed here when done.
+    Register — everything else on the register: observations, near misses, incidents, toolbox
+    talks, permits.
+*@
+
+<Page>
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="hs">
+        <SectionHeader Title="Health & Safety">
+            <Actions>
+                @if (Pane == AuditsPane)
+                {
+                    <button type="button" class="btn-primary" @onclick="() => newAuditOpen = true">New audit</button>
+                }
+                else if (Pane == RegisterPane)
+                {
+                    <button type="button" class="btn-primary" @onclick="() => logRecordOpen = true">Log record</button>
+                }
+            </Actions>
+        </SectionHeader>
+
+        <TabRow Items="Panes" ActiveKey="@Pane" AriaLabel="H&S views" />
+
+        @if (actionError is { } error)
+        {
+            <Notice Tone="Tone.Negative" Class="mb-4" Dismissible OnDismiss="() => actionError = null">@error</Notice>
+        }
+
+        @if (Pane == AuditsPane)
+        {
+            <RecordsTable Dense="true" MaxHeight="" IsLoading="@(!Audits.LoadedFor(ProjectId) && !dataFailed)"
+                          IsEmpty="@(AuditRows.Count == 0)" EmptyMessage="No audits on this project yet — New audit plants the inspection framework for the officer to fill in on site.">
+                <thead>
+                    <tr>
+                        <th>Ref</th>
+                        <th>Inspected</th>
+                        <th>Type</th>
+                        <th>Safety officer</th>
+                        <th>Site manager</th>
+                        <th class="text-right">Score</th>
+                        <th>Rating</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var audit in AuditRows)
+                    {
+                        <tr @key="audit.HsAuditId" class="is-clickable" @onclick="() => OpenAudit(audit)">
+                            <td class="font-mono text-xs whitespace-nowrap">@audit.Reference</td>
+                            <td class="whitespace-nowrap">@DateText(audit.InspectionDate)</td>
+                            <td>@audit.Type.DisplayName()</td>
+                            <td>@audit.SafetyOfficerName</td>
+                            <td>@audit.SiteManagerName</td>
+                            <td class="text-right whitespace-nowrap">@(audit.Score is { } score ? HsAuditScoring.PercentText(score) : "—")</td>
+                            <td>
+                                @if (audit.Rating is { } rating)
+                                {
+                                    <Pill Tone="@rating.ToTone()">@rating.DisplayName()</Pill>
+                                }
+                            </td>
+                            <td><Pill Tone="@audit.Status.ToTone()">@audit.Status.DisplayName()</Pill></td>
+                        </tr>
+                    }
+                </tbody>
+            </RecordsTable>
+        }
+        else
+        {
+            var rows = Pane == ActionsPane ? ActionRows : RegisterRows;
+            <RecordsTable Dense="true" MaxHeight="" IsLoading="@(Records.Current is null && !dataFailed)"
+                          IsEmpty="@(rows.Count == 0)"
+                          EmptyMessage="@(Pane == ActionsPane ? "No corrective actions on this project — issuing an audit puts its findings here." : "Nothing on the register for this project yet.")">
+                <thead>
+                    <tr>
+                        @if (Pane == RegisterPane) { <th>Kind</th> }
+                        <th>Summary</th>
+                        <th>Owner</th>
+                        <th>Severity</th>
+                        <th>Raised</th>
+                        <th>Due</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var record in rows)
+                    {
+                        <tr @key="record.HsRecordId" class="@(IsOverdue(record) ? "text-warning" : "")">
+                            @if (Pane == RegisterPane) { <td class="whitespace-nowrap">@record.Kind.KindDisplayName()</td> }
+                            <td class="max-w-lg">@record.Summary</td>
+                            <td class="whitespace-nowrap">@OwnerOf(record)</td>
+                            <td><Pill Tone="@record.Severity.ToTone()">@record.Severity</Pill></td>
+                            <td class="whitespace-nowrap">@DateText(record.RaisedAt)</td>
+                            <td class="whitespace-nowrap">@DateText(record.DueAt)</td>
+                            <td>
+                                <select class="field py-1" value="@((int)record.Status)" disabled="@busy"
+                                        @onchange="e => SetStatusAsync(record, e)">
+                                    @foreach (var status in Enum.GetValues<HsStatus>())
+                                    {
+                                        <option value="@((int)status)">@StatusLabel(status)</option>
+                                    }
+                                </select>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </RecordsTable>
+        }
+
+        <Modal IsOpen="@newAuditOpen" Title="New site audit" ConfirmLabel="Start audit" ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(newInspectionDate))"
+               OnConfirm="CreateAuditAsync" OnCancel="() => newAuditOpen = false">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField Label="Type of report">
+                    <select class="field" value="@((int)newType)" @onchange="e => newType = ParseType(e)">
+                        @foreach (var type in Enum.GetValues<HsAuditType>())
+                        {
+                            <option value="@((int)type)">@type.DisplayName()</option>
+                        }
+                    </select>
+                </FormField>
+                <FormField Label="Inspection date" Required>
+                    <input type="date" class="field" value="@newInspectionDate" @onchange="e => newInspectionDate = e.Value?.ToString() ?? string.Empty" />
+                </FormField>
+                <FormField Label="Safety officer / inspector" Value="@newSafetyOfficer" OnChange="v => newSafetyOfficer = v" />
+                <FormField Label="Site manager / supervisor" Value="@newSiteManager" OnChange="v => newSiteManager = v" />
+            </div>
+            <p class="text-xs text-content-subtle mt-3">Every item of the inspection framework (@HsAuditTemplate.Items.Count items in @HsAuditTemplate.Sections.Count sections) is planted blank for the officer to fill in.</p>
+        </Modal>
+
+        <Modal IsOpen="@logRecordOpen" Title="Log an H&S record" ConfirmLabel="Log record" ConfirmDisabled="@(busy || !LogFormReady)"
+               OnConfirm="LogRecordAsync" OnCancel="() => logRecordOpen = false">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <FormField Label="Kind">
+                    <select class="field" value="@((int)logKind)" @onchange="e => logKind = ParseKind(e)">
+                        @foreach (var kind in Enum.GetValues<HsRecordKind>())
+                        {
+                            <option value="@((int)kind)">@kind.KindDisplayName()</option>
+                        }
+                    </select>
+                </FormField>
+                <FormField Label="Severity">
+                    <select class="field" value="@((int)logSeverity)" @onchange="e => logSeverity = ParseSeverity(e)">
+                        @foreach (var severity in Enum.GetValues<HsSeverity>())
+                        {
+                            <option value="@((int)severity)">@severity</option>
+                        }
+                    </select>
+                </FormField>
+                <FormField Label="Owner" Required Value="@logOwner" OnChange="v => logOwner = v" Hint="A person's name — they need no portal login." />
+                <FormField Label="Due">
+                    <input type="date" class="field" value="@logDue" @onchange="e => logDue = e.Value?.ToString() ?? string.Empty" />
+                </FormField>
+            </div>
+            <FormField Label="Summary" Required Class="mt-3">
+                <textarea class="field" rows="3" maxlength="512" value="@logSummary" @oninput="e => logSummary = e.Value?.ToString() ?? string.Empty"></textarea>
+            </FormField>
+        </Modal>
+    </ProjectPageShell>
+</Page>

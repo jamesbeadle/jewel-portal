@@ -19,6 +19,7 @@ public sealed class LogHsRecordHandler : ICommandHandler<LogHsRecord, HsRecord>
             Severity = (int)command.Severity,
             Status = (int)HsStatus.Open,
             AssignedToEmail = command.AssignedToEmail,
+            AssignedToName = command.AssignedToName,
             RaisedAt = DateTimeOffset.UtcNow,
             DueAt = command.DueAt,
             ClosedAt = null

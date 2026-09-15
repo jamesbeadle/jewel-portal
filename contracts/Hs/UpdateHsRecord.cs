@@ -9,4 +9,5 @@ public sealed record UpdateHsRecord(
     HsSeverity Severity,
     HsStatus Status,
     string AssignedToEmail,
-    DateTimeOffset? DueAt) : ICommand<HsRecord>;
+    DateTimeOffset? DueAt,
+    string AssignedToName = "") : ICommand<HsRecord>;

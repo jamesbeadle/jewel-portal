@@ -141,6 +141,22 @@ public static class StatusTones
         _ => Tone.Muted
     };
 
+    public static Tone ToTone(this HsAuditStatus status) => status switch
+    {
+        HsAuditStatus.Issued => Tone.Info,
+        HsAuditStatus.Closed => Tone.Positive,
+        _ => Tone.Muted
+    };
+
+    // The spreadsheet's rating bands: under 70% is the report-required red.
+    public static Tone ToTone(this HsAuditRating rating) => rating switch
+    {
+        HsAuditRating.VeryGood => Tone.Positive,
+        HsAuditRating.Good => Tone.Positive,
+        HsAuditRating.Fair => Tone.Warning,
+        _ => Tone.Negative
+    };
+
     public static Tone ToTone(this HsSeverity severity) => severity switch
     {
         HsSeverity.Critical => Tone.Negative,

@@ -33,6 +33,7 @@ public sealed record HsRecord(
     HsSeverity Severity,
     HsStatus Status,
     string AssignedToEmail,
+    string AssignedToName,
     DateTimeOffset RaisedAt,
     DateTimeOffset? DueAt,
     DateTimeOffset? ClosedAt);

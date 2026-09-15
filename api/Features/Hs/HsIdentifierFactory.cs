@@ -6,4 +6,6 @@ internal static class HsIdentifierFactory
 
     public static string NextHsRecordId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextHsRecordAttendanceId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextHsAuditId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextHsAuditItemId() => Guid.NewGuid().ToString(CompactGuidFormat);
 }
