@@ -7,7 +7,7 @@ public sealed partial class MailboxGraphClient : IMailboxGraphClient
 {
     private const string GraphBase = "https://graph.microsoft.com/v1.0";
     private const string Summary =
-        "id,internetMessageId,conversationId,subject,bodyPreview,from,receivedDateTime,hasAttachments,categories,isDraft";
+        "id,internetMessageId,conversationId,subject,bodyPreview,from,toRecipients,ccRecipients,receivedDateTime,sentDateTime,hasAttachments,categories,isDraft";
 
     private readonly HttpClient _http;
     private readonly GraphTokenProvider _tokens;

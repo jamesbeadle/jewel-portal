@@ -15,6 +15,13 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools;
 /// query handler its endpoint composes and carries the endpoint's own role gate: the queue and
 /// search follow TriageRoles, the document-triage queue follows DocumentControlRoles, and the
 /// project communications roll-up is every internal role, exactly as over HTTP.
+///
+/// Every tool here reads ONE mailbox, live: the shared projects mailbox (MailboxIntakeOptions.
+/// Mailbox), every folder, Sent Items included. Nothing is filed into it and nothing is stored — a message is here
+/// because that mailbox sent or received it. Mail sent from a person's own account without the
+/// projects mailbox copied is not here and never will be (2026-09-15, the MD's Portal-vs-Outlook
+/// note: a thin result was read as "a file store that only shows what has been filed"). The tool
+/// descriptions say so, so the model reports the scope instead of inventing one.
 /// </summary>
 internal static class AiMailboxTools
 {
@@ -27,13 +34,23 @@ internal static class AiMailboxTools
     private static string Serialise(object value) => JsonSerializer.Serialize(value, Json);
     private static string Fail(string message) => Serialise(new { ok = false, error = message });
 
-    private static object Row(MailboxMessage message) => new
+    private const string MailboxScope =
+        "This is the shared projects mailbox (the mailboxAddress get_mailbox_message returns) read "
+        + "LIVE from Microsoft 365 — every folder, Sent Items included; nothing is filed into it and "
+        + "nothing is stored in the portal. Mail sent from a person's own "
+        + "account without the projects mailbox copied is not here — for that, the person's own "
+        + "mailbox is the source. ";
+
+    internal static object Row(MailboxMessage message) => new
     {
         messageId = message.Id,
         internetMessageId = message.InternetMessageId,
         from = new { email = message.FromEmail, name = message.FromName },
+        to = message.To,
+        cc = message.Cc,
         message.Subject,
         preview = message.BodyPreview,
+        message.SentAt,
         message.ReceivedAt,
         message.HasAttachments,
         tags = message.Categories,
@@ -57,7 +74,8 @@ internal static class AiMailboxTools
         {
             new(
                 "list_triage_queue",
-                "The Control Centre's mailbox views, read live: view \"queue\" is untriaged Inbox "
+                MailboxScope
+                + "The Control Centre's mailbox views: view \"queue\" is untriaged Inbox "
                 + "mail waiting for a decision (oldest first by default — the backlog clears from "
                 + "page one), \"discarded\" is mail set aside, \"tagged\" is mail already carrying "
                 + "JPMS tags (optionally filtered to specific tags — a record's stem like "
@@ -105,11 +123,14 @@ internal static class AiMailboxTools
 
             new(
                 "get_mailbox_message",
-                "One mailbox email in full, read live: sanitised body, envelope (from/to/cc, "
-                + "subject), its current JPMS tags and pathway bucket, its attachments with the "
-                + "ids read_email_attachment takes, and the replyAll envelope a reply starts from "
-                + "(what send_mailbox_email takes). Works for ANY mailbox message — triaged or "
-                + "not. A very long body is clipped and the result says so.",
+                MailboxScope
+                + "One email in full: the complete sanitised body, the envelope as sent (from, to, "
+                + "cc, and bcc on the mailbox's own sent copies), its current JPMS tags and pathway "
+                + "bucket, its attachments with the ids read_email_attachment takes, and the "
+                + "replyAll envelope a reply starts from (what send_mailbox_email takes). Works for "
+                + "ANY mailbox message — triaged or not. Search and list rows carry only a preview: "
+                + "call this before quoting an email. A very long body is clipped and the result "
+                + "says so.",
                 AiToolSchema.Object(
                     ("messageId", "string", "The message id from list_triage_queue, search_mailbox or a communications listing.", true),
                     ("internetMessageId", "string", "The stable fallback id from the same listing — pass it when you have it.", false)),
@@ -137,6 +158,7 @@ internal static class AiMailboxTools
                         from = new { email = detail.FromEmail, name = detail.FromName },
                         to = detail.To,
                         cc = detail.Cc,
+                        bcc = detail.Bcc,
                         replyTo = detail.ReplyTo,
                         mailboxAddress = detail.MailboxAddress,
                         subject = detail.Subject,
@@ -178,9 +200,12 @@ internal static class AiMailboxTools
 
             new(
                 "search_mailbox",
-                "Search the projects mailbox — sender, subject and body text — returning matching "
-                + "messages newest first with their tags. The same search the Control Centre's "
-                + "email finder runs.",
+                MailboxScope
+                + "Search it — sender, recipients, subject and body text — returning matching "
+                + "messages, relevance-ordered, each with its envelope (from/to/cc), Graph's own "
+                + "sent and received times, a body PREVIEW and its tags. The same search the Control "
+                + "Centre's email finder runs. Rows are not the whole email: get_mailbox_message "
+                + "reads the full body before anything is quoted.",
                 AiToolSchema.Object(
                     ("query", "string", "What to search for.", true),
                     ("take", "number", "Maximum results, default 25.", false)),

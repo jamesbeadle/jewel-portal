@@ -527,4 +527,37 @@ public sealed class AiConnectorTests
         Assert.False(Jewel.JPMS.Api.Features.Audit.AuditReadGate.Allows(UserWith(Role.FinanceDirector), recordId: null, eventType: AuditEventType.KpiEmailMarked));
         Assert.True(Jewel.JPMS.Api.Features.Audit.AuditReadGate.Allows(UserWith(Role.Admin), recordId: null, eventType: AuditEventType.KpiEmailMarked));
     }
+
+    [Fact]
+    public void MailboxTools_stateTheirScope_andCarryTheEnvelope()
+    {
+        // 2026-09-15, the MD's Portal-vs-Outlook note: a search row showing only the sender and a
+        // received time was read as "a file store that only shows what has been filed". The reads
+        // are the live projects mailbox, every folder — the descriptions say so, and a row carries
+        // the envelope and Graph's send time so nobody has to guess who an email went to.
+        var director = AiToolCatalogue.ForConnector(UserWith(Role.ManagingDirector));
+        foreach (var name in new[] { "search_mailbox", "list_triage_queue", "get_mailbox_message" })
+        {
+            var tool = Assert.Single(director, candidate => candidate.Name == name);
+            Assert.Contains("projects mailbox", tool.Description);
+            Assert.Contains("nothing is stored in the portal", tool.Description);
+            Assert.Contains("Sent Items", tool.Description);
+            Assert.Contains("own account", tool.Description);
+        }
+        Assert.Contains("get_mailbox_message", director.Single(t => t.Name == "search_mailbox").Description);
+        Assert.Contains("bcc", director.Single(t => t.Name == "get_mailbox_message").Description);
+
+        var message = new MailboxMessage(
+            "id", "imid", "paul@example.com", "Paul", "17A", "preview", false,
+            new DateTimeOffset(2026, 9, 11, 8, 54, 0, TimeSpan.Zero), Array.Empty<string>(),
+            To: new[] { "nigel@example.com" }, Cc: new[] { "projects@jewelbb.co.uk" },
+            SentAt: new DateTimeOffset(2026, 9, 11, 8, 53, 0, TimeSpan.Zero));
+        var row = System.Text.Json.JsonSerializer.Serialize(AiMailboxTools.Row(message));
+        Assert.Contains("\"to\":[\"nigel@example.com\"]", row);
+        Assert.Contains("\"cc\":[\"projects@jewelbb.co.uk\"]", row);
+        Assert.Contains("\"SentAt\":\"2026-09-11T08:53:00+00:00\"", row);
+
+        var detail = new MailboxMessageDetail("id", "", false, Array.Empty<IntakeAttachment>(), Bcc: new[] { "fd@example.com" });
+        Assert.Equal(new[] { "fd@example.com" }, detail.Bcc);
+    }
 }

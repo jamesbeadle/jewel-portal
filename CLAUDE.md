@@ -544,6 +544,27 @@ finds drift.
   Save As .xlsx or upload to the chat; .doc → .docx; .msg → open the email; .zip → name the file.
   Never a bare "unsupported".
 
+## The mailbox the connector reads (api)
+
+- **Every mailbox tool reads ONE mailbox, live — the shared projects mailbox, every folder, Sent
+  Items included; nothing is filed into it and nothing is stored in the portal** (2026-09-15, the
+  MD's Portal-vs-Outlook note: `search_mailbox` returned six thin rows for 17A and was read as "a
+  file store that only shows what has been filed"). `search_mailbox` is Graph `$search` over
+  `users/{Mailbox}/messages` (`MailboxGraphClient.SearchAsync`, relevance-ordered, not newest
+  first); the queue / discarded / tagged views are `$filter` reads of the same mailbox. A message is
+  there because the projects mailbox sent or received it — mail sent from a person's own account
+  without the projects mailbox copied never is, and the person's own mailbox is the source for
+  that. The rule for "what did we send / what did they send": the portal answers for anything
+  sent through it or copied to the projects mailbox; Outlook answers for a personal account.
+- **A row carries the envelope, the detail carries the body.** `MailboxMessage` rows (`Summary`
+  `$select`) now carry `To` / `Cc` / `SentAt` beside `From` / `ReceivedAt` — null when a read did
+  not select them; a preview is never the body, so `get_mailbox_message` (full sanitised body,
+  clipped at 30,000 chars and said so) is read before anything is quoted. `MailboxMessageDetail.Bcc`
+  is populated only for the mailbox's own sent copies — Graph never reveals a received message's
+  Bcc. `ReceivedAt` / `SentAt` are Graph's own stamps; there is no filing timestamp anywhere.
+  The three tool descriptions state the scope (`AiMailboxTools.MailboxScope`), pinned by
+  `MailboxTools_stateTheirScope_andCarryTheEnvelope`. Never describe the mailbox as a store.
+
 ## Loading states (jpms)
 
 - **Never render a figure, a row count or an empty state from a store that has not loaded.** A `0`

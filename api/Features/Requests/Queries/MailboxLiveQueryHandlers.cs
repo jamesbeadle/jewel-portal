@@ -170,7 +170,8 @@ public sealed class GetMailboxMessageDetailHandler : IQueryHandler<GetMailboxMes
             content.FromEmail, content.FromName, content.To, content.Cc, content.ReplyTo, content.Subject,
             MailboxAddress: string.IsNullOrWhiteSpace(options.Mailbox) ? null : options.Mailbox,
             Categories: workflowTags,
-            Bucket: bucket);
+            Bucket: bucket,
+            Bcc: content.Bcc);
     }
 
     // The same split the list reads make (MailboxGraphClient.Parse): record tags become chips, the

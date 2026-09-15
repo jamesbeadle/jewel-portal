@@ -30,7 +30,15 @@ public sealed record MailboxMessage(
     // set only on triage-queue reads, and only when the thread was already triaged. This message
     // itself is still untagged and still needs its own triage decision; the UI shows these as a
     // "reply to an already-linked thread" hint so re-linking is one step. Null elsewhere.
-    IReadOnlyList<string>? ThreadTags = null);
+    IReadOnlyList<string>? ThreadTags = null,
+    // The envelope as sent — To and Cc as Graph lists them — and Graph's own sentDateTime, read in
+    // the same $select as the row (2026-09-15, the MD's Portal-vs-Outlook note: a search row that
+    // showed only the sender and receivedDateTime read as "metadata from a file store", when the
+    // read is the live mailbox). Null when the read did not select them; Bcc is never on a row —
+    // Graph reveals it only on the mailbox's own sent copies, so it is MailboxMessageDetail's.
+    IReadOnlyList<string>? To = null,
+    IReadOnlyList<string>? Cc = null,
+    DateTimeOffset? SentAt = null);
 
 // The full, on-demand content of one mailbox message (sanitised HTML body + non-inline attachment
 // metadata), fetched live when a triager opens it. Keyed by the live message id. The envelope
@@ -57,7 +65,11 @@ public sealed record MailboxMessageDetail(
     // (System Actions' Create now raising a record from it); the Control Centre reconciles the
     // open email against these. Null when the read couldn't reach the mailbox.
     IReadOnlyList<string>? Categories = null,
-    string? Bucket = null);
+    string? Bucket = null,
+    // Who the mailbox's OWN sent copy was blind-copied to. Graph fills bccRecipients only on the
+    // sender's copy, so this is populated for a message in the projects mailbox's Sent Items and
+    // empty on anything received; null when the read did not select it.
+    IReadOnlyList<string>? Bcc = null);
 
 // One page of a live, server-side-filtered mailbox read. Graph pages these with an opaque cursor
 // (its own nextLink) rather than an offset, so NextCursor — when non-null — is passed straight back

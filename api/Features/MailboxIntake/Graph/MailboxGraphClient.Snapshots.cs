@@ -95,7 +95,28 @@ public sealed partial class MailboxGraphClient
 
         var conversationId = item.TryGetProperty("conversationId", out var conv) ? conv.GetString() ?? "" : "";
 
-        return new MailboxMessage(id, imid, fromEmail, fromName, subject, preview, hasAttachments, receivedAt, categories, conversationId, bucket);
+        DateTimeOffset? sentAt = null;
+        if (item.TryGetProperty("sentDateTime", out var sdt) && sdt.TryGetDateTimeOffset(out var parsedSentAt))
+            sentAt = parsedSentAt;
+
+        return new MailboxMessage(
+            id, imid, fromEmail, fromName, subject, preview, hasAttachments, receivedAt, categories, conversationId, bucket,
+            To: RecipientAddresses(item, "toRecipients"),
+            Cc: RecipientAddresses(item, "ccRecipients"),
+            SentAt: sentAt);
+    }
+
+    // The envelope as Graph lists it. Null when the read did not select the property (an older
+    // caller, or Graph omitting it), never empty-for-unknown — an empty list means nobody was on it.
+    private static IReadOnlyList<string>? RecipientAddresses(JsonElement item, string property)
+    {
+        if (!item.TryGetProperty(property, out var recipients) || recipients.ValueKind != JsonValueKind.Array) return null;
+        var addresses = new List<string>();
+        foreach (var recipient in recipients.EnumerateArray())
+            if (recipient.TryGetProperty("emailAddress", out var emailAddress) && emailAddress.ValueKind == JsonValueKind.Object
+                && emailAddress.TryGetProperty("address", out var address) && address.GetString() is { Length: > 0 } email)
+                addresses.Add(email);
+        return addresses;
     }
 
     // Graph only accepts attachments up to ~3 MB inline; larger files stream through an upload session.
