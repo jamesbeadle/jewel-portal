@@ -7,20 +7,21 @@ using Xunit;
 
 namespace Jewel.JPMS.Tests;
 
-// The pathway (bucket) rules the 2026-08-27 Control Centre restructure leans on: the four
-// buckets, the Supplier pathway's wiring, and the Materials category's move from the
+// The pathway (bucket) rules the 2026-08-27 Control Centre restructure leans on: the five
+// buckets (Sales joined 2026-09-15 — the pane an estimate enquiry is tagged to its lead on),
+// the Supplier pathway's wiring, and the Materials category's move from the
 // Subcontractor family to the Supplier family with its SubComms-Mats tag stem intact (so mail
 // tagged before the split keeps reading back).
 public sealed class TriagePathwayTests
 {
     [Fact]
-    public void FourBuckets_inDisplayOrder()
+    public void FiveBuckets_inDisplayOrder()
     {
         Assert.Equal(
             new[]
             {
                 TriageCategories.Client, TriageCategories.Subcontractor,
-                TriageCategories.Supplier, TriageCategories.Internal
+                TriageCategories.Supplier, TriageCategories.Sales, TriageCategories.Internal
             },
             TriageCategories.AllBuckets);
     }
@@ -29,9 +30,18 @@ public sealed class TriagePathwayTests
     [InlineData("JPMS/Client")]
     [InlineData("JPMS/Subcontractor")]
     [InlineData("JPMS/Supplier")]
+    [InlineData("JPMS/Sales")]
     [InlineData("JPMS/Internal")]
     public void EveryBucket_isABucketTag(string bucket) =>
         Assert.True(TriageCategories.IsBucketTag(bucket));
+
+    [Fact]
+    public void Lead_filesUnderTheSalesPathway()
+    {
+        Assert.Equal(TriageCategories.Sales, TriageCategories.BucketFor(RecordType.Lead));
+        Assert.Equal(TriageCategories.Sales, TriageCategories.BucketForPathway("Sales"));
+        Assert.Equal("Sales", AuditTrail.PathwayLabel(TriageCategories.Sales));
+    }
 
     [Fact]
     public void SupplierComms_filesUnderTheSupplierPathway() =>

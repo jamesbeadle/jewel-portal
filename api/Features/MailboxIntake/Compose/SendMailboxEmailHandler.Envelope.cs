@@ -16,12 +16,9 @@ public sealed partial class SendMailboxEmailHandler
     private static List<MailboxDraftRecipient> ToDraft(IReadOnlyList<ComposeRecipient> recipients) =>
         recipients.Select(r => new MailboxDraftRecipient(r.Email, r.Name)).ToList();
 
-    private static string? MapPathway(string? pathway) =>
-        string.Equals(pathway?.Trim(), "Client", StringComparison.OrdinalIgnoreCase) ? TriageCategories.Client
-        : string.Equals(pathway?.Trim(), "Subcontractor", StringComparison.OrdinalIgnoreCase) ? TriageCategories.Subcontractor
-        : string.Equals(pathway?.Trim(), "Supplier", StringComparison.OrdinalIgnoreCase) ? TriageCategories.Supplier
-        : string.Equals(pathway?.Trim(), "Internal", StringComparison.OrdinalIgnoreCase) ? TriageCategories.Internal
-        : null;
+    // One mapping for every pathway label, so a pane added to the Control Centre (Sales,
+    // 2026-09-15) files a reply sent from it under its own bucket without a second list here.
+    private static string? MapPathway(string? pathway) => TriageCategories.BucketForPathway(pathway);
 
     private static string Recipients(IReadOnlyList<string> to, IReadOnlyList<string> cc) =>
         cc.Count == 0

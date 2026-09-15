@@ -94,7 +94,8 @@ internal static partial class AiRecordTools
                 "Every email tagged to a record — what its page shows as Communications or Tender "
                 + "responses & related emails — with FULL bodies flattened to text, plus each "
                 + "attachment's name and id. Works for ANY record type: bid packages, variations, "
-                + "requests, work orders, defects, to-dos. This is the tool when the user says \"read "
+                + "requests, work orders, defects, to-dos, sales leads (an estimate enquiry and its "
+                + "drawings). This is the tool when the user says \"read "
                 + "the emails\": tender line items, what a subcontractor quoted, who said what — it "
                 + "all lives here. Each email carries its envelope (to, cc, bcc), so a SENT invite "
                 + "shows who received it (bcc). Defaults to the record on the page in view; nothing else needs "
@@ -104,7 +105,7 @@ internal static partial class AiRecordTools
                     ("recordType", "string",
                         "One of: request, bid_package, variation, variation_quote, work_order, defect, "
                         + "todo, lad, cost_centre, scheduling, subcontractor_comms, valuation_snapshot, "
-                        + "valuation_claim. "
+                        + "valuation_claim, lead (a sales lead's enquiry mail — the Sales pane's record). "
                         + "Defaults to the record in view.", false),
                     ("recordId", "string", "The record's id. Defaults to the record in view.", false),
                     ("maxChars", "number",
@@ -123,7 +124,7 @@ internal static partial class AiRecordTools
                     {
                         return Fail($"Emails cannot be read for \"{typeText}\" — tagged mail exists for: request, "
                             + "bid_package, variation, variation_quote, work_order, defect, todo, lad, "
-                            + "cost_centre, scheduling, subcontractor_comms, valuation_snapshot, valuation_claim.");
+                            + "cost_centre, scheduling, subcontractor_comms, valuation_snapshot, valuation_claim, lead.");
                     }
 
                     IReadOnlyList<MailboxMessage> messages;

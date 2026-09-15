@@ -108,6 +108,12 @@ public static class SalesFeatureRegistration
         Register<WithdrawSalesProposal, SalesProposal, WithdrawSalesProposalHandler, WithdrawSalesProposalAuthorisation, WithdrawSalesProposalValidation>(services);
         Register<ReplyToSalesEmail, SalesReplyOutcome, ReplyToSalesEmailHandler, ReplyToSalesEmailAuthorisation, ReplyToSalesEmailValidation>(services);
         Register<LogSalesEmailToLead, LeadActivity, LogSalesEmailToLeadHandler, LogSalesEmailToLeadAuthorisation, LogSalesEmailToLeadValidation>(services);
+        // The Sales pane (2026-09-15): a lead raised from an enquiry email, and the estimates on a lead.
+        Register<CreateLeadFromMessage, Lead, CreateLeadFromMessageHandler, CreateLeadFromMessageAuthorisation, CreateLeadFromMessageValidation>(services);
+        Register<CreateEstimate, LeadEstimate, CreateEstimateHandler, CreateEstimateAuthorisation, CreateEstimateValidation>(services);
+        Register<UpdateEstimateDetails, LeadEstimate, UpdateEstimateDetailsHandler, UpdateEstimateDetailsAuthorisation, UpdateEstimateDetailsValidation>(services);
+        Register<MoveEstimateStatus, LeadEstimate, MoveEstimateStatusHandler, MoveEstimateStatusAuthorisation, MoveEstimateStatusValidation>(services);
+        services.AddScoped<IQueryHandler<GetEstimate, LeadEstimate?>, GetEstimateHandler>();
         return services;
     }
 

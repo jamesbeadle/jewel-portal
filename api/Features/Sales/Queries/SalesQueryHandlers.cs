@@ -40,11 +40,16 @@ public sealed class GetLeadHandler : IQueryHandler<GetLead, LeadDetail?>
             .Where(proposal => proposal.LeadId == query.LeadId)
             .OrderByDescending(proposal => proposal.Version)
             .ToListAsync(cancellationToken);
+        var estimates = await context.LeadEstimates.AsNoTracking()
+            .Where(estimate => estimate.LeadId == query.LeadId)
+            .OrderByDescending(estimate => estimate.Number)
+            .ToListAsync(cancellationToken);
         return new LeadDetail(
             row.ToModel(strategyName),
             activities.Select(activity => activity.ToModel()).ToList(),
             new LeadImagine(row.ImagineToken, row.ImagineTokenIssuedAt, rounds),
-            proposals.Select(proposal => proposal.ToModel()).ToList());
+            proposals.Select(proposal => proposal.ToModel()).ToList(),
+            estimates.Select(estimate => estimate.ToModel()).ToList());
     }
 }
 

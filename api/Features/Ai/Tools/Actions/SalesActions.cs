@@ -9,9 +9,10 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 /// feed it. Mirrors Features/Sales — each entry's VisibleTo is the same SalesRoles set its
 /// Authorisation class checks, and the stamps copy exactly what SalesLeadEndpoints /
 /// SalesStrategyEndpoints stamp server-side. Reads: list_leads, get_lead, list_sales_strategies,
-/// get_sales_strategy (AiSalesTools).
+/// get_sales_strategy (AiSalesTools). The Sales pane's lead-from-email is
+/// SalesActions.LeadFromMessage and the estimates on a lead are SalesActions.Estimates (2026-09-15).
 /// </summary>
-internal sealed class SalesActions : IAiActionSource
+internal sealed partial class SalesActions : IAiActionSource
 {
     private const string Area = "Sales";
 
@@ -24,7 +25,10 @@ internal sealed class SalesActions : IAiActionSource
         + "source to Strategy), estimatedValue (£, optional), ownerEmail (the portal email of the "
         + "staff member working it — the signed-in user unless they say otherwise).";
 
-    public IEnumerable<AiAction> Build() => new AiAction[]
+    public IEnumerable<AiAction> Build() =>
+        LeadAndStrategyActions().Concat(LeadFromMessageActions()).Concat(EstimateActions());
+
+    private static IEnumerable<AiAction> LeadAndStrategyActions() => new AiAction[]
     {
         new AiAction(
             Name: "capture_lead",

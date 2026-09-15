@@ -54,19 +54,24 @@ public static class TriageCategories
     /// subcontractors (the Control Centre's pathway restructure, 2026-08-27).</summary>
     public const string Supplier = "JPMS/Supplier";
 
+    /// <summary>Pathway tag: correspondence with a prospect before there is a project — an
+    /// estimate enquiry tagged to the sales lead it is about (the Sales pane, 2026-09-15).</summary>
+    public const string Sales = "JPMS/Sales";
+
     /// <summary>Pathway tag: internal Jewel correspondence (to-dos, company admin).</summary>
     public const string Internal = "JPMS/Internal";
 
-    /// <summary>The four pathway tags. Order matters only for display.</summary>
-    public static readonly IReadOnlyList<string> AllBuckets = new[] { Client, Subcontractor, Supplier, Internal };
+    /// <summary>The five pathway tags. Order matters only for display.</summary>
+    public static readonly IReadOnlyList<string> AllBuckets = new[] { Client, Subcontractor, Supplier, Sales, Internal };
 
-    /// <summary>True if a category is one of the four pathway (bucket) tags. Bucket tags share the
+    /// <summary>True if a category is one of the five pathway (bucket) tags. Bucket tags share the
     /// JPMS/ prefix but are NOT workflow tags for queue-membership purposes: an email carrying only a
     /// bucket has no triage decision, so every "does it have a decision" test must exclude them.</summary>
     public static bool IsBucketTag(string category) =>
         category.Equals(Client, StringComparison.OrdinalIgnoreCase)
         || category.Equals(Subcontractor, StringComparison.OrdinalIgnoreCase)
         || category.Equals(Supplier, StringComparison.OrdinalIgnoreCase)
+        || category.Equals(Sales, StringComparison.OrdinalIgnoreCase)
         || category.Equals(Internal, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The pathway a record type files its thread under, or null when the type is
@@ -102,6 +107,7 @@ public static class TriageCategories
         RecordType.Inventory        => Supplier,     // the goods come from a materials/goods supplier
         RecordType.InternalComms    => Internal,     // general staff-to-staff correspondence — the tag IS the filing
         RecordType.SiteInstruction  => Internal,     // Jewel instructing its own site — staff-side by nature (2026-09-03)
+        RecordType.Lead             => Sales,        // a prospect's enquiry, before any project exists (2026-09-15)
         RecordType.CostCentre       => null,     // triager picks the side, per email
         RecordType.CalendarEvent    => null,     // neutral: a site visit, a delivery or a meeting belongs to whichever side arranged it
         RecordType.Todo             => null,     // neutral: never sets or changes a pathway
@@ -116,7 +122,7 @@ public static class TriageCategories
         BucketForPathway(record.Pathway) ?? BucketFor(record.Type);
 
     /// <summary>The bucket category for a short pathway label ("Client", "Subcontractor",
-    /// "Supplier", "Internal" — case-insensitive), or null for blank or unknown text. The
+    /// "Supplier", "Sales", "Internal" — case-insensitive), or null for blank or unknown text. The
     /// inverse of AuditTrail.PathwayLabel; what the triager's explicit pathway choice on
     /// LinkMessageToRecord and a record's own <see cref="LinkableRecord.Pathway"/> both map
     /// through.</summary>
@@ -127,6 +133,7 @@ public static class TriageCategories
         if (p.Equals("Client", StringComparison.OrdinalIgnoreCase)) return Client;
         if (p.Equals("Subcontractor", StringComparison.OrdinalIgnoreCase)) return Subcontractor;
         if (p.Equals("Supplier", StringComparison.OrdinalIgnoreCase)) return Supplier;
+        if (p.Equals("Sales", StringComparison.OrdinalIgnoreCase)) return Sales;
         if (p.Equals("Internal", StringComparison.OrdinalIgnoreCase)) return Internal;
         return null;
     }

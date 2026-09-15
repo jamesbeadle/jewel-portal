@@ -37,6 +37,23 @@ internal static class SalesEntityMapping
         new(entity.LeadActivityId, entity.LeadId, (LeadActivityKind)entity.Kind, entity.Summary,
             entity.OccurredAt, entity.RecordedByEmail);
 
+    public static LeadEstimate ToModel(this LeadEstimateEntity entity) =>
+        new(
+            entity.EstimateId,
+            entity.LeadId,
+            entity.Reference,
+            entity.Scope,
+            entity.ArchitectName,
+            entity.PriceDueOn,
+            entity.BudgetMentioned,
+            entity.Total,
+            entity.Notes,
+            (EstimateStatus)entity.Status,
+            entity.StatusChangedAt,
+            entity.SubmittedAt,
+            entity.CreatedByEmail,
+            entity.CreatedAt);
+
     public static SalesStrategy ToModel(this SalesStrategyEntity entity) =>
         new(
             entity.StrategyId,

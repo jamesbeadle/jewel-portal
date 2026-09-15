@@ -103,6 +103,8 @@ public static class AiRegistryDriftCheck
             [RecordType.ValuationReportSnapshot] = RecordReach.Via("get_valuation_context"),
             // The claims list (ids, names, statuses) comes back with the report.
             [RecordType.ValuationClaim] = RecordReach.Via("get_valuation_context"),
+            // The Sales pane's record (2026-09-15): company-wide, no project; LD-#### resolves too.
+            [RecordType.Lead] = RecordReach.Via("list_leads", "get_lead", "find_by_reference"),
 
             // Record-less tag families: correspondence buckets, not records — there is no id for a
             // list tool to return. read_record_emails reads them when given the scope.

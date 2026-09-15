@@ -560,4 +560,51 @@ public sealed class AiConnectorTests
         var detail = new MailboxMessageDetail("id", "", false, Array.Empty<IntakeAttachment>(), Bcc: new[] { "fd@example.com" });
         Assert.Equal(new[] { "fd@example.com" }, detail.Bcc);
     }
+
+    [Fact]
+    public void SalesPaneAndEstimates_reachTheConnector()
+    {
+        // 2026-09-15, Nigel: an estimate enquiry forwarded to the projects mailbox is tagged on the
+        // Sales pane to the lead it is about — an existing one (file_email_to_record, type Lead) or
+        // a new one raised from the email — so the assistant reads the enquiry and opens an
+        // estimate on the lead. Every button the pane and the lead page get, the connector gets.
+        var names = AiActionRegistry.All.Select(a => a.Name).ToList();
+        foreach (var name in new[] { "create_lead_from_message", "create_estimate", "update_estimate_details", "move_estimate_status" })
+        {
+            Assert.Contains(name, names);
+            Assert.Equal("Sales", AiActionRegistry.Find(name)!.Area);
+        }
+
+        // Raising a lead from an email is a triage decision: the Control Centre's roles, confirm-first,
+        // and the notes send the model to file_email_to_record for a lead that already exists.
+        var raise = AiActionRegistry.Find("create_lead_from_message")!;
+        Assert.True(raise.RequiresConfirmation);
+        Assert.True(raise.VisibleTo.IncludesAny(UserWith(Role.ProjectManager).Roles));
+        Assert.False(raise.VisibleTo.IncludesAny(UserWith(Role.Foreman).Roles));
+        Assert.Contains("file_email_to_record", raise.Notes);
+        var raiseSchema = System.Text.Json.JsonSerializer.Serialize(AiActionSchema.InputSchema(raise));
+        Assert.Contains("messageId", raiseSchema);
+        Assert.DoesNotContain("projectId", raiseSchema);
+
+        // The estimate actions take the estimateId, never the reference, and stamp the actor.
+        foreach (var name in new[] { "update_estimate_details", "move_estimate_status" })
+        {
+            Assert.Contains("estimateId", AiActionRegistry.Find(name)!.Notes);
+            Assert.Contains("never the reference", AiActionRegistry.Find(name)!.Notes);
+        }
+        Assert.Contains("CreatedByEmail", AiActionRegistry.Find("create_estimate")!.EmailStamps);
+        Assert.Contains("ChangedByEmail", AiActionRegistry.Find("move_estimate_status")!.EmailStamps);
+        Assert.True(AiActionRegistry.Find("move_estimate_status")!.RequiresConfirmation);
+        Assert.False(AiActionRegistry.Find("create_estimate")!.VisibleTo.IncludesAny(UserWith(Role.Subcontractor).Roles));
+
+        // The reads: get_lead carries the estimates, the record type "lead" reads its mail, and
+        // find_by_reference resolves LD-#### and EST-####.
+        var director = AiToolCatalogue.ForConnector(UserWith(Role.ManagingDirector));
+        Assert.Contains("estimates", director.Single(t => t.Name == "get_lead").Description);
+        Assert.Contains("lead", director.Single(t => t.Name == "read_record_emails").Description);
+        Assert.Contains("LD-0007", director.Single(t => t.Name == "find_by_reference").Description);
+        Assert.Contains("EST-0003", director.Single(t => t.Name == "find_by_reference").Description);
+        Assert.True(AiRecordTools.TryMapRecordType("lead", out var lead) && lead == RecordType.Lead);
+        Assert.True(AiRecordTools.TryMapRecordType("LD", out var ld) && ld == RecordType.Lead);
+    }
 }

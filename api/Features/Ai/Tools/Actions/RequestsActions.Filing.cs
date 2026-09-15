@@ -62,8 +62,11 @@ internal sealed partial class RequestsActions
                 + "(default), MessageOnly or EntireThread. If the answer says the thread is "
                 + "already filed under another pathway, ASK THE USER before re-calling with "
                 + "allowCrossPathway true — never confirm a cross-filing on your own. pathway "
-                + "(Client/Subcontractor/Supplier/Internal) matters only for pathway-neutral "
-                + "record types like CostCentre. For catching a record up on its own threads, "
+                + "(Client/Subcontractor/Supplier/Sales/Internal) matters only for pathway-neutral "
+                + "record types like CostCentre. type Lead (recordId = the leadId, no projectId) "
+                + "tags an enquiry to an existing sales lead — the Sales pane's \"tag to a lead\"; "
+                + "create_lead_from_message is for a lead that does not exist yet. For catching a "
+                + "record up on its own threads, "
                 + "prefer file_unfiled_replies."),
 
         new AiAction(

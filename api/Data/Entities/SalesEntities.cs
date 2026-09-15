@@ -96,6 +96,32 @@ public sealed class ImagineImageEntity
     [MaxLength(2000)]    public string Comment { get; set; } = "";
 }
 
+// An estimate on a lead (see Jewel.JPMS.Models.LeadEstimate, 2026-09-15): Jewel's own pricing
+// of one enquiry — scope, the architect it came through, when the price is due, the budget the
+// prospect mentioned, the total once priced — climbing Received → Pricing → Submitted → Won /
+// Lost. Number is a global sequence rendered as EST-####. Read per lead; no FK, as everywhere
+// else (the handlers own the relationship).
+public sealed class LeadEstimateEntity
+{
+    [Key, MaxLength(64)] public string EstimateId { get; set; } = "";
+    [MaxLength(64)]      public string LeadId { get; set; } = "";
+    public int Number { get; set; }
+    [MaxLength(4000)]    public string Scope { get; set; } = "";
+    [MaxLength(256)]     public string ArchitectName { get; set; } = "";
+    public DateOnly? PriceDueOn { get; set; }
+    public decimal? BudgetMentioned { get; set; }
+    public decimal? Total { get; set; }
+    [MaxLength(4000)]    public string Notes { get; set; } = "";
+    public int Status { get; set; }
+    public DateTimeOffset StatusChangedAt { get; set; }
+    public DateTimeOffset? SubmittedAt { get; set; }
+    [MaxLength(256)]     public string CreatedByEmail { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string Reference => $"EST-{Number:0000}";
+}
+
 // A proposal on a lead (see Jewel.JPMS.Models.SalesProposal): scope, base price, options,
 // schedule of works and terms, versioned; acceptance is recorded on the row. Options and phases
 // are JSON columns (nvarchar(max)) — small, read whole, never queried.

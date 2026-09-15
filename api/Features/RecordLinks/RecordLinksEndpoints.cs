@@ -29,6 +29,16 @@ public sealed class RecordLinksEndpoints
     public async Task<IActionResult> List(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/records")] HttpRequest request,
         string projectId)
+        => await ListRecords(request, projectId);
+
+    // A company-wide record type — a sales lead belongs to no project (2026-09-15) — listed with
+    // no project in the route; the front end calls this when its project id is blank.
+    [Function("ListCompanyWideLinkableRecords")]
+    public async Task<IActionResult> ListCompanyWide(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "records")] HttpRequest request)
+        => await ListRecords(request, projectId: "");
+
+    private async Task<IActionResult> ListRecords(HttpRequest request, string projectId)
     {
         if (await Gate(request) is { } deny) return deny;
         var typeRaw = request.Query["type"].ToString();

@@ -3329,6 +3329,74 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("SalesProposals");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.LeadEstimateEntity", b =>
+                {
+                    b.Property<string>("EstimateId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ArchitectName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<decimal?>("BudgetMentioned")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("LeadId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly?>("PriceDueOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("StatusChangedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("SubmittedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<decimal?>("Total")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.HasKey("EstimateId");
+
+                    b.HasIndex("LeadId")
+                        .HasDatabaseName("IX_LeadEstimates_LeadId");
+
+                    b.HasIndex("Number")
+                        .HasDatabaseName("IX_LeadEstimates_Number");
+
+                    b.ToTable("LeadEstimates");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.LeadActivityEntity", b =>
                 {
                     b.Property<string>("LeadActivityId")

@@ -19,10 +19,11 @@ public static partial class AiToolCatalogue
             new(
                 "find_by_reference",
                 "Look up a single record by the reference a person would say out loud — V72, RFI-049, REQ-0122, "
-                + "NOD-003, TODO-0074, WO-0045, BPI-0003, DEF-0012, KPI-0003 (administrators only), or a project "
+                + "NOD-003, TODO-0074, WO-0045, BPI-0003, DEF-0012, LD-0007 (a sales lead), EST-0003 (an "
+                + "estimate on a lead), KPI-0003 (administrators only), or a project "
                 + "reference like JBB-2026-002. "
                 + "Searches variations, requests, to-dos, work "
-                + "orders, bid packages, defects, KPIs and projects across every project. Tolerant of how people type: "
+                + "orders, bid packages, defects, leads, estimates, KPIs and projects across every project. Tolerant of how people type: "
                 + "rfi001, RFI-001, vo80, VOQ-0080, V80 and todo 74 all find their record, and a project-prefixed "
                 + "reference (JBB-2026-001-REQ-0113) matches too. Use this before saying you cannot find "
                 + "something — ONE call, not one per spelling. The one thing it cannot see: a DRAFT work "
@@ -89,7 +90,7 @@ public static partial class AiToolCatalogue
                     // the lookup is by Number). 2026-08-21: TODO-0074 came back "not found" and the
                     // model told the user to click the card it could not reach — a reference a
                     // person can read out loud must resolve here, whatever the record type.
-                    var stemForm = System.Text.RegularExpressions.Regex.Match(cleaned, "^(todo|wo|bpi|def|kpi)0*(\\d+)$");
+                    var stemForm = System.Text.RegularExpressions.Regex.Match(cleaned, "^(todo|wo|bpi|def|kpi|ld|est)0*(\\d+)$");
                     if (stemForm.Success && int.TryParse(stemForm.Groups[2].Value, out var stemNumber))
                     {
                         switch (stemForm.Groups[1].Value)
@@ -231,6 +232,18 @@ public static partial class AiToolCatalogue
                                             + "record_type bid_package reads its tender correspondence."
                                     });
                                 }
+                                break;
+                            }
+                            case "ld":
+                            {
+                                var lead = await FindLeadByNumberAsync(context, stemNumber, ct);
+                                if (lead is not null) return lead;
+                                break;
+                            }
+                            case "est":
+                            {
+                                var estimate = await FindEstimateByNumberAsync(context, stemNumber, ct);
+                                if (estimate is not null) return estimate;
                                 break;
                             }
                             case "def":

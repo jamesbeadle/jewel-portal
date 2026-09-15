@@ -56,6 +56,7 @@ internal static partial class AiRecordTools
             "supplier comms" => RecordType.SupplierComms,
             "valuation snapshot" or "valuation report snapshot" => RecordType.ValuationReportSnapshot,
             "valuation claim" or "valuation period" => RecordType.ValuationClaim,
+            "lead" or "ld" or "sales lead" => RecordType.Lead,
             _ => null
         };
         recordType = mapped ?? default;

@@ -34,6 +34,8 @@ public static class RecordLinksFeatureRegistration
         services.AddScoped<ILinkableRecordProvider, CalendarEventLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, BuildingControlCaseLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, BuildingControlInspectionLinkProvider>();
+        // The Sales pane's record (2026-09-15): company-wide, no project.
+        services.AddScoped<ILinkableRecordProvider, LeadLinkProvider>();
 
         services.AddScoped<RecordProviderRegistry>();
         services.AddScoped<RecordEmailReader>();

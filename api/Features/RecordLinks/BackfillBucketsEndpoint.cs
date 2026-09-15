@@ -241,6 +241,8 @@ public sealed class BackfillBucketsEndpoint
         if (stem.StartsWith("LAD-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client;
         if (stem.StartsWith("VAL-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client;
         if (stem.StartsWith("BPI-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Subcontractor;
+        // A lead's enquiry mail (2026-09-15) — the Sales pathway, before any project exists.
+        if (stem.StartsWith("LD-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Sales;
         // Work-order stems are project-qualified since 2026-09-14 ("JBB-2026-001-WO-0045"); the
         // bare "WO-0045" is the legacy form.
         if (stem.StartsWith("WO-", StringComparison.OrdinalIgnoreCase)

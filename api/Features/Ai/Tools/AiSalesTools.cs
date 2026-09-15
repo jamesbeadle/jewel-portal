@@ -71,8 +71,11 @@ internal static class AiSalesTools
         new(
             GetLead,
             "One lead in full with its timeline — every touch (calls, emails, letters, meetings, "
-            + "site visits, proposals, notes) and every stage change, newest first. Takes the "
-            + "leadId from list_leads, or an LD-#### reference.",
+            + "site visits, proposals, notes) and every stage change, newest first — and its "
+            + "estimates (EST-####: scope, architect, price due date, budget mentioned, total, "
+            + "status Received → Pricing → Submitted → Won / Lost), newest first. Takes the "
+            + "leadId from list_leads, or an LD-#### reference. The enquiry mail tagged to the "
+            + "lead is read_record_emails record_type lead.",
             AiToolSchema.Object(
                 ("leadId", "string", "The lead's id (list_leads) or its LD-#### reference.", true)),
             AiToolKind.Read,
@@ -99,7 +102,8 @@ internal static class AiSalesTools
                         activity.Summary,
                         activity.OccurredAt,
                         activity.RecordedByEmail
-                    })
+                    }),
+                    estimates = (detail.Estimates ?? Array.Empty<LeadEstimate>()).Select(EstimateRow)
                 });
             }),
 
@@ -221,6 +225,26 @@ internal static class AiSalesTools
         lead.ClientId,
         lead.ProjectId,
         lead.LostReason
+    };
+
+    // The estimate as the actions take it: estimateId is what update_estimate_details and
+    // move_estimate_status want, never the reference.
+    private static object EstimateRow(LeadEstimate estimate) => new
+    {
+        estimate.EstimateId,
+        estimate.Reference,
+        estimate.Scope,
+        estimate.ArchitectName,
+        estimate.PriceDueOn,
+        estimate.BudgetMentioned,
+        estimate.Total,
+        estimate.Notes,
+        status = estimate.Status.ToString(),
+        isOpen = estimate.Status.IsOpen(),
+        estimate.StatusChangedAt,
+        estimate.SubmittedAt,
+        estimate.CreatedByEmail,
+        estimate.CreatedAt
     };
 
     /// <summary>An id as given, or an LD-#### (or bare number) reference resolved through the

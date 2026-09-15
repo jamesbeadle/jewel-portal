@@ -303,6 +303,13 @@ public sealed partial class JpmsContext
         modelBuilder.Entity<SalesProposalEntity>()
             .HasIndex(row => row.LeadId)
             .HasDatabaseName("IX_SalesProposals_LeadId");
+        // Estimates (2026-09-15) read per lead; Number resolves EST-#### references.
+        modelBuilder.Entity<LeadEstimateEntity>()
+            .HasIndex(row => row.LeadId)
+            .HasDatabaseName("IX_LeadEstimates_LeadId");
+        modelBuilder.Entity<LeadEstimateEntity>()
+            .HasIndex(row => row.Number)
+            .HasDatabaseName("IX_LeadEstimates_Number");
 
         // ---- Draft programme updates (2026-09-08) ---------------------------------------------
         // Mappings read per project (the draft capture and the programme detail) and are replaced

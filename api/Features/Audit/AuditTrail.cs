@@ -29,6 +29,7 @@ public sealed class AuditTrail
         : bucketCategory.Equals(TriageCategories.Client, StringComparison.OrdinalIgnoreCase) ? "Client"
         : bucketCategory.Equals(TriageCategories.Subcontractor, StringComparison.OrdinalIgnoreCase) ? "Subcontractor"
         : bucketCategory.Equals(TriageCategories.Supplier, StringComparison.OrdinalIgnoreCase) ? "Supplier"
+        : bucketCategory.Equals(TriageCategories.Sales, StringComparison.OrdinalIgnoreCase) ? "Sales"
         : bucketCategory.Equals(TriageCategories.Internal, StringComparison.OrdinalIgnoreCase) ? "Internal"
         : bucketCategory;
 
