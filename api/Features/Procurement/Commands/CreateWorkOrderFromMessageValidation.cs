@@ -24,9 +24,6 @@ public sealed class CreateWorkOrderFromMessageValidation
             errors.Add("Every line needs a cost centre.");
         if (command.Lines.Any(line => string.IsNullOrWhiteSpace(line.Title)))
             errors.Add("Every line needs a title.");
-        // Decimal constants can't appear in patterns, hence the explicit comparison.
-        if (command.Lines.Any(line => line.Amount == 0m))
-            errors.Add("Every line needs a non-zero amount.");
         // Deposit is recorded as a percentage of the order value only, and only when required.
         if (command.DepositRequired && (command.DepositPercent is not { } percent || percent <= 0m || percent > 100m))
             errors.Add("A required deposit needs a percentage above 0 and no more than 100.");

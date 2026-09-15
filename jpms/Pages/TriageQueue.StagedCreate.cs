@@ -41,7 +41,7 @@ public partial class TriageQueue
             // master guard) with the email tagged to the new order.
             busyLabel = "Raising work order";
             var orderLines = staged.EnteredLines
-                .Where(line => line.CostCode != "" && line.Amount is { } amount && amount != 0m)
+                .Where(line => line.CostCode != "" && line.Amount is not null)
                 .Select(line => new ManualWorkOrderLine(
                     line.CostCode, line.Title.Trim(), line.Amount!.Value, line.Description.Trim()))
                 .ToList();

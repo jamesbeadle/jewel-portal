@@ -28,7 +28,8 @@ internal sealed partial class ProcurementActions
                 + "stamp). Cost codes come from list_cost_codes. The portal raise dialog's "
                 + "uncovered-cost-centre warning gate lives on the HTTP door only and does not run "
                 + "here — check the valuation report has a priced sale for each line's centre "
-                + "first."),
+                + "first. A line's amount may be 0 — an item the supplier includes at no charge "
+                + "under their quote goes on the order as the quote lists it, never dropped."),
 
         new AiAction(
             Name: "create_work_order_from_message",
@@ -46,9 +47,11 @@ internal sealed partial class ProcurementActions
             EmailStamps: new[] { "RaisedByEmail" },
             NameStamps: Array.Empty<string>(),
             Notes: "messageId is a mailbox message id from the triage queue. Confirm the lines and "
-                + "value with the user before calling. Filing under Subcontractor as well as a "
-                + "pathway the thread already carries is refused unless allowCrossPathway is true — "
-                + "only pass it after the user confirms."),
+                + "value with the user before calling. A line's amount may be 0 — an item the "
+                + "supplier includes at no charge under their quote goes on the order as the quote "
+                + "lists it, never dropped. Filing under Subcontractor as well as a pathway the "
+                + "thread already carries is refused unless allowCrossPathway is true — only pass "
+                + "it after the user confirms."),
 
         new AiAction(
             Name: "approve_work_order",

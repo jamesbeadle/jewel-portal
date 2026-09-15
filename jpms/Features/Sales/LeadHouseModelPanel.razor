@@ -1,0 +1,160 @@
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@*
+    The lead page's 3D model panel (2026-09-15, Nigel's ask: a model of the works the client can
+    be sent, which the Imagine concepts are not — then "less interactive, more an animated
+    build-up of works"). The house the enquiry is about is built in the browser from the
+    architect's drawings by wwwroot/js/house-model.js on a vendored three.js, and the works are
+    played as a build-up: scaffold, roof opened, dormer raised and glazed, rooflights, the garage
+    turned into a room, scaffold down — the camera on each stage in turn and handed to the viewer
+    only at the end. For now every estimate shows the one demo model, 16 Ravens Dene (Resi
+    B369214 rev B, the EST-0001 enquiry); a model per estimate is the step after the demo is
+    judged. The chips compare existing and proposed once the works are finished.
+*@
+
+<Panel Title="3D model" BodyClass="p-0">
+    <HeaderActions>
+        <FilterChips Items="@PhaseChips" Selected="@phase" OnSelect="SetPhaseAsync"
+                     Disabled="@(!ready || playback != HouseModelPlayback.Finished)" AriaLabel="Existing or proposed" />
+        <Toolbar>
+            <ToolbarButton Icon="fullscreen" Label="@(fullscreen ? "Exit fullscreen" : "Fullscreen")" Disabled="@(!ready)" OnClick="ToggleFullscreenAsync" />
+        </Toolbar>
+    </HeaderActions>
+    <ChildContent>
+        @if (error is not null)
+        {
+            <p class="p-6 text-sm text-content-subtle">The model couldn't be shown (@error).</p>
+        }
+        else
+        {
+            @* The host must exist before the scene can size into it, so the jewel floats over it
+               (Overlay) rather than replacing it; touch-action:none hands touch to the orbit
+               controls instead of the page scroller. *@
+            <LoadGate IsLoading="@(!ready)" Overlay="true" Label="Building the model">
+                <div @ref="host" class="aspect-[16/10] bg-canvas select-none" style="touch-action: none;"></div>
+            </LoadGate>
+            <HouseModelPlaybackStrip IsReady="@ready" Playback="@playback" StageIndex="@stageIndex" StageCount="@stageCount"
+                                     StageTitle="@stageTitle" StageDetail="@stageDetail" Caption="@Caption" Views="@Views"
+                                     OnPlay="PlayAsync" OnPause="PauseAsync" OnSkip="SkipToEndAsync" OnView="ViewAsync" />
+        }
+    </ChildContent>
+</Panel>
+
+@code {
+    /// <summary>The demo house every estimate shows for now — 16 Ravens Dene, from Resi's planning
+    /// drawings. The key names a definition under wwwroot/js/house-model/models.</summary>
+    public const string DemoModelKey = "ravens-dene-16";
+
+    private const string ExistingPhase = "existing";
+    private const string ProposedPhase = "proposed";
+
+    private static readonly IReadOnlyList<TabItem> PhaseChips = new[]
+    {
+        new TabItem(ExistingPhase, "Existing", Title: "The house as it stands"),
+        new TabItem(ProposedPhase, "Proposed", Title: "With the proposed works")
+    };
+
+    private static readonly IReadOnlyList<(string Key, string Label)> Views = new[]
+    {
+        ("overview", "Opening view"),
+        ("garden", "From the garden"),
+        ("road", "From the road"),
+        ("side", "Garden side"),
+        ("above", "From above")
+    };
+
+    /// <summary>Which model to build — a key the viewer knows (wwwroot/js/house-model/models).</summary>
+    [Parameter, EditorRequired] public string ModelKey { get; set; } = "";
+
+    /// <summary>The footer line: which estimate the model is for and what it was built from.</summary>
+    [Parameter] public string? Caption { get; set; }
+
+    private ElementReference host;
+    private DotNetObjectReference<LeadHouseModelPanel>? selfReference;
+    private bool mounted;
+    private bool ready;
+    private bool fullscreen;
+    private string phase = ProposedPhase;
+    private string? error;
+    private HouseModelPlayback playback = HouseModelPlayback.Ready;
+    private int stageIndex = -1;
+    private int stageCount;
+    private string? stageTitle;
+    private string? stageDetail;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (mounted || error is not null) return;
+        mounted = true;
+        selfReference ??= DotNetObjectReference.Create(this);
+        try
+        {
+            await JS.InvokeVoidAsync("jpmsHouseModel.mount", host, ModelKey, selfReference);
+        }
+        catch (JSException exception)
+        {
+            error = exception.Message;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public void ModelReady()
+    {
+        ready = true;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void FullscreenChanged(bool isFullscreen)
+    {
+        fullscreen = isFullscreen;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void StageChanged(int index, int count, string title, string detail)
+    {
+        stageIndex = index;
+        stageCount = count;
+        stageTitle = title;
+        stageDetail = detail;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void PlaybackChanged(string state)
+    {
+        playback = state.ParsePlayback();
+        if (playback == HouseModelPlayback.Finished) phase = ProposedPhase;
+        StateHasChanged();
+    }
+
+    private Task PlayAsync() => JS.InvokeVoidAsync("jpmsHouseModel.play", host).AsTask();
+
+    private Task PauseAsync() => JS.InvokeVoidAsync("jpmsHouseModel.pause", host).AsTask();
+
+    private Task SkipToEndAsync() => JS.InvokeVoidAsync("jpmsHouseModel.skipToEnd", host).AsTask();
+
+    private async Task SetPhaseAsync(string chosen)
+    {
+        phase = chosen;
+        await JS.InvokeVoidAsync("jpmsHouseModel.setProposed", host, chosen == ProposedPhase);
+    }
+
+    private Task ViewAsync(string viewName) => JS.InvokeVoidAsync("jpmsHouseModel.view", host, viewName).AsTask();
+
+    private Task ToggleFullscreenAsync() => JS.InvokeVoidAsync("jpmsHouseModel.toggleFullscreen", host).AsTask();
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (mounted) await JS.InvokeVoidAsync("jpmsHouseModel.dispose", host);
+        }
+        catch (JSDisconnectedException) { }
+        catch (InvalidOperationException) { }
+        selfReference?.Dispose();
+    }
+}

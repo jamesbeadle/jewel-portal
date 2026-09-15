@@ -5,7 +5,7 @@ public partial class WorkOrderForm
     public bool CanSave =>
         subcontractorId != ""
         && !string.IsNullOrWhiteSpace(title)
-        && lines.Any(line => line.CostCode != "" && Parse(line.AmountText) is { } amount && amount != 0m)
+        && EnteredLines().Count > 0
         && ValidationProblem is null;
 
     /// <summary>What still stops the order saving — null when it is complete. The core rules only;
@@ -14,12 +14,11 @@ public partial class WorkOrderForm
     {
         get
         {
-            var filledLines = lines.Where(line =>
-                line.CostCode != "" || !string.IsNullOrWhiteSpace(line.Title) || !string.IsNullOrWhiteSpace(line.AmountText)).ToList();
+            var filledLines = EnteredLines();
             if (filledLines.Any(line => line.CostCode == "")) return "Choose a cost centre for every line.";
             if (filledLines.Any(line => string.IsNullOrWhiteSpace(line.Title))) return "Every line needs a title.";
-            if (filledLines.Any(line => Parse(line.AmountText) is not { } amount || amount == 0m))
-                return "Every line needs a non-zero amount.";
+            if (filledLines.Any(line => Parse(line.AmountText) is null))
+                return "Every line needs an amount — 0 for an item the supplier includes at no charge.";
             foreach (var line in filledLines)
             {
                 if (MeasuredBreakdownProblem(line) is { } problem) return problem;
@@ -93,8 +92,13 @@ public partial class WorkOrderForm
                 UnitCost: IsMeasured(line) ? Parse(line.UnitCostText) : null))
             .ToList();
 
+    /// <summary>The rows with anything typed on them — a blank "+ Add another line" row is not
+    /// an order line, but a £0 line is (2026-09-15, the accountant's On The Level order: the quote
+    /// lists the outlet gullies at 0.00, included under the formers, and the PO lists what the
+    /// quote lists). Validation sees the same rows the draft sends.</summary>
     private List<LineRow> EnteredLines() =>
-        lines.Where(line => line.CostCode != "" && Parse(line.AmountText) is { } amount && amount != 0m).ToList();
+        lines.Where(line =>
+            line.CostCode != "" || !string.IsNullOrWhiteSpace(line.Title) || !string.IsNullOrWhiteSpace(line.AmountText)).ToList();
 
     private static DateTimeOffset? AsUtcDate(DateTime? date) =>
         date is null ? null : new DateTimeOffset(DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Utc));

@@ -291,7 +291,13 @@ Received → Pricing → Submitted → Won / Lost (scope, architect, price due,
 budget mentioned, total; Submitted needs a total; **PDF** on each row downloads
 the estimate sheet, rendered from the register, internal not for issue — the
 notes print line by line so a breakdown typed as "- item: £x" lines reads as
-one). Estimate ≠ proposal: the
+one). **3D model** (2026-09-15) sits under Estimates on a lead that has one:
+the house built in the browser from the architect's drawings, and the works
+played as a build-up — Play, then scaffold, roof stripped, dormer raised and
+glazed, rooflights, garage converted, scaffold down, each with its caption —
+after which the viewer can orbit, take the viewpoints and compare Existing /
+Proposed; for now the one demo house, 16 Ravens Dene, on every estimate.
+Estimate ≠ proposal: the
 Proposals panel below is what the prospect sees. Strategies are the
 methodologies for finding leads; the Sales inbox is sales@ read live, its own
 thing, not the Control Centre.

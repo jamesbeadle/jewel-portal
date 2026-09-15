@@ -1,0 +1,80 @@
+@*
+    The strip under the 3D model's canvas (2026-09-15): the one control the build-up needs at
+    each moment — Play, then Pause and Skip, then Replay — beside the stage's caption, a bar per
+    stage showing how far the works have got, and, once the works are finished and the camera
+    is the viewer's own, the buttons that take it to the drawings' viewpoints. The panel owns
+    the interop; this strip only renders what it is told and raises what was pressed.
+*@
+
+<footer class="px-6 py-4 border-t border-line space-y-3">
+    <div class="flex flex-wrap items-center gap-3">
+        @if (Playback == HouseModelPlayback.Ready)
+        {
+            <button type="button" class="btn-primary" disabled="@(!IsReady)" @onclick="OnPlay">Play the build</button>
+        }
+        else if (Playback == HouseModelPlayback.Playing)
+        {
+            <button type="button" class="btn-secondary" @onclick="OnPause">Pause</button>
+            <button type="button" class="btn-secondary" @onclick="OnSkip">Skip to the end</button>
+        }
+        else if (Playback == HouseModelPlayback.Paused)
+        {
+            <button type="button" class="btn-primary" @onclick="OnPlay">Resume</button>
+            <button type="button" class="btn-secondary" @onclick="OnSkip">Skip to the end</button>
+        }
+        else
+        {
+            <button type="button" class="btn-secondary" @onclick="OnPlay">Replay the build</button>
+            @foreach (var view in Views)
+            {
+                var chosen = view;
+                <button type="button" class="btn-secondary text-xs" @onclick="() => OnView.InvokeAsync(chosen.Key)">@chosen.Label</button>
+            }
+        }
+        <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium text-content">@Headline</p>
+            <p class="text-xs text-content-subtle">@Detail</p>
+        </div>
+    </div>
+    <ol class="flex gap-1" aria-label="Stages of the build">
+        @for (var stage = 0; stage < StageCount; stage++)
+        {
+            <li class="h-1 flex-1 @StageBarClass(stage)"></li>
+        }
+    </ol>
+    @if (Caption is not null)
+    {
+        <p class="text-xs text-content-faint">@Caption</p>
+    }
+</footer>
+
+@code {
+    [Parameter] public bool IsReady { get; set; }
+    [Parameter] public HouseModelPlayback Playback { get; set; }
+    [Parameter] public int StageIndex { get; set; } = -1;
+    [Parameter] public int StageCount { get; set; }
+    [Parameter] public string? StageTitle { get; set; }
+    [Parameter] public string? StageDetail { get; set; }
+    [Parameter] public string? Caption { get; set; }
+    [Parameter] public IReadOnlyList<(string Key, string Label)> Views { get; set; } = Array.Empty<(string, string)>();
+    [Parameter] public EventCallback OnPlay { get; set; }
+    [Parameter] public EventCallback OnPause { get; set; }
+    [Parameter] public EventCallback OnSkip { get; set; }
+    [Parameter] public EventCallback<string> OnView { get; set; }
+
+    private const string ReadyHeadline = "The house as it stands";
+    private const string ReadyDetail = "Press play to watch the works go up, stage by stage, then look around the finished house.";
+
+    private string Headline => Playback == HouseModelPlayback.Ready || StageTitle is null
+        ? ReadyHeadline
+        : Playback == HouseModelPlayback.Finished ? StageTitle : $"Stage {StageIndex + 1} of {StageCount} · {StageTitle}";
+
+    private string Detail => Playback == HouseModelPlayback.Ready || StageDetail is null ? ReadyDetail : StageDetail;
+
+    private string StageBarClass(int stage)
+    {
+        if (Playback == HouseModelPlayback.Finished || stage < StageIndex) return "bg-content-faint";
+        if (stage == StageIndex) return "bg-accent";
+        return "bg-line";
+    }
+}

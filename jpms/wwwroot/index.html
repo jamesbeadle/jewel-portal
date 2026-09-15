@@ -21,6 +21,13 @@
     <meta name="mobile-web-app-capable" content="yes" />
 
     <link href="css/app.built.css" rel="stylesheet" />
+
+    <!--
+        The import map names the vendored three.js for the 3D model's ES modules (js/house-model/,
+        js/vendor/three/README.md). It has to stand before any module loads; the modules themselves
+        are fetched only when a page mounts a model (js/house-model.js).
+    -->
+    <script type="importmap">{ "imports": { "three": "/js/vendor/three/three.module.min.js" } }</script>
 </head>
 
 <body>
@@ -101,6 +108,7 @@
     <script src="js/chat-composer-keys.js"></script>
     <script src="js/chat-scroll.js"></script>
     <script src="js/lead-qr.js"></script>
+    <script src="js/house-model.js"></script>
     <script src="_framework/blazor.webassembly.js" autostart="false"></script>
     <script src="js/blazor-start.js"></script>
 </body>

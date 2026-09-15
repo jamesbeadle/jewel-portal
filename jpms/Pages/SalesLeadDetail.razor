@@ -163,6 +163,10 @@
                        enquiry mail read live by the lead's tag — filed from the Control Centre's
                        Sales pane, never from here (a lead has no project). *@
                     <LeadEstimatesPanel LeadId="@LeadId" Estimates="@Estimates" CanWork="@CanWork" OnChanged="ReloadAsync" />
+                    @if (Estimates.Count > 0)
+                    {
+                        <LeadHouseModelPanel ModelKey="@LeadHouseModelPanel.DemoModelKey" Caption="@HouseModelCaption" />
+                    }
                     <Panel BodyClass="p-5">
                         <RecordCorrespondenceSection Type="RecordType.Lead" RecordId="@LeadId" RecordReference="@lead.Reference"
                                                      ProjectId="" Title="Enquiry emails">
@@ -406,6 +410,11 @@
     private IReadOnlyList<LeadEstimate> Estimates => Detail.Current(LeadId)?.Estimates ?? Array.Empty<LeadEstimate>();
     private IReadOnlyList<ImagineImageView> Concepts =>
         Detail.Current(LeadId)?.Imagine?.Rounds.SelectMany(round => round.Concepts).ToList() ?? new List<ImagineImageView>();
+
+    // The 3D model (2026-09-15) fronts every estimate with the one demo house until models are
+    // made per enquiry; the caption says so and names the estimate it stands in for.
+    private string HouseModelCaption =>
+        $"Demo for {Estimates[0].Reference} — 16 Ravens Dene, built from Resi's planning drawings B369214 rev B. A massing model, not a survey.";
 
     // The timeline's kind label: the lead's own milestones read in the accent, the things sent
     // out or priced (imagine, proposals, estimates) in info, everything else quietly.

@@ -49,7 +49,10 @@ public sealed record CreateManualWorkOrder(
 /// product — the form derives it), or leave them out and the line prints the legacy
 /// "1 item" at Amount. They exist so a measured quote stops being squeezed into the
 /// description as prose while the printed PO said "1 item" (2026-08-27, the accountant's
-/// tiling order).</summary>
+/// tiling order). Amount may be 0: an item the supplier includes at no charge under the quote
+/// (2026-09-15, the accountant's On The Level order — the outlet gullies at 0.00 beneath the
+/// formers) is a line on the PO exactly as it is on the quote, adding nothing to the order's
+/// value.</summary>
 public sealed record ManualWorkOrderLine(
     string CostCode, string Title, decimal Amount, string Description = "",
     decimal? Quantity = null, string Unit = "", decimal? UnitCost = null);

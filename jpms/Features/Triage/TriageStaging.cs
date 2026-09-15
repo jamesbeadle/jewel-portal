@@ -170,8 +170,8 @@ public sealed class StagedRecordCreate
             if (entered.Count == 0) return "Add at least one priced line.";
             if (entered.Any(line => line.CostCode == "")) return "Choose a cost centre for every line.";
             if (entered.Any(line => string.IsNullOrWhiteSpace(line.Title))) return "Every line needs a title.";
-            if (entered.Any(line => line.Amount is not { } amount || amount == 0m))
-                return "Every line needs a non-zero amount.";
+            if (entered.Any(line => line.Amount is null))
+                return "Every line needs an amount — 0 for an item the supplier includes at no charge.";
             if (DepositRequired && (ParseDecimal(DepositPercentText) is not { } percent || percent <= 0m || percent > 100m))
                 return "A required deposit needs a percentage above 0 and no more than 100.";
             return null;

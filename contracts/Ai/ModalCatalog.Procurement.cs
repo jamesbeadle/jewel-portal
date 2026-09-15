@@ -141,9 +141,10 @@ public static partial class ModalCatalog
                         + "correspondence actually states."),
                     new("amount", "number",
                         "The line's TOTAL value in GBP as a plain number, NET of VAT. Negative "
-                        + "only for a credit line. Only figures the correspondence actually "
-                        + "states. Leave it out when quantity and unitCost are given — the "
-                        + "dialog computes quantity × unitCost itself.")
+                        + "only for a credit line; 0 for an item the quote includes at no charge "
+                        + "— list it as the quote does, never drop it. Only figures the "
+                        + "correspondence actually states. Leave it out when quantity and "
+                        + "unitCost are given — the dialog computes quantity × unitCost itself.")
                 })
         });
 
@@ -233,9 +234,10 @@ public static partial class ModalCatalog
                         "The rate per unit in GBP, NET of VAT — 54 for £54.00/m2. Only rates the "
                         + "correspondence actually states."),
                     new("amount", "number",
-                        "The line's TOTAL value in GBP as a plain number, NET of VAT. Only "
-                        + "figures the correspondence actually states. Leave it out when "
-                        + "quantity and unitCost are given — the dialog computes "
+                        "The line's TOTAL value in GBP as a plain number, NET of VAT; 0 for an "
+                        + "item the quote includes at no charge — list it as the quote does, "
+                        + "never drop it. Only figures the correspondence actually states. Leave "
+                        + "it out when quantity and unitCost are given — the dialog computes "
                         + "quantity × unitCost itself.")
                 })
         });

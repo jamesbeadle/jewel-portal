@@ -104,6 +104,38 @@
   emails the prospect — confirm-first — `withdraw_sales_proposal` is `Deciders`; `get_lead`
   lists `proposals[]` with ids and `imagineLinkIssued`), so the assistant can read the enquiry
   and prepare the proposal a person then reads on the lead's page before it goes.
+- **The 3D model on the lead page** (jpms, 2026-09-15, Nigel: "a 3D model of a project I could
+  send to the client" — the Imagine concepts are not it; then "less interactive, more an animated
+  build-up of works … a play button and then let me look around at the end"). `LeadHouseModelPanel`
+  sits under Estimates on every lead that has one and builds the enquiry's house in the browser
+  from the architect's drawings — massing, roofs, openings — then PLAYS the works as a build-up:
+  the house as it stands drifting slowly, Play, and stage by stage the scaffold goes up, the roof
+  is stripped to battens, the dormer rises and is glazed, the front rooflights drop in, the
+  garage door comes out and the opening is bricked up, the garden windows and rooflights go in,
+  the scaffold comes down — the camera flying to each stage's viewpoint and handed to the viewer
+  only when the works are finished (orbit, the four viewpoints, Existing / Proposed chips, all
+  disabled until then; `HouseModelPlaybackStrip` under the canvas holds Play → Pause / Skip →
+  Replay, the stage caption and a bar per stage). The scene is `wwwroot/js/house-model.js` (the
+  classic-script doorway Blazor calls; it fetches the ES module tree under `js/house-model/` only
+  when a model is mounted) on a VENDORED three.js (`js/vendor/three/`, named by the import map in
+  `index.html` — never a CDN on a client-facing page). A house is a plain definition
+  (`js/house-model/models/`: blocks, faces, openings, infills, rooflights, the dormer profile,
+  downpipes, context — and its `programme`: the scaffold and roof strip to build, and the stages,
+  each naming parts and the move each makes: grow / shrink / drop / lift / appear / vanish / fade,
+  `build-sequence/animators.js`). Every part is stamped with a `Phase` (existing / proposed /
+  removed / construction) so the toggle is one visibility rule (`phases.js`); an animator's
+  progress-1 state is exactly the finished house, so the chips find nothing out of place after
+  the build. `build-sequence/timeline.js` is the clock (play / pause / skipToEnd / reset,
+  `step(now)` each frame), `hooks.js` what it does to the camera and tells the page
+  (`StageChanged`, `PlaybackChanged`). Metres throughout — x along the front from the party wall,
+  z from the front wall to the garden, heights above the ground-floor FFL, as the drawings level.
+  For now every estimate shows the ONE demo model, `ravens-dene-16` (Resi B369214 rev B,
+  EST-0001's enquiry) and the footer caption says so; a model per estimate is the next step once
+  the modelling route is agreed — nothing is persisted yet, and there is no connector surface
+  because there is no command or query. The client-facing copy is `Claude outputs/
+  16-ravens-dene-3d-model.html` (viewer + three.js bundled by esbuild into one file, works from
+  disk). Verified headless (Playwright on SwiftShader), not by `dotnet build`: no SDK was
+  reachable from the session, so the first `dotnet build` is the compile check.
 
 ## H&S site audits and the register they mint onto (contracts + api + jpms)
 
@@ -208,6 +240,16 @@
 - **Badges count where the draft was staged**: `StagedRecordCreate.Pathway` is stamped by
   `StagedRecordActionEditor` from its pane, so a work order (or defect) drafted on the Supplier
   pane counts on the Supplier badge. Display only; the server decides the filing.
+- **A line may be £0** (2026-09-15, the accountant's On The Level order: the quote lists the
+  outlet gullies at 0.00, included under the formers, and the PO must list what the quote
+  lists). An amount of 0 is an ENTERED line everywhere — `WorkOrderForm.EnteredLines` (anything
+  typed on the row; blankness is "nothing typed", never "amount is zero"), the Control Centre's
+  staged order (`TriageStaging.WorkOrderProblem`, `TriageQueue.StagedCreate`) and the three
+  server validations (`CreateManualWorkOrder`, `UpdateManualWorkOrder`,
+  `CreateWorkOrderFromMessage`, which the connector actions share). A line still needs a cost
+  centre and a title; a £0 line adds nothing to the order's value, prints on the PO at £0.00
+  with its quantity ("2 nr"), and recodes whole like any line. Pinned by
+  `WorkOrderNoChargeLineTests`. Never bring "Every line needs a non-zero amount" back.
 
 ## A valuation email files to ONE row per period (api + jpms)
 

@@ -44,7 +44,8 @@ public sealed record UpdateManualWorkOrder(
 /// One priced line as edited. WorkOrderLineId ties it to an existing line — preserving
 /// its id, so paid-to-date and invoice history stay attached — while null means a brand
 /// new line. Existing lines missing from the list are removed, which is only allowed
-/// while nothing has been paid against them.
+/// while nothing has been paid against them. Amount may be 0 — an item the supplier
+/// includes at no charge, same as ManualWorkOrderLine.
 /// </summary>
 public sealed record UpdatedManualWorkOrderLine(
     string? WorkOrderLineId,
