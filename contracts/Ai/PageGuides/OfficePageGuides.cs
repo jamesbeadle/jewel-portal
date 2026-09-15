@@ -102,7 +102,20 @@ public static class OfficePageGuides
             + "versions of the scope / base price / options (price deltas) / schedule of works / "
             + "terms; a draft is edited and sent (the prospect is emailed the imagine link, where it "
             + "shows; the lead moves to Proposal); their acceptance — name, email, options, price, "
-            + "moment — is the agreement the Won button then builds on."),
+            + "moment — is the agreement the Won button then builds on. Between the details and "
+            + "those two sit the ESTIMATING panels (2026-09-15): Enquiry emails — every email tagged "
+            + "to the lead (JPMS/LD-####) from the Control Centre's Sales pane, read live, with Find "
+            + "& tag, Reply and Forward — and Estimates: Jewel's OWN pricing of each enquiry, one row "
+            + "per estimate (EST-####: scope, architect or consultant, the date the price is due, "
+            + "the budget the prospect mentioned, the total once priced) climbing Received → Pricing "
+            + "→ Submitted → Won / Lost; \"Add estimate\" and Edit are one modal, the status pill is "
+            + "the move (Submitted needs a total; Won and Lost close it). An estimate is not a "
+            + "proposal: the proposal is what the prospect sees. Over the connector: "
+            + "read_record_emails type lead reads the enquiry mail (read_email_attachment opens its "
+            + "drawings and specs), get_lead lists estimates[] with estimateId, create_estimate / "
+            + "update_estimate_details / move_estimate_status act on them, find_by_reference "
+            + "resolves EST-####. The priced breakdown is not built yet — it will follow Nigel's "
+            + "estimating workbook."),
 
         new("/sales/inbox", "Sales inbox",
             "Sales → Inbox: sales@jewelbb.co.uk read live from the mailbox — deliberately its own "

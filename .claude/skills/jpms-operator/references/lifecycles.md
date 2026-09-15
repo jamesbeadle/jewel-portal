@@ -134,8 +134,25 @@ Tag families seen in the codebase: record tags per reference (requests
 order numbers are per project; defects DEF-####, bid packages, to-dos), the
 programme/scheduling bucket (`JPMS/SCH-` — "Relevant Event" tick at triage),
 and the `JPMS/SubComms` family (general + Chaser / Info request / Materials /
-H&S) feeding `/subcontractors/communications`. A record page reads its tagged
-mail live; the Control Centre's Tagged view is where untagging lives.
+H&S) feeding `/subcontractors/communications`, and sales leads `JPMS/LD-####`
+(company-wide — no project in the stem; bucket `JPMS/Sales`). A record page
+reads its tagged mail live; the Control Centre's Tagged view is where
+untagging lives.
+
+## Leads and estimates
+
+A lead (LD-####, `contracts/Models/Lead.cs`) climbs New → Contacted → Engaged →
+Site visit → Proposal, ending Won (`WinLead` — creates the Client and the
+project shell, never a plain stage move) or Lost, or parks in Nurture. One
+raised from an enquiry email on the Control Centre's Sales pane
+(`CreateLeadFromMessage`) lands Engaged / Inbound with the email tagged to it.
+An estimate (EST-####, `LeadEstimate`, 2026-09-15) is Jewel's own pricing of
+one enquiry on the lead: Received → Pricing → Submitted (needs a total; stamps
+SubmittedAt) → Won / Lost (closed; edits refused). Several per lead are normal
+— a re-price is a new estimate. The priced breakdown will follow Nigel's
+estimating workbook; until then the record is the status, scope, architect,
+price due date, budget mentioned, total and notes. A proposal
+(`SalesProposal`) is the separate client-facing document.
 
 ## Retention
 

@@ -18,7 +18,11 @@ staged (tags, new records, to-dos, replies and forwards, "Send to document
 triage" ticks) in a single act. Unfinished work parks per email as a draft.
 Records (RFIs, defects, variations, bid packages, to-dos) can be raised from an
 email in System Actions; the New email composer for any fresh outbound email
-also lives here. Attachment filing is NOT done here — the "Send to document
+also lives here. Five pathway panes: Client, Subcontractor, Supplier, **Sales**
+(2026-09-15 — an estimate enquiry is tagged to the sales lead it is about, or
+"Raise Lead" makes one from the email, Engaged / Inbound; a lead belongs to no
+project so the pane never asks for one; bucket `JPMS/Sales`, tag `JPMS/LD-####`)
+and Internal. Attachment filing is NOT done here — the "Send to document
 triage" tick copies files to `/document-triage`.
 
 ### Document Triage — `/document-triage` (alias `/document-control`)
@@ -248,6 +252,21 @@ Materials / H&S categories), read live, newest first, category chip filter.
 Expand to full body; Reply/Forward send from the projects mailbox in place, the
 sent copy inheriting the thread's tags. Tagging/untagging: Control Centre.
 
+## Sales folder
+
+### Leads — `/sales/leads`, lead `/sales/leads/{leadId}`; Strategies — `/sales/strategies`; Inbox — `/sales/inbox`
+The one register of everyone Jewel might convince to build with it (LD-####,
+ladder New → Contacted → Engaged → Site visit → Proposal, ending Won / Lost or
+parked in Nurture; Won creates the Client and the project shell). A lead's page
+holds its details, stage move, timeline, and — since 2026-09-15 — **Enquiry
+emails** (every email tagged to the lead from the Control Centre's Sales pane,
+read live) and **Estimates**: Jewel's own pricing of each enquiry, EST-####,
+Received → Pricing → Submitted → Won / Lost (scope, architect, price due,
+budget mentioned, total; Submitted needs a total). Estimate ≠ proposal: the
+Proposals panel below is what the prospect sees. Strategies are the
+methodologies for finding leads; the Sales inbox is sales@ read live, its own
+thing, not the Control Centre.
+
 ## Internal folder
 
 ### Directory — `/directory`, entry `/directory/{subcontractorId}`, register `/directory/compliance`
@@ -432,6 +451,6 @@ ageing toggle due date ↔ invoice date; Refresh, Excel export. Read-only.
 ## Off-rail pages
 
 `/rfis` (company-wide read-only RFI register, overdue day-counts in red).
-`/dashboard` (alias `/my-day`) is the role-aware home. The CRM front end
-(`/estimating-queue`, `/nurture`, `/sales-analytics`) was removed on
-2026-09-03 — the leads API and the `list_leads` tool remain, with no page.
+`/dashboard` (alias `/my-day`) is the role-aware home. The May-prototype CRM
+front end (`/estimating-queue`, `/nurture`, `/sales-analytics`) was removed on
+2026-09-03; the Sales folder above (2026-09-06) is its replacement.

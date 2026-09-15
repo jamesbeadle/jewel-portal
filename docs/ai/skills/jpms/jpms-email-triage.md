@@ -29,9 +29,16 @@ by machinery, you must enforce by discipline.
    period is still the claim; the client's response arrives once the statement is out. Claim
    and statement read each other's mail, so a filing to the other row is never lost — but
    offer the user the one row, not a choice.
+   An ESTIMATE ENQUIRY (2026-09-15) — someone asking Jewel to price work, forwarded to the
+   projects mailbox — files to the sales LEAD it is about (type lead; list_leads or
+   find_by_reference LD-#### find it; a lead belongs to no project, so name none). No lead
+   yet: create_lead_from_message raises one from the email (Engaged / Inbound, the email
+   tagged to it) — the Sales pane's Raise Lead. The estimate itself is then opened on the
+   lead (create_estimate) after reading the enquiry and its attachments through
+   read_record_emails / read_email_attachment; never price from the preview alone.
 5. **Create at most ONE new record per email per pass** (create_request_from_message,
    create_work_order_from_message, create_defect_from_message,
-   create_inventory_item_from_message, …). Creating mints the record's tag onto the email, so the
+   create_inventory_item_from_message, create_lead_from_message, …). Creating mints the record's tag onto the email, so the
    next filing decision sees it. If an email seems to need two new records, do the second on a
    second pass, after the first exists.
 6. **Discard only what needs nothing** (discard_mailbox_message) — circulars, pure
