@@ -265,7 +265,10 @@ holds its details, stage move, timeline, and — since 2026-09-15 — **Enquiry
 emails** (every email tagged to the lead from the Control Centre's Sales pane,
 read live) and **Estimates**: Jewel's own pricing of each enquiry, EST-####,
 Received → Pricing → Submitted → Won / Lost (scope, architect, price due,
-budget mentioned, total; Submitted needs a total). Estimate ≠ proposal: the
+budget mentioned, total; Submitted needs a total; **PDF** on each row downloads
+the estimate sheet, rendered from the register, internal not for issue — the
+notes print line by line so a breakdown typed as "- item: £x" lines reads as
+one). Estimate ≠ proposal: the
 Proposals panel below is what the prospect sees. Strategies are the
 methodologies for finding leads; the Sales inbox is sales@ read live, its own
 thing, not the Control Centre.

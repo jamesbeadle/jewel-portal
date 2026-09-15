@@ -49,7 +49,7 @@ public static class EstimateDocumentRenderer
         AddNotes(section, estimate.Notes);
 
         HouseFooter(section,
-            $"Generated {DateAndTime(model.GeneratedAt)} · {estimate.Reference} on {lead.Reference} · internal estimate, not for issue — the proposal is the client's document");
+            $"Generated {DateAndTime(model.GeneratedAt)} · {estimate.Reference} on {lead.Reference} · internal estimate — not for issue");
 
         var renderer = new PdfDocumentRenderer { Document = document };
         renderer.RenderDocument();

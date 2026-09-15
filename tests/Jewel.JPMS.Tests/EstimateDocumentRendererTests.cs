@@ -22,8 +22,8 @@ public sealed class EstimateDocumentRendererTests
         var pdf = EstimateDocumentRenderer.Render(new EstimateDocumentRenderer.Model(Estimate(), Lead(), new DateTimeOffset(2026, 9, 15, 12, 0, 0, TimeSpan.Zero)));
 
         Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(pdf, 0, 4));
-        using var document = PdfDocument.Open(pdf);
-        var text = string.Join("\n", document.GetPages().Select(page => page.Text));
+        if (Environment.GetEnvironmentVariable("ESTIMATE_PDF_OUT") is { Length: > 0 } outPath) File.WriteAllBytes(outPath, pdf);
+        var text = Text(pdf);
         Assert.Contains("EST-0001", text);
         Assert.Contains("LD-0001", text);
         Assert.Contains("16 Ravens Dene", text);
@@ -31,7 +31,7 @@ public sealed class EstimateDocumentRendererTests
         Assert.Contains("150,000", text);
         Assert.Contains("Rear dormer", text);
         Assert.Contains("16,000", text);
-        Assert.Contains("Loft conversion", text);
+        Assert.Contains("LOFT CONVERSION", text);
         Assert.Contains("internal estimate", text);
     }
 
@@ -39,8 +39,7 @@ public sealed class EstimateDocumentRendererTests
     public void AnUnpricedEstimate_saysSo_andStillRenders()
     {
         var pdf = EstimateDocumentRenderer.Render(new EstimateDocumentRenderer.Model(Estimate() with { Total = null, BudgetMentioned = null, Notes = "" }, Lead(), DateTimeOffset.UtcNow));
-        using var document = PdfDocument.Open(pdf);
-        var text = string.Join("\n", document.GetPages().Select(page => page.Text));
+        var text = Text(pdf);
         Assert.Contains("Not yet priced", text);
         Assert.DoesNotContain("Notes and breakdown", text);
     }
@@ -50,6 +49,13 @@ public sealed class EstimateDocumentRendererTests
     {
         Assert.Equal("EST-0001 - 16 Ravens Dene - estimate.pdf", EstimateDocumentRenderer.FileName(Estimate(), Lead()));
         Assert.Equal("EST-0001 - Julia Nagornaya - estimate.pdf", EstimateDocumentRenderer.FileName(Estimate(), Lead() with { PropertyAddress = "" }));
+    }
+
+    // PdfPig's page.Text runs words together; the words, spaced, are what a reader sees.
+    private static string Text(byte[] pdf)
+    {
+        using var document = PdfDocument.Open(pdf);
+        return string.Join("\n", document.GetPages().Select(page => string.Join(" ", page.GetWords().Select(word => word.Text))));
     }
 
     private static LeadEstimate Estimate() => new(
