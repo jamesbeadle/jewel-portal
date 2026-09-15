@@ -19,8 +19,9 @@
     only, because it creates the Client account and the project shell in one move and cannot be
     undone from here. Delete (2026-09-15) is the directors' too, never on a Won lead, and takes
     the lead's whole timeline, estimates, proposals and imagine rounds with it — for a mistaken
-    capture or a duplicate; a real lead that went nowhere is Lost. Edits are modals; the page
-    never renders an inline form.
+    capture or a duplicate; a real lead that went nowhere is Lost. The rail is the house one:
+    Won on its own as the primary step, everything else (edit, log, delete) in the Actions
+    menu. Edits are modals; the page never renders an inline form.
 *@
 
 <Page>
@@ -55,19 +56,17 @@
                     @(string.IsNullOrWhiteSpace(lead.Summary) ? lead.Stage.Meaning() : lead.Summary)
                 </SubtitleContent>
                 <Actions>
-                    <div class="flex items-center gap-2 shrink-0">
-                        @if (CanWork)
-                        {
-                            <button type="button" class="btn-secondary" @onclick="() => editOpen = true">Edit</button>
-                            <button type="button" class="btn-secondary" @onclick="OpenLog">Log activity</button>
-                        }
+                    @* The house rail (as the request and variation pages): the one primary step
+                       on its own, everything else — edit, log, and the destructive tail — in
+                       the Actions menu. *@
+                    <div class="flex flex-wrap items-center gap-2 shrink-0">
                         @if (CanDecide && lead.Stage != LeadStage.Won)
                         {
                             <button type="button" class="btn-primary" title="@(Proposals.Any(p => p.Status == SalesProposalStatus.Accepted) ? "The proposal is accepted — this creates the client and the project" : "Creates the client and the project")" @onclick="OpenWin">Won — create client &amp; project</button>
                         }
-                        @if (CanDecide && lead.Stage != LeadStage.Won)
+                        @if (ActionMenuItems.Count > 0)
                         {
-                            <button type="button" class="btn-secondary text-negative border-negative/40 hover:border-negative" title="Removes the lead and everything on it — no undo" @onclick="OpenDelete">Delete</button>
+                            <DropdownMenu Label="Actions" WidthClass="w-64" Disabled="@busy" Items="ActionMenuItems" />
                         }
                     </div>
                 </Actions>
@@ -520,6 +519,27 @@
         }
         catch (CommandFailedException ex) { actionError = ex.Message; }
         finally { busy = false; }
+    }
+
+    // The Actions menu: editing and logging for the sales team, the destructive tail for the
+    // deciders, last and marked — the same shape as ProjectRequestDetail.Menus.
+    private List<DropdownMenu.Item> ActionMenuItems
+    {
+        get
+        {
+            var items = new List<DropdownMenu.Item>();
+            if (Lead is not { } lead) return items;
+            if (CanWork)
+            {
+                items.Add(new(Label: "Edit details…", OnSelect: EventCallback.Factory.Create(this, () => { editOpen = true; })));
+                items.Add(new(Label: "Log activity…", OnSelect: EventCallback.Factory.Create(this, OpenLog),
+                    Hint: "A call, email, letter, meeting, site visit, proposal or note on the timeline"));
+            }
+            if (CanDecide && lead.Stage != LeadStage.Won)
+                items.Add(new(Label: "Delete lead…", OnSelect: EventCallback.Factory.Create(this, OpenDelete),
+                    Hint: "Removes the lead and everything on it — no undo", Destructive: true, Group: 1));
+            return items;
+        }
     }
 
     private void OpenDelete()

@@ -257,9 +257,10 @@ sent copy inheriting the thread's tags. Tagging/untagging: Control Centre.
 ### Leads — `/sales/leads`, lead `/sales/leads/{leadId}`; Strategies — `/sales/strategies`; Inbox — `/sales/inbox`
 The one register of everyone Jewel might convince to build with it (LD-####,
 ladder New → Contacted → Engaged → Site visit → Proposal, ending Won / Lost or
-parked in Nurture; Won creates the Client and the project shell; **Delete**,
-directors only and never on a Won lead, removes a mistaken or duplicate lead
-with everything on it). A lead's page
+parked in Nurture; Won creates the Client and the project shell; the Actions
+menu holds Edit details, Log activity and — directors only, never on a Won
+lead — **Delete lead**, which removes a mistaken or duplicate lead with
+everything on it). A lead's page
 holds its details, stage move, timeline, and — since 2026-09-15 — **Enquiry
 emails** (every email tagged to the lead from the Control Centre's Sales pane,
 read live) and **Estimates**: Jewel's own pricing of each enquiry, EST-####,
