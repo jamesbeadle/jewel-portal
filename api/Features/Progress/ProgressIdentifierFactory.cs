@@ -8,4 +8,5 @@ internal static class ProgressIdentifierFactory
     public static string NextProgressPhotoId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextProgressReportId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextProgressReportSelectionId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextContractorsReportId() => Guid.NewGuid().ToString(CompactGuidFormat);
 }

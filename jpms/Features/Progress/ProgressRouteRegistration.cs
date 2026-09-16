@@ -55,5 +55,30 @@ public static class ProgressRouteRegistration
         commands.Register<DeleteProgressReport, Acknowledgement>(
             new CommandRoute("DELETE", "/api/progress-reports/{progressReportId}",
                 command => $"/api/progress-reports/{((DeleteProgressReport)command).ProgressReportId}"));
+
+        RegisterContractorsReportRoutes(queries, commands);
+    }
+
+    private static void RegisterContractorsReportRoutes(QueryRouteTable queries, CommandRouteTable commands)
+    {
+        queries.Register<ListContractorsReports, IReadOnlyList<ContractorsReport>>(
+            new QueryRoute("/api/projects/{projectId}/contractors-reports",
+                query => $"/api/projects/{((ListContractorsReports)query).ProjectId}/contractors-reports"));
+
+        queries.Register<GetContractorsReport, ContractorsReportView?>(
+            new QueryRoute("/api/contractors-reports/{contractorsReportId}",
+                query => $"/api/contractors-reports/{((GetContractorsReport)query).ContractorsReportId}"));
+
+        commands.Register<CreateContractorsReport, ContractorsReport>(
+            new CommandRoute("POST", "/api/projects/{projectId}/contractors-reports",
+                command => $"/api/projects/{((CreateContractorsReport)command).ProjectId}/contractors-reports"));
+
+        commands.Register<UpdateContractorsReport, ContractorsReport>(
+            new CommandRoute("PUT", "/api/contractors-reports/{contractorsReportId}",
+                command => $"/api/contractors-reports/{((UpdateContractorsReport)command).ContractorsReportId}"));
+
+        commands.Register<DeleteContractorsReport, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/contractors-reports/{contractorsReportId}",
+                command => $"/api/contractors-reports/{((DeleteContractorsReport)command).ContractorsReportId}"));
     }
 }

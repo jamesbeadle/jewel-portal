@@ -1,0 +1,35 @@
+@using Jewel.JPMS.Contracts.Progress
+
+@* Which of the week's progress updates go into Sections 1 and 9. Every update in the period
+   starts ticked; untick a note that is not for the client's eyes. *@
+
+@if (Updates.Count == 0)
+{
+    <EmptyState>No progress updates were recorded in this week — record them on the progress feed or import the WhatsApp week.</EmptyState>
+}
+else
+{
+    <ul class="space-y-2">
+        @foreach (var update in Updates)
+        {
+            <li class="flex items-center gap-3">
+                <Checkbox Value="@Draft.SelectedUpdateIds.Contains(update.ProgressUpdateId)" ValueChanged="value => Toggle(update.ProgressUpdateId, value)" />
+                <div class="min-w-0">
+                    <p class="text-sm text-content truncate">@update.Title</p>
+                    <p class="text-xs text-content-subtle">@DateText(update.WorkDate) · @update.PhotoCount photo@(update.PhotoCount == 1 ? "" : "s")</p>
+                </div>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter, EditorRequired] public ContractorsReportDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<ContractorsReportUpdateChoice> Updates { get; set; } = Array.Empty<ContractorsReportUpdateChoice>();
+
+    private void Toggle(string progressUpdateId, bool isSelected)
+    {
+        if (isSelected) Draft.SelectedUpdateIds.Add(progressUpdateId);
+        else Draft.SelectedUpdateIds.Remove(progressUpdateId);
+    }
+}

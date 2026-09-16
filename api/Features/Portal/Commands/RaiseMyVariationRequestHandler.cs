@@ -21,11 +21,11 @@ public sealed class RaiseMyVariationRequestHandler
         if (workOrder.Status is not ((int)WorkOrderStatus.Released or (int)WorkOrderStatus.Complete))
             throw new InvalidOperationException("Variations can only be raised against issued work orders.");
 
-        // Clamp to storage limits — the portal form is friendly but the API is the boundary.
+        // Clamp the title to its column — the portal form is friendly but the API is the boundary;
+        // the description is unbounded.
         var title = command.Title.Trim();
         if (title.Length > 256) title = title[..256];
         var description = command.Description.Trim();
-        if (description.Length > 2048) description = description[..2048];
 
         var entity = new SubcontractorVariationRequestEntity
         {

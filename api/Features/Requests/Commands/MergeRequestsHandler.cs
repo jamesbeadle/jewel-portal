@@ -60,14 +60,13 @@ public sealed class MergeRequestsHandler : ICommandHandler<MergeRequests, Reques
             item.Position = ++nextPosition;
         }
 
-        // 3. The merged description folds in beneath the survivor's, labelled with where it came
-        //    from (truncated to the column's limit if the combination overruns it).
+        // 3. The merged description folds in beneath the survivor's, labelled with where it came from.
         if (!string.IsNullOrWhiteSpace(merged.Description))
         {
             var combined = string.IsNullOrWhiteSpace(survivor.Description)
                 ? merged.Description
                 : $"{survivor.Description}\n\n— Merged from {merged.TagReference} ({merged.Title}) —\n{merged.Description}";
-            survivor.Description = combined.Length <= 2048 ? combined : combined[..2048];
+            survivor.Description = combined;
         }
 
         // 4. The live-read emails follow: retag everything carrying the merged request's workflow

@@ -294,9 +294,9 @@ public partial class ProjectRequestDetail
 
     // Which fields the assistant changed on its last pass, so they pulse rather than silently
     // differing from what the user last read. Cleared on a timer.
-    // Storage limits on VariationOrderEntity. Enforced here now that no server-side draft handler
-    // sits in front of the dialog to clamp what a model returned.
+    // The title's storage limit on VariationOrderEntity (the description is unbounded). Enforced
+    // here now that no server-side draft handler sits in front of the dialog to clamp what a
+    // model returned.
     private const int MaxVariationTitleChars = 256;
-    private const int MaxVariationDescriptionChars = 2048;
 
 }

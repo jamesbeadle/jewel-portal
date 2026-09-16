@@ -2,7 +2,9 @@ using Ganss.Xss;
 using Jewel.JPMS.Api.Features.Labour; // SiteClock (view_labour_week's week arithmetic)
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph; // IIntakeMessageReader (record email reads)
 using Jewel.JPMS.Api.Features.Requests; // TriageRoles (internal, same assembly)
+using Jewel.JPMS.Api.Features.Closeout;
 using Jewel.JPMS.Contracts.Ai;
+using Jewel.JPMS.Contracts.Closeout;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools;
@@ -20,7 +22,8 @@ public static partial class AiToolCatalogue
                 "list_defects",
                 "Defects on a project. Status is Open, InProgress, Resolved or Verified. Looking for a "
                 + "defect by what or where it is? Pass search on the FIRST call — it matches the "
-                + "description and the location.",
+                + "description and the location. Each defect with a supplier address carries "
+                + "supplierEmail — the to, subject and body send_defect_to_supplier will send.",
                 AiToolSchema.Object(
                     ("projectId", "string", "Defaults to the project in view.", false),
                     ("status", "string", "Optional filter: Open, InProgress, Resolved or Verified.", false),
@@ -61,6 +64,16 @@ public static partial class AiToolCatalogue
                         : await context.Db.Subcontractors.AsNoTracking()
                             .Where(s => supplierIds.Contains(s.SubcontractorId))
                             .ToDictionaryAsync(s => s.SubcontractorId, ct);
+                    Jewel.JPMS.Api.Data.Entities.SubcontractorEntity? SupplierOf(Jewel.JPMS.Api.Data.Entities.DefectEntity row) =>
+                        row.SubcontractorId is { } id && suppliers.TryGetValue(id, out var found) ? found : null;
+                    DefectSupplierEmail? SupplierEmailOf(Jewel.JPMS.Api.Data.Entities.DefectEntity row)
+                    {
+                        var supplier = SupplierOf(row);
+                        var model = row.ToModel(supplier);
+                        return string.IsNullOrWhiteSpace(model.SupplierEmail)
+                            ? null
+                            : DefectSupplierEmails.Next(model, project.Name, project.Reference, supplier?.ContactName);
+                    }
 
                     return Serialise(new
                     {
@@ -74,8 +87,8 @@ public static partial class AiToolCatalogue
                               + "Pass search to narrow instead of calling again blind."
                             : "read_record_emails record_type defect (with the defectId) reads a defect's tagged mail; "
                               + "list_todos aboutRecordId (the defectId) lists the to-dos about it; add_todo "
-                              + "aboutRecordType Defect raises one. Sending the defect to its supplier happens "
-                              + "on the defect's page (route) — no connector action yet.",
+                              + "aboutRecordType Defect raises one. send_defect_to_supplier emails the defect to "
+                              + "its supplier — supplierEmail on each defect is exactly what it will send.",
                         defects = defects.Select(row => new
                         {
                             row.DefectId,
@@ -83,9 +96,10 @@ public static partial class AiToolCatalogue
                             status = ((DefectStatus)row.Status).ToString(),
                             description = row.Description,
                             location = row.Location,
-                            supplier = row.SubcontractorId is { } supplierId && suppliers.TryGetValue(supplierId, out var supplier)
+                            supplier = SupplierOf(row) is { } supplier
                                 ? new { supplier.SubcontractorId, supplier.CompanyName, supplier.ContactEmail }
                                 : null,
+                            supplierEmail = SupplierEmailOf(row),
                             assignedTo = string.IsNullOrWhiteSpace(row.AssignedToEmail) ? null : row.AssignedToEmail,
                             sentToSupplierAt = row.SentToSupplierAt,
                             sentToSupplierBy = row.SentToSupplierByEmail,

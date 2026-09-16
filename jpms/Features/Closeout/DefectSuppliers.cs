@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.Closeout;
 using Jewel.JPMS.Features.Triage;
 
 namespace Jewel.JPMS.Features.Closeout;
@@ -19,48 +20,15 @@ public static class DefectSuppliers
             .ToList();
 
     /// <summary>The first email to the supplier — the defect as it stands, with the ask. Plain
-    /// text: the composer turns it into HTML and the sender edits before sending. The subject
-    /// leads with the reference so the supplier's reply keeps it in view.</summary>
-    public static ComposePrefill RaiseEmail(Defect defect, Project? project, Subcontractor? supplier)
-    {
-        var projectLabel = project is null ? "" : $" at {project.Name} ({project.Reference})";
-        var greeting = supplier is null || string.IsNullOrWhiteSpace(supplier.ContactName)
-            ? "Hello,"
-            : $"Hello {supplier.ContactName.Split(' ')[0]},";
-        var body =
-            $"{greeting}\n\n"
-            + $"We have logged the following defect{projectLabel} and need it put right:\n\n"
-            + $"{defect.Reference}\n"
-            + (string.IsNullOrWhiteSpace(defect.Location) ? "" : $"Location: {defect.Location}\n")
-            + $"Description: {defect.Description}\n\n"
-            + "Please confirm when you can attend and rectify this. Reply to this email so your response stays on file against the defect.\n\n"
-            + "Kind regards,\n";
-        return new ComposePrefill(To: defect.SupplierEmail, Subject: Subject(defect, project), Body: body);
-    }
+    /// text: the composer turns it into HTML and the sender edits before sending. The wording
+    /// is DefectSupplierEmails (contracts), shared with the connector's send_defect_to_supplier.</summary>
+    public static ComposePrefill RaiseEmail(Defect defect, Project? project, Subcontractor? supplier) =>
+        Prefill(DefectSupplierEmails.Raise(defect, project?.Name, project?.Reference, supplier?.ContactName));
 
     /// <summary>A chase — the defect was sent already; this asks for the response that hasn't come.</summary>
-    public static ComposePrefill ChaseEmail(Defect defect, Project? project, Subcontractor? supplier)
-    {
-        var greeting = supplier is null || string.IsNullOrWhiteSpace(supplier.ContactName)
-            ? "Hello,"
-            : $"Hello {supplier.ContactName.Split(' ')[0]},";
-        var sent = defect.SentToSupplierAt is { } at ? $" sent to you on {DateFormats.DateText(at)}" : "";
-        var body =
-            $"{greeting}\n\n"
-            + $"A reminder about defect {defect.Reference}{sent}"
-            + (string.IsNullOrWhiteSpace(defect.Location) ? "" : $" ({defect.Location})")
-            + ":\n\n"
-            + $"{defect.Description}\n\n"
-            + "Please let us know when this will be attended to.\n\n"
-            + "Kind regards,\n";
-        return new ComposePrefill(To: defect.SupplierEmail, Subject: "Chasing: " + Subject(defect, project), Body: body);
-    }
+    public static ComposePrefill ChaseEmail(Defect defect, Project? project, Subcontractor? supplier) =>
+        Prefill(DefectSupplierEmails.Chase(defect, project?.Name, supplier?.ContactName));
 
-    private static string Subject(Defect defect, Project? project)
-    {
-        var parts = new List<string> { defect.Reference };
-        if (!string.IsNullOrWhiteSpace(defect.Location)) parts.Add(defect.Location);
-        if (project is not null) parts.Add(project.Name);
-        return string.Join(" · ", parts);
-    }
+    private static ComposePrefill Prefill(DefectSupplierEmail email) =>
+        new(To: email.To, Subject: email.Subject, Body: email.Body);
 }

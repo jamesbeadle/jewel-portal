@@ -31,9 +31,8 @@ public sealed class CreateManualVariationOrderHandler : ICommandHandler<CreateMa
         var title = command.Title.Trim();
         if (title.Length == 0) throw new InvalidOperationException("A title is required.");
         var description = (command.Description ?? "").Trim();
-        // Clamp to the entity's storage limits — the same guard CreateVoqFromRfq applies.
+        // Clamp the title to its column — the same guard CreateVoqFromRfq applies; the description is unbounded.
         if (title.Length > 256) title = title[..256];
-        if (description.Length > 2048) description = description[..2048];
         var commercialBasis = VariationNarratives.Clean(command.CommercialBasis);
         var programmeImpact = VariationNarratives.Clean(command.ProgrammeImpact);
         var exclusions = VariationNarratives.Clean(command.Exclusions);

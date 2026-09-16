@@ -47,6 +47,8 @@ internal static partial class AiDeliveryTools
         GetProgramme(),
         ListArchitectInstructions(),
         ListProgress(),
+        ListContractorsReports(),
+        GetContractorsReport(),
         ListDrawings(),
         GetDocumentExtraction(),
         GetPackageReconciliation(),

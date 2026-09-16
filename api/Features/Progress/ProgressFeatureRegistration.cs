@@ -1,4 +1,8 @@
 using Jewel.JPMS.Api.Features.Progress.Commands;
+using Jewel.JPMS.Api.Features.Progress.ContractorsReports.Commands;
+using Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
+using Jewel.JPMS.Api.Features.Progress.ContractorsReports.Documents;
+using Jewel.JPMS.Api.Features.Progress.ContractorsReports.Queries;
 using Jewel.JPMS.Api.Features.Progress.Photos;
 using Jewel.JPMS.Api.Features.Progress.WhatsApp;
 using Jewel.JPMS.Api.Features.Progress.Queries;
@@ -56,7 +60,29 @@ public static class ProgressFeatureRegistration
         services.AddScoped<ICommandHandler<DeleteProgressReport, Acknowledgement>, DeleteProgressReportHandler>();
         services.AddScoped<DeleteProgressReportAuthorisation>();
 
+        AddContractorsReports(services);
         return services;
+    }
+
+    private static void AddContractorsReports(IServiceCollection services)
+    {
+        services.AddScoped<ContractorsReportComposer>();
+        services.AddScoped<ContractorsReportPhotoLoader>();
+        services.AddScoped<ContractorsReportBuilder>();
+
+        services.AddScoped<IQueryHandler<ListContractorsReports, IReadOnlyList<ContractorsReport>>, ListContractorsReportsHandler>();
+        services.AddScoped<IQueryHandler<GetContractorsReport, ContractorsReportView?>, GetContractorsReportHandler>();
+
+        services.AddScoped<ICommandHandler<CreateContractorsReport, ContractorsReport>, CreateContractorsReportHandler>();
+        services.AddScoped<CreateContractorsReportAuthorisation>();
+        services.AddScoped<CreateContractorsReportValidation>();
+
+        services.AddScoped<ICommandHandler<UpdateContractorsReport, ContractorsReport>, UpdateContractorsReportHandler>();
+        services.AddScoped<UpdateContractorsReportAuthorisation>();
+        services.AddScoped<UpdateContractorsReportValidation>();
+
+        services.AddScoped<ICommandHandler<DeleteContractorsReport, Acknowledgement>, DeleteContractorsReportHandler>();
+        services.AddScoped<DeleteContractorsReportAuthorisation>();
     }
 
     private static void RegisterPhotoStore(IServiceCollection services, IConfiguration configuration)

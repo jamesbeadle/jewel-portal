@@ -1,0 +1,42 @@
+@* Section 2 as a list of lines: tick one when it is done (it is struck from the print and not
+   carried to next week), add the next, remove a mistake. *@
+
+<div class="space-y-2">
+    @for (var index = 0; index < Draft.LookAhead.Count; index++)
+    {
+        var line = Draft.LookAhead[index];
+        <div class="flex items-center gap-3">
+            <Checkbox Value="@line.IsDone" ValueChanged="value => line.IsDone = value" Title="Done — struck from the print and not carried forward" />
+            <input class="field flex-1 @(line.IsDone ? "line-through text-content-subtle" : "")" value="@line.Text"
+                   @onchange="e => line.Text = e.Value?.ToString() ?? string.Empty" placeholder="What is planned for the coming week" />
+            <button type="button" class="btn-secondary text-negative" title="Remove this line" @onclick="() => Draft.LookAhead.Remove(line)">Remove</button>
+        </div>
+    }
+    @if (Draft.LookAhead.Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic">No items yet — add the first line below.</p>
+    }
+    <div class="flex items-center gap-3">
+        <input class="field flex-1" value="@newLine" @onchange="e => newLine = e.Value?.ToString() ?? string.Empty"
+               @onkeydown="OnKeyDown" placeholder="Add a line" />
+        <button type="button" class="btn-secondary" disabled="@string.IsNullOrWhiteSpace(newLine)" @onclick="Add">Add</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ContractorsReportDraft Draft { get; set; } = default!;
+
+    private string newLine = "";
+
+    private void Add()
+    {
+        if (string.IsNullOrWhiteSpace(newLine)) return;
+        Draft.LookAhead.Add(new ContractorsReportLookAheadLine { Text = newLine.Trim() });
+        newLine = "";
+    }
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") Add();
+    }
+}

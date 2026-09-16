@@ -1,0 +1,35 @@
+@* Opening the week's report: the Thursday it ends on, and the number when the sequence needs a hand. *@
+
+<div class="border border-line bg-surface p-5 mb-5">
+    <div class="grid gap-4 md:grid-cols-3">
+        <FormField Label="Week ending (Thursday)" Required Hint="The week runs from the Friday before to this Thursday.">
+            <input type="date" class="field" value="@WeekEnding.ToString("yyyy-MM-dd")" @onchange="OnDateChanged" />
+        </FormField>
+        <FormField Label="Report number" Hint="Leave blank to follow on from the newest report.">
+            <input type="number" min="1" class="field" value="@Number" @onchange="OnNumberChanged" />
+        </FormField>
+        <div class="flex items-end">
+            <button type="button" class="btn-primary" disabled="@IsBusy" @onclick="OnOpen">Open the week</button>
+        </div>
+    </div>
+    <p class="text-xs text-content-subtle mt-3">
+        Programme reference, prepared by and issued to carry forward from the previous report, as do its unstruck
+        Look Ahead items; the Valuation No. defaults to the highest certificate on the register and every progress
+        update in the week starts selected.
+    </p>
+</div>
+
+@code {
+    [Parameter] public DateOnly WeekEnding { get; set; }
+    [Parameter] public EventCallback<DateOnly> WeekEndingChanged { get; set; }
+    [Parameter] public int? Number { get; set; }
+    [Parameter] public EventCallback<int?> NumberChanged { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public EventCallback OnOpen { get; set; }
+
+    private Task OnDateChanged(ChangeEventArgs e) =>
+        DateOnly.TryParse(e.Value?.ToString(), out var day) ? WeekEndingChanged.InvokeAsync(day) : Task.CompletedTask;
+
+    private Task OnNumberChanged(ChangeEventArgs e) =>
+        NumberChanged.InvokeAsync(int.TryParse(e.Value?.ToString(), out var value) && value > 0 ? value : null);
+}

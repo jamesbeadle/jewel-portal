@@ -139,6 +139,7 @@ public sealed partial class JpmsContext : DbContext
     public DbSet<ProgressPhotoEntity> ProgressPhotos => Set<ProgressPhotoEntity>();
     public DbSet<ProgressReportEntity> ProgressReports => Set<ProgressReportEntity>();
     public DbSet<ProgressReportSelectionEntity> ProgressReportSelections => Set<ProgressReportSelectionEntity>();
+    public DbSet<ContractorsReportEntity> ContractorsReports => Set<ContractorsReportEntity>();
 
     public DbSet<ClaimPeriodEntity> ClaimPeriods => Set<ClaimPeriodEntity>();
     public DbSet<ValuationEntity> Valuations => Set<ValuationEntity>();

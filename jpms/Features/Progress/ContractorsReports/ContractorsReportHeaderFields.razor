@@ -1,0 +1,39 @@
+@using Jewel.JPMS.Contracts.Progress
+
+@* The header block a person keys: Valuation No. (the register's last certificate shown beside
+   it), programme reference, prepared by, issued to, date of issue. *@
+
+<div class="grid gap-4 md:grid-cols-2">
+    <FormField Label="Valuation No." Hint="@ValuationHint">
+        <input class="field" value="@Draft.ValuationNumber" @onchange="e => Draft.ValuationNumber = e.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <FormField Label="Programme reference">
+        <input class="field" value="@Draft.ProgrammeReference" @onchange="e => Draft.ProgrammeReference = e.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <FormField Label="Prepared by">
+        <input class="field" value="@Draft.PreparedByName" @onchange="e => Draft.PreparedByName = e.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <FormField Label="Issued to">
+        <input class="field" value="@Draft.IssuedTo" @onchange="e => Draft.IssuedTo = e.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <FormField Label="Date of issue" Required>
+        <input type="date" class="field" value="@Draft.DateOfIssue.ToString("yyyy-MM-dd")" @onchange="OnDateChanged" />
+    </FormField>
+    <FormField Label="Period" Hint="Friday to Thursday — fixed when the report was opened.">
+        <input class="field" disabled value="@($"{DateText(Header.PeriodStart)} – {DateText(Header.PeriodEnd)}")" />
+    </FormField>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ContractorsReportDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public ContractorsReportHeader Header { get; set; } = default!;
+
+    private string ValuationHint => Header.LastCertificateNumber is { } last
+        ? $"The register's highest payment certificate is No. {last}."
+        : "No payment certificate is on the register yet.";
+
+    private void OnDateChanged(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), out var day)) Draft.DateOfIssue = day;
+    }
+}

@@ -1,0 +1,41 @@
+@using Jewel.JPMS.Contracts.Progress
+
+@* Section 8: the work orders on site come from the register; the days on site and the
+   client-nominated flag are what a person keys against each. *@
+
+<RecordsTable IsEmpty="@(Subcontractors.Count == 0)" EmptyMessage="No work orders are on site this week." Dense>
+    <thead>
+        <tr>
+            <th>Order</th>
+            <th>Supplier</th>
+            <th>Scope</th>
+            <th class="text-right">Value</th>
+            <th>Target completion</th>
+            <th class="text-right w-28">Days on site</th>
+            <th class="w-36">Client nominated</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var subcontractor in Subcontractors)
+        {
+            var line = Draft.AttendanceFor(subcontractor.WorkOrderId);
+            <tr>
+                <td class="font-medium">@subcontractor.Reference</td>
+                <td>@subcontractor.Supplier</td>
+                <td class="max-w-md truncate" title="@subcontractor.Scope">@subcontractor.Scope</td>
+                <td class="text-right">@Money(subcontractor.Value)</td>
+                <td>@DateText(subcontractor.TargetCompletion)</td>
+                <td class="text-right">
+                    <input type="number" min="0" max="7" class="field text-right" value="@line.AttendanceDays"
+                           @onchange="e => line.AttendanceDays = int.TryParse(e.Value?.ToString(), out var days) ? days : null" />
+                </td>
+                <td><Checkbox Value="@line.IsClientNominated" ValueChanged="value => line.IsClientNominated = value" /></td>
+            </tr>
+        }
+    </tbody>
+</RecordsTable>
+
+@code {
+    [Parameter, EditorRequired] public ContractorsReportDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<ContractorsReportSubcontractor> Subcontractors { get; set; } = Array.Empty<ContractorsReportSubcontractor>();
+}

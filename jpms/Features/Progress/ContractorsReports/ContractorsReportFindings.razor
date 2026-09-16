@@ -1,0 +1,25 @@
+@using Jewel.JPMS.Contracts.Progress
+
+@* The wording gate's verdict: while any line names a banned word the Word and PDF builds are
+   refused, and the person is told which section and which line. *@
+
+@if (Findings.Count > 0)
+{
+    <Notice Tone="Tone.Negative" Title="The report cannot be built as written" Class="@Class">
+        <p class="text-sm mb-2">
+            It goes to the client's side, so nothing in it may read as an admission of defective work. Reword these lines
+            (a site note is edited on the progress feed) and save:
+        </p>
+        <ul class="text-sm space-y-1">
+            @foreach (var finding in Findings)
+            {
+                <li><span class="font-medium">@finding.Section</span> — “@finding.Line” @finding.Reason</li>
+            }
+        </ul>
+    </Notice>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ContractorsReportFinding> Findings { get; set; } = Array.Empty<ContractorsReportFinding>();
+    [Parameter] public string Class { get; set; } = "";
+}

@@ -77,3 +77,33 @@ public sealed class ProgressReportSelectionEntity
     [MaxLength(64)]      public string ProgressUpdateId { get; set; } = "";
     public int SortOrder { get; set; }
 }
+
+/// <summary>
+/// The weekly Contractor's Report (the FD's spec of 2026-09-15, change 4): one row per report
+/// holding what a person enters — the header fields, Look Ahead, Neighbours, H&amp;S, the
+/// Building Control liaison line, the subcontractors' attendance and the chosen updates. Every
+/// other section is read from the register at build time and never stored. The three JSON
+/// columns hold small typed lists (ContractorsReportJson), the way a variation's staged lines do.
+/// </summary>
+public sealed class ContractorsReportEntity
+{
+    [Key, MaxLength(64)] public string ContractorsReportId { get; set; } = "";
+    [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    public int Number { get; set; }
+    public DateOnly PeriodStart { get; set; }
+    public DateOnly PeriodEnd { get; set; }
+    [MaxLength(32)]      public string ValuationNumber { get; set; } = "";
+    [MaxLength(256)]     public string ProgrammeReference { get; set; } = "";
+    [MaxLength(256)]     public string PreparedByName { get; set; } = "";
+    [MaxLength(256)]     public string IssuedTo { get; set; } = "";
+    public DateOnly DateOfIssue { get; set; }
+    public string LookAheadJson { get; set; } = "[]";
+    [MaxLength(4000)]    public string Neighbours { get; set; } = "";
+    [MaxLength(4000)]    public string HealthAndSafety { get; set; } = "";
+    [MaxLength(2000)]    public string BuildingControlLiaison { get; set; } = "";
+    public string AttendanceJson { get; set; } = "[]";
+    public string SelectedUpdateIdsJson { get; set; } = "[]";
+    [MaxLength(256)]     public string CreatedByEmail { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}

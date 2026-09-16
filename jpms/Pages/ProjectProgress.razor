@@ -96,6 +96,10 @@
             @if (CanContribute)
             {
                 <div class="flex items-center gap-2">
+                    <a href="@($"/projects/{ProjectId}/progress/contractors-reports")" class="btn-secondary"
+                       title="The weekly nine-section Contractor's Report, built from this register as Word and PDF">
+                        Contractor's Reports…
+                    </a>
                     <a href="@($"/projects/{ProjectId}/progress/whatsapp-week")" class="btn-secondary"
                        title="Bring a week of the site WhatsApp group in as one update per day, with its photographs">
                         Import WhatsApp week…

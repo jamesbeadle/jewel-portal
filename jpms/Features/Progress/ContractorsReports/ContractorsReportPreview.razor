@@ -1,0 +1,104 @@
+@using Jewel.JPMS.Contracts.Progress
+
+@* The document as it will print, read from the SAME composition the Word and PDF builds use —
+   so the page never shows one thing and the file another. Register-read sections are shown as
+   read; the entered ones show what was last SAVED. *@
+
+<div class="space-y-5 text-sm">
+    <section>
+        <h3 class="font-semibold text-content mb-2">1. Progress Against Programme</h3>
+        @foreach (var day in Document.Progress)
+        {
+            <p class="text-xs font-semibold text-accent mt-2">@day.Heading</p>
+            @if (day.Entries.Count == 0)
+            {
+                <p class="text-content-subtle italic">No progress recorded.</p>
+            }
+            @foreach (var entry in day.Entries)
+            {
+                <p class="font-medium text-content">@entry.Title <span class="text-content-subtle font-normal">· @entry.Photos.Count photo@(entry.Photos.Count == 1 ? "" : "s")</span></p>
+                <p class="whitespace-pre-line text-content-muted">@entry.Description</p>
+            }
+        }
+    </section>
+    <section>
+        <h3 class="font-semibold text-content mb-2">2. Look Ahead</h3>
+        @if (!Document.LookAhead.Any(item => !item.IsDone))
+        {
+            <p class="text-content-subtle italic">No items are planned for the coming week.</p>
+        }
+        <ul class="list-disc pl-5 text-content-muted">
+            @foreach (var item in Document.LookAhead.Where(item => !item.IsDone))
+            {
+                <li>@item.Text</li>
+            }
+        </ul>
+    </section>
+    <section>
+        <h3 class="font-semibold text-content mb-2">3. Decisions / Instructions Needed</h3>
+        @if (Document.Decisions.Count == 0)
+        {
+            <p class="text-content-subtle italic">No decisions or instructions are outstanding.</p>
+        }
+        @foreach (var decision in Document.Decisions)
+        {
+            <p class="text-content-muted"><span class="font-medium text-content">@decision.Reference</span> @decision.Title · @decision.Status · due @DateText(decision.ResponseDue)</p>
+        }
+    </section>
+    <section>
+        <h3 class="font-semibold text-content mb-2">4. Variations</h3>
+        @if (Document.Variations.Count == 0)
+        {
+            <p class="text-content-subtle italic">No variations are outstanding.</p>
+        }
+        @foreach (var variation in Document.Variations)
+        {
+            <p class="text-content-muted"><span class="font-medium text-content">@variation.DisplayNumber</span> @variation.Title · @variation.Status · @Money(variation.Value)</p>
+        }
+        @if (Document.Variations.Count > 0)
+        {
+            <p class="font-medium text-content mt-1">Total @Money(Document.VariationsTotal)</p>
+        }
+    </section>
+    <section>
+        <h3 class="font-semibold text-content mb-2">5. Neighbours</h3>
+        <p class="whitespace-pre-line text-content-muted">@Shown(Document.Neighbours)</p>
+    </section>
+    <section>
+        <h3 class="font-semibold text-content mb-2">6. Health &amp; Safety</h3>
+        <p class="whitespace-pre-line text-content-muted">@Shown(Document.HealthAndSafety)</p>
+    </section>
+    <section>
+        <h3 class="font-semibold text-content mb-2">7. Building Control</h3>
+        <p class="text-content-muted">@(Document.BuildingControl.BodyName ?? "—") · @(Document.BuildingControl.ContactName ?? "—") · @(Document.BuildingControl.ContactEmail ?? "—") · @(Document.BuildingControl.ContactPhone ?? "—")</p>
+        <p class="whitespace-pre-line text-content-muted">@Shown(Document.BuildingControl.Liaison)</p>
+    </section>
+    <section>
+        <h3 class="font-semibold text-content mb-2">8. Specialist Subcontractors</h3>
+        @if (Document.Subcontractors.Count == 0)
+        {
+            <p class="text-content-subtle italic">No specialist subcontractors were on site this week.</p>
+        }
+        @foreach (var subcontractor in Document.Subcontractors)
+        {
+            <p class="text-content-muted"><span class="font-medium text-content">@subcontractor.Reference</span> @subcontractor.Supplier · @subcontractor.Scope · @Money(subcontractor.Value) · @(subcontractor.AttendanceDays?.ToString() ?? "—") days@(subcontractor.IsClientNominated ? " · client nominated" : "")</p>
+        }
+    </section>
+    <section>
+        <h3 class="font-semibold text-content mb-2">9. Site Photographs</h3>
+        @if (!Document.Progress.Any(day => day.Photos.Count > 0))
+        {
+            <p class="text-content-subtle italic">Nothing to report.</p>
+        }
+        @foreach (var day in Document.Progress.Where(day => day.Photos.Count > 0))
+        {
+            <p class="text-content-muted"><span class="text-xs font-semibold text-accent">@day.Heading</span> · @day.Photos.Count photo@(day.Photos.Count == 1 ? "" : "s")</p>
+        }
+    </section>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ContractorsReportDocument Document { get; set; } = default!;
+
+    private static string Shown(string text) => string.IsNullOrWhiteSpace(text) ? "Nothing to report." : text;
+}

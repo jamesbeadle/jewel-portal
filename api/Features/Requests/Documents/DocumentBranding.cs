@@ -15,6 +15,9 @@ public static class DocumentBranding
     /// <summary>MigraDoc image name for the official logo (base64-embedded transparent PNG).</summary>
     public static string LogoImageName => "base64:" + LogoPngBase64;
 
+    /// <summary>The same logo as PNG bytes, for documents built outside MigraDoc (Word).</summary>
+    public static byte[] LogoPngBytes() => Convert.FromBase64String(LogoPngBase64);
+
     /// <summary>
     /// Adds the official logo to a header-band cell at the given width (aspect ratio locked),
     /// in place of the old text-only eyebrow.

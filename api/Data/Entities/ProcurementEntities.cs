@@ -264,7 +264,7 @@ public sealed class RequestEntity
     public int Kind { get; set; }
     [MaxLength(64)]      public string Reference { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
-    [MaxLength(2048)]    public string Description { get; set; } = "";
+                         public string Description { get; set; } = "";
     public int Status { get; set; }
     public decimal? Value { get; set; }
     [MaxLength(256)]     public string RaisedByEmail { get; set; } = "";
@@ -276,7 +276,7 @@ public sealed class RequestEntity
     public DateTimeOffset? IssuedAt { get; set; }
 
     public DateTimeOffset? RespondedAt { get; set; }
-    [MaxLength(2048)]    public string? ResponseText { get; set; }
+                         public string? ResponseText { get; set; }
     [MaxLength(256)]     public string? RespondedByEmail { get; set; }
 
     // When the request was closed. Chosen by the user at close time (defaults to today, may be a
@@ -312,7 +312,7 @@ public sealed class RequestEntity
     [MaxLength(4000)]    public string? ResponseActionRequired { get; set; }
 
     // Impact if the response is not received by the required-by date (programme / cost consequence).
-    [MaxLength(2048)]    public string? ImpactIfLate { get; set; }
+                         public string? ImpactIfLate { get; set; }
 
     // Sequential, human-readable request number (rendered as REQ-0001). Used as the name of the
     // request's Outlook folder in the projects@ mailbox so triaged emails can be grouped per request.

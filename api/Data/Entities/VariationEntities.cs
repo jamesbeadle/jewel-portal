@@ -22,7 +22,7 @@ public sealed class VariationOrderEntity
     public int Number { get; set; }
     [MaxLength(64)]      public string Reference { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
-    [MaxLength(2048)]    public string Description { get; set; } = "";
+                         public string Description { get; set; } = "";
     public int Status { get; set; }
     [MaxLength(64)]      public string? SelectedBidPackageId { get; set; }
     [MaxLength(64)]      public string? SelectedSubcontractorId { get; set; }
@@ -65,7 +65,7 @@ public sealed class SubcontractorVariationRequestEntity
     [MaxLength(64)]      public string WorkOrderId { get; set; } = "";
     [MaxLength(64)]      public string SubcontractorId { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
-    [MaxLength(2048)]    public string Description { get; set; } = "";
+                         public string Description { get; set; } = "";
     public decimal ProposedValue { get; set; }
     public int Status { get; set; }
     public DateTimeOffset SubmittedAt { get; set; }

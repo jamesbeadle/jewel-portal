@@ -27,6 +27,10 @@ public static class CloseoutFeatureRegistration
         services.AddScoped<UpdateDefectValidation>();
 
         // The Control Centre's "create new → Defect": raise + link the originating email.
+        services.AddScoped<ICommandHandler<SendDefectToSupplier, Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome>, SendDefectToSupplierHandler>();
+        services.AddScoped<SendDefectToSupplierAuthorisation>();
+        services.AddScoped<SendDefectToSupplierValidation>();
+
         services.AddScoped<ICommandHandler<CreateDefectFromMessage, Defect>, CreateDefectFromMessageHandler>();
         services.AddScoped<CreateDefectFromMessageAuthorisation>();
         services.AddScoped<CreateDefectFromMessageValidation>();

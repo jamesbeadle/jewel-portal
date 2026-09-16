@@ -1,0 +1,25 @@
+@using Jewel.JPMS.Contracts.Progress
+
+@* Sections 5, 6 and the entered half of 7. The Building Control contact beside the liaison
+   line is the project's case, read — it is not edited here. *@
+
+<div class="space-y-4">
+    <FormField Label="5. Neighbours" Hint="Defaults to the standing line; replace it when there is something to say.">
+        <textarea class="field" rows="3" value="@Draft.Neighbours" @onchange="e => Draft.Neighbours = e.Value?.ToString() ?? string.Empty"></textarea>
+    </FormField>
+    <FormField Label="6. Health &amp; Safety" Hint="Blank prints as “Nothing to report.”">
+        <textarea class="field" rows="3" value="@Draft.HealthAndSafety" @onchange="e => Draft.HealthAndSafety = e.Value?.ToString() ?? string.Empty"></textarea>
+    </FormField>
+    <FormField Label="7. Building Control — liaison this week" Hint="@ContactHint">
+        <textarea class="field" rows="3" value="@Draft.BuildingControlLiaison" @onchange="e => Draft.BuildingControlLiaison = e.Value?.ToString() ?? string.Empty"></textarea>
+    </FormField>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ContractorsReportDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public ContractorsReportBuildingControl BuildingControl { get; set; } = default!;
+
+    private string ContactHint => BuildingControl.BodyName is null && BuildingControl.ContactName is null
+        ? "No Building Control case is open on the project — the contact block prints empty."
+        : $"Contact printed from the project's case: {BuildingControl.BodyName ?? "—"} · {BuildingControl.ContactName ?? "—"}.";
+}

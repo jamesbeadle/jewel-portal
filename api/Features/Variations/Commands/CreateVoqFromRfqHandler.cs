@@ -43,7 +43,6 @@ public sealed class CreateVoqFromRfqHandler : ICommandHandler<CreateVoqFromRfq, 
         var title = string.IsNullOrWhiteSpace(command.Title) ? request.Title : command.Title!.Trim();
         var description = command.Description?.Trim() ?? request.Description;
         if (title.Length > 256) title = title[..256];
-        if (description.Length > 2048) description = description[..2048];
 
         var entity = new VariationOrderEntity
         {

@@ -1,0 +1,73 @@
+@page "/projects/{ProjectId}/progress/contractors-reports"
+@using Jewel.JPMS.Contracts.Progress
+@using Jewel.JPMS.Features.Progress.ContractorsReports
+@inject AuthService Auth
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+@inject NavigationManager Nav
+
+<PageTitle>Contractor's Reports · JPMS</PageTitle>
+
+@*
+    The weekly Contractor's Report register (change 4 of the FD's 2026-09-15 spec): one row per
+    reporting week, newest first. "New report" opens the week ending on a Thursday pre-filled
+    from last week's; the editor is the row's own page.
+*@
+
+<Page CanAccess="@CanRead" AccessDeniedMessage="Contractor's Reports are for the internal team.">
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="progress">
+        <SectionHeader Title="Contractor's Reports"
+                       Subtitle="The weekly nine-section report to the client's side, built from the register on every download">
+            <Actions>
+                <a href="@($"/projects/{ProjectId}/progress")" class="btn-secondary">Back to progress</a>
+                @if (CanContribute)
+                {
+                    <button type="button" class="btn-primary" @onclick="() => isOpening = !isOpening">
+                        @(isOpening ? "Cancel" : "+ New report")
+                    </button>
+                }
+            </Actions>
+        </SectionHeader>
+
+        @if (error is { } message)
+        {
+            <Notice Tone="Tone.Negative" Class="mb-4" Dismissible OnDismiss="() => error = null">@message</Notice>
+        }
+
+        @if (isOpening)
+        {
+            <ContractorsReportOpenForm WeekEnding="@weekEnding" WeekEndingChanged="value => weekEnding = value"
+                                       Number="@number" NumberChanged="value => number = value"
+                                       IsBusy="@isBusy" OnOpen="OpenAsync" />
+        }
+
+        <RecordsTable IsLoading="@(reports is null)" IsEmpty="@(reports is { Count: 0 })"
+                      EmptyMessage="No Contractor's Reports yet — open the first with New report.">
+            <thead>
+                <tr>
+                    <th>Report</th>
+                    <th>Week ending</th>
+                    <th>Valuation No.</th>
+                    <th>Prepared by</th>
+                    <th>Issued to</th>
+                    <th>Date of issue</th>
+                    <th class="text-right">Updates</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var report in Reports)
+                {
+                    <tr class="is-clickable" @onclick="() => Nav.NavigateTo(EditorPath(report))">
+                        <td class="font-medium">@report.DisplayTitle</td>
+                        <td>@DateText(report.PeriodEnd)</td>
+                        <td>@(string.IsNullOrWhiteSpace(report.ValuationNumber) ? "—" : report.ValuationNumber)</td>
+                        <td>@(string.IsNullOrWhiteSpace(report.PreparedByName) ? "—" : report.PreparedByName)</td>
+                        <td>@(string.IsNullOrWhiteSpace(report.IssuedTo) ? "—" : report.IssuedTo)</td>
+                        <td>@DateText(report.DateOfIssue)</td>
+                        <td class="text-right">@report.SelectedUpdateIds.Count</td>
+                    </tr>
+                }
+            </tbody>
+        </RecordsTable>
+    </ProjectPageShell>
+</Page>

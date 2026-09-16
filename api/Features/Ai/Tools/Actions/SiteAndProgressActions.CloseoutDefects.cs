@@ -7,6 +7,7 @@ using Jewel.JPMS.Api.Features.Site.Commands;
 using Jewel.JPMS.Api.Features.Todos;
 using Jewel.JPMS.Api.Features.Todos.Commands;
 using Jewel.JPMS.Contracts.Closeout;
+using Jewel.JPMS.Contracts.MailboxCompose;
 using Jewel.JPMS.Contracts.Drawings;
 using Jewel.JPMS.Contracts.Progress;
 using Jewel.JPMS.Contracts.Site;
@@ -56,6 +57,34 @@ internal sealed partial class SiteAndProgressActions
                 + "\"Supplier\" for a merchant's faulty goods; omitted files under Subcontractor. "
                 + "An email already tagged to another pathway is refused unless allowCrossPathway "
                 + "is true."),
+
+        new AiAction(
+            Name: "send_defect_to_supplier",
+            Area: "Closeout & defects",
+            Description: "SENDS the defect to its supplier by email from the projects mailbox — "
+                + "the defect page's \"Send to supplier\" (or \"Chase supplier\" once it has been "
+                + "sent), performed server-side. The email goes to the supplier's address on the "
+                + "defect, filed under the defect on the supplier's side, so the sent copy and the "
+                + "supplier's reply both appear on the defect; the first send stamps "
+                + "sentToSupplierAt and moves an Open defect to In progress. subject and body "
+                + "omitted use the portal's own wording, which list_defects shows on each defect "
+                + "as supplierEmail (the first send, or the chase); either given replaces it. "
+                + "saveAsDraftOnly true stages the email in the mailbox's Drafts folder for a "
+                + "person to send from Outlook instead. Once sent there is no undo.",
+            CommandType: typeof(SendDefectToSupplier),
+            ResultType: typeof(ComposeOutcome),
+            AuthorisationType: typeof(SendDefectToSupplierAuthorisation),
+            ValidationType: typeof(SendDefectToSupplierValidation),
+            VisibleTo: JpmsRoleSets.AllInternal,
+            EmailStamps: new[] { "SentByEmail" },
+            NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
+            Notes: "defectId from list_defects, which also carries supplierEmail — the to address, "
+                + "subject and body this call will send when you pass none. Show the user that "
+                + "wording (or the wording they asked for, as subject and body, plain text with "
+                + "blank lines between paragraphs) and get their explicit yes before the "
+                + "confirm: true call: the email goes the moment it succeeds. A defect with no "
+                + "supplier email is refused — set its supplier with update_defect first."),
 
         new AiAction(
             Name: "update_defect",

@@ -292,8 +292,8 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
 ## The site note and its photographs reach the portal (contracts + api + jpms)
 
 - **The Contractor's Report intake, changes 1–3 of the FD's 2026-09-15 spec** (`portal-change-spec-
-  weekly-report_2026-09-15.md`; change 4, the nine-section Word/PDF report, is not built and its
-  two open rules — Valuation No., Section 4's source — wait on Jeremy). The gap was one-directional:
+  weekly-report_2026-09-15.md`; change 4, the nine-section Word/PDF report, followed on
+  2026-09-16 — see the last bullet). The gap was one-directional:
   the portal could be READ for everything the weekly Contractor's Report needs and could not be
   WRITTEN the one thing it did not hold, the site note and its photographs.
 - **`CreateProgressUpdate` is the create from words alone** (ProjectId, Title, Description
@@ -335,10 +335,46 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   unticked and apply refuses it by name — re-running a week never duplicates. Non-photo media
   (video, voice notes) is counted and left out. `ProgressUpdates.Description` is nvarchar(max)
   since this migration.
-- **Not built: change 4.** The nine-section Contractor's Report (Word + PDF from the template cut
-  from Report 29, Section 3 from open RFIs, Section 8 from work orders, photo grids under the
-  Section 1 day headings, the banned-word gate, Section 4 rebuilt from source every time) is the
-  next task; do not extend the three-box `ProgressReport` into it.
+- **Change 4 is built: the weekly Contractor's Report** (2026-09-16; `contracts/Progress/
+  ContractorsReport*.cs`, `api/Features/Progress/ContractorsReports`, `jpms/Features/Progress/
+  ContractorsReports` + `ProjectProgressContractorsReports` / `ProjectProgressContractorsReport`
+  pages, the door "Contractor's Reports…" beside "Import WhatsApp week…"). ONE row per report
+  (`ContractorsReports`, unique on project + PeriodEnd, migration `AddContractorsReports`,
+  script `add-contractors-reports.sql`) holding only the ENTERED fields — number, the
+  Friday-to-Thursday period (`WhatsAppWeek`), Valuation No., programme reference, prepared by,
+  issued to, date of issue, Look Ahead lines (text + done), Neighbours, H&S, the Building
+  Control liaison line, Section 8 attendance per work order, and which updates are selected.
+  Every register-read section is composed at READ time by `ContractorsReportComposer` (the one
+  read behind the page's preview, `get_contractors_report`, and both downloads): Section 1 =
+  the selected updates under Friday (weekend folded in) then Monday–Thursday
+  (`ContractorsReportDays`); 3 = RFIs not Closed with ResponseDue and an italic count line;
+  4 = variations Quoting / Issued / Awaiting AI at `EstimatedValue ?? Value`, total = the sum
+  of the rows, NEVER carried forward; 7 = the active `BuildingControlCase` contact; 8 = work
+  orders Released (or Complete with ScheduledCompletion in the week) with the directory's
+  CompanyName; 9 = the selected days' photographs, two-up, days without photos omitted.
+  `CreateContractorsReport` pre-fills what a person would copy from last week (number = max+1,
+  header fields carried, unstruck Look Ahead carried, Valuation No. = the highest payment
+  certificate on the register — `ContractorsReportCertificates.Highest`, numeric-aware —
+  Neighbours' default line, every update in the week selected) and refuses a second report for
+  the same period. **The wording gate** (`ContractorsReportWording`: remedial, remedial works,
+  making good, rectify, rectification, snagging, defects, rework — whole words, any case) runs
+  over every printable line; a hit is a `ContractorsReportFinding` naming section + line, the
+  page shows them, and `GET contractors-reports/{id}/pdf` / `/docx` answer 422 with the
+  findings — never reworded silently. PDF is MigraDoc on `JewelDocumentStyle`
+  (`ContractorsReportPdfRenderer`); Word is the Open XML SDK (`DocumentFormat.OpenXml` 3.1.1,
+  now a direct PackageReference; `ContractorsReportWordRenderer` + `…WordParts` / `…WordTables`
+  / `…WordPictures`, typed property setters so Word's schema order holds — validated clean with
+  `OpenXmlValidator`). Both renderers read the same `ContractorsReportDocument` and the same
+  `ContractorsReportText` wording, and PLG's Report 29 template is NOT in hand: the house style
+  stands in until it arrives, and the two renderers are the one place to swap it. Jeremy's two
+  open rules are answered with defaults, not decisions: Valuation No. is an entered field
+  defaulting to the last certificate (the register's number is shown beside it), and Section 4
+  reads the portal's variation register. The portal never emails the report — a person
+  downloads Word or PDF from the page and sends it. Connector: `list_contractors_reports`,
+  `get_contractors_report` (document + findings + updatesInPeriod), `create_contractors_report`,
+  `update_contractors_report`, `delete_contractors_report` (confirm-first); pinned by
+  `ContractorsReports_reachTheConnector`, rules by `ContractorsReportTests`. Do not extend the
+  three-box `ProgressReport` into any of this.
 
 ## The Sales pane: an enquiry tagged to its lead, and the estimate on it (api + jpms)
 
@@ -533,6 +569,15 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   named), which is what the defect page's Find & tag and composer get. For a neutral type the
   choice beats the record's own pathway; for a typed record the record answers and the choice is
   ignored (`BucketFor(LinkableRecord, chosenBucket)`). Pinned by `DefectPathwayTests`.
+- **A defect goes to its supplier from the assistant too** (2026-09-16):
+  `SendDefectToSupplier` (`api/Features/Closeout/Commands`, `AllInternal`) wraps the SAME
+  `SendMailboxEmail` the defect page's composer sends — the supplier's address from the
+  defect, the raise or chase wording from `DefectSupplierEmails` (contracts/Closeout; the page's
+  `DefectSuppliers` now reads the same wording), the defect's tag, the company's pathway
+  (`CompanyPathways.LabelFor`) — so `DefectSupplierSendRecorder` stamps `SentToSupplierAt`
+  exactly as a page send does. Connector: `send_defect_to_supplier` (confirm-first, `SentByEmail`
+  stamped; subject/body overridable), and `list_defects` carries `supplierEmail` — the address,
+  subject and body the action would send — so the assistant shows the email before the yes.
 - **Badges count where the draft was staged**: `StagedRecordCreate.Pathway` is stamped by
   `StagedRecordActionEditor` from its pane, so a work order (or defect) drafted on the Supplier
   pane counts on the Supplier badge. Display only for every kind but the defect, whose pane IS
@@ -575,6 +620,16 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   Valuation Report and Control Centre page guides), `docs/ai/skills/jpms/jpms-email-triage.md` +
   `jpms-valuation-cycle.md` (re-save to the portal's stored skills with `save_skill` after the
   deploy — the DB copy is what the connector loads), and the jpms-operator skill's references.
+
+## Request and variation text is unbounded (api)
+
+- **An RFI's description, response and impact-if-late, and a variation's description, are
+  `nvarchar(max)`** (2026-09-16, the site team's ask: RFI text over 2048 characters was refused;
+  migration `WidenRequestAndVariationText`, script `widen-request-and-variation-text.sql`). The
+  `[MaxLength(2048)]` attributes, `UpdateRequestFormValidation.ImpactMax`, the mailbox create's
+  `Clamp(…, 2048)`, the merge's truncation, the three variation creates' description clamps and
+  the page's `MaxVariationDescriptionChars` are all gone — never re-add a length on these
+  fields. Titles keep their 256.
 
 ## Record tabs & the in-view toolbar (jpms)
 

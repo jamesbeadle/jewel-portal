@@ -98,7 +98,7 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
             Kind = (int)command.Kind,
             Reference = reference,
             Title = Clamp(command.Title, 256),
-            Description = Clamp(command.Description, 2048),
+            Description = command.Description ?? "",
             Status = (int)RequestStatus.NeedsAction,
             Value = command.Value,
             RaisedByEmail = command.RaisedByEmail,
@@ -211,7 +211,7 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
         return request.ToModel();
     }
 
-    // Email subjects/bodies can exceed the request column limits; clamp so a long email can't throw on save.
+    // An email subject can exceed the title column; clamp so a long subject can't throw on save.
     private static string Clamp(string value, int maxLength) =>
         string.IsNullOrEmpty(value) || value.Length <= maxLength ? value : value[..maxLength];
 }

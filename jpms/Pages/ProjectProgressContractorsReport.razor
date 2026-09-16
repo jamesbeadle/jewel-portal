@@ -1,0 +1,87 @@
+@page "/projects/{ProjectId}/progress/contractors-reports/{ReportId}"
+@using Jewel.JPMS.Contracts.Progress
+@using Jewel.JPMS.Features.Progress.ContractorsReports
+@inject AuthService Auth
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+@inject NavigationManager Nav
+
+<PageTitle>@(view?.Report.DisplayTitle ?? "Contractor's Report") · JPMS</PageTitle>
+
+@*
+    One Contractor's Report: the entered fields on the left, the document it composes to on the
+    right. Save writes the record and re-reads the composition; Word and PDF are built from the
+    register on every download and refused, by section and line, while the wording gate holds
+    a finding. The portal never emails the report — a person downloads it and sends it.
+*@
+
+<Page CanAccess="@CanRead" AccessDeniedMessage="Contractor's Reports are for the internal team.">
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="progress">
+        <SectionHeader Title="@(view?.Report.DisplayTitle ?? "Contractor's Report")"
+                       Subtitle="@(view is { } loaded ? $"Week ending {DateText(loaded.Report.PeriodEnd)}" : null)">
+            <Actions>
+                <a href="@($"/projects/{ProjectId}/progress/contractors-reports")" class="btn-secondary">All reports</a>
+                @if (view is { } ready)
+                {
+                    <a href="@($"/api/contractors-reports/{ReportId}/docx")" class="btn-secondary @(ready.Document.CanBeBuilt ? "" : "pointer-events-none opacity-50")"
+                       title="@DownloadTitle(ready, "Word")">Download Word</a>
+                    <a href="@($"/api/contractors-reports/{ReportId}/pdf")" class="btn-secondary @(ready.Document.CanBeBuilt ? "" : "pointer-events-none opacity-50")"
+                       title="@DownloadTitle(ready, "PDF")">Download PDF</a>
+                    @if (CanContribute)
+                    {
+                        <button type="button" class="btn-secondary text-negative" @onclick="() => deleting = true">Delete</button>
+                        <button type="button" class="btn-primary" disabled="@isBusy" @onclick="SaveAsync">Save</button>
+                    }
+                }
+            </Actions>
+        </SectionHeader>
+
+        @if (error is { } message)
+        {
+            <Notice Tone="Tone.Negative" Class="mb-4" Dismissible OnDismiss="() => error = null">@message</Notice>
+        }
+        @if (saved)
+        {
+            <Notice Tone="Tone.Positive" Class="mb-4" Dismissible OnDismiss="() => saved = false">Saved — the preview reads the register as it stands now.</Notice>
+        }
+
+        <LoadGate IsLoading="@(view is null && error is null)" Prominent="true">
+            @if (view is { } report && draft is { } entered)
+            {
+                <ContractorsReportFindings Findings="@report.Document.Findings" Class="mb-4" />
+                <LoadGate Overlay="true" IsLoading="@isBusy">
+                    <div class="grid gap-5 xl:grid-cols-2">
+                        <div class="space-y-5">
+                            <Panel Title="Header">
+                                <ContractorsReportHeaderFields Draft="@entered" Header="@report.Document.Header" />
+                            </Panel>
+                            <Panel Title="1 · Progress Against Programme — the week's updates">
+                                <ContractorsReportUpdatePicker Draft="@entered" Updates="@report.UpdatesInPeriod" />
+                            </Panel>
+                            <Panel Title="2 · Look Ahead">
+                                <ContractorsReportLookAheadEditor Draft="@entered" />
+                            </Panel>
+                            <Panel Title="5 · 6 · 7 — Neighbours, Health &amp; Safety, Building Control">
+                                <ContractorsReportNarrativeFields Draft="@entered" BuildingControl="@report.Document.BuildingControl" />
+                            </Panel>
+                            <Panel Title="8 · Specialist Subcontractors — attendance" BodyClass="p-0">
+                                <ContractorsReportAttendanceTable Draft="@entered" Subcontractors="@report.Document.Subcontractors" />
+                            </Panel>
+                        </div>
+                        <Panel Title="As it will print" >
+                            <p class="text-xs text-content-subtle mb-4">
+                                Sections 3, 4, 7's contact and 8's orders are read from the register every time; the entered sections show what was last saved.
+                            </p>
+                            <ContractorsReportPreview Document="@report.Document" />
+                        </Panel>
+                    </div>
+                </LoadGate>
+            }
+        </LoadGate>
+
+        <ConfirmDialog IsOpen="@deleting" Title="Delete this Contractor's Report?" ConfirmLabel="Delete" Danger
+                       OnConfirm="DeleteAsync" OnCancel="() => deleting = false">
+            The report record is removed. The progress updates, RFIs, variations and work orders it read are untouched.
+        </ConfirmDialog>
+    </ProjectPageShell>
+</Page>

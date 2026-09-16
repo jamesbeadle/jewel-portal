@@ -215,6 +215,10 @@ public sealed partial class JpmsContext
             .HasDatabaseName("IX_HsRecords_ProjectId");
         // Audits read per project (the H&S tab's list); items per audit (the form); the record
         // link resolves a closed corrective action back to its item.
+        modelBuilder.Entity<ContractorsReportEntity>()
+            .HasIndex(row => new { row.ProjectId, row.PeriodEnd })
+            .IsUnique()
+            .HasDatabaseName("IX_ContractorsReports_ProjectId_PeriodEnd");
         modelBuilder.Entity<HsAuditEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_HsAudits_ProjectId");
