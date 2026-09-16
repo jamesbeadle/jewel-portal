@@ -473,8 +473,8 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   Verified headless (Playwright on SwiftShader), not by `dotnet build`: no SDK was reachable
   from either session, so the first `dotnet build` is the compile check.
 - **The model belongs to the estimate** (2026-09-16, the "3D model per estimate" task, with
-  Jeremy's trade-and-phase element list folded into the SAME definition — one dataset, two
-  views, never two formats). `LeadEstimate.HouseModelJson` / `HouseModelSource` /
+  Jeremy's trade-and-phase element list carried in the SAME definition — one dataset, never
+  two formats). `LeadEstimate.HouseModelJson` / `HouseModelSource` /
   `HouseModelSetAt` (migration `AddEstimateHouseModel`, script `add-estimate-house-model.sql`)
   hold the definition as JSON, stored whole and never queried; `SetEstimateHouseModel`
   (`PUT sales/estimates/{id}/house-model`, connector `set_house_model`, confirm-first,
@@ -492,20 +492,12 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   `phases.phaseOfElement` reads them into existing / proposed / removed / construction so the
   toggle needs no new rule). Extruded footprints cannot be a pitched roof, gable or dormer —
   those stay house parts. The build-up keeps its Existing / Proposed chips and never draws the
-  elements; **Works by trade** is Jeremy's viewer over the same JSON (`LeadWorksModelPanel` +
-  `WorksModelStrip` / `WorksModelLegend` / `WorksElementCard`, `WorksModelDefinition` reading
-  phases, trades and the element count off the JSON, `WorksModelInterop` the verbs;
-  `wwwroot/js/works-model.js` the doorway, `js/works-model/`: `shell.js` re-clothes the
-  build-up's house parts in one translucent material and maps their stamps to phases
-  (`phase-state.js`: existing from `00`, removed leaves at `01`, proposed joins at `03`, the
-  neighbours left out), `presentation.js` is the one pass that places every element and shell
-  part for the phase — joined solid, left gone or ghosted red, hidden trades out —
-  `playback.js` eases through the phases (2.6 s each, elements rising as they join) with the
-  slow orbit in `frames.js`, `picking.js` raycasts a click to `ElementPicked`, `recording.js`
-  captures the canvas to a webm the browser downloads, and `renderAt(host, virtualMs)` hands the
-  clock to `tools/works-model/render-frames.mjs`, which renders frames headlessly and stitches an
-  mp4 with ffmpeg). Both panels render on the lead when the definition has elements
-  (`LeadHouseModelSection`). How a definition is read off a set of drawings is the
+  elements — they are stored for the estimator to read off the JSON. A separate "Works by
+  trade" viewer over the elements was shipped in a5423c8 and taken out again the same day
+  (its script was never loaded by `index.html`, so mounting it threw `jpmsWorksModel was
+  undefined` and stopped the lead page's renderer); if it comes back it comes back as its own
+  task. `LeadHouseModelSection` renders the build-up for the newest estimate with a model.
+  How a definition is read off a set of drawings is the
   `jpms-house-model` skill (`docs/ai/skills/jpms/`, mirrored in `.claude/skills/jpms-house-model/`,
   saved to the portal's skills store with its `definition-schema` reference). Not built yet: the
   standalone client page of the model (`GET /api/sales/estimates/{id}/model` is reserved for

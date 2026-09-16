@@ -1,8 +1,7 @@
 // Turns a model definition into the house: each block's walls, gable and roof, then every
 // opening on its face, the new brickwork, every rooflight on its slope, the dormer, and the
 // downpipes — each part stamped with the phase it belongs to so the proposal can be switched
-// on and off — and, for the build-up, the temporary works the programme calls for. The
-// internal works (definition.elements) are the works view's, js/works-model/.
+// on and off — and, for the build-up, the temporary works the programme calls for.
 import * as THREE from "three";
 import { wallBlock, gablePrism } from "./builders/wall-blocks.js";
 import { gableRoof } from "./builders/gable-roof.js";
