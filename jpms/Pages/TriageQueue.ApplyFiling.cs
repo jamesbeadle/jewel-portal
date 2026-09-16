@@ -101,7 +101,7 @@ public partial class TriageQueue
             // (confirm retired 2026-08-28; true also keeps an older api from prompting).
             await Intake.LinkMessageToRecordAsync(
                 anchor.Id, anchor.InternetMessageId, record.Type, record.RecordId,
-                pathway: CostCentrePathwayFor(record),
+                pathway: PanePathwayFor(record),
                 allowCrossPathway: true,
                 scope: plan.Scope);
         }
@@ -125,7 +125,7 @@ public partial class TriageQueue
                 continue;
             await Intake.LinkMessageToRecordAsync(
                 anchor.Id, anchor.InternetMessageId, record.Type, record.RecordId,
-                pathway: CostCentrePathwayFor(record),
+                pathway: PanePathwayFor(record),
                 allowCrossPathway: true,
                 scope: plan.Scope);
             linked = true;

@@ -65,6 +65,7 @@ builder.Services.AddScoped(serviceProvider => new HttpClient
 var globalErrorSink = new GlobalErrorSink();
 builder.Services.AddSingleton(globalErrorSink);
 builder.Logging.AddProvider(new ErrorReportingLoggerProvider(globalErrorSink));
+builder.Services.AddScoped<ClientErrorLog>();
 builder.Services.AddScoped<ErrorReporter>();
 builder.Services.AddScoped<IErrorSink>(services => services.GetRequiredService<ErrorReporter>());
 

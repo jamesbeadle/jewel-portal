@@ -52,6 +52,7 @@ public sealed class SetEstimateBreakdownHandlerTests
         Assert.Contains("breakdown set", timeline.Summary);
         Assert.Contains("2 sections", timeline.Summary);
         Assert.Contains("3 lines", timeline.Summary);
+        Assert.EndsWith("total £43,480", timeline.Summary);
     }
 
     [Fact]

@@ -1,3 +1,5 @@
+using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
+using Jewel.JPMS.Api.Features.Procurement;
 using Jewel.JPMS.Contracts.Closeout;
 using Jewel.JPMS.Contracts.RecordLinks;
 
@@ -15,25 +17,25 @@ public sealed class CreateDefectFromMessageHandler
 {
     private readonly ICommandHandler<RaiseDefect, Defect> raiseDefect;
     private readonly ICommandHandler<LinkMessageToRecord, Acknowledgement> link;
-    private readonly Jewel.JPMS.Api.Features.MailboxIntake.Graph.IMailboxGraphClient graph;
+    private readonly IMailboxGraphClient graph;
 
     public CreateDefectFromMessageHandler(
         ICommandHandler<RaiseDefect, Defect> raiseDefect,
         ICommandHandler<LinkMessageToRecord, Acknowledgement> link,
-        Jewel.JPMS.Api.Features.MailboxIntake.Graph.IMailboxGraphClient graph)
+        IMailboxGraphClient graph)
     { this.raiseDefect = raiseDefect; this.link = link; this.graph = graph; }
 
     public async Task<Defect> HandleAsync(CreateDefectFromMessage command, CancellationToken cancellationToken)
     {
         // Pre-flight the cross-pathway confirm BEFORE the defect persists (CrossPathwayGuard,
-        // 2026-08-22): a defect files the thread under Subcontractor, and rejecting after the
-        // create left an orphaned defect behind and a red error the triager couldn't confirm past.
+        // 2026-08-22): rejecting after the create left an orphaned defect behind and a red error
+        // the triager couldn't confirm past. The side is the pane's (a new defect names no
+        // company yet), else Subcontractor — the same answer the link below reaches.
         var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken)
             ?? throw new InvalidOperationException("The email could not be read from the mailbox.");
+        var bucket = TriageCategories.BucketForPathway(command.Pathway) ?? CompanyPathways.BucketFor(null);
         Jewel.JPMS.Api.Features.RecordLinks.CrossPathwayGuard.EnsureConfirmed(
-            snapshot.Categories,
-            Jewel.JPMS.Api.Features.MailboxIntake.Graph.TriageCategories.BucketFor(RecordType.Defect),
-            command.AllowCrossPathway, "the new defect");
+            snapshot.Categories, bucket, command.AllowCrossPathway, "the new defect");
 
         var defect = await raiseDefect.HandleAsync(
             new RaiseDefect(
@@ -48,6 +50,7 @@ public sealed class CreateDefectFromMessageHandler
         await link.HandleAsync(
             new LinkMessageToRecord(
                 command.MessageId, RecordType.Defect, defect.DefectId, command.InternetMessageId,
+                Pathway: command.Pathway,
                 AllowCrossPathway: command.AllowCrossPathway,
                 Scope: command.Scope),
             cancellationToken);

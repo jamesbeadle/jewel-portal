@@ -107,11 +107,12 @@ public sealed class ReportingErrorBoundary : ErrorBoundaryBase
             builder.CloseElement(); // header
 
             // Selectable plain text — the same block the toast's Copy button produces, so someone
-            // stuck on this screen can select all and paste it into an email with nothing lost.
+            // stuck on this screen can select all and paste it into an email. The stack is not
+            // here: it went to the API's log under the same reference.
             builder.OpenElement(27, "pre");
             builder.AddAttribute(28, "class",
                 "px-4 py-3 text-xs text-content-muted whitespace-pre-wrap break-words max-h-80 overflow-y-auto");
-            builder.AddContent(29, report.ToPlainText());
+            builder.AddContent(29, report.ToUserText());
             builder.CloseElement();
 
             builder.CloseElement(); // detail block

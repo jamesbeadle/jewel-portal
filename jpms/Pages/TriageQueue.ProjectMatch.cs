@@ -248,16 +248,23 @@ public partial class TriageQueue
         linkRecords = Array.Empty<LinkableRecord>();
     }
 
-    // The pathway label sent with a link command. Only pathway-neutral COST-CENTRE links carry one —
-    // the record type implies the pathway everywhere else, and a Todo link must stay neutral (sending
-    // a pathway with it would file the thread, which a to-do never does). On the queue it is the
-    // triager's selection; on the Tagged tab it is the thread's own side. Internal never applies —
-    // cost-centre mail is valuation-side (Client) or subcontract-side (Subcontractor) only.
-    private string? CostCentrePathwayFor(LinkableRecord record)
+    // The pathway label sent with a link command — the pane's side, for the two pathway-neutral
+    // record types whose side the pane decides: a COST-CENTRE link is valuation-side (Client) or
+    // subcontract-side (Subcontractor), and a DEFECT (2026-09-16) is a trade's (Subcontractor) or
+    // a merchant's (Supplier) — the server falls back to the defect's company when no pane says.
+    // The record type implies the pathway everywhere else, and a Todo link must stay neutral
+    // (sending a pathway with it would file the thread, which a to-do never does). On the queue
+    // it is the triager's selection; on the Tagged tab it is the thread's own side.
+    private string? PanePathwayFor(LinkableRecord record)
     {
-        if (record.Type != RecordType.CostCentre) return null;
         var side = view == QueueView.Tagged ? FixedPathway : pathway;
-        return side is TriagePathway.Client or TriagePathway.Subcontractor ? TriagePathways.Label(side.Value) : null;
+        var isTheRecordsSide = record.Type switch
+        {
+            RecordType.CostCentre => side is TriagePathway.Client or TriagePathway.Subcontractor,
+            RecordType.Defect => side is TriagePathway.Subcontractor or TriagePathway.Supplier,
+            _ => false
+        };
+        return isTheRecordsSide ? TriagePathways.Label(side!.Value) : null;
     }
 
     // "Reply in thread": the reply written here is staged as an Outlook draft on the email

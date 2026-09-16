@@ -23,7 +23,12 @@ public sealed record CreateDefectFromMessage(
     // sweep; the Control Centre passes an explicit MessageOnly / EntireThread from its
     // "triage the entire thread" checkbox.
     LinkThreadScope Scope = LinkThreadScope.ThreadBehindAnchor,
-    // Explicit consent to file the thread under Subcontractor as well as a pathway it already
-    // carries. Pre-flighted before the defect is created (CrossPathwayGuard), so a rejection
-    // creates nothing; the UI's "File under both anyway" re-sends with this true.
-    bool AllowCrossPathway = false) : ICommand<Defect>;
+    // Explicit consent to file the thread under the defect's pathway as well as a pathway it
+    // already carries. Pre-flighted before the defect is created (CrossPathwayGuard), so a
+    // rejection creates nothing; the UI's "File under both anyway" re-sends with this true.
+    bool AllowCrossPathway = false,
+    // The pane the defect was raised from — "Subcontractor" (a trade's workmanship) or
+    // "Supplier" (a merchant's faulty goods, 2026-09-07) — which is the side its thread files
+    // under: a new defect names no company yet, so the pane is the only thing that knows. Null
+    // files under Subcontractor, as every defect did before 2026-09-16.
+    string? Pathway = null) : ICommand<Defect>;

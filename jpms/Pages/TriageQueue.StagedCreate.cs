@@ -104,7 +104,8 @@ public partial class TriageQueue
         if (staged.Kind == StagedRecordKind.Defect)
         {
             // The defect staged in System Actions, raised through the same rules as a manual
-            // defect (numbering, Open status) with the email tagged to it.
+            // defect (numbering, Open status) with the email tagged to it — under the pane it was
+            // staged on (a trade's on Subcontractor, a merchant's on Supplier, 2026-09-16).
             busyLabel = "Raising defect";
             var defect = await Intake.CreateDefectFromMessageAsync(new Jewel.JPMS.Contracts.Closeout.CreateDefectFromMessage(
                 anchor.Id, triageProjectId,
@@ -113,7 +114,8 @@ public partial class TriageQueue
                 staged.DefectAssignedTo.Trim(),
                 InternetMessageId: anchor.InternetMessageId,
                 Scope: scope,
-                AllowCrossPathway: true));
+                AllowCrossPathway: true,
+                Pathway: staged.Pathway ?? StagedCreatePathway(staged.Kind)));
             return new StagedCreateOutcome(
                 new CreatedNowRecord(defect.Reference, "defect", staged.DisplayTitle), null);
         }

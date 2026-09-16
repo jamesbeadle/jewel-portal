@@ -7,9 +7,10 @@ namespace Jewel.JPMS.Worker.Sales;
 /// <summary>
 /// Consumes the sales-imagine-render queue (2026-09-06). The whole render lives in
 /// ImagineRenderRunner (api-shared source); this class is just the binding. The runner never
-/// rethrows — it stamps the round Failed with the reason — so a message is consumed once: a
-/// render is minutes and money, and one honest failure the lead page can retry beats five
-/// silent repeats.
+/// rethrows a failure of its own — it stamps the round Failed with the reason — so a message is
+/// consumed once: a render is minutes and money, and one honest failure the lead page can retry
+/// beats five silent repeats. The host's functionTimeout is the one exception: the runner stamps
+/// the round Failed and rethrows, and ignores the host's retries of that dead run.
 /// </summary>
 public sealed class ImagineRenderWorker
 {

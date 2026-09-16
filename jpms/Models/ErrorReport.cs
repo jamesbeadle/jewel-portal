@@ -7,8 +7,11 @@ namespace Jewel.JPMS.Models;
 ///
 /// The split matters: <see cref="Summary"/> is what the user reads and is written for them, while
 /// everything else exists so that "it broke" can become a diagnosis without a phone call. The
-/// reference is short and pronounceable on purpose — it gets read down a phone and typed into a
-/// message far more often than it gets copied.
+/// user's card and Copy button carry <see cref="ToUserText"/> — the summary, the reference, when,
+/// who and where; the stack, the server's words and the exception type travel to the API's log
+/// (ClientErrorLog) under the same reference, so support can look the report up from the
+/// reference alone. The reference is short and pronounceable on purpose — it
+/// gets read down a phone and typed into a message far more often than it gets copied.
 /// </summary>
 public sealed record ErrorReport(
     string Reference,
@@ -29,12 +32,9 @@ public sealed record ErrorReport(
     public static string NewReference() =>
         $"JPMS-{Guid.NewGuid().ToString("N")[..6].ToUpperInvariant()}";
 
-    /// <summary>True when there is anything beyond the summary worth expanding.</summary>
-    public bool HasDetail =>
-        !string.IsNullOrWhiteSpace(Detail)
-        || RequestPath is not null
-        || StatusCode is not null
-        || !string.IsNullOrWhiteSpace(StackTrace);
+    /// <summary>An expired or missing sign-in: not a fault, and the one error whose remedy is a
+    /// button — Sign in again.</summary>
+    public bool IsSessionExpired => StatusCode == 401;
 
     /// <summary>The one-line "where" shown under the summary, e.g. "POST /api/directory · 500".</summary>
     public string? Endpoint
@@ -49,10 +49,12 @@ public sealed record ErrorReport(
     }
 
     /// <summary>
-    /// The whole report as plain text, for the Copy button. Deliberately readable when pasted into
-    /// an email or a WhatsApp message rather than machine-shaped — the recipient is a person.
+    /// What the user sees and copies: the reference, when, who, which page, what happened and
+    /// what they were doing. Deliberately readable when pasted into an email or a WhatsApp message
+    /// rather than machine-shaped — the recipient is a person, and the reference is what support
+    /// needs to find the rest.
     /// </summary>
-    public string ToPlainText()
+    public string ToUserText()
     {
         var text = new StringBuilder();
         text.AppendLine($"JPMS error {Reference}");
@@ -64,14 +66,6 @@ public sealed record ErrorReport(
         if (!string.IsNullOrWhiteSpace(Page)) text.AppendLine($"Page:   {Page}");
         text.AppendLine($"What:   {Summary}");
         if (!string.IsNullOrWhiteSpace(Operation)) text.AppendLine($"Doing:  {Operation}");
-        if (Endpoint is not null) text.AppendLine($"Where:  {Endpoint}");
-        if (!string.IsNullOrWhiteSpace(Detail)) text.AppendLine($"Detail: {Detail}");
-        if (!string.IsNullOrWhiteSpace(ExceptionType)) text.AppendLine($"Type:   {ExceptionType}");
-        if (!string.IsNullOrWhiteSpace(StackTrace))
-        {
-            text.AppendLine("Stack:");
-            text.AppendLine(StackTrace.Trim());
-        }
         return text.ToString();
     }
 }

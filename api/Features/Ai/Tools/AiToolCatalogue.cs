@@ -88,6 +88,7 @@ public static partial class AiToolCatalogue
 
     private static IReadOnlyList<AiTool> Build() =>
         ContextTools()
+            .Concat(ProjectDetailsTools())
             .Concat(RecordsTools())
             .Concat(ProcurementTools())
             .Concat(SiteWorkTools())

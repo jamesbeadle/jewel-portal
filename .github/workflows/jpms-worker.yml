@@ -18,15 +18,25 @@ on:
       - 'contracts/**'
       # The worker compiles shared source from these api paths via linked includes, so changes
       # to them must redeploy the worker too. These globs cover every file the worker csproj links
-      # (MailboxIntake queues/actions/options, the Requests identifier + intake conversation, and the
-      # whole Requests/Documents renderer) so a fix to any linked source rebuilds the worker.
+      # (mailbox intake, requests, Xero, Bluebeam, drawings, the Sales research + Imagine render
+      # runners, the ValuationInvoices payment sync, the Claude client, the document style, the
+      # directory matchers and blob storage) so a fix to any linked source rebuilds the worker.
+      # When a new <Compile Include="..\api\..."> is added to worker/Jewel.JPMS.Worker.csproj, add
+      # its path here too.
       - 'api/Data/**'
+      - 'api/Cqrs/**'
+      - 'api/Storage/**'
+      - 'api/Features/Ai/**'
+      - 'api/Features/Bluebeam/**'
+      - 'api/Features/Documents/**'
+      - 'api/Features/Drawings/**'
+      - 'api/Features/Labour/**'
       - 'api/Features/MailboxIntake/**'
       - 'api/Features/Requests/**'
+      - 'api/Features/Sales/**'
+      - 'api/Features/Subcontractors/**'
+      - 'api/Features/ValuationInvoices/**'
       - 'api/Features/Xero/**'
-      - 'api/Features/Bluebeam/**'
-      - 'api/Features/Drawings/Storage/**'
-      - 'api/Cqrs/**'
       - '.github/workflows/jpms-worker.yml'
   workflow_dispatch:
 

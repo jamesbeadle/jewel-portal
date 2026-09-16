@@ -36,8 +36,10 @@ public sealed class StagedRecordCreate
     // The pane the draft was staged from ("Subcontractor" / "Supplier" / …) — for the pathway
     // badges, which count a drafted record where it was STAGED (2026-09-15: a work order or a
     // defect is offered on both the Subcontractor and Supplier panes). Null = the kind's home
-    // pane (TriageQueue.StagedCreatePathway). Display only — what pathway the new record's
-    // thread files under is the server's decision.
+    // pane (TriageQueue.StagedCreatePathway). For every kind but the defect this is display
+    // only — what pathway the new record's thread files under is the server's decision; a
+    // defect names no company yet, so the pane it was staged on IS its side (2026-09-16) and
+    // travels on CreateDefectFromMessage.Pathway.
     public string? Pathway { get; set; }
 
     // Which request the Request kind raises: General ("Raise Request") or an official RFI

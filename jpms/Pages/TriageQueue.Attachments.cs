@@ -136,7 +136,7 @@ public partial class TriageQueue
             busy = true;
             await Intake.LinkMessageToRecordAsync(
                 selected.Id, selected.InternetMessageId, recordType, linkRecordId,
-                pathway: record is null ? null : CostCentrePathwayFor(record),
+                pathway: record is null ? null : PanePathwayFor(record),
                 allowCrossPathway: true);
             await ReloadTaggedInPlaceAsync();
             selected = null;

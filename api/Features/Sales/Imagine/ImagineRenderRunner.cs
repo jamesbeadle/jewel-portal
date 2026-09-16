@@ -11,15 +11,18 @@ namespace Jewel.JPMS.Api.Features.Sales.Imagine;
 /// and the notes) and take its concepts; render each concept over the prospect's own photo with
 /// Azure image generation and store it; mark Complete; log it on the lead's timeline; email the
 /// prospect the link back. Every concept is saved as it lands, so a failure part-way leaves what
-/// was made. The runner never rethrows — a render costs real money — it stamps the round Failed
-/// with the reason, which both the public page and the lead page show, and the lead page's
-/// Retry re-queues it.
+/// was made. The runner never rethrows a failure of its own — a render costs real money — it
+/// stamps the round Failed with the reason, which both the public page and the lead page show,
+/// and the lead page's Retry re-queues it. A host cancellation (the functionTimeout) is stamped
+/// the same way and then rethrown, so a timed-out round reads Failed rather than Rendering.
 /// </summary>
 public sealed class ImagineRenderRunner
 {
     /// <summary>How many photos go to the models. More costs more and adds little.</summary>
     private const int MaxReferencePhotos = 4;
     private const int RevisionVariants = 2;
+    /// <summary>Mirrors functionTimeout in worker/host.json — the ceiling the host enforces on one run.</summary>
+    private const int HostRenderLimitMinutes = 10;
 
     private readonly JpmsContext context;
     private readonly IImagineImageStore store;
@@ -53,6 +56,13 @@ public sealed class ImagineRenderRunner
         if (round.Status == (int)ImagineRoundStatus.Complete)
         {
             logger.LogInformation("Imagine render: round {RoundId} is already complete — duplicate delivery ignored.", round.RoundId);
+            return;
+        }
+        // A Failed round only reaches the queue again through Retry, which sets it Queued first:
+        // a Failed round here is the host retrying a run it killed — consumed once, not paid five times.
+        if (round.Status == (int)ImagineRoundStatus.Failed)
+        {
+            logger.LogInformation("Imagine render: round {RoundId} already failed — the host's retry of that run is ignored.", round.RoundId);
             return;
         }
         // host.json's visibilityTimeout re-delivers a message whose first run is still going: a
@@ -176,17 +186,34 @@ public sealed class ImagineRenderRunner
 
             await EmailProspectAsync(lead, round, made, isRevision, ct);
         }
-        catch (OperationCanceledException) { throw; }
+        catch (OperationCanceledException)
+        {
+            logger.LogError("Imagine render for round {RoundId} was stopped by the host after {Minutes} minutes.", round.RoundId, MinutesSince(round.StartedAt));
+            await StampFailedAsync(lead, round, $"The render timed out after {MinutesSince(round.StartedAt)} minutes (the worker allows {HostRenderLimitMinutes}). Retry it.");
+            throw;
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Imagine render failed for round {RoundId}.", round.RoundId);
-            round.Status = (int)ImagineRoundStatus.Failed;
-            round.CompletedAt = DateTimeOffset.UtcNow;
-            round.Error = Clip(ex.Message, 2000);
-            context.LeadActivities.Add(Activity(lead.LeadId, $"Imagine round {round.Number} failed: {Clip(ex.Message, 500)}"));
-            await context.SaveChangesAsync(CancellationToken.None);
+            await StampFailedAsync(lead, round, ex.Message);
         }
     }
+
+    // The host's functionTimeout (worker/host.json) cancels a run that overruns it — the same
+    // token a deploy's shutdown cancels. Either way the round must not sit on Running: it is
+    // stamped Failed with the reason and the cancellation rethrown so the host sees it. The
+    // lead page's Retry is the way back for both; an honest Failed beats a Rendering that isn't.
+    private async Task StampFailedAsync(LeadEntity lead, ImagineRoundEntity round, string reason)
+    {
+        round.Status = (int)ImagineRoundStatus.Failed;
+        round.CompletedAt = DateTimeOffset.UtcNow;
+        round.Error = Clip(reason, 2000);
+        context.LeadActivities.Add(Activity(lead.LeadId, $"Imagine round {round.Number} failed: {Clip(reason, 500)}"));
+        await context.SaveChangesAsync(CancellationToken.None);
+    }
+
+    private static int MinutesSince(DateTimeOffset? startedAt) =>
+        startedAt is null ? 0 : (int)Math.Round((DateTimeOffset.UtcNow - startedAt.Value).TotalMinutes);
 
     private async Task EmailProspectAsync(LeadEntity lead, ImagineRoundEntity round, int made, bool revision, CancellationToken ct)
     {

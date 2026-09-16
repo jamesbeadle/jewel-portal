@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Procurement;
+using System.Globalization;
 using Jewel.JPMS.Contracts.Sales;
 
 namespace Jewel.JPMS.Api.Features.Sales.Commands;
@@ -40,6 +41,7 @@ public sealed class UpdateEstimateDetailsHandler : ICommandHandler<UpdateEstimat
 
 public sealed class SetEstimateBreakdownHandler : ICommandHandler<SetEstimateBreakdown, LeadEstimate>
 {
+    private static readonly CultureInfo Sterling = CultureInfo.GetCultureInfo("en-GB");
     private readonly JpmsContext context;
     public SetEstimateBreakdownHandler(JpmsContext context) { this.context = context; }
 
@@ -95,7 +97,7 @@ public sealed class SetEstimateBreakdownHandler : ICommandHandler<SetEstimateBre
         var summary = rows.Count == 0
             ? $"Estimate {entity.Reference} breakdown cleared"
             : $"Estimate {entity.Reference} breakdown set — {command.Sections.Count(section => section.Lines.Count > 0)} section{(command.Sections.Count == 1 ? "" : "s")}, "
-              + $"{rows.Count} line{(rows.Count == 1 ? "" : "s")}, total {entity.Total:C0}";
+              + $"{rows.Count} line{(rows.Count == 1 ? "" : "s")}, total {entity.Total?.ToString("C0", Sterling)}";
         EstimateTimeline.Write(context, entity, summary, command.ChangedByEmail, now);
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel(rows);

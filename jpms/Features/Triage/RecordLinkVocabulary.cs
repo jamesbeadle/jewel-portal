@@ -65,7 +65,8 @@ public static class RecordLinkVocabulary
     // Drives the Tagged picker's cross-filing heads-up.
     // WorkOrder is null here too: since 2026-09-15 an order files by the COMPANY it is placed
     // with (Supplier or Subcontractor — LinkableRecord.Pathway carries the answer per record),
-    // which the type alone can't say, so the heads-up stays quiet rather than guess.
+    // which the type alone can't say, so the heads-up stays quiet rather than guess. Defect
+    // likewise since 2026-09-16 (the pane, else the defect's company).
     public static TriagePathway? ImpliedPathway(RecordType type) => type switch
     {
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
@@ -90,6 +91,7 @@ public static class RecordLinkVocabulary
         RecordType.BidPackageInvite
             or RecordType.SubcontractorComms => "Subcontractor",
         RecordType.WorkOrder        => "Subcontractor or Supplier", // follows the order's company (2026-09-15)
+        RecordType.Defect           => "Subcontractor or Supplier", // the pane, else the defect's company (2026-09-16)
         RecordType.SupplierComms    => "Supplier",
         RecordType.Inventory        => "Supplier",
         RecordType.InternalComms    => "Internal",

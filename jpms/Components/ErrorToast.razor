@@ -1,15 +1,17 @@
 @inject ErrorReporter Reporter
 @inject IJSRuntime Js
+@inject NavigationManager Nav
 @implements IDisposable
 
 @*
     The app's one error surface: full width, along the top, impossible to miss.
 
-    It shows the user a sentence they can act on, and hides everything else behind "Show details" —
-    but the detail is one click and one Copy away, because the person who can fix the problem is
-    not the person looking at the screen. What gets copied is the whole report: reference, time,
-    who, which page, which endpoint, status, the server's own message and the stack. That is the
-    difference between "the valuations page is broken" and a fix.
+    It shows the user a sentence they can act on, the reference, the time and the page — and
+    nothing a user cannot use. What gets copied is the same: reference, time, who, which page,
+    what happened. The endpoint, the server's own message, the exception type and the stack went
+    to the API's log under that reference the moment the error was raised (ClientErrorLog), so
+    the person who can fix the problem looks the reference up rather than reading a trace off a
+    screenshot. An expired sign-in is not a fault at all: it gets a Sign in again button.
 
     Blazor's own #blazor-error-ui strip still sits at the bottom of index.html for the one case this
     cannot cover — a failure that takes the renderer itself down, where the only honest option left
@@ -34,11 +36,11 @@
                 <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-negative-ink/75">
                     <span class="font-mono font-semibold tracking-wide">@report.Reference</span>
                     <span>@report.OccurredAt.ToLocalTime().ToString("HH:mm:ss")</span>
-                    @if (report.Endpoint is { } endpoint)
+                    @if (PagePath(report) is { } pagePath)
                     {
-                        <span class="font-mono truncate max-w-[22rem]">@endpoint</span>
+                        <span class="truncate max-w-[22rem]">@pagePath</span>
                     }
-                    @if (report.HasDetail)
+                    @if (!report.IsSessionExpired)
                     {
                         <button type="button" @onclick="() => expanded = !expanded"
                                 class="underline underline-offset-2 hover:text-negative-ink font-medium">
@@ -49,16 +51,26 @@
 
                 @if (expanded)
                 {
-                    <pre class="mt-2 max-h-56 overflow-auto rounded bg-black/25 p-3 text-xs leading-relaxed font-mono whitespace-pre-wrap break-words">@report.ToPlainText()</pre>
+                    <pre class="mt-2 max-h-56 overflow-auto rounded bg-black/25 p-3 text-xs leading-relaxed font-mono whitespace-pre-wrap break-words">@report.ToUserText()</pre>
                 }
             </div>
 
             <div class="flex items-center gap-2 shrink-0">
-                <button type="button" @onclick="Copy"
-                        title="Copy the full report so you can send it on"
-                        class="rounded bg-black/20 hover:bg-black/30 px-3 py-1.5 text-xs font-medium transition">
-                    @(copied ? "Copied" : "Copy report")
-                </button>
+                @if (report.IsSessionExpired)
+                {
+                    <button type="button" @onclick="SignInAgain"
+                            class="rounded bg-white/90 text-negative-strong hover:bg-white px-3 py-1.5 text-xs font-semibold transition">
+                        Sign in again
+                    </button>
+                }
+                else
+                {
+                    <button type="button" @onclick="Copy"
+                            title="Copy the reference and what happened, so you can send it on"
+                            class="rounded bg-black/20 hover:bg-black/30 px-3 py-1.5 text-xs font-medium transition">
+                        @(copied ? "Copied" : "Copy report")
+                    </button>
+                }
                 <button type="button" @onclick="Dismiss" aria-label="Dismiss this error"
                         class="grid place-items-center w-7 h-7 rounded hover:bg-black/25 transition">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -97,7 +109,7 @@
         if (Reporter.Current is null) return;
         try
         {
-            await Js.InvokeVoidAsync("navigator.clipboard.writeText", Reporter.Current.ToPlainText());
+            await Js.InvokeVoidAsync("navigator.clipboard.writeText", Reporter.Current.ToUserText());
             copied = true;
         }
         catch
@@ -107,6 +119,16 @@
             expanded = true;
         }
     }
+
+    private void SignInAgain()
+    {
+        Reporter.Dismiss();
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+
+    /// <summary>The page's path without the host — "/todos", not the whole address.</summary>
+    private static string? PagePath(ErrorReport report) =>
+        Uri.TryCreate(report.Page, UriKind.Absolute, out var uri) ? uri.PathAndQuery : report.Page;
 
     private void Dismiss()
     {

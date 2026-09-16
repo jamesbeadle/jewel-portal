@@ -49,12 +49,12 @@ public sealed class SendWorkOrderPoEmailHandler : ICommandHandler<SendWorkOrderP
 
         // Categories on the draft = what the SENT copy should carry, so it self-files: the
         // pathway of the company the order is placed with (Supplier for a merchant, else
-        // Subcontractor — WorkOrderPathways, 2026-09-15), the order's own record tag (replies
+        // Subcontractor — CompanyPathways, 2026-09-15), the order's own record tag (replies
         // group under the order via the shared record-link read-back), and — when the order came
         // from awarding a tender — the source package's tag, so the thread also reads alongside
         // the tender correspondence.
-        var bucket = WorkOrderPathways.BucketFor((DirectoryCategory)supplier.Category);
-        var pathway = WorkOrderPathways.LabelFor((DirectoryCategory)supplier.Category);
+        var bucket = CompanyPathways.BucketFor((DirectoryCategory)supplier.Category);
+        var pathway = CompanyPathways.LabelFor((DirectoryCategory)supplier.Category);
         var categories = new List<string>
         {
             TriageCategories.Marker,

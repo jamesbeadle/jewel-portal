@@ -94,14 +94,15 @@ public static class TriageCategories
         // The TYPE's default only. Since 2026-09-15 an order follows the COMPANY it is placed
         // with — a Supplier-category company files under Supplier — which the type cannot say:
         // the record-level answer is LinkableRecord.Pathway (filled by WorkOrderLinkProvider from
-        // WorkOrderPathways), read through BucketFor(LinkableRecord) below. Callers holding only
+        // CompanyPathways), read through BucketFor(LinkableRecord) below. Callers holding only
         // the type get the pre-2026-09-15 answer, right for every subcontractor order.
         RecordType.WorkOrder        => Subcontractor,
-        // The remediation is chased with the company that caused it. Raisable from the Supplier
-        // pane too since 2026-09-07 (faulty goods are the merchant's to put right); the thread
-        // still files under Subcontractor, because the pathway is keyed on record type — see
-        // DefectLinkProvider for why that is left alone.
-        RecordType.Defect           => Subcontractor,
+        // Neutral since 2026-09-16: the remediation is chased with the company that caused it —
+        // a trade (Subcontractor pane) or a merchant (Supplier pane, since 2026-09-07) — so the
+        // side is the defect's company (DefectLinkProvider fills LinkableRecord.Pathway from
+        // CompanyPathways; Subcontractor when no company is named yet) unless the pane that
+        // stages the tag says otherwise. See BucketFor(LinkableRecord, string?).
+        RecordType.Defect           => null,
         RecordType.SubcontractorComms => Subcontractor, // general subcontractor correspondence — the tag IS the filing
         RecordType.SupplierComms    => Supplier,     // general supplier correspondence — the tag IS the filing
         RecordType.Inventory        => Supplier,     // the goods come from a materials/goods supplier
@@ -120,6 +121,18 @@ public static class TriageCategories
     /// is null for the type: pathway-neutral, the triager's choice decides.</summary>
     public static string? BucketFor(LinkableRecord record) =>
         BucketForPathway(record.Pathway) ?? BucketFor(record.Type);
+
+    /// <summary>The pathway a LINK files its thread under, given the record and the caller's
+    /// explicit choice (a bucket category, or null for none). A typed record answers for itself
+    /// — its own pathway, else its type's — and the choice is ignored: a Request is always
+    /// Client. A pathway-neutral record (CostCentre, Defect) takes the choice first — the pane
+    /// the triager staged the tag on — and its own pathway only when nobody chose (a defect's
+    /// company, on the record page's Find &amp; tag and composer). A Todo answers null throughout:
+    /// it carries no pathway and no caller sends one for it.</summary>
+    public static string? BucketFor(LinkableRecord record, string? chosenBucket) =>
+        BucketFor(record.Type) is not null
+            ? BucketFor(record)
+            : chosenBucket ?? BucketForPathway(record.Pathway);
 
     /// <summary>The bucket category for a short pathway label ("Client", "Subcontractor",
     /// "Supplier", "Sales", "Internal" — case-insensitive), or null for blank or unknown text. The

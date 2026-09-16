@@ -56,9 +56,10 @@ public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRe
 
         // The pathway this link would file the thread under: implied by the record (its own
         // pathway — a supplier's work order files under Supplier — else its type's), or — for
-        // pathway-neutral types like CostCentre — the triager's explicit choice. Null = no pathway
-        // involvement at all (e.g. a Todo link, which never sets or changes one).
-        var bucket = TriageCategories.BucketFor(record) ?? TriageCategories.BucketForPathway(command.Pathway);
+        // pathway-neutral types like CostCentre and Defect — the triager's explicit choice, else
+        // the record's own (a defect's company). Null = no pathway involvement at all (e.g. a
+        // Todo link, which never sets or changes one).
+        var bucket = TriageCategories.BucketFor(record, TriageCategories.BucketForPathway(command.Pathway));
         var existingBuckets = (snapshot.Categories ?? Array.Empty<string>())
             .Where(TriageCategories.IsBucketTag)
             .Distinct(StringComparer.OrdinalIgnoreCase)

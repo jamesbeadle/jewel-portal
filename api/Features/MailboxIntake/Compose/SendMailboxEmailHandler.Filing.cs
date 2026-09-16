@@ -53,8 +53,9 @@ public sealed partial class SendMailboxEmailHandler
         compose.LinkedRecord = linkedRecord;
         compose.RecordTag = TriageCategories.ForRecord(linkedRecord.TagReference);
         // The record's own pathway first (a supplier's work order files under Supplier,
-        // 2026-09-15), else the type's; a pathway-neutral type takes the composer's choice.
-        var recordBucket = TriageCategories.BucketFor(linkedRecord) ?? compose.ChosenBucket;
+        // 2026-09-15), else the type's; a pathway-neutral type takes the composer's choice, else
+        // the record's own (a defect's company, 2026-09-16).
+        var recordBucket = TriageCategories.BucketFor(linkedRecord, compose.ChosenBucket);
 
         if (compose.ExistingBucket is not null && recordBucket is not null
             && TriageCategories.CrossesClientWall(compose.ExistingBucket, recordBucket))

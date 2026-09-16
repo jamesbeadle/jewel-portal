@@ -197,7 +197,7 @@ public sealed class BackfillBucketsEndpoint
 
     // Which pathway a record tag implies: BucketForTag's answer from the tag's shape, except for a
     // work-order stem, whose pathway is the ORDER's — it follows the company the order is placed
-    // with (WorkOrderPathways, 2026-09-15: a merchant's order files under Supplier), so the stem
+    // with (CompanyPathways, 2026-09-15: a merchant's order files under Supplier), so the stem
     // is resolved through the provider (one lookup per distinct stem per run). A stem that
     // resolves to nothing — a legacy flat "WO-0045" that names orders on two projects, say —
     // falls back to Subcontractor, the pre-2026-09-15 answer for every work order.

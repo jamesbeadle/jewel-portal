@@ -512,21 +512,31 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   staged order) offers vetted Subcontractor AND Supplier directory records — never prospects,
   clients or architects — under the label "Company", keeping an order's existing pick listed
   whatever its category is now.
-- **The pathway follows the company, not the type.** `WorkOrderPathways` (api): a
-  Supplier-category company files the order's mail under `JPMS/Supplier`, any other under
-  `JPMS/Subcontractor`. The answer travels per record on `LinkableRecord.Pathway` (filled by
-  `WorkOrderLinkProvider`) and the link layer reads it through
-  `TriageCategories.BucketFor(LinkableRecord)` — `LinkMessageToRecordHandler`, the composer's
-  `LinkRecordAsync`, the backfill sweep (work-order stems resolve through the provider). Outbound
-  PO mail (`SendWorkOrderPoEmailHandler`, `PrepareWorkOrderReplyDraftHandler`) stamps the
-  company's bucket and audits under its label. `TriageCategories.BucketFor(RecordType.WorkOrder)`
-  still answers Subcontractor — the type's default for callers holding only the type — and
-  `RecordLinkVocabulary.ImpliedPathway(WorkOrder)` is null (the Tagged picker's heads-up can't
-  say). The defect (2026-09-07) still files under Subcontractor from either pane; this is the
-  per-record road it would take if that ever changes.
+- **The pathway follows the company, not the type.** `CompanyPathways` (api, was
+  `WorkOrderPathways` until 2026-09-16): a Supplier-category company files the record's mail
+  under `JPMS/Supplier`, any other under `JPMS/Subcontractor`. The answer travels per record on
+  `LinkableRecord.Pathway` (filled by `WorkOrderLinkProvider` and, since 2026-09-16,
+  `DefectLinkProvider`) and the link layer reads it through
+  `TriageCategories.BucketFor(LinkableRecord, chosenBucket)` — `LinkMessageToRecordHandler`, the
+  composer's `LinkRecordAsync`, the backfill sweep (work-order stems resolve through the
+  provider). Outbound PO mail (`SendWorkOrderPoEmailHandler`, `PrepareWorkOrderReplyDraftHandler`)
+  stamps the company's bucket and audits under its label.
+  `TriageCategories.BucketFor(RecordType.WorkOrder)` still answers Subcontractor — the type's
+  default for callers holding only the type — and `RecordLinkVocabulary.ImpliedPathway(WorkOrder)`
+  is null (the Tagged picker's heads-up can't say).
+- **A defect is pathway-NEUTRAL** (2026-09-16; `BucketFor(RecordType.Defect)` is null): the
+  same DEF-#### is a trade's workmanship (Subcontractor pane) or a merchant's faulty goods
+  (Supplier pane, since 2026-09-07). The side is the pane's explicit choice when there is one —
+  `TriageQueue.PanePathwayFor` sends it with every Control Centre pick of a defect (as it does for
+  a cost centre), and the staged create carries it on `CreateDefectFromMessage.Pathway` — else the
+  defect's own company (`DefectLinkProvider` → `CompanyPathways`; Subcontractor when none is
+  named), which is what the defect page's Find & tag and composer get. For a neutral type the
+  choice beats the record's own pathway; for a typed record the record answers and the choice is
+  ignored (`BucketFor(LinkableRecord, chosenBucket)`). Pinned by `DefectPathwayTests`.
 - **Badges count where the draft was staged**: `StagedRecordCreate.Pathway` is stamped by
   `StagedRecordActionEditor` from its pane, so a work order (or defect) drafted on the Supplier
-  pane counts on the Supplier badge. Display only; the server decides the filing.
+  pane counts on the Supplier badge. Display only for every kind but the defect, whose pane IS
+  its side (above); the server decides every other filing.
 - **A line may be £0** (2026-09-15, the accountant's On The Level order: the quote lists the
   outlet gullies at 0.00, included under the formers, and the PO must list what the quote
   lists). An amount of 0 is an ENTERED line everywhere — `WorkOrderForm.EnteredLines` (anything
@@ -1146,8 +1156,11 @@ finds drift.
 - `ErrorReporter` holds the single current error; `ErrorToast` renders it full-width along the top
   of both layouts. One at a time, newest wins.
 - Every report carries a short reference (`JPMS-7F3A2C`), the time, the signed-in user, the page,
-  the endpoint + status, the server's own message and the stack — copyable in one click, so a user
-  can forward something actionable rather than "it went red".
+  the endpoint + status, the server's own message and the stack. The user sees and copies only
+  the reference, the time, the page and the sentence (`ErrorReport.ToUserText`); the rest is
+  posted by `ClientErrorLog` to `POST /api/client-errors` (`LogClientErrorEndpoint`), which writes
+  it to the API's log under the same reference — support looks the reference up, the user never
+  reads a stack trace. A 401 gets a "Sign in again" button instead of Copy; it is not logged.
 - What reaches the toast: all query failures, command failures **except** 400/409/422 (those are
   validation answers the calling dialog already shows next to the field), and any unhandled
   exception — caught either by `ReportingErrorBoundary` in `App.razor` or by

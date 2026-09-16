@@ -92,7 +92,7 @@ public sealed record PathwayPaneConfig(
         // one WO sequence, one PO PDF — so rather than build a separate "purchase order" feature
         // the one record is offered on both panes. Unlike a defect, its thread files by the
         // COMPANY the order is placed with (a Supplier-category company → Supplier;
-        // WorkOrderPathways server-side), so a merchant's PO correspondence reads on this side.
+        // CompanyPathways server-side), so a merchant's PO correspondence reads on this side.
         new[] { RecordType.WorkOrder, RecordType.Inventory, RecordType.Defect },
         CommunicationFamily.Supplier,
         new (string, IReadOnlyList<SystemActionKind>)[]

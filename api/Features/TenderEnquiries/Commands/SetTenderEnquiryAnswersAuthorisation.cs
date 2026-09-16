@@ -1,1 +1,0 @@
-// Retired 2026-09-03: the Tender Enquiries feature was removed. This file is empty on purpose so the build stays green — git rm it when convenient.

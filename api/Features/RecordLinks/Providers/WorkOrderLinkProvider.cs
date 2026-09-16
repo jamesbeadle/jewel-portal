@@ -8,13 +8,13 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 // can be linked to an order and the order can read its mail back live by tag (RecordEmailReader) —
 // the same mechanism the Bid Package family uses, with no changes to the link/read layer or triage UI.
 //
-// The pathway FOLLOWS THE COMPANY the order is placed with (WorkOrderPathways): the same record
+// The pathway FOLLOWS THE COMPANY the order is placed with (CompanyPathways): the same record
 // is offered on the Subcontractor pane and the Supplier pane, so the type alone cannot say which
 // side a thread belongs to. Every record this provider hands out therefore carries
 // LinkableRecord.Pathway — "Supplier" for a Supplier-category company, "Subcontractor" for any
 // other — and the link layer reads it through TriageCategories.BucketFor(LinkableRecord). (The
-// defect took the other road on 2026-09-07 and files under Subcontractor whichever pane raised
-// it; see DefectLinkProvider. This is the road the per-record pathway was built for.)
+// defect joined this road on 2026-09-16 — DefectLinkProvider — with one difference: its type is
+// pathway-neutral, so the pane that stages the tag can override the company.)
 //
 // The tag stem is PROJECT-QUALIFIED ("JBB-2026-001-WO-0045", WorkOrderTags) since 2026-09-14: order
 // numbers are per project, so the flat "WO-0045" named By France's Farrant order AND Coombe Lane's
@@ -141,6 +141,6 @@ public sealed class WorkOrderLinkProvider : ILinkableRecordProvider, ITagResolvi
             // Released is the one live state; Complete, Cancelled and Rejected are finished business.
             IsActive:     entity.Status == (int)WorkOrderStatus.Released,
             // The side this order's mail files under follows its company (see the class note).
-            Pathway:      WorkOrderPathways.LabelFor(company is null ? (DirectoryCategory?)null : (DirectoryCategory)company.Category));
+            Pathway:      CompanyPathways.LabelFor(company is null ? (DirectoryCategory?)null : (DirectoryCategory)company.Category));
     }
 }

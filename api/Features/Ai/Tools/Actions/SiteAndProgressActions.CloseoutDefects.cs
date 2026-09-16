@@ -51,8 +51,11 @@ internal sealed partial class SiteAndProgressActions
             VisibleTo: SiteTeamManagers,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "messageId is a mailbox message id from the triage queue. An email already "
-                + "tagged to another pathway is refused unless allowCrossPathway is true."),
+            Notes: "messageId is a mailbox message id from the triage queue. pathway is the side "
+                + "the thread files under — \"Subcontractor\" for a trade's workmanship, "
+                + "\"Supplier\" for a merchant's faulty goods; omitted files under Subcontractor. "
+                + "An email already tagged to another pathway is refused unless allowCrossPathway "
+                + "is true."),
 
         new AiAction(
             Name: "update_defect",

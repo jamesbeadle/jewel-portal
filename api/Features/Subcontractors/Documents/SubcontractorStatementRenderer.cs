@@ -37,13 +37,11 @@ public static class SubcontractorStatementRenderer
         normal.Font.Size = 9;
         normal.Font.Color = Ink;
 
-        var section = document.AddSection();
-        var setup = section.PageSetup;
-        setup.PageFormat = PageFormat.A4;
-        setup.TopMargin = Unit.FromCentimeter(1.3);
-        setup.BottomMargin = Unit.FromCentimeter(1.6);
-        setup.LeftMargin = Unit.FromCentimeter(1.6);
-        setup.RightMargin = Unit.FromCentimeter(1.6);
+        // The house geometry (A4Page) and footer (HouseFooter): the one bottom margin that clears
+        // the footer, and the orange band every document carries — this renderer was the last one
+        // still setting its own margins, and its footer printed through the final row on a full
+        // page just as the others once did (2026-09-16).
+        var section = A4Page(document);
 
         AddHeaderBand(section, statement);
         AddDetailsGrid(section, statement);
@@ -230,24 +228,8 @@ public static class SubcontractorStatementRenderer
         SpaceBefore(note, 2);
     }
 
-    private static void AddFooter(Section section, SubcontractorStatement statement)
-    {
-        var footer = section.Footers.Primary.AddParagraph();
-        footer.Format.Borders.Top.Width = 0.75;
-        footer.Format.Borders.Top.Color = Orange;
-        footer.Format.Borders.Distance = Unit.FromMillimeter(2);
-        footer.Format.Font.Size = 7.5;
-
-        footer.AddFormattedText("◆ ", new Font { Color = Orange, Size = 7.5 });
-        footer.AddFormattedText("JEWEL BESPOKE BUILD", new Font { Color = Navy, Bold = true, Size = 7.5 });
-        footer.AddFormattedText("    WWW.JEWELBB.CO.UK", new Font { Color = Gold, Bold = true, Size = 7.5 });
-        footer.AddTab();
-        footer.AddFormattedText(
-            $"Generated {DateTime(statement.GeneratedAt)} · from the JPMS register (source of truth)",
-            new Font { Color = Muted, Size = 7 });
-
-        footer.Format.TabStops.AddTabStop(Unit.FromCentimeter(18.3), TabAlignment.Right);
-    }
+    private static void AddFooter(Section section, SubcontractorStatement statement) =>
+        HouseFooter(section, $"Generated {DateAndTime(statement.GeneratedAt)} · from the JPMS register (source of truth)");
 
     // ---- Helpers ------------------------------------------------------------------------------
 
@@ -333,6 +315,5 @@ public static class SubcontractorStatementRenderer
     private static string Money(decimal value) => value.ToString("£#,##0.00;\u2212£#,##0.00", Uk);
     private static string Date(System.DateTime value) => JewelDocumentStyle.Date(value);
     private static string Date(DateTimeOffset value) => JewelDocumentStyle.Date(value);
-    private static string DateTime(DateTimeOffset value) => value.ToString("dd MMM yyyy HH:mm", Uk);
 
 }

@@ -755,4 +755,25 @@ public sealed class AiConnectorTests
         Assert.Contains("list_hs_records", AiActionRegistry.Find("log_hs_record")!.Notes);
         Assert.Contains("assignedToName", AiActionRegistry.Find("log_hs_record")!.Notes);
     }
+    // 2026-09-16: update_project_details overwrites every field, so it needs a read that returns
+    // them all — list_projects gives only id, reference, name and stage. get_project_details is
+    // that read, behind the Project settings page's gate, and the action's notes send the model
+    // to it before every call.
+    [Fact]
+    public void ProjectDetails_areReadable_beforeTheyAreOverwritten()
+    {
+        var read = AiToolCatalogue.Find("get_project_details");
+        Assert.NotNull(read);
+        Assert.Equal(AiToolKind.Read, read!.Kind);
+        foreach (var editor in new[] { Role.ManagingDirector, Role.FinanceDirector, Role.ProjectManager })
+            Assert.Contains("get_project_details", AiToolCatalogue.ForConnector(UserWith(editor)).Select(t => t.Name));
+        Assert.DoesNotContain("get_project_details", AiToolCatalogue.ForConnector(UserWith(Role.Subcontractor)).Select(t => t.Name));
+
+        var update = AiActionRegistry.Find("update_project_details");
+        Assert.NotNull(update);
+        Assert.Contains("get_project_details", update!.Description);
+        Assert.Contains("get_project_details", update.Notes);
+        foreach (var role in Enum.GetValues<Role>())
+            Assert.Equal(update.VisibleTo.Includes(role), read.VisibleTo.Includes(role));
+    }
 }

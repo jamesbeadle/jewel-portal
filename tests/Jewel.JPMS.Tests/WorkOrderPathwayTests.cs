@@ -20,14 +20,14 @@ public sealed class WorkOrderPathwayTests
     [Fact]
     public void Bucket_followsTheCompanyCategory()
     {
-        Assert.Equal(TriageCategories.Supplier, WorkOrderPathways.BucketFor(DirectoryCategory.Supplier));
-        Assert.Equal(TriageCategories.Subcontractor, WorkOrderPathways.BucketFor(DirectoryCategory.Subcontractor));
+        Assert.Equal(TriageCategories.Supplier, CompanyPathways.BucketFor(DirectoryCategory.Supplier));
+        Assert.Equal(TriageCategories.Subcontractor, CompanyPathways.BucketFor(DirectoryCategory.Subcontractor));
         // Anything else an old order might point at — and a company missing from the directory —
         // keeps the pre-2026-09-15 answer.
-        Assert.Equal(TriageCategories.Subcontractor, WorkOrderPathways.BucketFor(DirectoryCategory.Client));
-        Assert.Equal(TriageCategories.Subcontractor, WorkOrderPathways.BucketFor(null));
-        Assert.Equal("Supplier", WorkOrderPathways.LabelFor(DirectoryCategory.Supplier));
-        Assert.Equal("Subcontractor", WorkOrderPathways.LabelFor(DirectoryCategory.Other));
+        Assert.Equal(TriageCategories.Subcontractor, CompanyPathways.BucketFor(DirectoryCategory.Client));
+        Assert.Equal(TriageCategories.Subcontractor, CompanyPathways.BucketFor(null));
+        Assert.Equal("Supplier", CompanyPathways.LabelFor(DirectoryCategory.Supplier));
+        Assert.Equal("Subcontractor", CompanyPathways.LabelFor(DirectoryCategory.Other));
     }
 
     [Fact]
@@ -77,8 +77,8 @@ public sealed class WorkOrderPathwayTests
         Assert.Equal(
             new[] { "Subcontractor", "Supplier", "Subcontractor" },
             (await provider.ForProjectAsync(Project, CancellationToken.None)).Select(record => record.Pathway).ToArray());
-        Assert.Equal(TriageCategories.Supplier, WorkOrderPathways.BucketFor(await WorkOrderPathways.CategoryAsync(context, "sup-travis", CancellationToken.None)));
-        Assert.Equal(TriageCategories.Subcontractor, WorkOrderPathways.BucketFor(await WorkOrderPathways.CategoryAsync(context, "nobody", CancellationToken.None)));
+        Assert.Equal(TriageCategories.Supplier, CompanyPathways.BucketFor(await CompanyPathways.CategoryAsync(context, "sup-travis", CancellationToken.None)));
+        Assert.Equal(TriageCategories.Subcontractor, CompanyPathways.BucketFor(await CompanyPathways.CategoryAsync(context, "nobody", CancellationToken.None)));
     }
 
     private static async Task<JpmsContext> ContextWithBothKindsOfOrderAsync()

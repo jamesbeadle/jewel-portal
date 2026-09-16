@@ -55,10 +55,10 @@ public sealed class PrepareWorkOrderReplyDraftHandler : ICommandHandler<PrepareW
 
         // Categories on the draft = what the SENT copy should carry, so it self-files: the
         // pathway of the company the order is placed with (Supplier for a merchant, else
-        // Subcontractor — WorkOrderPathways, 2026-09-15), the order's own record tag, and — when
+        // Subcontractor — CompanyPathways, 2026-09-15), the order's own record tag, and — when
         // the order came from awarding a tender — the source package's tag (same set as
         // SendWorkOrderPoEmailHandler).
-        var bucket = await WorkOrderPathways.BucketAsync(context, order, cancellationToken);
+        var bucket = await CompanyPathways.BucketAsync(context, order, cancellationToken);
         var categories = new List<string>
         {
             TriageCategories.Marker,

@@ -36,7 +36,7 @@ public partial class TriageQueue
             busyLabel = "Tagging lined-up replies";
             await Intake.LinkMessageToRecordAsync(
                 lined.MessageId, lined.InternetMessageId, record.Type, record.RecordId,
-                pathway: CostCentrePathwayFor(record),
+                pathway: PanePathwayFor(record),
                 allowCrossPathway: true,
                 scope: LinkThreadScope.MessageOnly);
         }

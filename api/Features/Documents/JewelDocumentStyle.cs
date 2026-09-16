@@ -47,11 +47,12 @@ internal static class JewelDocumentStyle
     /// <summary>
     /// THE page geometry every house document shares: A4, 1.6 cm sides, 1.3 cm top — and a bottom
     /// margin that CLEARS the footer. MigraDoc hangs the footer FooterDistance up from the page
-    /// edge and grows it upward from there, while the body runs down to BottomMargin; with the
-    /// default FooterDistance (1.25 cm) and a 1.3–1.6 cm bottom margin the two overlap, and the
-    /// footer's orange rule prints straight through the last table row on any full page. Every
-    /// renderer was carrying its own copy of these numbers (and the valuation snapshot had fixed
-    /// the overlap locally) — this is the one place the numbers live now.
+    /// edge and grows it upward from there by its content height, while the body runs down to
+    /// BottomMargin; if the two overlap the footer prints straight through the last table row on
+    /// any full page (the 2026-09-07 bug, and again on 2026-09-16 — see <see cref="OrangeBand"/>
+    /// for the second cause). Every renderer was carrying its own copy of these numbers (and the
+    /// valuation snapshot had fixed the overlap locally) — this is the one place the numbers live
+    /// now, and <see cref="FooterHeight"/> is the one place the footer's height is stated.
     /// </summary>
     public static Section A4Page(Document document)
     {
@@ -59,20 +60,40 @@ internal static class JewelDocumentStyle
         var setup = section.PageSetup;
         setup.PageFormat = PageFormat.A4;
         setup.TopMargin = Unit.FromCentimeter(1.3);
-        // The footer is the provenance line plus the orange band beneath it (9 mm at the page
-        // foot), so the body stops 2.4 cm up and the line hangs 1.2 cm from the edge, above the band.
-        setup.BottomMargin = Unit.FromCentimeter(2.4);
-        setup.FooterDistance = Unit.FromCentimeter(1.15);
+        // The footer hangs from the very edge of the page (distance 0) so its orange band bleeds
+        // off the bottom, and it is FooterHeight tall; the body stops FooterClearance above it.
+        setup.FooterDistance = Unit.FromCentimeter(0);
+        setup.BottomMargin = FooterHeight + FooterClearance;
         setup.LeftMargin = Unit.FromCentimeter(1.6);
         setup.RightMargin = Unit.FromCentimeter(1.6);
         return section;
     }
 
+    // Declaration order matters below: C# runs static initialisers top to bottom, so the band's
+    // numbers must be assigned before FooterHeight adds them up.
+
+    /// <summary>The orange brand band along the foot of every page.</summary>
+    public static readonly Unit BandHeight = Unit.FromMillimeter(9);
+
+    /// <summary>The gap between the provenance line and the band.</summary>
+    public static readonly Unit BandGap = Unit.FromMillimeter(3);
+
     /// <summary>
-    /// THE house footer: orange rule, brand and site on the left, the document's provenance note
-    /// right-aligned ("Generated 07 Sep 2026 14:02 · from the JPMS register (source of truth)").
-    /// One footer for every document, so the sheets read as one family — and one height, which
-    /// is what <see cref="A4Page"/>'s bottom margin is sized to clear.
+    /// The house footer's height as MigraDoc lays it out: the 7 pt provenance line (≈ 3 mm with
+    /// its line spacing), the gap above the band, and the band itself. Stated here, next to the
+    /// margins that must clear it, rather than rediscovered from a print-out.
+    /// </summary>
+    public static readonly Unit FooterHeight = Unit.FromMillimeter(3) + BandGap + BandHeight;
+
+    /// <summary>White space between the last line of the body and the top of the footer.</summary>
+    public static readonly Unit FooterClearance = Unit.FromMillimeter(6);
+
+    /// <summary>
+    /// THE house footer: brand and site on the left, the document's provenance note right-aligned
+    /// ("Generated 07 Sep 2026 14:02 · from the JPMS register (source of truth)"), and the orange
+    /// band beneath. One footer for every document, so the sheets read as one family — and one
+    /// height (<see cref="FooterHeight"/>), which is what <see cref="A4Page"/>'s bottom margin is
+    /// sized to clear.
     /// </summary>
     public static void HouseFooter(Section section, string note)
     {
@@ -80,6 +101,7 @@ internal static class JewelDocumentStyle
         // the right (a right tab stop at the usable width, 21 cm − 2 × 1.6 cm).
         var footer = section.Footers.Primary.AddParagraph();
         footer.Format.Font.Size = 7;
+        footer.Format.SpaceAfter = BandGap;   // the gap belongs to the line, not the band (see OrangeBand)
         footer.AddFormattedText("JEWEL BESPOKE BUILD", new Font { Color = Gold, Bold = true, Size = 7 });
         footer.AddFormattedText("   www.jewelbb.co.uk", new Font { Color = Muted, Size = 7 });
         footer.AddTab();
@@ -92,23 +114,35 @@ internal static class JewelDocumentStyle
     /// <summary>
     /// The brand band along the foot of every page (2026-09-15, Nigel: the documents follow the
     /// tender's branding — a clean white top with the logo, an orange band across the bottom). A
-    /// text frame positioned against the page, not the margins, so it bleeds to both edges and the
-    /// bottom; it lives in the footer so every page carries it.
+    /// text frame that sits IN THE FOOTER'S FLOW, straight under the provenance line, positioned
+    /// against the page only horizontally so it bleeds to both side edges; with the footer hung
+    /// from the page edge (FooterDistance 0, see <see cref="A4Page"/>) the band's bottom IS the
+    /// bottom of the page. It lives in the footer so every page carries it.
+    ///
+    /// Why not simply pin it to the page bottom with RelativeVertical.Page (2026-09-16)? MigraDoc
+    /// measures a footer from its first element's top to its LAST element's bottom, and a
+    /// page-positioned frame reports its absolute page position as that bottom — so the footer's
+    /// measured height became the whole bottom margin and it was hung FooterDistance higher than
+    /// the body's end: the provenance line printed through the last table row on every full
+    /// page (the VO export, 16 Sep). In the flow, the footer measures what it draws.
+    ///
+    /// The band carries no top distance of its own: MigraDoc counts a first element's top margin
+    /// in the footer's height but draws the element at the footer's top regardless, so a
+    /// band-only footer (the estimate's cover) with a distance would float that far off the
+    /// page edge. The gap under the provenance line is that paragraph's SpaceAfter instead.
     /// </summary>
     public static void OrangeBand(Section section)
     {
         var band = section.Footers.Primary.AddTextFrame();
         band.RelativeHorizontal = RelativeHorizontal.Page;
-        band.RelativeVertical = RelativeVertical.Page;
+        band.RelativeVertical = RelativeVertical.Paragraph;   // in the footer's flow, under the line
+        band.WrapFormat.Style = WrapStyle.TopBottom;            // and taking up its own height there
         band.Left = Unit.FromCentimeter(0);
-        band.Top = Unit.FromCentimeter(29.7) - BandHeight;
         band.Width = Unit.FromCentimeter(21);
         band.Height = BandHeight;
         band.FillFormat.Color = Orange;
         band.LineFormat.Width = 0;
     }
-
-    public static readonly Unit BandHeight = Unit.FromMillimeter(9);
 
     /// <summary>
     /// THE clean document top (2026-09-15): the logo centred on white, then the title with its

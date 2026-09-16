@@ -8,14 +8,16 @@ namespace Jewel.JPMS.Services;
 /// One at a time, newest wins. A stack of toasts is a worse experience than a single clear one:
 /// when something is broken it usually breaks several times in a row, and the user needs the most
 /// recent state of the world, not a history of it. Everything needed to diagnose the failure is
-/// captured at the moment it happens — page, user, endpoint, status, the server's own words — so
-/// that "it went red" can be forwarded as something actionable.
+/// captured at the moment it happens — page, user, endpoint, status, the server's own words — and
+/// shipped to the API's log under the report's reference; the user's card carries only what they
+/// can act on, so "it went red" can be forwarded as a reference rather than a stack trace.
 /// </summary>
 public sealed class ErrorReporter : IErrorSink, IDisposable
 {
     private readonly NavigationManager navigation;
     private readonly AuthService auth;
     private readonly GlobalErrorSink sink;
+    private readonly ClientErrorLog log;
 
     /// <summary>The same failure repeating inside this window is treated as one event. Background
     /// refreshes retry on their own, and three identical toasts say nothing the first did not.</summary>
@@ -24,11 +26,12 @@ public sealed class ErrorReporter : IErrorSink, IDisposable
     private string? lastSignature;
     private DateTimeOffset lastReportedAt;
 
-    public ErrorReporter(NavigationManager navigation, AuthService auth, GlobalErrorSink sink)
+    public ErrorReporter(NavigationManager navigation, AuthService auth, GlobalErrorSink sink, ClientErrorLog log)
     {
         this.navigation = navigation;
         this.auth = auth;
         this.sink = sink;
+        this.log = log;
 
         sink.OnError += HandleCaptured;
         foreach (var captured in sink.DrainPending()) HandleCaptured(captured);
@@ -106,6 +109,7 @@ public sealed class ErrorReporter : IErrorSink, IDisposable
     private void Publish(ErrorReport report)
     {
         Current = report;
+        log.Send(report);
         OnChange?.Invoke();
     }
 

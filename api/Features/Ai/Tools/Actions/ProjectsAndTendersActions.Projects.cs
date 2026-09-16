@@ -44,9 +44,9 @@ internal sealed partial class ProjectsAndTendersActions
                 + "customer the project's sales invoices are raised on) and siteNoteSenderNames (the "
                 + "people whose WhatsApp messages are the project's site notes, one name per line, "
                 + "read by the Progress tab's Import WhatsApp week). Fields omitted are not kept: "
-                + "read the project first and carry forward everything that should not change. The "
-                + "party assignment decides where project emails (RFIs and other request documents) "
-                + "are addressed.",
+                + "call get_project_details first and carry forward everything that should not "
+                + "change. The party assignment decides where project emails (RFIs and other request "
+                + "documents) are addressed.",
             CommandType: typeof(UpdateProjectDetails),
             ResultType: typeof(Project),
             AuthorisationType: typeof(UpdateProjectDetailsAuthorisation),
@@ -54,9 +54,11 @@ internal sealed partial class ProjectsAndTendersActions
             VisibleTo: ProjectEditors,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "projectId comes from list_projects. Echo current values for anything unchanged — "
-                + "a null partyId clears the party assignment, and a null xeroContactId clears the Xero "
-                + "contact mapping (raise_valuation_invoice_in_xero is blocked until it is set). "
+            Notes: "projectId comes from list_projects; the current values come from "
+                + "get_project_details — read it first, every time, and echo its values for anything "
+                + "unchanged. A null partyId clears the party assignment, and a null xeroContactId "
+                + "clears the Xero contact mapping (raise_valuation_invoice_in_xero is blocked until "
+                + "it is set). "
                 + "Prefer set_project_xero_contact for the Xero mapping — it takes only the contactId "
                 + "(from list_xero_customers) and stores Xero's own name; here the pair must be echoed "
                 + "exactly as read, never guessed."),
