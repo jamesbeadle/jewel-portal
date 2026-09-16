@@ -7,7 +7,7 @@ namespace Jewel.JPMS.Api.Features.Progress.Storage;
 public sealed class NullProgressPhotoStore : IProgressPhotoStore
 {
     private const string Message =
-        "Progress photo storage is not configured. Set 'ProgressPhotosStorage:ConnectionString' (or 'AzureWebJobsStorage').";
+        "Progress photo storage is not configured. Set 'ProgressPhotosStorage:ConnectionString' (or 'DrawingsStorage:ConnectionString' / 'AzureWebJobsStorage').";
 
     public Task<string> UploadAsync(
         string projectId, string progressUpdateId, string photoId,
