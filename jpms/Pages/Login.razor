@@ -6,6 +6,11 @@
 
 <PageTitle>Sign in · JPMS</PageTitle>
 
+@if (Auth.IsSignedIn)
+{
+    return;
+}
+
 <div class="min-h-dvh flex flex-col md:flex-row">
 
     <div class="order-1 md:order-2 w-full md:w-1/2 h-[25vh] md:h-auto bg-surface overflow-hidden">
@@ -77,10 +82,14 @@
     private bool CanSubmit =>
         !string.IsNullOrWhiteSpace(email) && !string.IsNullOrWhiteSpace(password);
 
-    protected override async Task OnInitializedAsync()
+    // The layout has already waited for the sign-in check, so the answer is known before this
+    // page's first render: a signed-in visitor is sent on without the form ever being drawn,
+    // and the boot overlay stays up until their destination has something to show.
+    protected override void OnInitialized()
     {
-        await Auth.EnsureInitialisedAsync();
-        if (Auth.IsSignedIn) Nav.NavigateTo(Destination(), replace: true);
+        if (!Auth.IsSignedIn) return;
+        BootScreen.HoldThroughRedirect();
+        Nav.NavigateTo(Destination(), replace: true);
     }
 
     private async Task HandleSubmit()

@@ -52,6 +52,8 @@ internal static partial class AiDeliveryTools
         ListDrawings(),
         GetDocumentExtraction(),
         QueryDocumentData(),
+        ListContractorsReports(),
+        GetContractorsReport(),
         GetPackageReconciliation(),
     };
 }

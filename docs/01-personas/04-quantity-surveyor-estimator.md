@@ -6,8 +6,8 @@
 **Status:** Draft
 
 ## Goals
-- Build accurate tenders fast, on a re-usable rate library, with quants imported from Bluebeam without leaving Bluebeam to do it.
-- Work against a single canonical drawing in Bluebeam Studio Projects — never chase the latest revision, never upload it twice.
+- Build accurate tenders fast, on a re-usable rate library, with quantities read off the drawing itself — never measured by hand, never re-keyed from a take-off tool.
+- Work against a single canonical drawing in the JPMS drawing register — never chase the latest revision, never upload it twice.
 - Compare returned subcontractor quotes on one screen and award without rebuilding the comparison in Excel.
 - Run the valuation cycle from contract + approved variations + current % without rekey.
 - Price variations against the rate library.
@@ -20,8 +20,8 @@
 - Valuation rebuilt every claim period.
 
 ## How JPMS changes this for the QS
-- **Drawings flow into JPMS from Bluebeam Studio Projects automatically** (workflow 01). The Studio Project IS the drawing store; the QS opens drawings in Bluebeam Revu directly from the JPMS drawing register. No re-upload, no manual file moves.
-- **Take-off lands in JPMS via Bluebeam Markups List CSV import in v1** (workflow 02), then via the Bluebeam Markups API direct in phase 2. JPMS publishes a Bluebeam tool-set with a JPMS cost-code column on every take-off markup, so the take-off is tagged to its BoQ destination at source.
+- **Drawings land in the JPMS drawing register as they arrive** (workflow 01) — filed from the projects mailbox through Document Triage, or uploaded as a revision — and every revision is transcribed as it lands. The register IS the drawing store.
+- **Take-off comes from the drawing itself, not from Bluebeam** (decided 2026-09-07; workflow 02). The portal reads each PDF's own vector geometry and positioned text (`api/Features/Drawings/Geometry`): the title block, the revision table, the sheet's proven scale, and every figured dimension, callout and closed shape as rows the assistant can query and total. Measurement is exact at the proven scale and depends on no outside connection. Bluebeam's Markups API is not a take-off engine — it returns only markups a person has drawn in Revu, and nothing at all on a drawing nobody has marked up — so Revu markups are an optional import that exists only when someone has genuinely measured in Revu. The earlier plan (Markups List CSV in v1, Markups API in phase 2, a JPMS tool-set with a cost-code column) is withdrawn.
 
 ## Involvement across workflows
 - **Owner on:** 02 (Pre-Construction: Tender & BoQ), 07 (Valuations slice — produces the Programme Valuation Report each Claim Period), 08 (final account slice within close-out).

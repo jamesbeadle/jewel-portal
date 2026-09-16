@@ -7,6 +7,7 @@ namespace Jewel.JPMS.Services;
 public static class BootScreen
 {
     private static bool isDown;
+    private static bool isHeldThroughRedirect;
 
     /// <summary>
     /// Takes the boot overlay down. Idempotent per document — the overlay exists once, so after
@@ -23,6 +24,7 @@ public static class BootScreen
     {
         if (isDown) return;
         isDown = true;
+        isHeldThroughRedirect = false;
         try
         {
             await js.InvokeVoidAsync("jpmsBoot.dismiss");
@@ -30,5 +32,21 @@ public static class BootScreen
         catch (Exception)
         {
         }
+    }
+
+    /// <summary>
+    /// A page that only bounces the visitor somewhere else (the sign-in door for someone already
+    /// signed in) says so before it navigates, so the landing layout leaves the overlay up for
+    /// the page that will actually draw. Consumed by the next <see cref="DismissUnlessHeldAsync"/>.
+    /// </summary>
+    public static void HoldThroughRedirect() => isHeldThroughRedirect = true;
+
+    /// <summary>The landing layout's dismiss: down once its page has drawn a real screen, left
+    /// up when that page is redirecting.</summary>
+    public static Task DismissUnlessHeldAsync(IJSRuntime js)
+    {
+        if (!isHeldThroughRedirect) return DismissAsync(js);
+        isHeldThroughRedirect = false;
+        return Task.CompletedTask;
     }
 }

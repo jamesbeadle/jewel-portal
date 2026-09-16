@@ -1,5 +1,15 @@
 @inherits LayoutComponentBase
+@inject AuthService Auth
 @inject IJSRuntime JS
+
+@*
+    The layout outside the signed-in app: sign-in, set-password, forgot-password, the connector's
+    consent page, the Imagine viewer. It draws NOTHING until the sign-in check has answered —
+    the boot overlay stays up over an empty shell — because sign-in has three states, not two,
+    and a login page drawn while the answer is still "checking" is the login page flashing at a
+    signed-in user before the app jumps to their dashboard (2026-09-16). A page that turns out to
+    be a bounce (Login for a signed-in visitor) holds the overlay through its redirect.
+*@
 
 <div class="min-h-dvh bg-canvas text-content antialiased">
     @* Sign-in, set-password and forgot-password get the same error surface as the rest of the app:
@@ -8,14 +18,17 @@
     @* Sign-in gets the update prompt too: a stale cached bundle on the landing page is exactly
        what makes "sign-in is broken" reports out of a deploy that changed the auth flow. *@
     <UpdateToast />
-    @Body
+    @if (Auth.SignIn != SignInState.Checking)
+    {
+        @Body
+    }
 </div>
 
 @code {
-    // Sign-in is a real screen, so the boot overlay's work is done the moment it draws. Every
-    // route that is not behind ApprovedSessionGate takes the boot screen down here.
+    protected override Task OnInitializedAsync() => Auth.EnsureInitialisedAsync();
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender) await BootScreen.DismissAsync(JS);
+        if (Auth.SignIn != SignInState.Checking) await BootScreen.DismissUnlessHeldAsync(JS);
     }
 }

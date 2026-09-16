@@ -292,8 +292,8 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
 ## The site note and its photographs reach the portal (contracts + api + jpms)
 
 - **The Contractor's Report intake, changes 1–3 of the FD's 2026-09-15 spec** (`portal-change-spec-
-  weekly-report_2026-09-15.md`; change 4, the nine-section Word/PDF report, is not built and its
-  two open rules — Valuation No., Section 4's source — wait on Jeremy). The gap was one-directional:
+  weekly-report_2026-09-15.md`; change 4, the nine-section Word/PDF report, followed on
+  2026-09-16 — see the last bullet). The gap was one-directional:
   the portal could be READ for everything the weekly Contractor's Report needs and could not be
   WRITTEN the one thing it did not hold, the site note and its photographs.
 - **`CreateProgressUpdate` is the create from words alone** (ProjectId, Title, Description
@@ -335,10 +335,46 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   unticked and apply refuses it by name — re-running a week never duplicates. Non-photo media
   (video, voice notes) is counted and left out. `ProgressUpdates.Description` is nvarchar(max)
   since this migration.
-- **Not built: change 4.** The nine-section Contractor's Report (Word + PDF from the template cut
-  from Report 29, Section 3 from open RFIs, Section 8 from work orders, photo grids under the
-  Section 1 day headings, the banned-word gate, Section 4 rebuilt from source every time) is the
-  next task; do not extend the three-box `ProgressReport` into it.
+- **Change 4 is built: the weekly Contractor's Report** (2026-09-16; `contracts/Progress/
+  ContractorsReport*.cs`, `api/Features/Progress/ContractorsReports`, `jpms/Features/Progress/
+  ContractorsReports` + `ProjectProgressContractorsReports` / `ProjectProgressContractorsReport`
+  pages, the door "Contractor's Reports…" beside "Import WhatsApp week…"). ONE row per report
+  (`ContractorsReports`, unique on project + PeriodEnd, migration `AddContractorsReports`,
+  script `add-contractors-reports.sql`) holding only the ENTERED fields — number, the
+  Friday-to-Thursday period (`WhatsAppWeek`), Valuation No., programme reference, prepared by,
+  issued to, date of issue, Look Ahead lines (text + done), Neighbours, H&S, the Building
+  Control liaison line, Section 8 attendance per work order, and which updates are selected.
+  Every register-read section is composed at READ time by `ContractorsReportComposer` (the one
+  read behind the page's preview, `get_contractors_report`, and both downloads): Section 1 =
+  the selected updates under Friday (weekend folded in) then Monday–Thursday
+  (`ContractorsReportDays`); 3 = RFIs not Closed with ResponseDue and an italic count line;
+  4 = variations Quoting / Issued / Awaiting AI at `EstimatedValue ?? Value`, total = the sum
+  of the rows, NEVER carried forward; 7 = the active `BuildingControlCase` contact; 8 = work
+  orders Released (or Complete with ScheduledCompletion in the week) with the directory's
+  CompanyName; 9 = the selected days' photographs, two-up, days without photos omitted.
+  `CreateContractorsReport` pre-fills what a person would copy from last week (number = max+1,
+  header fields carried, unstruck Look Ahead carried, Valuation No. = the highest payment
+  certificate on the register — `ContractorsReportCertificates.Highest`, numeric-aware —
+  Neighbours' default line, every update in the week selected) and refuses a second report for
+  the same period. **The wording gate** (`ContractorsReportWording`: remedial, remedial works,
+  making good, rectify, rectification, snagging, defects, rework — whole words, any case) runs
+  over every printable line; a hit is a `ContractorsReportFinding` naming section + line, the
+  page shows them, and `GET contractors-reports/{id}/pdf` / `/docx` answer 422 with the
+  findings — never reworded silently. PDF is MigraDoc on `JewelDocumentStyle`
+  (`ContractorsReportPdfRenderer`); Word is the Open XML SDK (`DocumentFormat.OpenXml` 3.1.1,
+  now a direct PackageReference; `ContractorsReportWordRenderer` + `…WordParts` / `…WordTables`
+  / `…WordPictures`, typed property setters so Word's schema order holds — validated clean with
+  `OpenXmlValidator`). Both renderers read the same `ContractorsReportDocument` and the same
+  `ContractorsReportText` wording, and PLG's Report 29 template is NOT in hand: the house style
+  stands in until it arrives, and the two renderers are the one place to swap it. Jeremy's two
+  open rules are answered with defaults, not decisions: Valuation No. is an entered field
+  defaulting to the last certificate (the register's number is shown beside it), and Section 4
+  reads the portal's variation register. The portal never emails the report — a person
+  downloads Word or PDF from the page and sends it. Connector: `list_contractors_reports`,
+  `get_contractors_report` (document + findings + updatesInPeriod), `create_contractors_report`,
+  `update_contractors_report`, `delete_contractors_report` (confirm-first); pinned by
+  `ContractorsReports_reachTheConnector`, rules by `ContractorsReportTests`. Do not extend the
+  three-box `ProgressReport` into any of this.
 
 ## The Sales pane: an enquiry tagged to its lead, and the estimate on it (api + jpms)
 
@@ -375,17 +411,35 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   `add-lead-estimates.sql`; `EST-####` global) hangs off the lead: scope, the architect or
   consultant, the date the price is due, the budget the prospect mentioned, the total once priced,
   notes, and `EstimateStatus` Received → Pricing → Submitted → Won / Lost (`StatusChangedAt`;
-  Submitted needs a `Total` and stamps `SubmittedAt`; Won/Lost close it and refuse edits). It is
-  deliberately a plain record: the priced breakdown is built on Nigel's estimating workbook once
-  that is in the portal, and MUST follow its structure, rates and calculations — get the workbook
-  before designing it. Commands `CreateEstimate` / `UpdateEstimateDetails` / `MoveEstimateStatus`
+  Submitted needs a `Total` and stamps `SubmittedAt`; Won/Lost close it and refuse edits).
+  **Since 536de5c (2026-09-15, Nigel: "make sure we complete the estimate as expected" — the
+  Wodeland Avenue tender's shape) it carries the priced breakdown and the client-facing
+  document.** The breakdown is `LeadEstimateLines` — sections in print order (Preliminaries &
+  preambles, Demolition & stripping out, Structural steelwork…; a section may be a provisional
+  allowance, printed as such in red), each a list of lines: cost code (optional, but a Code from
+  the cost-centre master when given), description, quantity, unit, unit price, total = quantity ×
+  unit price computed server-side; when the breakdown has lines `Total` IS their sum.
+  `SetEstimateBreakdown` (`set_estimate_breakdown`, confirm-first) is a FULL-RECORD write — every
+  section and line as supplied, anything not sent is gone. The narrative is three fields on the
+  record — `ExecutiveSummary`, `BuildTime`, `Exclusions` — written by `UpdateEstimateDetails`.
+  The document is `GET sales/estimates/{id}/document` (`EstimateDocumentRenderer`): cover, the
+  project page, the executive summary with build time and exclusions, the breakdown chart, one
+  itemised table per section, the total, the contact page — **client-facing, "Estimate for
+  project"**, the internal `Notes` never print; regenerated on every download, nothing stored.
+  Nigel's estimating workbook is still the reference for rates and calculations when it arrives
+  — the structure is built, the pricing doctrine is not. Commands `CreateEstimate` /
+  `UpdateEstimateDetails` / `SetEstimateBreakdown` / `MoveEstimateStatus`
   (`SalesRoles.SalesTeam`), `GetEstimate` (`Readers`); `GetLead` carries `Estimates` newest
-  first. Page: `LeadEstimatesPanel` on the lead (Add / Edit modal, the status pill is the move,
-  Won/Lost through `ConfirmDialog`), beside the lead's "Enquiry emails"
-  (`RecordCorrespondenceSection`, type Lead). Connector: `create_estimate`,
-  `update_estimate_details`, `move_estimate_status` (each takes `estimateId`, never the
-  reference), and `get_lead` lists `estimates[]` with their ids. Every write is a
-  `LeadActivityKind.Estimate` entry on the lead's timeline. Never call this record a
+  first. Pages: `LeadEstimatesPanel` on the lead (Add / Edit modal, the status pill is the move,
+  Won/Lost through `ConfirmDialog`, Open + Download PDF per row), beside the lead's "Enquiry
+  emails" (`RecordCorrespondenceSection`, type Lead); and the estimate's own page
+  `/sales/leads/{leadId}/estimates/{estimateId}` (`SalesEstimateDetail`): the breakdown editor
+  (a full-record save — what is on the page is what the estimate becomes), "What the document
+  says" (the three narrative fields), Details and the status move in their modals, Download PDF.
+  Connector: `create_estimate`, `update_estimate_details` (narrative fields included),
+  `set_estimate_breakdown`, `move_estimate_status` (each takes `estimateId`, never the
+  reference), and `get_lead` lists `estimates[]` with their ids and `sections[]`. Every write is
+  a `LeadActivityKind.Estimate` entry on the lead's timeline. Never call this record a
   "quote" or a "proposal" in copy — the `SalesProposal` is a different record, and it is on the
   connector too (`SalesActions.Proposals`: `save_sales_proposal` drafts, `send_sales_proposal`
   emails the prospect — confirm-first — `withdraw_sales_proposal` is `Deciders`; `get_lead`
@@ -533,6 +587,15 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   named), which is what the defect page's Find & tag and composer get. For a neutral type the
   choice beats the record's own pathway; for a typed record the record answers and the choice is
   ignored (`BucketFor(LinkableRecord, chosenBucket)`). Pinned by `DefectPathwayTests`.
+- **A defect goes to its supplier from the assistant too** (2026-09-16):
+  `SendDefectToSupplier` (`api/Features/Closeout/Commands`, `AllInternal`) wraps the SAME
+  `SendMailboxEmail` the defect page's composer sends — the supplier's address from the
+  defect, the raise or chase wording from `DefectSupplierEmails` (contracts/Closeout; the page's
+  `DefectSuppliers` now reads the same wording), the defect's tag, the company's pathway
+  (`CompanyPathways.LabelFor`) — so `DefectSupplierSendRecorder` stamps `SentToSupplierAt`
+  exactly as a page send does. Connector: `send_defect_to_supplier` (confirm-first, `SentByEmail`
+  stamped; subject/body overridable), and `list_defects` carries `supplierEmail` — the address,
+  subject and body the action would send — so the assistant shows the email before the yes.
 - **Badges count where the draft was staged**: `StagedRecordCreate.Pathway` is stamped by
   `StagedRecordActionEditor` from its pane, so a work order (or defect) drafted on the Supplier
   pane counts on the Supplier badge. Display only for every kind but the defect, whose pane IS
@@ -575,6 +638,31 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   Valuation Report and Control Centre page guides), `docs/ai/skills/jpms/jpms-email-triage.md` +
   `jpms-valuation-cycle.md` (re-save to the portal's stored skills with `save_skill` after the
   deploy — the DB copy is what the connector loads), and the jpms-operator skill's references.
+
+## Generated documents wear one house style (api)
+
+- **Every PDF the portal renders is `JewelDocumentStyle`** (`api/Features/Documents`): `A4Page`
+  (the one page geometry, its bottom margin sized to clear the footer), **`CleanHeader`** — the
+  clean document top since 2026-09-15 (Nigel: the documents follow the tender's branding): the
+  logo centred on white as the page header, the title with its subtitle on the left, the
+  document's key facts (`HeaderFact`: reference, status, dates) on the right, a fine gold rule —
+  and **`HouseFooter`** with the `OrangeBand` bleeding off the foot of every page. The navy header
+  band every renderer used to draw is gone; the facts it carried moved into the clean top. The
+  type is Poppins through `DocumentFontResolver` (shipped under the OFL in the API's fonts
+  folder; host fallbacks after it). Palette, `SectionHeading`, `Panelled`, the Label / Value /
+  Header / Body cells and the Date / Money helpers live there too — a renderer composes them and
+  never re-types a colour or a margin. Word output (the Contractor's Report) mirrors the same
+  colours and rules in `ContractorsReportWordParts`.
+
+## Request and variation text is unbounded (api)
+
+- **An RFI's description, response and impact-if-late, and a variation's description, are
+  `nvarchar(max)`** (2026-09-16, the site team's ask: RFI text over 2048 characters was refused;
+  migration `WidenRequestAndVariationText`, script `widen-request-and-variation-text.sql`). The
+  `[MaxLength(2048)]` attributes, `UpdateRequestFormValidation.ImpactMax`, the mailbox create's
+  `Clamp(…, 2048)`, the merge's truncation, the three variation creates' description clamps and
+  the page's `MaxVariationDescriptionChars` are all gone — never re-add a length on these
+  fields. Titles keep their 256.
 
 ## Record tabs & the in-view toolbar (jpms)
 

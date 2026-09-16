@@ -499,6 +499,11 @@ public sealed partial class JpmsContext
             .HasIndex(row => row.DrawingExtractionId)
             .HasDatabaseName("IX_DrawingMarkups_DrawingExtractionId");
 
+        modelBuilder.Entity<ContractorsReportEntity>()
+            .HasIndex(row => new { row.ProjectId, row.PeriodEnd })
+            .IsUnique()
+            .HasDatabaseName("IX_ContractorsReports_ProjectId_PeriodEnd");
+
         // ---- Drawing data rows (2026-09-16) -------------------------------------------------------
         // The transcription as rows: replaced per revision on every extraction (the revision index
         // is the delete and the per-sheet read), queried per project by the connector's

@@ -1,6 +1,6 @@
 ---
 name: jpms-tender-award
-description: "The bid-package tender flow from scope to purchase order — what people call 'the tender'. Load before building bid packages, preparing or re-sending the invite email, handling incoming quotes, awarding, or raising the post-award work order. Encodes read-the-record-before-inviting, who the invite draft really goes to, what it really attaches, extract-never-hand-type for quotes, the human-sends rule, directory hygiene for tender-only prospects, award-mints-the-WO, and the PO email as a distinct second step."
+description: "The bid-package tender flow from scope to purchase order — what people call 'the tender'. Load before building bid packages, preparing or re-sending the invite email, handling incoming quotes, judging which tagged emails are tenders and which are not (the Submissions tab's Discard / Restore), awarding, or raising the post-award work order. Encodes read-the-record-before-inviting, who the invite draft really goes to, what it really attaches, extract-never-hand-type for quotes, discard-not-a-tender, the human-sends rule, directory hygiene for tender-only prospects, award-mints-the-WO, and the PO email as a distinct second step."
 ---
 
 # JPMS — Tender and award
@@ -20,9 +20,11 @@ shows it as "On list"); it does not mean an email went out. `Declined` means the
 4. **Quotes arrive by email.** NEVER hand-type a quote's figures: run extract_tender_from_message
    on the email, review what it extracted with the user, then save_extracted_quote. A typo in a
    tender figure survives into the award and the work order.
-5. **Award** (award_bid_package — confirm-first): awarding mints the work order to the chosen
+5. **Not every tagged email is a tender** — see "The Submissions tab's verdicts" below. A chase,
+   an acknowledgement or a question is marked Discarded so it stops being offered for extraction.
+6. **Award** (award_bid_package — confirm-first): awarding mints the work order to the chosen
    subcontractor.
-6. **The PO email is a distinct second step** (prepare_work_order_email_draft): a draft in the
+7. **The PO email is a distinct second step** (prepare_work_order_email_draft): a draft in the
    shared mailbox for the human to review and send — the tool never sends.
 
 ## The invite email — read first, then decide the route
@@ -53,6 +55,26 @@ Then:
   attachments".
 - The draft sits in the shared mailbox's Drafts, tagged to the package, for a person to send
   from Outlook. Replies file themselves under the tag.
+
+## The Submissions tab's verdicts — Discard / Restore
+
+The package's Submissions tab lists every email tagged to the package and the package's
+verdict on each: a tender that has been extracted, or one still waiting, or not a tender at
+all. Working a package means giving that verdict, not only reading the quotes.
+
+- **A tagged email that is not a tender** — a chase ("have you had our quote?"), an
+  acknowledgement, a question about the drawings, an out-of-office — is marked **Discarded**
+  with `set_bid_package_email_disposition` (outcome `Discarded`, the email's `messageId` from
+  `read_record_emails` on the package). It stays tagged to the package and the Emails tab is
+  unchanged — nothing is untagged, nothing moves in the mailbox — it simply folds into the
+  Submissions tab's "Discarded" accordion and stops being offered for extraction. **Restore**
+  (outcome `Pending`) puts it back. Reversible either way, so neither needs confirmation: read
+  the email, say what it is, mark it.
+- **Extracted is never set by hand.** `save_extracted_quote` with `sourceMessageId` is what
+  stamps an email Extracted, so the verdict and the quote can never disagree. If an email holds
+  a tender, extract it — do not label it.
+- Read the tab before extracting: an email already Extracted or Discarded is not offered again,
+  and a package whose Submissions tab still shows Pending emails has work left in it.
 
 ## Directory hygiene
 

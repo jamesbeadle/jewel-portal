@@ -165,11 +165,34 @@ added/deleted; two-click deletes.
 
 ### Defects — `/projects/{project}/defects`
 Defect register — each defect's sequential **DEF-####** reference is also its
-mailbox tag stem, so tagged mail reads back live under it. "Raise defect"
-inline form (location, assigned-to email, description); Status dropdown walks
-Open → In progress → Resolved → Verified; "Emails" expands a row to its tagged
-correspondence. Also raised from a subcontractor email in the Control Centre
-(System Tags → Create new → Defect); further tagging happens there too.
+mailbox tag stem, so tagged mail reads back live under it. A defect is raised
+WITH a **supplier** — a directory company, picked the way a work order names
+its supplier; it can be a trade (workmanship) or a merchant (faulty goods,
+short delivery), since 2026-09-07 — plus location and description ("Raise
+defect" inline form; a "contact email" field is the stop-gap for a company not
+yet on the directory). Each row shows the supplier and whether and when the
+defect was **Sent** to them, and opens the defect's own page (below). Status
+walks Open → In progress → Resolved → Verified. Also raised from an email in
+the Control Centre — the **Subcontractor pane** or the **Supplier pane**
+(Actions → Raise Defect; tagging offers Defect on both) — and the pane it came
+from is the side its mail files under; further tagging happens there too.
+
+### Defect — `/projects/{project}/defects/{defectId}`
+One defect's page (2026-09-07): reference and location, the status pill and
+(Director / PM / Site Manager) Edit and the status select in the header; the
+one primary act is **Send to supplier** — the shared composer opens
+pre-addressed to the supplier's directory email and pre-written (the raise
+wording), edited then sent from the projects mailbox with the JPMS/DEF-####
+tag so the supplier's replies file themselves back to the defect. The first
+send stamps Sent (by whom, when) and moves Open → In progress server-side;
+after that the button reads **Chase supplier** (the chase wording, naming the
+date first sent). No supplier email yet → the button opens Edit to pick one.
+**Communications** is the defect's tagged mail read live, with Find & tag,
+Reply / Forward and a new email, all filed to the defect; **Detail** and
+**To-dos** about the defect beside it. Over the connector, `list_defects`
+carries each defect's `supplierEmail` (the address, subject and body the
+portal would send) and `send_defect_to_supplier` (confirm-first) sends the
+same email the page does.
 
 ### H&S — `/projects/{project}/hs`
 Health & safety in three panes (2026-09-15). **Audits**: the officer's site
@@ -288,10 +311,12 @@ holds its details, stage move, timeline, and — since 2026-09-15 — **Enquiry
 emails** (every email tagged to the lead from the Control Centre's Sales pane,
 read live) and **Estimates**: Jewel's own pricing of each enquiry, EST-####,
 Received → Pricing → Submitted → Won / Lost (scope, architect, price due,
-budget mentioned, total; Submitted needs a total; **PDF** on each row downloads
-the estimate sheet, rendered from the register, internal not for issue — the
-notes print line by line so a breakdown typed as "- item: £x" lines reads as
-one). **3D model** (2026-09-15) sits under Estimates on a lead that has one:
+budget mentioned, total; Submitted needs a total). Each row opens the
+estimate's own page (below) and **Download PDF** renders the client-facing
+**"Estimate for project"** document from the register on every download —
+cover, project page, executive summary with build time and exclusions, the
+breakdown chart, one itemised table per section, the total, the contact page;
+the internal notes never print. **3D model** (2026-09-15) sits under Estimates on a lead that has one:
 the house built in the browser from the architect's drawings, and the works
 played as a build-up — Play, then scaffold, roof stripped, dormer raised and
 glazed, rooflights, garage converted, scaffold down, each with its caption —
@@ -301,6 +326,22 @@ Estimate ≠ proposal: the
 Proposals panel below is what the prospect sees. Strategies are the
 methodologies for finding leads; the Sales inbox is sales@ read live, its own
 thing, not the Control Centre.
+
+### Estimate — `/sales/leads/{leadId}/estimates/{estimateId}`
+One estimate (2026-09-15, the tender's shape): the **Priced breakdown** editor —
+sections in print order (Preliminaries & preambles, Demolition & stripping out,
+Structural steelwork…; tick a section as a provisional allowance and the
+document says so in red), each a list of lines with cost code (optional; a code
+from the cost-centre master when given), description, quantity, unit and unit
+price, the line total and the estimate total computed as you type. Save is a
+full-record write: what is on the page is what the estimate becomes, and once
+it has lines the total IS their sum. Beside it **What the document says** — the
+executive summary, build time and exclusions the PDF prints — and **Details**
+(scope, architect, price due, budget) and the status move in their modals;
+**Download PDF** in the Actions menu. Sales team edits; readers see it
+read-only. Over the connector: `get_lead` lists `estimates[]` with their ids and
+`sections[]`; `set_estimate_breakdown` (confirm-first, full-record) writes the
+breakdown; `update_estimate_details` writes the narrative fields.
 
 ## Internal folder
 

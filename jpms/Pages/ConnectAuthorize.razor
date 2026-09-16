@@ -91,6 +91,7 @@
         if (!Auth.IsSignedIn)
         {
             // Through the normal sign-in, then straight back here with the request intact.
+            BootScreen.HoldThroughRedirect();
             var returnUrl = Uri.EscapeDataString(new Uri(Nav.Uri).PathAndQuery);
             Nav.NavigateTo($"/login?returnUrl={returnUrl}", replace: true);
             return;

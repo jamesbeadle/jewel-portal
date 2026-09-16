@@ -7,7 +7,7 @@
 **Owner (target):** JPMS (automated) with Project & Commercial Lead oversight on supersedure decisions.
 **Current monthly hours:** ~15 h/month.
 **Status:** Draft
-**Last reviewed:** —
+**Last reviewed:** 2026-09-16 (take-off route corrected: read from the drawing, not Bluebeam)
 
 ---
 
@@ -29,7 +29,7 @@
 4. JPMS supersedes the previous Drawing Revision automatically; the old version is flagged as archive.
 5. JPMS notifies the project team and assigned subcontractors with the new revision.
 6. PM is alerted only if the system cannot confidently determine revision or supersedure.
-7. Site app shows the current revision automatically; QS opens the drawing in Bluebeam Revu (same Studio Project) for take-off — no duplicate file moves.
+7. Site app shows the current revision automatically; the revision is transcribed as it lands (geometry, text, dimensions, callouts, shapes — `DrawingExtractionAutoQueue`), so take-off is read from the drawing in JPMS rather than done in Bluebeam Revu (workflow 02, decided 2026-09-07) — no duplicate file moves.
 8. Fall-back: if an architect emails a drawing instead of uploading to Studio, a monitored inbox channel ingests it and JPMS pushes it into the linked Studio Project for the canonical record.
 
 **The QS never re-uploads a drawing into JPMS.** The act of saving a new revision into the Studio Project IS the upload.
@@ -52,7 +52,7 @@
 
 ## Integrations & adjacent systems
 
-- **Bluebeam Studio Projects** (primary input — canonical drawing store; see workflow 02 for the take-off side).
+- **Bluebeam Studio Projects** (a drawing source; the JPMS register is the canonical store, and take-off does not come from Bluebeam — see workflow 02).
 - **Outlook / IMAP** (fall-back inbox channel for architects not using Studio).
 - **SharePoint** (archive only after rollout).
 
@@ -76,7 +76,7 @@ Status per story: **Drafted** · **In Review** · **Confirmed**
 | US-01-08 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want to see who has viewed which drawing revision (audit trail), so that I can prove distribution if a dispute arises. | Drafted |
 | US-01-09 | P03 Project & Commercial Lead | As a Project & Commercial Lead, I want each JPMS project linked to a Bluebeam Studio Project on creation, so that the drawing store is established up front and the QS / site team are looking at the same Studio Project from day one. | Drafted |
 | US-01-10 | JPMS (system) | As JPMS, I want to subscribe to Bluebeam Studio webhooks for each project's linked Studio Project, so that new or revised drawings land in the JPMS drawing register without a PM upload step. | Drafted |
-| US-01-11 | P04 Quantity Surveyor | As a QS, I want to open the project's drawings in Bluebeam Revu directly from the JPMS drawing register (one click into the linked Studio Project), so that I do take-off against the same canonical drawing the rest of the team is reading. | Drafted |
+| US-01-11 | P04 Quantity Surveyor | As a QS, I want every revision in the drawing register transcribed as it lands, so that take-off is read from the same canonical drawing the rest of the team is reading — not measured in Bluebeam Revu (superseded 2026-09-07; opening in Revu stays optional for a QS who measures there). | Built |
 | US-01-12 | JPMS (system) | As JPMS, when a drawing is emailed in via the fall-back inbox, I want to re-publish it into the project's linked Studio Project automatically, so that the Studio Project remains the canonical store regardless of how the architect issued the drawing. | Drafted |
 
 Covers spreadsheet row 6 (James Clark — PDF drawings from emails, save, upload, print).

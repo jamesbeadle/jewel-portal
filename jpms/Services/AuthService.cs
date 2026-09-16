@@ -47,6 +47,11 @@ public sealed class AuthService
 
     public bool IsSignedIn => CurrentUser is not null;
 
+    /// <summary>Checking until the first /api/auth/me has answered; then SignedIn or SignedOut.</summary>
+    public SignInState SignIn => !isInitialised ? SignInState.Checking
+        : IsSignedIn ? SignInState.SignedIn
+        : SignInState.SignedOut;
+
     public event Action? OnChange;
 
     public async Task EnsureInitialisedAsync()

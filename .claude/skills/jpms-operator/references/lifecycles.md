@@ -107,8 +107,20 @@ without changing order value. An order can never be invoiced past its value.
 
 ## Defects
 
-`DEF-####` sequential reference, which is also the mailbox tag stem. Status
-walks Open → In progress → Resolved → Verified.
+`DEF-####` sequential reference, which is also the mailbox tag stem. A defect
+is raised WITH a supplier (`SubcontractorId`, a directory company of either
+category — a trade for workmanship, a merchant for faulty goods; the
+Subcontractor and Supplier panes of the Control Centre both raise and tag
+them), from the register, from an email, or `raise_defect` over the connector.
+Status walks Open → In progress → Resolved → Verified (`UpdateDefect` stamps
+`ResolvedAt`). Sending the defect to its supplier — the page's Send to supplier
+/ Chase supplier, or `send_defect_to_supplier` — goes through the shared
+mailbox send with the defect's tag; the first send stamps `SentToSupplierAt` /
+`SentToSupplierByEmail` (`DefectSupplierSendRecorder`) and moves Open → In
+progress; later sends are chases and change nothing. A defect is
+pathway-neutral: its mail files under the pane it was picked on, else under
+its company's own pathway (Supplier-category → Supplier, otherwise
+Subcontractor).
 
 ## H&S audits and the register
 
@@ -167,10 +179,18 @@ keeps its history. Emails tagged JPMS/LD-#### keep their tag.
 An estimate (EST-####, `LeadEstimate`, 2026-09-15) is Jewel's own pricing of
 one enquiry on the lead: Received → Pricing → Submitted (needs a total; stamps
 SubmittedAt) → Won / Lost (closed; edits refused). Several per lead are normal
-— a re-price is a new estimate. The priced breakdown will follow Nigel's
-estimating workbook; until then the record is the status, scope, architect,
-price due date, budget mentioned, total and notes. A proposal
-(`SalesProposal`) is the separate client-facing document.
+— a re-price is a new estimate. The record is the status, scope, architect,
+price due date, budget mentioned, notes, the client-facing narrative
+(executive summary, build time, exclusions) and the **priced breakdown**
+(`LeadEstimateLines`, `SetEstimateBreakdown` / `set_estimate_breakdown`):
+sections of lines — cost code, description, quantity, unit, unit price, total
+= quantity × unit price computed server-side — written whole every time, and
+once it has lines the estimate's Total is their sum. The estimate document
+(`GET sales/estimates/{id}/document`, "Estimate for project") is client-facing
+and prints the narrative and the breakdown, never the notes. Nigel's
+estimating workbook remains the reference for rates and calculations once it
+is in the portal. A proposal (`SalesProposal`) is the separate client-facing
+document that carries the offer.
 
 ## Retention
 

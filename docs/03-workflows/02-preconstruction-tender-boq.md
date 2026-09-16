@@ -7,7 +7,7 @@
 **Owner (target):** Project & Commercial Lead (review and judgement); JPMS for data assembly.
 **Current monthly hours:** ~50 h/month.
 **Status:** Draft
-**Last reviewed:** —
+**Last reviewed:** 2026-09-16 (take-off route corrected: read from the drawing, not Bluebeam)
 
 ---
 
@@ -24,10 +24,10 @@
 
 ## Target flow (post-automation)
 
-1. New project record created in JPMS with the linked Bluebeam Studio Project (see workflow 01) — tender drawings already live there.
-2. QS does take-off in Bluebeam Revu against the drawings in the Studio Project, using the JPMS-published Bluebeam tool-set (each take-off markup carries a Subject and a JPMS cost-code custom column).
-3. **v1 take-off path:** QS exports the Markups List from Bluebeam Revu as CSV. JPMS has a single "Import Bluebeam take-off" screen with column mapping → the import lands BoQ line items (line, unit, qty, cost code) directly. No standalone Excel.
-4. **Phase 2 take-off path:** JPMS reads markups from the project's Studio Project via the **Bluebeam Markups API**, lands BoQ lines automatically, refreshes on demand or on revision change. CSV remains available as a fall-back.
+1. New project record created in JPMS — the tender drawings already sit in its drawing register (see workflow 01), filed from the projects mailbox or uploaded, and every revision is transcribed as it lands.
+2. **Take-off is read from the drawing itself** (decided 2026-09-07). The portal extracts each PDF's own vector geometry and positioned text — title block, revision table, the sheet's proven scale, every figured dimension, callout and closed shape — and stores them as rows the assistant queries and totals (`query_document_data`: by kind, page, text, axis, value or area range, rectangle, near a point). Measurement is exact at the proven scale and depends on no outside connection; a scanned sheet with no vector layer is the one that still needs a person.
+3. **Quantities become BoQ lines from those rows** — lengths, areas and counts against their spec notes, tagged to a cost code as they are taken (the story on the backlog; today the assistant reads the rows and the QS confirms the figures). No standalone Excel.
+4. **Revu markups are an optional import, not the route.** Bluebeam's Markups API returns only markups a person has drawn in Revu and nothing on a drawing nobody has marked up, so it is not a take-off engine. Where the QS has genuinely measured in Revu, those markups are read into the same extraction alongside the geometry; the extraction never waits on the Bluebeam connection to run.
 5. Rate library held in JPMS, with last-used rates per trade and supplier; AI suggests updated rates.
 6. M&E section produced through the same workflow with discipline tagging.
 7. Walk-round notes/photos captured against the project on mobile.
@@ -40,9 +40,9 @@
 - Project records (pre-construction phase).
 - BoQ module with hierarchical line items, units, rates.
 - Rate library with version history and supplier links.
-- **Bluebeam tool-set / custom column profile** — JPMS publishes a Bluebeam tool-set that includes a JPMS cost-code column on every take-off markup, so each take-off is tagged at source.
-- **Bluebeam take-off CSV importer (v1)** — single import screen, column mapping to BoQ + cost code, validation, preview before commit.
-- **Bluebeam Markups API integration (phase 2)** — read markups directly from the linked Studio Project, refresh on demand or on revision change.
+- **Drawing transcription** (built) — every revision's geometry and text read as it lands; rows per dimension, callout and shape; the summary and the row query over the connector.
+- **Quantities from the transcription** (backlog) — lengths, areas and counts taken off the rows against their spec notes and landed as BoQ lines with a cost code.
+- **Revu markups import** (optional, built) — a person's own Revu measurements read into the same extraction when they exist; never required.
 - Mobile walk-round capture (notes, photos, voice notes).
 - Re-tender comparison view (last priced vs current).
 
@@ -50,9 +50,8 @@
 
 ## Integrations & adjacent systems
 
-- **Bluebeam Studio Projects** (drawings sourced here; see workflow 01).
-- **Bluebeam Markups List CSV export** (v1 take-off path).
-- **Bluebeam Markups API** (phase 2 take-off path).
+- **The JPMS drawing register** (drawings sourced here; see workflow 01).
+- **Bluebeam Markups API** (optional — a person's Revu markups only; not the take-off route).
 - **Supplier rate data** (manual today; AI-assisted in target flow).
 - **JPMS rate library** (the canonical source after rollout).
 
@@ -97,7 +96,7 @@ Covers spreadsheet rows 13 (Bluebeam take-off), 14 (research rates), 20 (re-tend
 | Role | Involvement |
 |---|---|
 | Project & Commercial Lead | Owner — review and judgement on rates |
-| Quantity Surveyor (where retained) | Contributor — take-off and pricing |
+| Quantity Surveyor (where retained) | Contributor — confirms the quantities read off the drawings, and prices |
 | Site Team | Contributor — walk-round capture on mobile |
 | Architect (external) | Source — drawings and specs |
 
@@ -105,8 +104,8 @@ Covers spreadsheet rows 13 (Bluebeam take-off), 14 (research rates), 20 (re-tend
 
 ## Open questions
 
-- [x] Bluebeam — is direct API integration available, or do we ship via export/import file? **Decided 2026-05-25:** Both, in two phases. v1 ships CSV import from Bluebeam's Markups List export. Phase 2 adds API-direct take-off via the Bluebeam Markups API once the QS has adopted the JPMS-published tool-set consistently. See [`/00-business-context/meetings/2026-05-25-bluebeam-integration.md`](../00-business-context/meetings/2026-05-25-bluebeam-integration.md).
-- [ ] Bluebeam tool-set distribution — published as a `.btx` file the QS imports manually, or auto-provisioned per machine when JPMS detects Bluebeam Revu?
+- [x] Bluebeam — is direct API integration available, or do we ship via export/import file? **Decided 2026-05-25:** Both, in two phases (CSV, then the Markups API). See [`/00-business-context/meetings/2026-05-25-bluebeam-integration.md`](../00-business-context/meetings/2026-05-25-bluebeam-integration.md). **Superseded 2026-09-07:** neither is the take-off route. The Markups API only returns markups a person drew in Revu and nothing on an unmarked drawing (an architect's Revit export read on 9 Sep carried no annotation layer at all, and a 7,000-character vector text layer); measurement now comes from the drawing's own geometry and text, and Revu markups are an optional import. The CSV importer and the JPMS tool-set are withdrawn. Still to prove: whether the sessions endpoint returns markups already saved in the file before upload or only ones drawn in the live session — task 322b43ce settles it.
+- [ ] ~~Bluebeam tool-set distribution~~ — withdrawn with the tool-set (2026-09-07).
 - [ ] Rate library — supplier list as a JPMS entity, or just a lookup against the supplier directory?
 - [ ] M&E discipline tag — single field or full discipline hierarchy?
 - [ ] AI rate suggestion — confidence threshold to auto-apply vs flag for review?

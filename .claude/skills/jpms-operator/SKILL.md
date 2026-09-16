@@ -85,7 +85,7 @@ specific tab. Full page-by-page detail: `references/site-map.md`.
 | Raise / approve a work order | Work Orders tab — "Add work order", two-click Approve (mints WO number, emails the PO) |
 | Pay-side reconciliation | Xero Cost Allocation (code purchase lines to project + cost centre; allocating a draft bill fully approves it in Xero) then WO Allocation (tie lines to work orders) |
 | Approve the week's labour | Project Labour tab — tick and bulk-approve; only approved time posts to Financials |
-| Raise / progress a defect | Defects register (DEF-#### = its mailbox tag) or from a sub's email in Control Centre |
+| Raise / progress a defect | Defects register (DEF-#### = its mailbox tag), raised WITH its supplier from the directory — a trade or a merchant — or from an email on the Control Centre's Subcontractor or Supplier pane; the defect's own page sends it to the supplier (first send moves Open → In progress), chases, reads its mail; `send_defect_to_supplier` over the connector |
 | Delay events, NOD / EOT / LADs | Programme tab → Claims sub-tab |
 | Chase money answers | Aged Receivables / Aged Payables (include drafts Xero's own reports can't see); Cash Forecast for the months ahead; Profit Summary for margin |
 | Plan the next 13 weeks' payments — who gets paid which week | Weekly Cashflow (`/finance/weekly-cashflow`): move entries with ‹ ›, group suppliers into one line, park with ⊘, add manual items; the Excel export is the grid one line per supplier. Over the connector, `get_weekly_cashflow_grid` reads the same grid |
