@@ -491,15 +491,25 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   trade, `phaseIn` / `phaseOut`, `costCode`, `variationRef`, `note` (`builders/elements.js`;
   `phases.phaseOfElement` reads them into existing / proposed / removed / construction so the
   toggle needs no new rule). Extruded footprints cannot be a pitched roof, gable or dormer —
-  those stay house parts. The panel's chips are Existing / Proposed / **Works**
-  (`viewer.setMode`, `modes.js`): works lifts the shell — every block's walls, gable and roof,
-  tagged `userData.role = "shell"` by `house-builder.js` — off the finished house and shows the
-  elements by trade; Play from inside the works puts the shell back first. How a definition is
-  read off a set of drawings is the `jpms-house-model` skill (`docs/ai/skills/jpms/`, mirrored
-  in `.claude/skills/jpms-house-model/`, saved to the portal's skills store with its
-  `definition-schema` reference). Not built yet: Jeremy's phase scrubber and trade legend over
-  the elements, the standalone client page of the model (`GET /api/sales/estimates/{id}/model`
-  is reserved for it) and the estimate email carrying the link.
+  those stay house parts. The build-up keeps its Existing / Proposed chips and never draws the
+  elements; **Works by trade** is Jeremy's viewer over the same JSON (`LeadWorksModelPanel` +
+  `WorksModelStrip` / `WorksModelLegend` / `WorksElementCard`, `WorksModelDefinition` reading
+  phases, trades and the element count off the JSON, `WorksModelInterop` the verbs;
+  `wwwroot/js/works-model.js` the doorway, `js/works-model/`: `shell.js` re-clothes the
+  build-up's house parts in one translucent material and maps their stamps to phases
+  (`phase-state.js`: existing from `00`, removed leaves at `01`, proposed joins at `03`, the
+  neighbours left out), `presentation.js` is the one pass that places every element and shell
+  part for the phase — joined solid, left gone or ghosted red, hidden trades out —
+  `playback.js` eases through the phases (2.6 s each, elements rising as they join) with the
+  slow orbit in `frames.js`, `picking.js` raycasts a click to `ElementPicked`, `recording.js`
+  captures the canvas to a webm the browser downloads, and `renderAt(host, virtualMs)` hands the
+  clock to `tools/works-model/render-frames.mjs`, which renders frames headlessly and stitches an
+  mp4 with ffmpeg). Both panels render on the lead when the definition has elements
+  (`LeadHouseModelSection`). How a definition is read off a set of drawings is the
+  `jpms-house-model` skill (`docs/ai/skills/jpms/`, mirrored in `.claude/skills/jpms-house-model/`,
+  saved to the portal's skills store with its `definition-schema` reference). Not built yet: the
+  standalone client page of the model (`GET /api/sales/estimates/{id}/model` is reserved for
+  it) and the estimate email carrying the link.
 
 ## H&S site audits and the register they mint onto (contracts + api + jpms)
 

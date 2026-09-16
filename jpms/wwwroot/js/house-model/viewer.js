@@ -1,5 +1,5 @@
-// One mounted model per host element: the stage, the house with its temporary and internal
-// works, the context, the camera, and the build-up's timeline, kept in a map keyed by the host
+// One mounted model per host element: the stage, the house with its temporary works, the
+// context, the camera, and the build-up's timeline, kept in a map keyed by the host
 // (as image-viewer.js does) so Blazor can address a model by the element it rendered. The model
 // opens on the house as it stands, drifting slowly, and waits for Play; the camera is the
 // viewer's own only once the works are finished. A definition is the estimate's own plain data.
@@ -7,7 +7,6 @@ import { createStage } from "./stage.js";
 import { createMaterials, disposeMaterials } from "./materials.js";
 import { buildHouse, buildTemporaryWorks } from "./house-builder.js";
 import { buildContext } from "./builders/context.js";
-import { buildElements } from "./builders/elements.js";
 import { applyPhase } from "./phases.js";
 import { Modes, applyMode } from "./modes.js";
 import { houseViews, ViewNames } from "./camera-views.js";
@@ -26,11 +25,8 @@ export function mount(host, definition, dotnetRef) {
     const stage = createStage(host);
     const house = buildHouse(definition, materials);
     house.add(buildTemporaryWorks(definition, materials));
-    const elements = buildElements(definition, materials);
-    elements.visible = false;
-    house.add(elements);
     stage.scene.add(house, buildContext(definition.context, materials));
-    const state = { host, dotnetRef, stage, materials, house, elements, views: houseViews(definition), mode: Modes.existing,
+    const state = { host, dotnetRef, stage, materials, house, views: houseViews(definition), mode: Modes.existing,
         flight: new CameraFlight(stage.camera, stage.controls), needsFrame: true, isDrifting: true, disposed: false };
     states.set(host, state);
     applyPhase(house, false);
@@ -45,10 +41,7 @@ export function mount(host, definition, dotnetRef) {
 }
 
 export function play(host) {
-    const state = states.get(host);
-    if (!state) return;
-    if (state.mode === Modes.works) setMode(host, Modes.proposed);
-    state.timeline.play();
+    states.get(host)?.timeline.play();
 }
 
 export function pause(host) {

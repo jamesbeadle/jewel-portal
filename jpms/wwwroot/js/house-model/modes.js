@@ -1,17 +1,11 @@
-// The three ways to see the model. Existing and proposed are the phase toggle over the whole
-// house; works lifts the shell off the finished house so the internal elements can be seen.
+// The two ways to see the build-up's model — the house as it stands and with the works
+// proposed — as one visibility rule over every part's phase.
 import { applyPhase } from "./phases.js";
-import { isShell } from "./house-builder.js";
 
-export const Modes = { existing: "existing", proposed: "proposed", works: "works" };
-
-const known = new Set(Object.values(Modes));
+export const Modes = { existing: "existing", proposed: "proposed" };
 
 export function applyMode(state, mode) {
-    const works = mode === Modes.works;
-    state.mode = known.has(mode) ? mode : Modes.proposed;
+    state.mode = mode === Modes.existing ? Modes.existing : Modes.proposed;
     applyPhase(state.house, state.mode !== Modes.existing);
-    state.house.traverse(part => { if (isShell(part)) part.visible = !works; });
-    state.elements.visible = works;
     state.needsFrame = true;
 }

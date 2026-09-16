@@ -2,7 +2,7 @@
 // opening on its face, the new brickwork, every rooflight on its slope, the dormer, and the
 // downpipes — each part stamped with the phase it belongs to so the proposal can be switched
 // on and off — and, for the build-up, the temporary works the programme calls for. The
-// internal works (definition.elements) are builders/elements.js, added by the viewer.
+// internal works (definition.elements) are the works view's, js/works-model/.
 import * as THREE from "three";
 import { wallBlock, gablePrism } from "./builders/wall-blocks.js";
 import { gableRoof } from "./builders/gable-roof.js";
@@ -20,22 +20,11 @@ function blockNamed(definition, name) {
     return definition.blocks.find(block => block.name === name);
 }
 
-const Shell = "shell";
-
-export function isShell(part) {
-    return part.userData.role === Shell;
-}
-
-function asShell(part) {
-    part.userData.role = Shell;
-    return part;
-}
-
 export function buildHouse(definition, materials) {
     const house = new THREE.Group();
     house.name = definition.name;
     for (const block of definition.blocks) {
-        house.add(asShell(wallBlock(block, materials)), asShell(gablePrism(block, materials)), asShell(gableRoof(block, materials)));
+        house.add(wallBlock(block, materials), gablePrism(block, materials), gableRoof(block, materials));
     }
     for (const opening of definition.openings ?? []) {
         house.add(stampPhase(buildOpening(opening, definition.faces, materials), opening.phase));

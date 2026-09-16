@@ -1,0 +1,21 @@
+<aside class="w-44 shrink-0 border-l border-line px-4 py-3 space-y-2" aria-label="Trades">
+    <p class="eyebrow">Trades</p>
+    @foreach (var trade in Trades)
+    {
+        var chosen = trade;
+        <label class="flex items-center gap-2 text-sm text-content cursor-pointer select-none">
+            <input type="checkbox" checked="@(!Hidden.Contains(chosen.Key))" @onchange="e => OnToggle.InvokeAsync((chosen.Key, e.Value is true))" />
+            <span class="inline-block h-3 w-3 rounded" @attributes="SwatchOf(chosen)"></span>
+            <span class="truncate">@chosen.Name</span>
+        </label>
+    }
+</aside>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<WorksTrade> Trades { get; set; } = Array.Empty<WorksTrade>();
+    [Parameter] public IReadOnlySet<string> Hidden { get; set; } = new HashSet<string>();
+    [Parameter] public EventCallback<(string Key, bool IsVisible)> OnToggle { get; set; }
+
+    private static Dictionary<string, object> SwatchOf(WorksTrade trade) =>
+        new() { ["style"] = $"background-color: {trade.Colour}" };
+}
