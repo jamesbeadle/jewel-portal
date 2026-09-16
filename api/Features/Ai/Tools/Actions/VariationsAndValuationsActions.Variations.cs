@@ -252,9 +252,12 @@ internal sealed partial class VariationsAndValuationsActions
             NameStamps: Array.Empty<string>(),
             Notes: "Confirm with the user before calling. A line carrying a valuationLineItemId is "
                 + "re-priced in place (keeping its claim history); one without is added; an "
-                + "unclaimed report line missing from the list is dropped. Refused before approval, "
-                + "while the latest claim is preapproved, and when a line carrying settled value "
-                + "would be dropped — re-price that line to nothing instead."),
+                + "unclaimed report line missing from the list is dropped. Every claim's money for "
+                + "the variation is re-spread across the new lines unchanged — a settled claim keeps "
+                + "what it certified to the penny — so a breakdown that keeps the same total saves "
+                + "under any claim. Refused before approval, when the TOTAL would change while the "
+                + "latest claim is preapproved (confirm or reopen that claim first), and when a line "
+                + "carrying settled value would be dropped — re-price that line to nothing instead."),
 
         new AiAction(
             Name: "select_voq_tender",

@@ -12,10 +12,17 @@ namespace Jewel.JPMS.Api.Features.Variations.Commands;
 ///
 /// Lines are matched to the report by id (VariationLineRevision), never by position, so a line the
 /// user re-prices keeps its ValuationLineItemId and every claim entry standing against it stays
-/// attached. That is what lets a variation be edited after it has been claimed: settled claims
-/// (Preapproved / Confirmed) keep the money they were certified at, the snapshots frozen from them
-/// were value copies that were never going to move, and only the claim in progress is re-based onto
-/// the new figures (DraftClaimRebase).
+/// attached. That is what lets a variation be edited after it has been claimed: a claim locks the
+/// money it certified for the variation, not the shape of the lines beneath it, so every claim's
+/// money is dealt back across the revised line set (VariationClaimRespread) — settled claims
+/// (Preapproved / Confirmed) keep the money they were certified at to the penny, the snapshots
+/// frozen from them were value copies that were never going to move, and only the claim in progress
+/// has its money re-based onto the new figures.
+///
+/// Because the certified money never moves, a revision that keeps the variation's TOTAL — one line
+/// broken down into nine, say — goes through whatever the latest claim's status. Only a revision
+/// that changes the total is refused while the latest claim is preapproved: that would change the
+/// value the client is being asked to agree, so the claim is confirmed or reopened first.
 ///
 /// A line can only be dropped altogether while nothing settled has been claimed against it: deleting
 /// its claim entries would rewrite a valuation the client has already been sent. Re-price it to
@@ -61,20 +68,26 @@ public sealed class ReviseVariationOrderLinesHandler : ICommandHandler<ReviseVar
         var rowsById = existing.ToDictionary(line => line.ValuationLineItemId);
 
         var existingIds = existing.Select(line => line.ValuationLineItemId).ToList();
+        var oldTotal = order.Value;
 
-        // A claim whose totals are already locked must not have these lines move underneath it.
-        await DraftClaimRebase.GuardNoClaimInFlightAsync(context, order.ProjectId, existingIds, cancellationToken);
+        // A claim whose totals are already locked must not have the VALUE underneath it change. A
+        // revision that keeps the total only re-shapes the breakdown, and every claim's money is
+        // re-spread across the new shape without moving (VariationClaimRespread) — so it goes
+        // through under a preapproved claim.
+        if (newTotal != oldTotal)
+            await DraftClaimRebase.GuardNoClaimInFlightAsync(context, order.ProjectId, existingIds, cancellationToken);
 
-        // Every claim entry standing against those lines, carrying the status of the claim it
-        // belongs to: settled entries are history, and history is what the guard below protects.
-        var claimEntries = await (
+        // Every claim entry standing against those lines, carrying the claim it belongs to:
+        // settled entries are history, and history is what the guard below protects.
+        var claimEntries = (await (
                 from claimLine in context.ClaimLines
                 join claim in context.ValuationClaims on claimLine.ValuationClaimId equals claim.ValuationClaimId
                 where existingIds.Contains(claimLine.ValuationLineItemId)
-                select new { Entry = claimLine, claim.Status })
-            .ToListAsync(cancellationToken);
+                select new { Entry = claimLine, claim.ValuationClaimId, claim.ClaimNumber, claim.Status })
+            .ToListAsync(cancellationToken))
+            .Select(row => new VariationClaimRespread.PriorEntry(row.Entry, row.ValuationClaimId, row.ClaimNumber, row.Status))
+            .ToList();
 
-        var oldTotal = order.Value;
         // Per-centre committed amounts the approval (or a prior revision) wrote — read from the
         // lines as they stand now, before any of them is re-priced (the Sum runs here, and that
         // eagerness is load-bearing), falling back to the whole value against the primary code for
@@ -98,15 +111,15 @@ public sealed class ReviseVariationOrderLinesHandler : ICommandHandler<ReviseVar
             throw new InvalidOperationException(
                 $"{variationRef}'s {rowsById[blocked].CostCode} line has value claimed on a settled valuation, so it can't be removed. Re-price it instead — a negative rate omits the work without breaking the claim.");
 
-        // Re-price what is already there. Lines whose money actually moved are collected so the
-        // claim in progress can follow them.
-        var moved = new List<ValuationLineItemEntity>();
+        // Re-price what is already there. The revised line set (re-priced rows, then the added
+        // ones) is collected so every claim's money can be dealt across it afterwards.
+        var revised = new List<ValuationLineItemEntity>();
+        var addedIds = new HashSet<string>();
         foreach (var (lineItemId, input) in revision.Repriced)
         {
             var row = rowsById[lineItemId];
             var lineType = LineTypeFor(input.Quantity, input.Rate);
             var amount = ValuationCalculations.LineAmount(lineType, input.Quantity, input.Rate);
-            var amountMoved = row.LineAmount != amount;
 
             row.VariationTitle = order.Title;
             row.LineType = (int)lineType;
@@ -117,8 +130,7 @@ public sealed class ReviseVariationOrderLinesHandler : ICommandHandler<ReviseVar
             row.Rate = input.Rate;
             row.LineAmount = amount;
             row.Comments = $"Variation order {variationRef} (from {order.Reference})";
-
-            if (amountMoved) moved.Add(row);
+            revised.Add(row);
         }
 
         // Then append what the revision added.
@@ -128,7 +140,7 @@ public sealed class ReviseVariationOrderLinesHandler : ICommandHandler<ReviseVar
         foreach (var input in revision.Added)
         {
             var lineType = LineTypeFor(input.Quantity, input.Rate);
-            context.ValuationLineItems.Add(new ValuationLineItemEntity
+            var added = new ValuationLineItemEntity
             {
                 ValuationLineItemId = VariationsIdentifierFactory.NextValuationLineItemId(),
                 ProjectId = order.ProjectId,
@@ -146,7 +158,10 @@ public sealed class ReviseVariationOrderLinesHandler : ICommandHandler<ReviseVar
                 LineAmount = ValuationCalculations.LineAmount(lineType, input.Quantity, input.Rate),
                 Comments = $"Variation order {variationRef} (from {order.Reference})",
                 DisplayOrder = nextDisplayOrder++
-            });
+            };
+            context.ValuationLineItems.Add(added);
+            revised.Add(added);
+            addedIds.Add(added.ValuationLineItemId);
         }
 
         if (revision.Dropped.Count > 0)
@@ -162,7 +177,10 @@ public sealed class ReviseVariationOrderLinesHandler : ICommandHandler<ReviseVar
             context.ValuationLineItems.RemoveRange(revision.Dropped.Select(id => rowsById[id]));
         }
 
-        await DraftClaimRebase.ApplyAsync(context, moved, cancellationToken);
+        // Deal every claim's money for the variation across the revised line set: settled claims
+        // keep what they certified to the penny, the claim in progress keeps its percentages.
+        await VariationClaimRespread.ApplyAsync(
+            context, order.ProjectId, revised, addedIds, claimEntries, oldTotal, cancellationToken);
 
         // Adjust each cost centre's committed budget by its own change (add for new centres, release
         // for centres that dropped out).

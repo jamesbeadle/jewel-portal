@@ -13,8 +13,11 @@ namespace Jewel.JPMS.Api.Features.Commercial;
 /// follows the line, exactly as RecordClaimEntries computes it when the percentage itself is edited.
 ///
 /// Only a Draft claim is touched. Preapproved and Confirmed claims keep the money they were claimed
-/// at — that is what the client saw — which is also why a re-price is refused outright while the
-/// latest claim is preapproved: its totals are already frozen, so its lines must not move under it.
+/// at — that is what the client saw — which is also why a change of VALUE is refused outright while
+/// the latest claim is preapproved: its totals are already frozen, so the value under it must not
+/// move. Re-shaping a variation's breakdown without changing its total is not a re-price in that
+/// sense — every claim's money is dealt across the new lines unchanged (VariationClaimRespread),
+/// so ReviseVariationOrderLinesHandler only raises this guard when the total moves.
 /// </summary>
 internal static class DraftClaimRebase
 {
@@ -40,7 +43,7 @@ internal static class DraftClaimRebase
             cancellationToken);
         if (covered)
             throw new InvalidOperationException(
-                $"Claim {latest.ClaimNumber} is preapproved and its figures are locked, so the lines it covers can't be re-priced underneath it. Confirm it, or reopen it, first.");
+                $"Claim {latest.ClaimNumber} is preapproved and its figures are locked, so the value it covers can't change underneath it. Confirm it, or reopen it, first — a breakdown that keeps the same total can be saved as it is.");
     }
 
     /// <summary>
