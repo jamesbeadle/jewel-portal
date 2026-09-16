@@ -87,14 +87,23 @@ public static class ProgressFeatureRegistration
         services.AddScoped<DeleteContractorsReportAuthorisation>();
     }
 
+    // The DrawingsStorage fallback matches every other blob feature: prod configures only
+    // DrawingsStorage:ConnectionString, and on SWA managed functions AzureWebJobsStorage is the
+    // platform's own account, not ours — without this line every progress photo (and the site
+    // photo pool) landed on the null store (2026-09-16, Jeremy's first drop: "29 failed").
+    // A setting that exists but is BLANK is "unset", not "configured as nothing" — `??` would
+    // stop at an empty value and never reach the fallback, so the chain is read as a list.
     private static void RegisterPhotoStore(IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration["ProgressPhotosStorage:ConnectionString"]
-            ?? configuration["AzureWebJobsStorage"];
+        var connectionString = FirstConfigured(configuration,
+            "ProgressPhotosStorage:ConnectionString", "DrawingsStorage:ConnectionString", "AzureWebJobsStorage");
 
-        if (string.IsNullOrWhiteSpace(connectionString))
+        if (connectionString is null)
             services.AddSingleton<IProgressPhotoStore, NullProgressPhotoStore>();
         else
             services.AddSingleton<IProgressPhotoStore>(_ => new AzureBlobProgressPhotoStore(connectionString));
     }
+
+    private static string? FirstConfigured(IConfiguration configuration, params string[] keys) =>
+        keys.Select(key => configuration[key]).FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
 }
