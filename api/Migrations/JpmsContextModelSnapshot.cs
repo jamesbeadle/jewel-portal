@@ -6192,6 +6192,75 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("SiteInstructions");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.SitePhotoEntity", b =>
+                {
+                    b.Property<string>("SitePhotoId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("BlobRef")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("FiledAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("FiledByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("FiledToProgressPhotoId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("FiledToProgressUpdateId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("FiledToProjectId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("UploadedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("SitePhotoId");
+
+                    b.HasIndex("ContentHash")
+                        .IsUnique()
+                        .HasDatabaseName("IX_SitePhotos_ContentHash");
+
+                    b.HasIndex("FiledToProgressUpdateId")
+                        .HasDatabaseName("IX_SitePhotos_FiledToProgressUpdateId");
+
+                    b.ToTable("SitePhotos");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.SiteReportEntity", b =>
                 {
                     b.Property<string>("SiteReportId")

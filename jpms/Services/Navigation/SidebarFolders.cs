@@ -107,6 +107,11 @@ public static class SidebarFolders
                     DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Progress", "/projects/{project}/progress"),
                     DesktopNavigation.DirectorRoles),
+                // The site photo pool (2026-09-16): company-wide, deliberately not per project —
+                // a site manager drops the week's photographs here before the weekly-report run,
+                // and the assistant files each onto its project and day by fingerprint.
+                new SidebarRow(new NavigationItem("Site Photos", "/site-photos"),
+                    DesktopNavigation.DirectorRoles),
                 // The defect register (DEF-#### references). Defects are raised here or from a
                 // subcontractor email in the Control Centre; each reads its mail back live by tag.
                 new SidebarRow(new NavigationItem("Defects", "/projects/{project}/defects"),

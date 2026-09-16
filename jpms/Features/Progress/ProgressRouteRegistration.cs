@@ -57,6 +57,7 @@ public static class ProgressRouteRegistration
                 command => $"/api/progress-reports/{((DeleteProgressReport)command).ProgressReportId}"));
 
         RegisterContractorsReportRoutes(queries, commands);
+        RegisterSitePhotoRoutes(queries, commands);
     }
 
     private static void RegisterContractorsReportRoutes(QueryRouteTable queries, CommandRouteTable commands)
@@ -80,5 +81,19 @@ public static class ProgressRouteRegistration
         commands.Register<DeleteContractorsReport, Acknowledgement>(
             new CommandRoute("DELETE", "/api/contractors-reports/{contractorsReportId}",
                 command => $"/api/contractors-reports/{((DeleteContractorsReport)command).ContractorsReportId}"));
+    }
+
+    // The pool's upload is multipart/form-data, sent by HttpSitePhotoStore; the fingerprint match
+    // and the filing are the connector's (POST bodies the JSON query sender does not carry), so
+    // only the list and the delete are routed here.
+    private static void RegisterSitePhotoRoutes(QueryRouteTable queries, CommandRouteTable commands)
+    {
+        queries.Register<ListSitePhotos, IReadOnlyList<SitePhoto>>(
+            new QueryRoute("/api/site-photos",
+                query => ((ListSitePhotos)query).UnfiledOnly ? "/api/site-photos?unfiled=1" : "/api/site-photos"));
+
+        commands.Register<DeleteSitePhoto, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/site-photos/{sitePhotoId}",
+                command => $"/api/site-photos/{((DeleteSitePhoto)command).SitePhotoId}"));
     }
 }

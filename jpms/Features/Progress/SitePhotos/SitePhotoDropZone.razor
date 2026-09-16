@@ -1,0 +1,24 @@
+@namespace Jewel.JPMS.Features.Progress.SitePhotos
+
+@*
+    The pool's one door in: a drop target that is also a file picker. Up to fifty JPEG / PNG /
+    HEIC files at a time, dropped from Finder or picked; the same files that go in the WhatsApp
+    export folder, because the fingerprint the assistant matches on is the file's own bytes.
+*@
+
+<label class="mb-5 block cursor-pointer rounded border border-dashed border-line-strong bg-surface p-6 text-center transition hover:bg-surface-raised @(IsUploading ? "opacity-60 pointer-events-none" : "")">
+    <span class="block text-sm font-medium text-content">
+        @(IsUploading ? "Uploading…" : "Drop the week's photographs here, or click to choose")
+    </span>
+    <span class="mt-1 block text-xs text-content-subtle">
+        JPEG, PNG or HEIC · up to @MaxFiles at a time · the same files you export from WhatsApp, so the report run can find them
+    </span>
+    <InputFile OnChange="OnFilesChosen" multiple accept="image/*,.heic,.heif" class="hidden" disabled="@IsUploading" />
+</label>
+
+@code {
+    public const int MaxFiles = 50;
+
+    [Parameter] public bool IsUploading { get; set; }
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnFilesChosen { get; set; }
+}

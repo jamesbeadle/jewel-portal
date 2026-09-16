@@ -1,0 +1,44 @@
+@namespace Jewel.JPMS.Features.Progress.SitePhotos
+@using Jewel.JPMS.Contracts.Progress
+
+@*
+    One pool photograph: the thumbnail (click opens the viewer), the file name, and its standing —
+    an unfiled photo is the working row; a filed one is dimmed and says which update took it.
+    Delete is the two-click InlineConfirm; a filed photo's copy on its update is not touched.
+*@
+
+<div class="group flex flex-col rounded border border-line bg-surface @(Photo.IsFiled ? "opacity-70" : "")">
+    <button type="button" class="block" @onclick="OnOpen" title="@Photo.FileName">
+        <img src="@($"/api/site-photos/{Photo.SitePhotoId}/file?inline=1")" alt="@Photo.FileName" loading="lazy"
+             class="h-32 w-full object-cover rounded-t" />
+    </button>
+    <div class="flex flex-col gap-1 p-2">
+        <span class="truncate text-xs text-content" title="@Photo.FileName">@Photo.FileName</span>
+        <span class="text-xs text-content-subtle">
+            @if (Photo.IsFiled)
+            {
+                <Pill Tone="Tone.Positive">Filed</Pill>
+                <span class="ml-1">@DateText(Photo.FiledAt)</span>
+            }
+            else
+            {
+                <Pill Tone="Tone.Muted">Unfiled</Pill>
+                <span class="ml-1">@DateText(Photo.UploadedAt)</span>
+            }
+        </span>
+        @if (CanDelete)
+        {
+            <InlineConfirm Label="Delete" Question="Delete from the pool? Click again" Ghost="true" Busy="@Busy"
+                           Title="Remove this photograph from the pool (a copy already filed onto an update stays there)"
+                           OnConfirm="OnDelete" Class="self-start" />
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SitePhoto Photo { get; set; } = default!;
+    [Parameter] public bool CanDelete { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback OnOpen { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+}

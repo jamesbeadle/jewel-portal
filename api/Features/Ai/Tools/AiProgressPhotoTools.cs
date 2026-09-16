@@ -34,9 +34,11 @@ internal static partial class AiProgressPhotoTools
             + "update already holds the same image by content, and stored after the update's current "
             + "photos in the order given. Up to fifty per call; a failed image never fails the "
             + "batch — the answer says, per image, whether it was stored, a duplicate or failed, with "
-            + "the stored photo ids. Images pasted into the chat cannot be forwarded: ask the user to "
-            + "email them to the projects mailbox (then pass the attachment source_ids) or to use "
-            + "Import WhatsApp week on the Progress tab.",
+            + "the stored photo ids. Images pasted into the chat cannot be forwarded, and images in a "
+            + "folder on the laptop are not sources: for those the person drops the files on the Site "
+            + "photos page and you match them by fingerprint (match_site_photos, then "
+            + "file_site_photos). Otherwise ask the user to email them to the projects mailbox (then "
+            + "pass the attachment source_ids) or to use Import WhatsApp week on the Progress tab.",
             AiToolSchema.Object(
                 ("progressUpdateId", "string", "The update's id — list_progress or create_progress_update gives it.", true),
                 ("sourceIds", "array", "The images' source_ids from list_sources, in the order they should appear.", true)),

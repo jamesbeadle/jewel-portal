@@ -1,0 +1,81 @@
+@page "/site-photos"
+@using Jewel.JPMS.Contracts.Progress
+@using Jewel.JPMS.Features.Progress.SitePhotos
+@inject AuthService Auth
+@inject SessionService Session
+@inject ISitePhotoStore Store
+@inject NavigationManager Nav
+
+<PageTitle>Site photos · JPMS</PageTitle>
+
+@*
+    The company-wide site photo pool (2026-09-16, James: "a big dumping ground for photos and any
+    project"). A site manager drops the week's photographs here BEFORE the weekly-report run, from
+    the same files that end up in the WhatsApp export folder; nothing here names a project or a
+    day. The assistant then hashes the export folder, asks the portal which pool photos those
+    files are, and files each onto its project and day — so no image ever travels through the
+    model. Filed photos stay listed (greyed, with where they went) so the pool always shows what
+    is still waiting.
+*@
+
+<Page CanAccess="@CanRead" AccessDeniedMessage="Site photos are for the internal team.">
+    <PageHeader>
+        <SubtitleContent>
+            @if (photos is not null)
+            {
+                @Summary
+            }
+        </SubtitleContent>
+        <Actions>
+            <FilterChips Items="Chips" Selected="@filter" OnSelect="key => filter = key" Disabled="@(photos is null)" AriaLabel="Filed" />
+        </Actions>
+    </PageHeader>
+
+    @if (CanContribute)
+    {
+        <SitePhotoDropZone IsUploading="@isUploading" OnFilesChosen="UploadAsync" />
+    }
+
+    @if (error is { } message)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-4" Dismissible OnDismiss="() => error = null">@message</Notice>
+    }
+
+    @if (lastUpload is { } upload)
+    {
+        <Notice Tone="@(upload.FailedCount > 0 ? Tone.Warning : Tone.Positive)" Class="mb-4" Dismissible OnDismiss="() => lastUpload = null">
+            @UploadSummary(upload)
+        </Notice>
+    }
+
+    <LoadGate IsLoading="@(photos is null && !dataFailed)" Prominent="true" Label="Loading the pool">
+        @if (dataFailed)
+        {
+            <Notice Tone="Tone.Negative">Couldn't load the site photos — refresh to try again.</Notice>
+        }
+        else if (Filtered.Count == 0)
+        {
+            <EmptyState Message="@EmptyMessage" />
+        }
+        else
+        {
+            <div class="grid gap-3 grid-cols-[repeat(auto-fill,minmax(9rem,1fr))]">
+                @foreach (var photo in Filtered)
+                {
+                    <SitePhotoCard Photo="photo" CanDelete="@CanContribute" Busy="@(deleting == photo.SitePhotoId)"
+                                   OnOpen="() => viewing = photo" OnDelete="() => DeleteAsync(photo.SitePhotoId)" />
+                }
+            </div>
+        }
+    </LoadGate>
+
+    <Modal IsOpen="viewing is not null" Title="@viewing?.FileName" ShowFooter="false" OnCancel="() => viewing = null" Class="max-w-5xl">
+        @if (viewing is { } shown)
+        {
+            <ImageViewer FileUrl="@($"/api/site-photos/{shown.SitePhotoId}/file?inline=1")"
+                         DownloadUrl="@($"/api/site-photos/{shown.SitePhotoId}/file")"
+                         Caption="@shown.FileName" />
+            <p class="text-xs text-content-subtle mt-2">@SitePhotoText.Standing(shown)</p>
+        }
+    </Modal>
+</Page>
