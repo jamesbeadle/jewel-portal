@@ -7,7 +7,12 @@ public static partial class AiToolCatalogue
 {
     // The Project settings page's gate (UpdateProjectDetailsAuthorisation): this read exists so
     // update_project_details has something to read first, so it is offered to the same people.
-    private static readonly RoleSet ProjectSettingsReaders =
+    // A property, not a static readonly field: AiToolCatalogue.All is initialised in
+    // AiToolCatalogue.cs and the order static fields initialise across partial files is the
+    // compiler's file order — on the Linux build this field came AFTER All, every
+    // get_project_details tool carried a null VisibleTo, and ForConnector threw for every
+    // caller (found 2026-09-16 by the sandbox test run).
+    private static RoleSet ProjectSettingsReaders =>
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager);
 
     private static IEnumerable<AiTool> ProjectDetailsTools() => new List<AiTool>

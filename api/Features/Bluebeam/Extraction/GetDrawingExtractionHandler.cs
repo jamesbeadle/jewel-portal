@@ -29,29 +29,12 @@ public sealed class GetDrawingExtractionHandler : IQueryHandler<GetDrawingExtrac
             .ThenBy(row => row.MarkupType)
             .ToListAsync(cancellationToken);
 
-        var structure = await ReadBlobAsync<DrawingStructure>(extraction.StructureBlobRef, cancellationToken);
-        var textPages = await ReadBlobAsync<List<DrawingTextPage>>(extraction.TextBlobRef, cancellationToken);
+        var structure = await DrawingExtractionBlobs.ReadJsonAsync<DrawingStructure>(drawingBlobs, extraction.StructureBlobRef, cancellationToken);
+        var textPages = await DrawingExtractionBlobs.ReadJsonAsync<List<DrawingTextPage>>(drawingBlobs, extraction.TextBlobRef, cancellationToken);
         return new DrawingExtractionView(
             extraction.ToModel(),
             structure,
             markups.Select(markup => markup.ToModel()).ToList(),
             textPages ?? new List<DrawingTextPage>());
-    }
-
-    private async Task<T?> ReadBlobAsync<T>(string? blobRef, CancellationToken cancellationToken) where T : class
-    {
-        if (string.IsNullOrWhiteSpace(blobRef)) return null;
-        var blob = await drawingBlobs.OpenAsync(blobRef, cancellationToken);
-        if (blob is null) return null;
-
-        await using var content = blob.Content;
-        try
-        {
-            return await JsonSerializer.DeserializeAsync<T>(content, cancellationToken: cancellationToken);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
     }
 }

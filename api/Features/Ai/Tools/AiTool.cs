@@ -101,4 +101,18 @@ public static class AiToolSchema
         && value.TryGetInt32(out var parsed)
             ? parsed
             : null;
+
+    /// <summary>Reads a decimal argument (a millimetre position, an area) — a JSON number, or the
+    /// numeric string a model sometimes sends; null when missing or not a number.</summary>
+    public static double? Decimal(JsonElement input, string name)
+    {
+        if (input.ValueKind != JsonValueKind.Object || !input.TryGetProperty(name, out var value)) return null;
+        return value.ValueKind switch
+        {
+            JsonValueKind.Number when value.TryGetDouble(out var number) => number,
+            JsonValueKind.String when double.TryParse(value.GetString(), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var parsed) => parsed,
+            _ => null
+        };
+    }
 }

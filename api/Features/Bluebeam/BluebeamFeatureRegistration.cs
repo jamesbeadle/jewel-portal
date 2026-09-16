@@ -40,6 +40,13 @@ public static class BluebeamFeatureRegistration
 
         services.AddScoped<IQueryHandler<GetDrawingExtraction, DrawingExtractionView?>, GetDrawingExtractionHandler>();
 
+        // Every landed revision is transcribed (2026-09-16): the auto-queue the two landings call,
+        // and the rows-only rebuild for revisions extracted before the row tables existed.
+        services.AddScoped<DrawingExtractionAutoQueue>();
+        services.AddScoped<ICommandHandler<RebuildDrawingDataRows, DrawingDataRowsRebuild>, RebuildDrawingDataRowsHandler>();
+        services.AddScoped<RebuildDrawingDataRowsAuthorisation>();
+        services.AddScoped<RebuildDrawingDataRowsValidation>();
+
         return services;
     }
 

@@ -8,7 +8,8 @@ namespace Jewel.JPMS.Api.Features.Bluebeam.Extraction;
 /// <summary>
 /// Persists an extraction's outcome. Success stores the payloads as blobs under the revision's
 /// own key prefix — text as [{page,text}] JSON, the positioned geometry, the structured read,
-/// and Bluebeam's markups verbatim when they were read — replaces the revision's markup rows,
+/// and Bluebeam's markups verbatim when they were read — replaces the revision's markup rows AND
+/// its transcription rows (DrawingDataRows — dimensions, callouts, shapes, 2026-09-16),
 /// stamps the extraction row's summary (counts, title block, scale) AND the revision's
 /// MetadataExtractedAt (the register's badge) in one save, then writes the audit row directly —
 /// the worker doesn't link AuditTrail, and audit stays best-effort either way. Failure stamps
@@ -48,6 +49,7 @@ public sealed class DrawingExtractionResultWriter
             .ToListAsync(cancellationToken);
         context.DrawingMarkups.RemoveRange(existingRows);
         context.DrawingMarkups.AddRange(markups);
+        await DrawingDataRows.ReplaceAsync(context, extraction, outcome.Structure, cancellationToken);
 
         var now = DateTimeOffset.UtcNow;
         extraction.Status = (int)DrawingExtractionStatus.Succeeded;

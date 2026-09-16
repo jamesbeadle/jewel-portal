@@ -4,30 +4,26 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools;
 
 internal static partial class AiDeliveryTools
 {
-    private const int DimensionRows = 400;
-    private const int CalloutRows = 400;
-    private const int ShapeRows = 200;
+    private const int MarkupRows = 200;
 
-    /// <summary>The structured read of a drawing revision — the same view the Documents page's
-    /// "Extracted data" panel renders, through the same query handler.</summary>
+    /// <summary>The SUMMARY of a drawing revision's read — title block, revision table, proven
+    /// scale, counts, warnings, Revu markups if any. The dimensions, callouts and shapes
+    /// themselves are rows, read through query_document_data (2026-09-16): this used to return
+    /// them all and a real A0 sheet's reply was ~67k characters.</summary>
     private static AiTool GetDocumentExtraction()
     {
         return new(
             "get_document_extraction",
-            "What the portal read from a drawing revision's PDF — its title block (drawing number, "
-            + "title, revision, scale, date, drawn by, job, client), the revision table, the scale "
-            + "each page PROVED (figured dimensions matched to drawn lines at that scale — trust "
-            + "scaleVerified before measuring anything), every figured dimension paired with the "
-            + "line it measures (value in mm, axis H/V/D, from/to/label positions in real-world mm "
-            + "from the sheet's bottom-left corner), every note and callout with its position, and "
-            + "every closed shape with its real width, height, perimeter and area — plus any Revu "
-            + "markups if Bluebeam read some, and the warnings the reader raised. Use it for "
-            + "take-offs and quantities: the figured dimension is the number to use (sheets say "
-            + "figured dimensions take preference over scaling); the drawn geometry is the "
-            + "cross-check and the way to find which callout a dimension belongs to (nearest "
-            + "position). Pass revisionId, or drawingId for that document's newest extracted "
-            + "revision. status tells you whether the read has run; if it hasn't, the user can "
-            + "queue it with Extract data on the document page.",
+            "The summary of what the portal read from a drawing revision's PDF: its title block "
+            + "(drawing number, title, revision, scale, date, drawn by, job, client), the revision "
+            + "table, the scale each page PROVED (figured dimensions matched to drawn lines — trust "
+            + "scaleVerified before measuring anything), how many dimensions, notes and shapes were "
+            + "read, the warnings the reader raised, and any Revu markups if Bluebeam read some. "
+            + "The dimensions, notes and shapes are NOT in this reply — they are rows, filtered and "
+            + "totalled by query_document_data, so read this first for the sheet and its scale, "
+            + "then query the rows you need. Pass revisionId, or drawingId for that document's "
+            + "newest extracted revision. status tells you whether the read has run; every revision "
+            + "that lands is queued automatically, and extract_document_data queues one by hand.",
             AiToolSchema.Object(
                 ("revisionId", "string", "The revision to read (list_documents with drawingId gives revision ids).", false),
                 ("drawingId", "string", "Instead of revisionId: the document whose newest extracted revision to read.", false)),
@@ -43,25 +39,11 @@ internal static partial class AiDeliveryTools
         if (string.IsNullOrWhiteSpace(revisionId) && string.IsNullOrWhiteSpace(drawingId))
             return Fail("Pass revisionId or drawingId.");
 
-        DrawingExtractionView? view = null;
-        if (!string.IsNullOrWhiteSpace(revisionId))
-        {
-            view = await Query<GetDrawingExtraction, DrawingExtractionView?>(context, new GetDrawingExtraction(revisionId), ct);
-            if (view is null) return Serialise(new { ok = true, revisionId, status = "NotExtracted", note = "Nothing has been extracted from this revision yet — Extract data on the document page queues it." });
-        }
-        else
-        {
-            var revisions = await Query<ListRevisionsForDrawing, IReadOnlyList<DrawingRevision>>(
-                context, new ListRevisionsForDrawing(drawingId!), ct);
-            foreach (var revision in revisions.OrderByDescending(row => row.ReceivedAt).Take(8))
-            {
-                var candidate = await Query<GetDrawingExtraction, DrawingExtractionView?>(
-                    context, new GetDrawingExtraction(revision.DrawingRevisionId), ct);
-                if (candidate?.Extraction.Status == DrawingExtractionStatus.Succeeded) { view = candidate; break; }
-                view ??= candidate;
-            }
-            if (view is null) return Serialise(new { ok = true, drawingId, status = "NotExtracted", note = "None of this document's revisions has been extracted yet — Extract data on the document page queues one." });
-        }
+        var view = string.IsNullOrWhiteSpace(revisionId)
+            ? await NewestExtractedViewAsync(context, drawingId!, ct)
+            : await Query<GetDrawingExtraction, DrawingExtractionView?>(context, new GetDrawingExtraction(revisionId), ct);
+        if (view is null)
+            return Serialise(new { ok = true, revisionId, drawingId, status = "NotExtracted", note = NothingExtracted });
 
         var extraction = view.Extraction;
         if (extraction.Status != DrawingExtractionStatus.Succeeded)
@@ -76,37 +58,41 @@ internal static partial class AiDeliveryTools
             status = "Succeeded",
             extraction.CompletedAt,
             extraction.PageCount,
-            units = "Every position and size is in real-world millimetres (areas in m²), measured from the sheet's bottom-left corner at the page's proven scale. Prefer a dimension's value over the distance between its from/to points.",
+            extraction.RowsWrittenAt,
             summary = new
             {
-                extraction.DrawingNumber,
-                extraction.RevisionLabel,
-                extraction.Scale,
-                extraction.ScaleVerified,
-                extraction.DimensionCount,
-                extraction.CalloutCount,
-                extraction.ShapeCount,
-                extraction.MarkupCount,
-                extraction.MarkupsNote
+                extraction.DrawingNumber, extraction.RevisionLabel, extraction.Scale, extraction.ScaleVerified,
+                extraction.DimensionCount, extraction.CalloutCount, extraction.ShapeCount,
+                extraction.MarkupCount, extraction.MarkupsNote
             },
             titleBlock = structure?.TitleBlock,
             revisions = structure?.Revisions,
             scales = structure?.Scales,
             warnings = structure?.Warnings,
-            dimensions = Capped(structure?.Dimensions, DimensionRows),
-            callouts = Capped(structure?.Callouts.Select(callout => new { callout.Page, callout.At, Text = callout.Text.Length <= 400 ? callout.Text : callout.Text[..400] }).ToList(), CalloutRows),
-            shapes = Capped(structure?.Shapes, ShapeRows),
-            markups = view.Markups.Take(200),
+            markups = view.Markups.Take(MarkupRows),
+            rows = extraction.RowsWrittenAt is null
+                ? "Not transcribed into rows yet — rebuild_document_data does it from this read, no PDF re-read."
+                : "query_document_data reads the dimensions, callouts and shapes (kind, page, contains, near…).",
             structureNote = structure is null
                 ? "This revision was extracted before the portal read drawings itself — only the text layer is held. Extract data again on the document page to get the structured read."
                 : null
         });
     }
 
-    private static object? Capped<T>(IReadOnlyList<T>? rows, int cap)
+    // The document's newest successfully extracted revision, else its newest extraction row of
+    // any status (so a Queued / Failed one still reports), else null.
+    private static async Task<DrawingExtractionView?> NewestExtractedViewAsync(AiToolContext context, string drawingId, CancellationToken ct)
     {
-        if (rows is null) return null;
-        if (rows.Count <= cap) return new { count = rows.Count, rows };
-        return new { count = rows.Count, rows = (IReadOnlyList<T>)rows.Take(cap).ToList(), note = $"{rows.Count} in total; the first {cap} are listed." };
+        var revisions = await Query<ListRevisionsForDrawing, IReadOnlyList<DrawingRevision>>(
+            context, new ListRevisionsForDrawing(drawingId), ct);
+        DrawingExtractionView? fallback = null;
+        foreach (var revision in revisions.OrderByDescending(row => row.ReceivedAt).Take(8))
+        {
+            var candidate = await Query<GetDrawingExtraction, DrawingExtractionView?>(
+                context, new GetDrawingExtraction(revision.DrawingRevisionId), ct);
+            if (candidate?.Extraction.Status == DrawingExtractionStatus.Succeeded) return candidate;
+            fallback ??= candidate;
+        }
+        return fallback;
     }
 }

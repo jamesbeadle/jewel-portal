@@ -1453,96 +1453,6 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("ContraCharges");
                 });
 
-            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ContractorsReportEntity", b =>
-                {
-                    b.Property<string>("ContractorsReportId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("AttendanceJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("BuildingControlLiaison")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("CreatedByEmail")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<DateOnly>("DateOfIssue")
-                        .HasColumnType("date");
-
-                    b.Property<string>("HealthAndSafety")
-                        .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<string>("IssuedTo")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("LookAheadJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Neighbours")
-                        .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<int>("Number")
-                        .HasColumnType("int");
-
-                    b.Property<DateOnly>("PeriodEnd")
-                        .HasColumnType("date");
-
-                    b.Property<DateOnly>("PeriodStart")
-                        .HasColumnType("date");
-
-                    b.Property<string>("PreparedByName")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("ProgrammeReference")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("ProjectId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("SelectedUpdateIdsJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("ValuationNumber")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.HasKey("ContractorsReportId");
-
-                    b.HasIndex("ProjectId", "PeriodEnd")
-                        .IsUnique()
-                        .HasDatabaseName("IX_ContractorsReports_ProjectId_PeriodEnd");
-
-                    b.ToTable("ContractorsReports");
-                });
-
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.CostCenterEntity", b =>
                 {
                     b.Property<string>("CostCenterId")
@@ -2120,6 +2030,123 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("DocumentControlItems");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.DrawingCalloutEntity", b =>
+                {
+                    b.Property<string>("DrawingCalloutId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("DrawingExtractionId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("DrawingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("DrawingRevisionId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("Page")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<double>("X")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Y")
+                        .HasColumnType("float");
+
+                    b.HasKey("DrawingCalloutId");
+
+                    b.HasIndex("DrawingRevisionId")
+                        .HasDatabaseName("IX_DrawingCallouts_DrawingRevisionId");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_DrawingCallouts_ProjectId");
+
+                    b.ToTable("DrawingCallouts");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.DrawingDimensionEntity", b =>
+                {
+                    b.Property<string>("DrawingDimensionId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Axis")
+                        .IsRequired()
+                        .HasMaxLength(1)
+                        .HasColumnType("nvarchar(1)");
+
+                    b.Property<string>("DrawingExtractionId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("DrawingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("DrawingRevisionId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<double>("FromX")
+                        .HasColumnType("float");
+
+                    b.Property<double>("FromY")
+                        .HasColumnType("float");
+
+                    b.Property<double>("LabelX")
+                        .HasColumnType("float");
+
+                    b.Property<double>("LabelY")
+                        .HasColumnType("float");
+
+                    b.Property<int>("Page")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<double>("ToX")
+                        .HasColumnType("float");
+
+                    b.Property<double>("ToY")
+                        .HasColumnType("float");
+
+                    b.Property<int>("ValueMm")
+                        .HasColumnType("int");
+
+                    b.HasKey("DrawingDimensionId");
+
+                    b.HasIndex("DrawingRevisionId")
+                        .HasDatabaseName("IX_DrawingDimensions_DrawingRevisionId");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_DrawingDimensions_ProjectId");
+
+                    b.ToTable("DrawingDimensions");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.DrawingEntity", b =>
                 {
                     b.Property<string>("DrawingId")
@@ -2237,6 +2264,9 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<string>("RevisionLabel")
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset?>("RowsWrittenAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Scale")
                         .HasMaxLength(32)
@@ -2498,6 +2528,73 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasDatabaseName("IX_DrawingRevisions_DrawingId");
 
                     b.ToTable("DrawingRevisions");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.DrawingShapeEntity", b =>
+                {
+                    b.Property<string>("DrawingShapeId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<double>("AreaSqM")
+                        .HasColumnType("float");
+
+                    b.Property<double>("CentreX")
+                        .HasColumnType("float");
+
+                    b.Property<double>("CentreY")
+                        .HasColumnType("float");
+
+                    b.Property<string>("DrawingExtractionId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("DrawingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("DrawingRevisionId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<bool>("HasCurves")
+                        .HasColumnType("bit");
+
+                    b.Property<double>("HeightMm")
+                        .HasColumnType("float");
+
+                    b.Property<bool>("IsRectangle")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Page")
+                        .HasColumnType("int");
+
+                    b.Property<double>("PerimeterMm")
+                        .HasColumnType("float");
+
+                    b.Property<int>("PointCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<double>("WidthMm")
+                        .HasColumnType("float");
+
+                    b.HasKey("DrawingShapeId");
+
+                    b.HasIndex("DrawingRevisionId")
+                        .HasDatabaseName("IX_DrawingShapes_DrawingRevisionId");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_DrawingShapes_ProjectId");
+
+                    b.ToTable("DrawingShapes");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.EotEntity", b =>
@@ -5545,7 +5642,8 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
 
                     b.Property<string>("DrawingRef")
                         .HasMaxLength(256)
@@ -5561,7 +5659,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("ImpactIfLate")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
 
                     b.Property<bool>("ImpliesVariation")
                         .HasColumnType("bit");
@@ -5642,7 +5741,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("ResponseText")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -6396,7 +6496,8 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -7694,7 +7795,8 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
 
                     b.Property<string>("DraftLinesJson")
                         .HasColumnType("nvarchar(max)");

@@ -30,26 +30,14 @@ public sealed class QueueProjectDrawingExtractionsHandler : ICommandHandler<Queu
         {
             var extraction = await context.DrawingExtractions
                 .FirstOrDefaultAsync(row => row.DrawingRevisionId == revision.DrawingRevisionId, cancellationToken);
-            if (extraction?.Status is (int)DrawingExtractionStatus.Queued or (int)DrawingExtractionStatus.Running)
-                continue;
+            if (DrawingExtractionQueueing.IsInFlight(extraction)) continue;
 
             if (extraction is null)
             {
-                extraction = new DrawingExtractionEntity
-                {
-                    DrawingExtractionId = Guid.NewGuid().ToString("N"),
-                    DrawingRevisionId = revision.DrawingRevisionId,
-                    DrawingId = revision.DrawingId,
-                    ProjectId = command.ProjectId
-                };
+                extraction = DrawingExtractionQueueing.NewRow(revision.DrawingRevisionId, revision.DrawingId, command.ProjectId);
                 context.DrawingExtractions.Add(extraction);
             }
-            extraction.Status = (int)DrawingExtractionStatus.Queued;
-            extraction.QueuedBy = actor.Email;
-            extraction.QueuedAt = DateTimeOffset.UtcNow;
-            extraction.StartedAt = null;
-            extraction.CompletedAt = null;
-            extraction.ErrorMessage = null;
+            DrawingExtractionQueueing.StampQueued(extraction, actor.Email);
             queuedRevisionIds.Add(revision.DrawingRevisionId);
         }
         await context.SaveChangesAsync(cancellationToken);
@@ -76,13 +64,9 @@ public sealed class QueueProjectDrawingExtractionsHandler : ICommandHandler<Queu
 
         // One candidate per drawing — the newest live revision, PDFs only.
         return revisions
-            .Where(IsPdf)
+            .Where(DrawingExtractionQueueing.IsPdf)
             .GroupBy(revision => revision.DrawingId)
             .Select(group => group.OrderByDescending(revision => revision.ReceivedAt).First())
             .ToList();
     }
-
-    private static bool IsPdf(DrawingRevisionEntity revision) =>
-        (revision.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase)
-        || revision.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
 }

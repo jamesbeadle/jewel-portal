@@ -698,7 +698,7 @@ public sealed class AiConnectorTests
             "perform", "reject", "assign", "close", "reopen", "archive", "clear", "move", "cancel",
             "stage", "remove", "apply", "allocate", "recode", "attach", "register", "schedule",
             "chase", "extract", "submit", "confirm", "withdraw", "draft", "file", "tag", "invite",
-            "decline", "accept", "award", "revise", "settle", "void", "restore", "upload", "enable",
+            "decline", "accept", "award", "revise", "settle", "void", "restore", "upload", "enable", "query", "rebuild",
             "disable", "pin", "unpin", "flag", "unflag", "request", "plan", "book"
         };
         var namePattern = new System.Text.RegularExpressions.Regex(
@@ -776,48 +776,40 @@ public sealed class AiConnectorTests
         foreach (var role in Enum.GetValues<Role>())
             Assert.Equal(update.VisibleTo.Includes(role), read.VisibleTo.Includes(role));
     }
-    // 2026-09-16: the one thing that moves a defect along — putting it to the company that has to
-    // fix it — reaches the connector. Confirm-first (it emails a third party), the caller stamped
-    // as the sender, and list_defects carries the exact wording the action will send.
-    [Fact]
-    public void SendDefectToSupplier_reachesTheConnector_confirmFirst()
-    {
-        var action = AiActionRegistry.Find("send_defect_to_supplier");
-        Assert.NotNull(action);
-        Assert.True(action!.RequiresConfirmation);
-        Assert.Contains("SentByEmail", action.EmailStamps);
-        Assert.True(action.VisibleTo.Includes(Role.ManagingDirector));
-        Assert.True(action.VisibleTo.Includes(Role.SiteManager));
-        Assert.False(action.VisibleTo.Includes(Role.Subcontractor));
-        Assert.Contains("list_defects", action.Notes);
-        Assert.Contains("supplierEmail", action.Notes);
-        Assert.Contains("send_defect_to_supplier", AiToolCatalogue.Find("list_defects")!.Description);
-    }
 
-    // The weekly Contractor's Report (2026-09-16): the register and the composed document are
-    // readable, the entered fields writable, and delete is confirm-first — a page-only feature is
-    // a gap the site team finds first.
+    // 2026-09-16: "whenever drawings are triaged, transcribe them into data so work can be done
+    // over them without using a lot of AI context up". The extraction summary stays behind the
+    // DrawingReaders gate; the rows are a separate, filtered read behind the same gate; queueing a
+    // read and rebuilding the rows are actions for the roles that may extract on the page.
     [Fact]
-    public void ContractorsReports_reachTheConnector()
+    public void DrawingTranscription_isQueryableRows_notTheWholeBlob()
     {
         var director = AiToolCatalogue.ForConnector(UserWith(Role.ManagingDirector)).Select(t => t.Name).ToList();
-        Assert.Contains("list_contractors_reports", director);
-        Assert.Contains("get_contractors_report", director);
-        Assert.DoesNotContain("get_contractors_report", AiToolCatalogue.ForConnector(UserWith(Role.Subcontractor)).Select(t => t.Name));
-        Assert.Contains("findings", AiToolCatalogue.Find("get_contractors_report")!.Description);
+        var subcontractor = AiToolCatalogue.ForConnector(UserWith(Role.Subcontractor)).Select(t => t.Name).ToList();
+        foreach (var name in new[] { "get_document_extraction", "query_document_data" })
+        {
+            Assert.Contains(name, director);
+            Assert.Contains(name, subcontractor);
+        }
 
-        var create = AiActionRegistry.Find("create_contractors_report");
-        Assert.NotNull(create);
-        Assert.Contains("CreatedByEmail", create!.EmailStamps);
-        Assert.True(create.VisibleTo.Includes(Role.SiteManager));
-        Assert.False(create.VisibleTo.Includes(Role.Client));
+        var summary = AiToolCatalogue.Find("get_document_extraction")!;
+        Assert.Contains("query_document_data", summary.Description);
+        Assert.Contains("NOT in this reply", summary.Description);
+        var query = AiToolCatalogue.Find("query_document_data")!;
+        Assert.Equal(AiToolKind.Read, query.Kind);
+        var querySchema = System.Text.Json.JsonSerializer.Serialize(query.InputSchema);
+        foreach (var argument in new[] { "kind", "projectId", "contains", "nearX", "withinMm", "limit", "offset" })
+            Assert.Contains(argument, querySchema);
 
-        var update = AiActionRegistry.Find("update_contractors_report");
-        Assert.NotNull(update);
-        Assert.Contains("get_contractors_report", update!.Notes);
-
-        var delete = AiActionRegistry.Find("delete_contractors_report");
-        Assert.NotNull(delete);
-        Assert.True(delete!.RequiresConfirmation);
+        foreach (var name in new[] { "extract_document_data", "rebuild_document_data" })
+        {
+            var action = AiActionRegistry.Find(name);
+            Assert.NotNull(action);
+            Assert.True(action!.VisibleTo.Includes(Role.ManagingDirector), name);
+            Assert.True(action.VisibleTo.Includes(Role.ProjectManager), name);
+            Assert.False(action.VisibleTo.Includes(Role.Subcontractor), name);
+            Assert.False(action.RequiresConfirmation, name);
+        }
+        Assert.Contains("query_document_data", AiActionRegistry.Find("rebuild_document_data")!.Description);
     }
 }

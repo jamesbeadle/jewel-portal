@@ -74,6 +74,10 @@ public sealed class DrawingExtractionEntity
     public bool? ScaleVerified { get; set; }
     [MaxLength(128)]     public string? DrawingNumber { get; set; }
     [MaxLength(32)]      public string? RevisionLabel { get; set; }
+    // When the structured read was last written out as rows (DrawingDimensions / DrawingCallouts /
+    // DrawingShapes, 2026-09-16). Null on a revision extracted before the rows existed — the
+    // rebuild fills those from the structure blob without re-reading the PDF.
+    public DateTimeOffset? RowsWrittenAt { get; set; }
     // The Studio session the run used — diagnostics only; the session is finalised and deleted.
     [MaxLength(128)]     public string? BluebeamSessionId { get; set; }
 }

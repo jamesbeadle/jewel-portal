@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Features.Bluebeam.Extraction;
 using Jewel.JPMS.Api.Features.Closeout.Commands;
 using Jewel.JPMS.Api.Features.Drawings.Commands;
 using Jewel.JPMS.Api.Features.Progress;
@@ -168,6 +169,44 @@ internal sealed partial class SiteAndProgressActions
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
             Notes: "Cross-project moves are refused."),
+
+        new AiAction(
+            Name: "extract_document_data",
+            Area: "Documents",
+            Description: "Queues one document revision's PDF to be read on the worker — title block, "
+                + "proven scale, figured dimensions, notes, shapes — and transcribed into the rows "
+                + "query_document_data reads. Every revision that lands is queued automatically, so "
+                + "this is for a revision that was never read, one whose read failed, or a re-read. "
+                + "Returns the extraction row already stamped Queued; poll get_document_extraction "
+                + "for the result (a real sheet takes a minute or two).",
+            CommandType: typeof(QueueDrawingExtraction),
+            ResultType: typeof(DrawingExtraction),
+            AuthorisationType: typeof(QueueDrawingExtractionAuthorisation),
+            ValidationType: typeof(QueueDrawingExtractionValidation),
+            VisibleTo: DrawingExtractionRoles.AllowedToExtract,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "projectId, drawingId and drawingRevisionId all come from list_documents. Only a "
+                + "PDF revision can be read; a revision already queued or running is refused."),
+
+        new AiAction(
+            Name: "rebuild_document_data",
+            Area: "Documents",
+            Description: "Transcribes already-extracted revisions into the row tables "
+                + "query_document_data reads, from the structured read already in storage — no "
+                + "PDF is read again. For revisions extracted before 2026-09-16, when the rows did "
+                + "not exist: every succeeded extraction with no rows yet, on one project "
+                + "(projectId) or across the portal (no projectId), is queued rows-only to the "
+                + "worker. Returns how many were queued and how many already had rows.",
+            CommandType: typeof(RebuildDrawingDataRows),
+            ResultType: typeof(DrawingDataRowsRebuild),
+            AuthorisationType: typeof(RebuildDrawingDataRowsAuthorisation),
+            ValidationType: typeof(RebuildDrawingDataRowsValidation),
+            VisibleTo: DrawingExtractionRoles.AllowedToExtract,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "force: true re-transcribes revisions that already have rows too — only needed "
+                + "after a change to what the rows hold."),
 
         // ── Closeout & defects ────────────────────────────────────────────────────────────────
 

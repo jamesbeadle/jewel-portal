@@ -215,10 +215,6 @@ public sealed partial class JpmsContext
             .HasDatabaseName("IX_HsRecords_ProjectId");
         // Audits read per project (the H&S tab's list); items per audit (the form); the record
         // link resolves a closed corrective action back to its item.
-        modelBuilder.Entity<ContractorsReportEntity>()
-            .HasIndex(row => new { row.ProjectId, row.PeriodEnd })
-            .IsUnique()
-            .HasDatabaseName("IX_ContractorsReports_ProjectId_PeriodEnd");
         modelBuilder.Entity<HsAuditEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_HsAudits_ProjectId");
@@ -502,6 +498,29 @@ public sealed partial class JpmsContext
         modelBuilder.Entity<DrawingMarkupEntity>()
             .HasIndex(row => row.DrawingExtractionId)
             .HasDatabaseName("IX_DrawingMarkups_DrawingExtractionId");
+
+        // ---- Drawing data rows (2026-09-16) -------------------------------------------------------
+        // The transcription as rows: replaced per revision on every extraction (the revision index
+        // is the delete and the per-sheet read), queried per project by the connector's
+        // project-wide query_document_data (the project index).
+        modelBuilder.Entity<DrawingDimensionEntity>()
+            .HasIndex(row => row.DrawingRevisionId)
+            .HasDatabaseName("IX_DrawingDimensions_DrawingRevisionId");
+        modelBuilder.Entity<DrawingDimensionEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_DrawingDimensions_ProjectId");
+        modelBuilder.Entity<DrawingCalloutEntity>()
+            .HasIndex(row => row.DrawingRevisionId)
+            .HasDatabaseName("IX_DrawingCallouts_DrawingRevisionId");
+        modelBuilder.Entity<DrawingCalloutEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_DrawingCallouts_ProjectId");
+        modelBuilder.Entity<DrawingShapeEntity>()
+            .HasIndex(row => row.DrawingRevisionId)
+            .HasDatabaseName("IX_DrawingShapes_DrawingRevisionId");
+        modelBuilder.Entity<DrawingShapeEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_DrawingShapes_ProjectId");
 
         // ---- Valuation % complete: wider than the decimal(18,4) convention ----------------------
         // A line's % is whatever reproduces its claimed value (% x line amount). Four decimal

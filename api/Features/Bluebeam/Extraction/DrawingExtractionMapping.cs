@@ -25,7 +25,8 @@ public static class DrawingExtractionMapping
         entity.Scale,
         entity.ScaleVerified,
         entity.DrawingNumber,
-        entity.RevisionLabel);
+        entity.RevisionLabel,
+        entity.RowsWrittenAt);
 
     public static DrawingMarkup ToModel(this DrawingMarkupEntity entity) => new(
         entity.DrawingMarkupId,

@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Features.Audit;
+using Jewel.JPMS.Api.Features.Bluebeam.Extraction;
 using Jewel.JPMS.Api.Features.DocumentControl.Storage;
 using Jewel.JPMS.Api.Features.Drawings;
 using Jewel.JPMS.Api.Features.Drawings.Storage;
@@ -10,6 +11,8 @@ namespace Jewel.JPMS.Api.Features.DocumentControl.Commands;
 // document-control blob (not the mailbox — the email may be long gone); the landing itself is the
 // shared DrawingRevisionLanding, so the result is indistinguishable from a hand upload.
 // IssuedByEmail records the email's snapshotted sender (the architect who issued it), not the filer.
+// Once filed, the revision is queued for transcription (DrawingExtractionAutoQueue) — after the
+// save, best effort, so a queue problem never un-files the document.
 public sealed class FileDocumentAsDrawingHandler
     : ICommandHandler<FileDocumentAsDrawing, DocumentControlItem>
 {
@@ -18,13 +21,14 @@ public sealed class FileDocumentAsDrawingHandler
     private readonly IDrawingBlobStore drawingBlobs;
     private readonly AuditActor actor;
     private readonly AuditTrail auditTrail;
+    private readonly DrawingExtractionAutoQueue autoQueue;
 
     public FileDocumentAsDrawingHandler(
         JpmsContext context, IDocumentControlBlobStore documentBlobs, IDrawingBlobStore drawingBlobs,
-        AuditActor actor, AuditTrail auditTrail)
+        AuditActor actor, AuditTrail auditTrail, DrawingExtractionAutoQueue autoQueue)
     {
         this.context = context; this.documentBlobs = documentBlobs; this.drawingBlobs = drawingBlobs;
-        this.actor = actor; this.auditTrail = auditTrail;
+        this.actor = actor; this.auditTrail = auditTrail; this.autoQueue = autoQueue;
     }
 
     public async Task<DocumentControlItem> HandleAsync(FileDocumentAsDrawing command, CancellationToken cancellationToken)
@@ -65,6 +69,7 @@ public sealed class FileDocumentAsDrawingHandler
             internetMessageId: item.InternetMessageId,
             cancellationToken: cancellationToken);
 
+        await autoQueue.QueueLandedRevisionAsync(landed.Revision, command.ProjectId, actor.Email, cancellationToken);
         return item.ToModel();
     }
 

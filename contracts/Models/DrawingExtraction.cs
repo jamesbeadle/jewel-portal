@@ -15,7 +15,9 @@ public enum DrawingExtractionStatus
 /// came out. The counts and title-block summary are denormalised here so a register can show
 /// them without opening the blobs; the payloads themselves ride on DrawingExtractionView.
 /// MarkupsNote says why Bluebeam markups are absent when they are (not connected, call failed)
-/// — the structured read succeeds regardless, because it comes from the PDF itself.
+/// — the structured read succeeds regardless, because it comes from the PDF itself. RowsWrittenAt
+/// (2026-09-16) is when that read was last transcribed into the queryable row tables; null means
+/// the revision predates them and the rebuild has not run yet.
 /// </summary>
 public sealed record DrawingExtraction(
     string DrawingExtractionId,
@@ -38,7 +40,8 @@ public sealed record DrawingExtraction(
     string? Scale,
     bool? ScaleVerified,
     string? DrawingNumber,
-    string? RevisionLabel);
+    string? RevisionLabel,
+    DateTimeOffset? RowsWrittenAt = null);
 
 /// <summary>One markup from an extraction, as the data view renders it.</summary>
 public sealed record DrawingMarkup(

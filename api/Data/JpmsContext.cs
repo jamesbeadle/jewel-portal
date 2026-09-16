@@ -54,6 +54,10 @@ public sealed partial class JpmsContext : DbContext
     public DbSet<BluebeamConnectionEntity> BluebeamConnections => Set<BluebeamConnectionEntity>();
     public DbSet<DrawingExtractionEntity> DrawingExtractions => Set<DrawingExtractionEntity>();
     public DbSet<DrawingMarkupEntity> DrawingMarkups => Set<DrawingMarkupEntity>();
+    // The transcription as rows (2026-09-16): what the connector queries instead of the blob.
+    public DbSet<DrawingDimensionEntity> DrawingDimensions => Set<DrawingDimensionEntity>();
+    public DbSet<DrawingCalloutEntity> DrawingCallouts => Set<DrawingCalloutEntity>();
+    public DbSet<DrawingShapeEntity> DrawingShapes => Set<DrawingShapeEntity>();
 
     public DbSet<DocumentControlItemEntity> DocumentControlItems => Set<DocumentControlItemEntity>();
     public DbSet<PaymentCertificateEntity> PaymentCertificates => Set<PaymentCertificateEntity>();
@@ -139,7 +143,6 @@ public sealed partial class JpmsContext : DbContext
     public DbSet<ProgressPhotoEntity> ProgressPhotos => Set<ProgressPhotoEntity>();
     public DbSet<ProgressReportEntity> ProgressReports => Set<ProgressReportEntity>();
     public DbSet<ProgressReportSelectionEntity> ProgressReportSelections => Set<ProgressReportSelectionEntity>();
-    public DbSet<ContractorsReportEntity> ContractorsReports => Set<ContractorsReportEntity>();
 
     public DbSet<ClaimPeriodEntity> ClaimPeriods => Set<ClaimPeriodEntity>();
     public DbSet<ValuationEntity> Valuations => Set<ValuationEntity>();

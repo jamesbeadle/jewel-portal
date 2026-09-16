@@ -1,18 +1,27 @@
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Audit;
+using Jewel.JPMS.Api.Features.Bluebeam.Extraction;
 using Jewel.JPMS.Contracts.Drawings;
 
 namespace Jewel.JPMS.Api.Features.Drawings.Commands;
 
 /// <summary>
 /// Persists a newly uploaded revision as <see cref="DrawingApprovalStatus.Unapproved"/>. It does NOT
-/// supersede or touch any sibling revision — that happens only when a revision is approved.
+/// supersede or touch any sibling revision — that happens only when a revision is approved. Once
+/// saved, the revision is queued for transcription (DrawingExtractionAutoQueue) — best effort,
+/// after the save, so a queue problem never fails the upload.
 /// </summary>
 public sealed class UploadDrawingRevisionHandler
     : ICommandHandler<UploadDrawingRevision, DrawingRevision>
 {
     private readonly JpmsContext context;
+    private readonly AuditActor actor;
+    private readonly DrawingExtractionAutoQueue autoQueue;
 
-    public UploadDrawingRevisionHandler(JpmsContext context) { this.context = context; }
+    public UploadDrawingRevisionHandler(JpmsContext context, AuditActor actor, DrawingExtractionAutoQueue autoQueue)
+    {
+        this.context = context; this.actor = actor; this.autoQueue = autoQueue;
+    }
 
     public async Task<DrawingRevision> HandleAsync(UploadDrawingRevision command, CancellationToken cancellationToken)
     {
@@ -40,6 +49,8 @@ public sealed class UploadDrawingRevisionHandler
 
         context.DrawingRevisions.Add(revision);
         await context.SaveChangesAsync(cancellationToken);
+
+        await autoQueue.QueueLandedRevisionAsync(revision, drawing.ProjectId, actor.Email, cancellationToken);
         return revision.ToModel();
     }
 }

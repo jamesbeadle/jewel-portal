@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.Bluebeam.Queue;
 using Jewel.JPMS.Contracts.Drawings;
@@ -36,34 +35,21 @@ public sealed class QueueDrawingExtractionHandler : ICommandHandler<QueueDrawing
             throw new InvalidOperationException("That document belongs to a different project.");
         if (string.IsNullOrWhiteSpace(revision.BlobRef))
             throw new InvalidOperationException("That revision has no stored file to extract from.");
-        var isPdf = (revision.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase)
-            || revision.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
-        if (!isPdf)
+        if (!DrawingExtractionQueueing.IsPdf(revision))
             throw new InvalidOperationException("Only PDF revisions can be extracted.");
 
         var extraction = await context.DrawingExtractions
             .FirstOrDefaultAsync(row => row.DrawingRevisionId == command.DrawingRevisionId, cancellationToken);
         var wasSucceeded = extraction?.Status == (int)DrawingExtractionStatus.Succeeded;
-        if (extraction?.Status is (int)DrawingExtractionStatus.Queued or (int)DrawingExtractionStatus.Running)
+        if (DrawingExtractionQueueing.IsInFlight(extraction))
             throw new InvalidOperationException("That revision is already being extracted — refresh to see where it's up to.");
 
         if (extraction is null)
         {
-            extraction = new DrawingExtractionEntity
-            {
-                DrawingExtractionId = Guid.NewGuid().ToString("N"),
-                DrawingRevisionId = command.DrawingRevisionId,
-                DrawingId = command.DrawingId,
-                ProjectId = command.ProjectId
-            };
+            extraction = DrawingExtractionQueueing.NewRow(command.DrawingRevisionId, command.DrawingId, command.ProjectId);
             context.DrawingExtractions.Add(extraction);
         }
-        extraction.Status = (int)DrawingExtractionStatus.Queued;
-        extraction.QueuedBy = actor.Email;
-        extraction.QueuedAt = DateTimeOffset.UtcNow;
-        extraction.StartedAt = null;
-        extraction.CompletedAt = null;
-        extraction.ErrorMessage = null;
+        DrawingExtractionQueueing.StampQueued(extraction, actor.Email);
         await context.SaveChangesAsync(cancellationToken);
 
         await queue.EnqueueAsync(

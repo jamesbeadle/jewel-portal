@@ -5,8 +5,10 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools;
 /// <summary>
 /// The delivery-side read surface (2026-08-31): the project calendar, building control, the
 /// programme with its LAD claims, the Architect's Instruction register, progress updates/reports,
-/// the drawing register, a drawing's structured read (2026-09-07) and the package reconciliation. Each tool wraps the SAME query handler its
-/// HTTP endpoint composes and mirrors that endpoint's role gate exactly.
+/// the drawing register, a drawing's structured read (2026-09-07) — its summary, and its
+/// transcription rows queried in SQL (2026-09-16) — and the package reconciliation. Each tool
+/// wraps the SAME query handler its HTTP endpoint composes (or, for the row query, the same
+/// tables through the same DrawingReaders gate) and mirrors that endpoint's role gate exactly.
 /// </summary>
 internal static partial class AiDeliveryTools
 {
@@ -47,10 +49,9 @@ internal static partial class AiDeliveryTools
         GetProgramme(),
         ListArchitectInstructions(),
         ListProgress(),
-        ListContractorsReports(),
-        GetContractorsReport(),
         ListDrawings(),
         GetDocumentExtraction(),
+        QueryDocumentData(),
         GetPackageReconciliation(),
     };
 }

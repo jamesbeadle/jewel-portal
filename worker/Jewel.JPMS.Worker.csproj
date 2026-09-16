@@ -145,6 +145,10 @@
     <Compile Include="..\api\Features\Bluebeam\Extraction\DrawingExtractionRunner.cs" Link="Shared\Bluebeam\DrawingExtractionRunner.cs" />
     <Compile Include="..\api\Features\Bluebeam\Extraction\DrawingExtractionResultWriter.cs" Link="Shared\Bluebeam\DrawingExtractionResultWriter.cs" />
     <Compile Include="..\api\Features\Bluebeam\Extraction\DrawingExtractionOutcome.cs" Link="Shared\Bluebeam\DrawingExtractionOutcome.cs" />
+    <!-- The transcription as rows (2026-09-16): the result writer and the rows-only rebuild
+         write the same dimension / callout / shape rows the api's query_document_data reads. -->
+    <Compile Include="..\api\Features\Bluebeam\Extraction\DrawingDataRows.cs" Link="Shared\Bluebeam\DrawingDataRows.cs" />
+    <Compile Include="..\api\Features\Bluebeam\Extraction\DrawingExtractionBlobs.cs" Link="Shared\Bluebeam\DrawingExtractionBlobs.cs" />
     <!-- The PDF's own read (2026-09-07): positioned geometry + the structured drawing record. -->
     <Compile Include="..\api\Features\Drawings\Geometry\*.cs" Link="Shared\Drawings\Geometry\%(Filename)%(Extension)" />
     <!-- The drawings blob store the runner reads PDFs from and writes payload blobs to. -->

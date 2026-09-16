@@ -18,7 +18,9 @@ namespace Jewel.JPMS.Api.Features.Bluebeam.Extraction;
 /// absent with a note saying why, because they only matter when someone has measured in Revu.
 /// Idempotent against queue re-delivery: a row already Succeeded is only re-run when the message
 /// says Force. A failure of the PDF read stamps the row and rethrows so the queue's retry (5
-/// attempts, then poison) is the retry policy.
+/// attempts, then poison) is the retry policy. A RowsOnly message never touches the PDF or the
+/// row's status: it re-transcribes the rows from the structure blob (the rebuild for revisions
+/// extracted before the row tables existed) and a missing blob is logged, not retried.
 /// </summary>
 public sealed class DrawingExtractionRunner
 {
@@ -45,6 +47,11 @@ public sealed class DrawingExtractionRunner
         if (extraction is null)
         {
             logger.LogWarning("Extraction message for revision {RevisionId} has no row — dropped.", message.DrawingRevisionId);
+            return;
+        }
+        if (message.RowsOnly)
+        {
+            await TranscribeRowsFromBlobAsync(extraction, cancellationToken);
             return;
         }
         if (extraction.Status == (int)DrawingExtractionStatus.Succeeded && !message.Force) return;
@@ -82,6 +89,24 @@ public sealed class DrawingExtractionRunner
             extraction, revision,
             new DrawingExtractionOutcome(textLayer, geometry, structure, markupsRawJson, markupsNote),
             message.RequestedBy, cancellationToken);
+    }
+
+    // The rows-only rebuild: the structure blob is the source, so a revision extracted before the
+    // row tables existed gets its rows without the PDF being read again. Only a succeeded row has
+    // a structure to transcribe; an unreadable blob leaves RowsWrittenAt null so the next rebuild
+    // picks the revision up again once someone has re-extracted it.
+    private async Task TranscribeRowsFromBlobAsync(DrawingExtractionEntity extraction, CancellationToken cancellationToken)
+    {
+        if (extraction.Status != (int)DrawingExtractionStatus.Succeeded) return;
+        var structure = await DrawingExtractionBlobs.ReadJsonAsync<DrawingStructure>(
+            drawingBlobs, extraction.StructureBlobRef, cancellationToken);
+        if (structure is null)
+        {
+            logger.LogWarning("Revision {RevisionId} has no readable structure blob — rows not rebuilt; extract it again.", extraction.DrawingRevisionId);
+            return;
+        }
+        await DrawingDataRows.ReplaceAsync(context, extraction, structure, cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     // Markups are read only when Bluebeam is configured and an admin has connected it; anything

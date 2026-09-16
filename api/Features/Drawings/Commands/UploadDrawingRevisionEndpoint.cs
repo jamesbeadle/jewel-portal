@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.Drawings.Storage;
 using Jewel.JPMS.Contracts.Drawings;
 
@@ -11,6 +12,7 @@ namespace Jewel.JPMS.Api.Features.Drawings.Commands;
 public sealed class UploadDrawingRevisionEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly AuditActor auditActor;
     private readonly JpmsContext context;
     private readonly IDrawingBlobStore blobStore;
     private readonly UploadDrawingRevisionAuthorisation authorisation;
@@ -19,6 +21,7 @@ public sealed class UploadDrawingRevisionEndpoint
 
     public UploadDrawingRevisionEndpoint(
         SignedInUserResolver users,
+        AuditActor auditActor,
         JpmsContext context,
         IDrawingBlobStore blobStore,
         UploadDrawingRevisionAuthorisation authorisation,
@@ -26,6 +29,7 @@ public sealed class UploadDrawingRevisionEndpoint
         ICommandHandler<UploadDrawingRevision, DrawingRevision> handler)
     {
         this.users = users;
+        this.auditActor = auditActor;
         this.context = context;
         this.blobStore = blobStore;
         this.authorisation = authorisation;
@@ -43,6 +47,8 @@ public sealed class UploadDrawingRevisionEndpoint
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!authorisation.Allows(signedInUser)) return new StatusCodeResult(403);
+        // The uploader is who the automatic transcription is queued by.
+        auditActor.Email = signedInUser.Email;
 
         if (!request.HasFormContentType) return new BadRequestObjectResult("Expected multipart/form-data.");
         var form = await request.ReadFormAsync(cancellationToken);
