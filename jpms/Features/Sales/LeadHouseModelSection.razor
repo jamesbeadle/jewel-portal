@@ -1,0 +1,24 @@
+@if (ModelledEstimate is { } modelled)
+{
+    <LeadHouseModelPanel DefinitionJson="@(modelled.HouseModelJson ?? "")" Caption="@CaptionFor(modelled)" />
+}
+@if (AsksForAModel)
+{
+    <Panel Title="3D model">
+        <EmptyState Message="@NoModelYet" />
+    </Panel>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<LeadEstimate> Estimates { get; set; } = Array.Empty<LeadEstimate>();
+
+    private LeadEstimate? ModelledEstimate => Estimates.FirstOrDefault(estimate => estimate.HasHouseModel);
+
+    private bool AsksForAModel => ModelledEstimate is null && Estimates.Count > 0;
+
+    private string NoModelYet =>
+        $"No model drafted for {Estimates[0].Reference} yet. Ask the assistant to draft the model from the drawings — it reads the enquiry's sheets and stores the definition on the estimate.";
+
+    private static string CaptionFor(LeadEstimate estimate) =>
+        $"{estimate.Reference} — built from {estimate.HouseModelSource}. A massing model, not a survey.";
+}

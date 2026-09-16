@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Jewel.JPMS.Api.Features.Ai;
 using Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 using Jewel.JPMS.Api.Features.Ai.Tools;
@@ -606,6 +607,32 @@ public sealed class AiConnectorTests
         Assert.Contains("EST-0003", director.Single(t => t.Name == "find_by_reference").Description);
         Assert.True(AiRecordTools.TryMapRecordType("lead", out var lead) && lead == RecordType.Lead);
         Assert.True(AiRecordTools.TryMapRecordType("LD", out var ld) && ld == RecordType.Lead);
+    }
+
+    [Fact]
+    public void EstimateHouseModel_reachesTheConnector_asTheDefinitionObject()
+    {
+        // 2026-09-16: set_house_model is confirm-first, the actor stamped, the sales team's, and its
+        // model argument is the definition OBJECT, never an escaped string; get_lead hands it back.
+        var action = AiActionRegistry.Find("set_house_model");
+        Assert.NotNull(action);
+        Assert.Equal("Sales", action!.Area);
+        Assert.True(action.RequiresConfirmation);
+        Assert.Contains("ChangedByEmail", action.EmailStamps);
+        Assert.Contains("estimateId", action.Notes);
+        Assert.Contains("never the reference", action.Notes);
+        Assert.Contains("jpms-house-model", action.Notes);
+        var salesDesk = UserWith(Role.SalesMarketing).Roles;
+        var subcontractor = UserWith(Role.Subcontractor).Roles;
+        Assert.True(action.VisibleTo.IncludesAny(salesDesk));
+        Assert.False(action.VisibleTo.IncludesAny(subcontractor));
+        var schema = JsonSerializer.Serialize(AiActionSchema.InputSchema(action));
+        Assert.Contains("\"model\":{\"type\":\"object\"}", schema);
+        Assert.Contains("source", schema);
+        Assert.DoesNotContain("changedByEmail", schema);
+
+        var director = AiToolCatalogue.ForConnector(UserWith(Role.ManagingDirector));
+        Assert.Contains("houseModel", director.Single(t => t.Name == "get_lead").Description);
     }
 
     [Fact]

@@ -17,11 +17,12 @@ export function timelineHooks(state) {
             state.stage.controls.enabled = isFinished;
             state.isDrifting = !isFinished;
             state.needsFrame = true;
-            if (isFinished) applyPhase(state.house, true);
+            if (isFinished) { applyPhase(state.house, true); state.mode = "proposed"; }
             state.dotnetRef.invokeMethodAsync("PlaybackChanged", playback).catch(() => {});
         },
         beforeReplay: () => {
             applyPhase(state.house, false);
+            state.mode = "existing";
             state.flight.flyTo(state.views.overview);
         }
     };

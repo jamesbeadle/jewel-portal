@@ -21,3 +21,12 @@ export function applyPhase(root, isProposed) {
         object.visible = phase === Phase.existing || phase === (isProposed ? Phase.proposed : Phase.removed);
     });
 }
+
+// Joining in the first phase is existing (removed if it leaves); later is proposed (construction if it leaves).
+export function phaseOfElement(element, phases) {
+    const first = phases?.[0]?.key;
+    const joinsAtStart = element.phaseIn === undefined || element.phaseIn === null || element.phaseIn === first;
+    const leaves = element.phaseOut !== undefined && element.phaseOut !== null;
+    if (joinsAtStart) return leaves ? Phase.removed : Phase.existing;
+    return leaves ? Phase.construction : Phase.proposed;
+}

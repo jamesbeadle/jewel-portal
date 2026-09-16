@@ -55,7 +55,8 @@ public static class EstimateStatusExtensions
 /// off once Nigel's estimating workbook is in the portal; the client-facing document built from
 /// it is the <see cref="SalesProposal"/>. The EST-#### reference is minted server-side. A lead
 /// may carry several — a re-price after a scope change is a new estimate, the old one Lost or
-/// left Submitted as history.
+/// left Submitted as history. HouseModelJson is the 3D model the lead page builds (2026-09-16),
+/// with the sheets and revision it was read from — null until the assistant drafts one.
 /// </summary>
 public sealed record LeadEstimate(
     string EstimateId,
@@ -86,8 +87,13 @@ public sealed record LeadEstimate(
     string Exclusions = "",
     // The priced breakdown — sections of lines, in print order. Empty until SetEstimateBreakdown;
     // when it has lines, Total is their sum.
-    IReadOnlyList<EstimateLine>? Lines = null)
+    IReadOnlyList<EstimateLine>? Lines = null,
+    string? HouseModelJson = null,
+    string HouseModelSource = "",
+    DateTimeOffset? HouseModelSetAt = null)
 {
+    public bool HasHouseModel => !string.IsNullOrWhiteSpace(HouseModelJson);
+
     public IReadOnlyList<EstimateLine> BreakdownLines => Lines ?? Array.Empty<EstimateLine>();
 
     /// <summary>The lines grouped into their sections in print order — what the sheet and the

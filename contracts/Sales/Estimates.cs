@@ -60,5 +60,16 @@ public sealed record MoveEstimateStatus(
     string? Note,
     string ChangedByEmail = "") : ICommand<LeadEstimate>;
 
+/// <summary>
+/// Stores the estimate's 3D model (2026-09-16): the definition the lead page's viewer builds
+/// (its shape is the jpms-house-model skill), replaced whole, with the sheets and revision it
+/// was read from. A Won or Lost estimate is refused. ChangedByEmail is stamped by the server.
+/// </summary>
+public sealed record SetEstimateHouseModel(
+    string EstimateId,
+    System.Text.Json.JsonElement Model,
+    string Source,
+    string ChangedByEmail = "") : ICommand<LeadEstimate>;
+
 /// <summary>One estimate by id or by its EST-#### reference.</summary>
 public sealed record GetEstimate(string EstimateId) : IQuery<LeadEstimate?>;

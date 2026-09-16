@@ -121,6 +121,9 @@ public sealed class LeadEstimateEntity
     public string ExecutiveSummary { get; set; } = "";
     [MaxLength(1024)]    public string BuildTime { get; set; } = "";
     [MaxLength(4000)]    public string Exclusions { get; set; } = "";
+    public string? HouseModelJson { get; set; }
+    [MaxLength(1024)]    public string HouseModelSource { get; set; } = "";
+    public DateTimeOffset? HouseModelSetAt { get; set; }
 
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string Reference => $"EST-{Number:0000}";

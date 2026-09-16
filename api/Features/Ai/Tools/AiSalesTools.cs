@@ -74,8 +74,10 @@ internal static class AiSalesTools
             + "site visits, proposals, notes) and every stage change, newest first — and its "
             + "estimates (EST-####: scope, architect, price due date, budget mentioned, total, "
             + "status Received → Pricing → Submitted → Won / Lost, the client-facing executive "
-            + "summary, build time and exclusions, and the priced breakdown as sections[] of "
-            + "lines — costCode, description, quantity, unit, unitPrice, total), newest first, and its "
+            + "summary, build time and exclusions, the priced breakdown as sections[] of "
+            + "lines — costCode, description, quantity, unit, unitPrice, total — and houseModel: "
+            + "the 3D model definition set_house_model stored, with its source sheets and when, "
+            + "or null when none has been drafted yet), newest first, and its "
             + "proposals (what the prospect sees: title, scope, base price, options, schedule, "
             + "terms, status Draft → Sent → Accepted / Declined / Superseded). Takes the leadId "
             + "from list_leads, or an LD-#### reference. The enquiry mail tagged to the lead is "
@@ -261,8 +263,19 @@ internal static class AiSalesTools
             section.Provisional,
             total = section.Total,
             lines = section.Lines.Select(line => new { line.CostCode, line.Description, line.Quantity, line.Unit, line.UnitPrice, total = line.Total })
-        })
+        }),
+        houseModel = HouseModelRow(estimate)
     };
+
+    private static object? HouseModelRow(LeadEstimate estimate) =>
+        estimate.HasHouseModel
+            ? new
+            {
+                source = estimate.HouseModelSource,
+                setAt = estimate.HouseModelSetAt,
+                definition = JsonSerializer.Deserialize<JsonElement>(estimate.HouseModelJson!)
+            }
+            : null;
 
     /// <summary>An id as given, or an LD-#### (or bare number) reference resolved through the
     /// register's Number column.</summary>

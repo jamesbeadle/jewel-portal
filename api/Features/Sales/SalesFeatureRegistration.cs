@@ -115,6 +115,7 @@ public static class SalesFeatureRegistration
         Register<UpdateEstimateDetails, LeadEstimate, UpdateEstimateDetailsHandler, UpdateEstimateDetailsAuthorisation, UpdateEstimateDetailsValidation>(services);
         Register<MoveEstimateStatus, LeadEstimate, MoveEstimateStatusHandler, MoveEstimateStatusAuthorisation, MoveEstimateStatusValidation>(services);
         Register<SetEstimateBreakdown, LeadEstimate, SetEstimateBreakdownHandler, SetEstimateBreakdownAuthorisation, SetEstimateBreakdownValidation>(services);
+        Register<SetEstimateHouseModel, LeadEstimate, SetEstimateHouseModelHandler, SetEstimateHouseModelAuthorisation, SetEstimateHouseModelValidation>(services);
         services.AddScoped<IQueryHandler<GetEstimate, LeadEstimate?>, GetEstimateHandler>();
         return services;
     }

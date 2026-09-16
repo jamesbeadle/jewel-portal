@@ -470,13 +470,36 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   `step(now)` each frame), `hooks.js` what it does to the camera and tells the page
   (`StageChanged`, `PlaybackChanged`). Metres throughout — x along the front from the party wall,
   z from the front wall to the garden, heights above the ground-floor FFL, as the drawings level.
-  For now every estimate shows the ONE demo model, `ravens-dene-16` (Resi B369214 rev B,
-  EST-0001's enquiry) and the footer caption says so; a model per estimate is the next step once
-  the modelling route is agreed — nothing is persisted yet, and there is no connector surface
-  because there is no command or query. The client-facing copy is `Claude outputs/
-  16-ravens-dene-3d-model.html` (viewer + three.js bundled by esbuild into one file, works from
-  disk). Verified headless (Playwright on SwiftShader), not by `dotnet build`: no SDK was
-  reachable from the session, so the first `dotnet build` is the compile check.
+  Verified headless (Playwright on SwiftShader), not by `dotnet build`: no SDK was reachable
+  from either session, so the first `dotnet build` is the compile check.
+- **The model belongs to the estimate** (2026-09-16, the "3D model per estimate" task, with
+  Jeremy's trade-and-phase element list folded into the SAME definition — one dataset, two
+  views, never two formats). `LeadEstimate.HouseModelJson` / `HouseModelSource` /
+  `HouseModelSetAt` (migration `AddEstimateHouseModel`, script `add-estimate-house-model.sql`)
+  hold the definition as JSON, stored whole and never queried; `SetEstimateHouseModel`
+  (`PUT sales/estimates/{id}/house-model`, connector `set_house_model`, confirm-first,
+  `SalesRoles.SalesTeam`, `ChangedByEmail` stamped; the command's `Model` is a `JsonElement`,
+  so the action schema is a plain object and the model never sends an escaped string) replaces
+  it whole with a note of the sheets and revision it was read from and writes an Estimate
+  activity; `get_lead` returns `estimates[].houseModel` (source, setAt, definition) or null.
+  `LeadHouseModelPanel` takes `DefinitionJson` — the newest estimate that has one — and
+  `house-model.js` parses it and hands the OBJECT to `viewer.mount`; an estimate with no model
+  shows "No model drafted … ask the assistant". `js/house-model/models/` keeps
+  `ravens-dene-16.json` as the worked example and the render-check fixture only; nothing looks a
+  model up by key any more. The definition gained `phases` (the ordered list, data),
+  `trades` (key, name, colour) and `elements[]` — footprint polygons extruded `base`→`top`,
+  trade, `phaseIn` / `phaseOut`, `costCode`, `variationRef`, `note` (`builders/elements.js`;
+  `phases.phaseOfElement` reads them into existing / proposed / removed / construction so the
+  toggle needs no new rule). Extruded footprints cannot be a pitched roof, gable or dormer —
+  those stay house parts. The panel's chips are Existing / Proposed / **Works**
+  (`viewer.setMode`, `modes.js`): works lifts the shell — every block's walls, gable and roof,
+  tagged `userData.role = "shell"` by `house-builder.js` — off the finished house and shows the
+  elements by trade; Play from inside the works puts the shell back first. How a definition is
+  read off a set of drawings is the `jpms-house-model` skill (`docs/ai/skills/jpms/`, mirrored
+  in `.claude/skills/jpms-house-model/`, saved to the portal's skills store with its
+  `definition-schema` reference). Not built yet: Jeremy's phase scrubber and trade legend over
+  the elements, the standalone client page of the model (`GET /api/sales/estimates/{id}/model`
+  is reserved for it) and the estimate email carrying the link.
 
 ## H&S site audits and the register they mint onto (contracts + api + jpms)
 

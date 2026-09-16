@@ -3804,6 +3804,17 @@ namespace Jewel.JPMS.Api.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("HouseModelJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("HouseModelSetAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("HouseModelSource")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
                     b.Property<string>("LeadId")
                         .IsRequired()
                         .HasMaxLength(64)

@@ -56,7 +56,10 @@ internal static class SalesEntityMapping
             entity.ExecutiveSummary,
             entity.BuildTime,
             entity.Exclusions,
-            lines?.OrderBy(line => line.SectionOrder).ThenBy(line => line.SortOrder).Select(ToModel).ToList());
+            lines?.OrderBy(line => line.SectionOrder).ThenBy(line => line.SortOrder).Select(ToModel).ToList(),
+            entity.HouseModelJson,
+            entity.HouseModelSource,
+            entity.HouseModelSetAt);
 
     public static EstimateLine ToModel(this LeadEstimateLineEntity entity) =>
         new(entity.LineId, entity.EstimateId, entity.Section, entity.SectionOrder, entity.SectionProvisional,

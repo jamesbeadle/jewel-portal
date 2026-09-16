@@ -8,9 +8,10 @@
     architect's drawings by wwwroot/js/house-model.js on a vendored three.js, and the works are
     played as a build-up: scaffold, roof opened, dormer raised and glazed, rooflights, the garage
     turned into a room, scaffold down — the camera on each stage in turn and handed to the viewer
-    only at the end. For now every estimate shows the one demo model, 16 Ravens Dene (Resi
-    B369214 rev B, the EST-0001 enquiry); a model per estimate is the step after the demo is
-    judged. The chips compare existing and proposed once the works are finished.
+    only at the end. The definition is the ESTIMATE'S OWN (2026-09-16): the JSON the assistant
+    drafted from the enquiry's drawings and stored with set_house_model, handed to the viewer as
+    data. The chips compare existing and proposed once the works are finished, and "Works" lifts
+    the shell off to show the internal elements by trade.
 *@
 
 <Panel Title="3D model" BodyClass="p-0">
@@ -42,17 +43,15 @@
 </Panel>
 
 @code {
-    /// <summary>The demo house every estimate shows for now — 16 Ravens Dene, from Resi's planning
-    /// drawings. The key names a definition under wwwroot/js/house-model/models.</summary>
-    public const string DemoModelKey = "ravens-dene-16";
-
     private const string ExistingPhase = "existing";
     private const string ProposedPhase = "proposed";
+    private const string WorksPhase = "works";
 
     private static readonly IReadOnlyList<TabItem> PhaseChips = new[]
     {
         new TabItem(ExistingPhase, "Existing", Title: "The house as it stands"),
-        new TabItem(ProposedPhase, "Proposed", Title: "With the proposed works")
+        new TabItem(ProposedPhase, "Proposed", Title: "With the proposed works"),
+        new TabItem(WorksPhase, "Works", Title: "Inside the works — the shell lifted off, the elements by trade")
     };
 
     private static readonly IReadOnlyList<(string Key, string Label)> Views = new[]
@@ -64,8 +63,8 @@
         ("above", "From above")
     };
 
-    /// <summary>Which model to build — a key the viewer knows (wwwroot/js/house-model/models).</summary>
-    [Parameter, EditorRequired] public string ModelKey { get; set; } = "";
+    /// <summary>The estimate's definition as stored — LeadEstimate.HouseModelJson.</summary>
+    [Parameter, EditorRequired] public string DefinitionJson { get; set; } = "";
 
     /// <summary>The footer line: which estimate the model is for and what it was built from.</summary>
     [Parameter] public string? Caption { get; set; }
@@ -90,7 +89,7 @@
         selfReference ??= DotNetObjectReference.Create(this);
         try
         {
-            await JS.InvokeVoidAsync("jpmsHouseModel.mount", host, ModelKey, selfReference);
+            await JS.InvokeVoidAsync("jpmsHouseModel.mount", host, DefinitionJson, selfReference);
         }
         catch (JSException exception)
         {
@@ -127,7 +126,7 @@
     public void PlaybackChanged(string state)
     {
         playback = state.ParsePlayback();
-        if (playback == HouseModelPlayback.Finished) phase = ProposedPhase;
+            if (playback != HouseModelPlayback.Ready) phase = ProposedPhase;
         StateHasChanged();
     }
 
@@ -140,7 +139,7 @@
     private async Task SetPhaseAsync(string chosen)
     {
         phase = chosen;
-        await JS.InvokeVoidAsync("jpmsHouseModel.setProposed", host, chosen == ProposedPhase);
+        await JS.InvokeVoidAsync("jpmsHouseModel.setMode", host, chosen);
     }
 
     private Task ViewAsync(string viewName) => JS.InvokeVoidAsync("jpmsHouseModel.view", host, viewName).AsTask();

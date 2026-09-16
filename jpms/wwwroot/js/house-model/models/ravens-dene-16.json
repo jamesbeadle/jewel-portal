@@ -1,0 +1,2200 @@
+{
+  "name": "16 Ravens Dene, Chislehurst",
+  "source": {
+    "sheets": [
+      "B369214-1100 Existing Drawings (Resi, Aug 2026, 1:100 @ A1)",
+      "B369214-3100 Proposed Drawings rev B — Concept Issue 04/09/2026 (Resi, 1:100 @ A1)"
+    ],
+    "revision": "B",
+    "readOn": "2026-09-16",
+    "levels": {
+      "groundFloor": 0,
+      "groundFloorCeiling": 2.31,
+      "firstFloor": 2.6,
+      "firstFloorCeiling": 4.96,
+      "loftFloor": 5.33,
+      "ridge": 9.27
+    },
+    "caveat": "A massing model read off planning drawings at 1:100, not a survey. The shell, roof and openings were measured on 15 Sept 2026; the internal elements are placed from the room areas, the dimension strings and the section levels, not measured on the plans, and are for Jeremy to check."
+  },
+  "centre": [
+    4.3,
+    3.4,
+    5.6
+  ],
+  "blocks": [
+    {
+      "name": "house",
+      "x": 0,
+      "z": 0,
+      "width": 5.7,
+      "depth": 9.9,
+      "eaves": 5,
+      "roof": {
+        "ridge": 9.27,
+        "overhang": 0.3,
+        "vergeLeft": 0,
+        "vergeRight": 0.25
+      }
+    },
+    {
+      "name": "garage",
+      "x": 5.7,
+      "z": 4.3,
+      "width": 3,
+      "depth": 6.6,
+      "eaves": 2.4,
+      "roof": {
+        "ridge": 4.75,
+        "overhang": 0.25,
+        "vergeLeft": 0,
+        "vergeRight": 0.2
+      }
+    }
+  ],
+  "faces": {
+    "front": {
+      "axis": "z",
+      "at": 0,
+      "outward": -1
+    },
+    "rear": {
+      "axis": "z",
+      "at": 9.9,
+      "outward": 1
+    },
+    "right": {
+      "axis": "x",
+      "at": 5.7,
+      "outward": 1
+    },
+    "garageFront": {
+      "axis": "z",
+      "at": 4.3,
+      "outward": -1
+    },
+    "garageRear": {
+      "axis": "z",
+      "at": 10.9,
+      "outward": 1
+    }
+  },
+  "openings": [
+    {
+      "face": "front",
+      "kind": "window",
+      "u": [
+        1.1,
+        2.47
+      ],
+      "y": [
+        0.97,
+        2.14
+      ],
+      "columns": 3,
+      "arched": true
+    },
+    {
+      "face": "front",
+      "kind": "door",
+      "u": [
+        3.65,
+        4.66
+      ],
+      "y": [
+        0,
+        1.93
+      ],
+      "canopy": true
+    },
+    {
+      "face": "front",
+      "kind": "window",
+      "u": [
+        1.1,
+        2.47
+      ],
+      "y": [
+        3.26,
+        4.53
+      ],
+      "columns": 3,
+      "arched": true
+    },
+    {
+      "face": "front",
+      "kind": "window",
+      "u": [
+        3.7,
+        4.56
+      ],
+      "y": [
+        3.26,
+        4.53
+      ],
+      "columns": 2,
+      "arched": true
+    },
+    {
+      "face": "rear",
+      "kind": "slidingDoors",
+      "u": [
+        1.15,
+        4.56
+      ],
+      "y": [
+        0,
+        2.22
+      ],
+      "columns": 2
+    },
+    {
+      "face": "rear",
+      "kind": "window",
+      "u": [
+        3.77,
+        4.61
+      ],
+      "y": [
+        3.46,
+        4.5
+      ],
+      "columns": 2,
+      "arched": true
+    },
+    {
+      "face": "rear",
+      "kind": "window",
+      "u": [
+        1.35,
+        2.68
+      ],
+      "y": [
+        3.46,
+        4.5
+      ],
+      "columns": 3,
+      "arched": true
+    },
+    {
+      "face": "right",
+      "kind": "window",
+      "u": [
+        1.55,
+        2.27
+      ],
+      "y": [
+        1.13,
+        2.16
+      ],
+      "columns": 1,
+      "arched": true
+    },
+    {
+      "face": "right",
+      "kind": "window",
+      "u": [
+        4.63,
+        5.35
+      ],
+      "y": [
+        5.6,
+        6.65
+      ],
+      "columns": 1,
+      "arched": true
+    },
+    {
+      "name": "garage door",
+      "face": "garageFront",
+      "kind": "garageDoor",
+      "u": [
+        6,
+        8.4
+      ],
+      "y": [
+        0,
+        2.1
+      ],
+      "phase": "removed"
+    },
+    {
+      "name": "utility window",
+      "face": "garageFront",
+      "kind": "window",
+      "u": [
+        6.15,
+        6.95
+      ],
+      "y": [
+        1.1,
+        2
+      ],
+      "columns": 1,
+      "phase": "proposed"
+    },
+    {
+      "name": "garden window 1",
+      "face": "garageRear",
+      "kind": "window",
+      "u": [
+        5.88,
+        6.72
+      ],
+      "y": [
+        0.84,
+        2.23
+      ],
+      "columns": 1,
+      "phase": "proposed"
+    },
+    {
+      "name": "garden window 2",
+      "face": "garageRear",
+      "kind": "window",
+      "u": [
+        7.36,
+        8.25
+      ],
+      "y": [
+        0.84,
+        2.23
+      ],
+      "columns": 1,
+      "phase": "proposed"
+    }
+  ],
+  "infills": [
+    {
+      "name": "garage infill",
+      "face": "garageFront",
+      "u": [
+        6,
+        8.4
+      ],
+      "y": [
+        0,
+        2.1
+      ],
+      "phase": "proposed"
+    }
+  ],
+  "rooflights": [
+    {
+      "reference": "R11",
+      "block": "house",
+      "side": "front",
+      "x": 1.38,
+      "sillHeight": 7.03,
+      "width": 0.78,
+      "length": 1.18,
+      "phase": "proposed"
+    },
+    {
+      "reference": "R10",
+      "block": "house",
+      "side": "front",
+      "x": 2.78,
+      "sillHeight": 7.03,
+      "width": 0.78,
+      "length": 1.18,
+      "phase": "proposed"
+    },
+    {
+      "reference": "R9",
+      "block": "house",
+      "side": "front",
+      "x": 4.16,
+      "sillHeight": 7.03,
+      "width": 0.78,
+      "length": 1.18,
+      "phase": "proposed"
+    },
+    {
+      "reference": "R7",
+      "block": "garage",
+      "side": "rear",
+      "x": 6.3,
+      "sillHeight": 3,
+      "width": 0.78,
+      "length": 1.18,
+      "phase": "proposed"
+    },
+    {
+      "reference": "R8",
+      "block": "garage",
+      "side": "rear",
+      "x": 7.8,
+      "sillHeight": 3,
+      "width": 0.78,
+      "length": 1.18,
+      "phase": "proposed"
+    }
+  ],
+  "dormer": {
+    "x": [
+      1.46,
+      4.34
+    ],
+    "profile": [
+      {
+        "z": 8.87,
+        "y": 5.89
+      },
+      {
+        "z": 8.37,
+        "y": 7.2
+      },
+      {
+        "z": 6.6,
+        "y": 7.85
+      }
+    ],
+    "columns": 3,
+    "phase": "proposed"
+  },
+  "downpipes": [
+    {
+      "x": 5.55,
+      "z": -0.08,
+      "top": 4.75
+    },
+    {
+      "x": 5.55,
+      "z": 9.98,
+      "top": 4.75
+    },
+    {
+      "x": 8.62,
+      "z": 4.22,
+      "top": 2.15
+    },
+    {
+      "x": 8.62,
+      "z": 10.98,
+      "top": 2.15
+    }
+  ],
+  "context": {
+    "paving": [
+      {
+        "x": [
+          0,
+          8.85
+        ],
+        "z": [
+          -7,
+          0
+        ]
+      },
+      {
+        "x": [
+          5.7,
+          8.85
+        ],
+        "z": [
+          0,
+          4.3
+        ]
+      },
+      {
+        "x": [
+          0,
+          5.7
+        ],
+        "z": [
+          9.9,
+          12.6
+        ]
+      },
+      {
+        "x": [
+          5.7,
+          8.85
+        ],
+        "z": [
+          10.9,
+          12.6
+        ]
+      }
+    ],
+    "fences": [
+      {
+        "from": [
+          8.82,
+          10.9
+        ],
+        "to": [
+          8.82,
+          24
+        ]
+      },
+      {
+        "from": [
+          -6.2,
+          24
+        ],
+        "to": [
+          8.82,
+          24
+        ]
+      },
+      {
+        "from": [
+          0,
+          9.9
+        ],
+        "to": [
+          0,
+          24
+        ]
+      },
+      {
+        "from": [
+          -6.2,
+          9.6
+        ],
+        "to": [
+          -6.2,
+          24
+        ]
+      }
+    ],
+    "neighbours": [
+      {
+        "name": "attached",
+        "x": -6.2,
+        "z": 0.3,
+        "width": 6.2,
+        "depth": 9.3,
+        "eaves": 4.9,
+        "roof": {
+          "ridge": 8.3,
+          "overhang": 0.25,
+          "vergeLeft": 0.25,
+          "vergeRight": 0
+        }
+      },
+      {
+        "name": "detached",
+        "x": 10.6,
+        "z": 0.6,
+        "width": 6.6,
+        "depth": 9,
+        "eaves": 5,
+        "roof": {
+          "ridge": 8.4,
+          "overhang": 0.25,
+          "vergeLeft": 0.25,
+          "vergeRight": 0.25
+        }
+      }
+    ]
+  },
+  "phases": [
+    {
+      "key": "00",
+      "name": "Existing"
+    },
+    {
+      "key": "01",
+      "name": "Strip out"
+    },
+    {
+      "key": "02",
+      "name": "Structure"
+    },
+    {
+      "key": "03",
+      "name": "Envelope"
+    },
+    {
+      "key": "04",
+      "name": "First fix"
+    },
+    {
+      "key": "05",
+      "name": "Board and plaster"
+    },
+    {
+      "key": "06",
+      "name": "Second fix"
+    },
+    {
+      "key": "07",
+      "name": "Finishes"
+    }
+  ],
+  "trades": [
+    {
+      "key": "demolition",
+      "name": "Demolition",
+      "colour": "#c0392b"
+    },
+    {
+      "key": "groundworks",
+      "name": "Groundworks",
+      "colour": "#7f6a4f"
+    },
+    {
+      "key": "structure",
+      "name": "Structure",
+      "colour": "#5d6d7e"
+    },
+    {
+      "key": "partitions",
+      "name": "Partitions",
+      "colour": "#d4b483"
+    },
+    {
+      "key": "first-fix-me",
+      "name": "First fix M&E",
+      "colour": "#2e86c1"
+    },
+    {
+      "key": "plaster",
+      "name": "Plaster",
+      "colour": "#e8e2d4"
+    },
+    {
+      "key": "second-fix",
+      "name": "Second fix",
+      "colour": "#8e44ad"
+    },
+    {
+      "key": "joinery",
+      "name": "Joinery",
+      "colour": "#b9770e"
+    },
+    {
+      "key": "decoration",
+      "name": "Decoration",
+      "colour": "#58a55c"
+    },
+    {
+      "key": "external",
+      "name": "External",
+      "colour": "#616a6b"
+    }
+  ],
+  "elements": [
+    {
+      "id": "loft-boarding",
+      "name": "Existing loft boarding and hatch",
+      "trade": "demolition",
+      "footprint": [
+        [
+          0.6,
+          3.6
+        ],
+        [
+          5.1,
+          3.6
+        ],
+        [
+          5.1,
+          6.3
+        ],
+        [
+          0.6,
+          6.3
+        ]
+      ],
+      "base": 4.96,
+      "top": 5.01,
+      "phaseIn": "00",
+      "phaseOut": "01",
+      "costCode": "ENABLE-DEM",
+      "note": "Scaled: the boarded area is not drawn; taken as the middle of the loft."
+    },
+    {
+      "id": "ceiling-cut-stair",
+      "name": "First-floor ceiling cut for the new staircase",
+      "trade": "demolition",
+      "footprint": [
+        [
+          4.5,
+          2.4
+        ],
+        [
+          5.4,
+          2.4
+        ],
+        [
+          5.4,
+          5.4
+        ],
+        [
+          4.5,
+          5.4
+        ]
+      ],
+      "base": 4.96,
+      "top": 5.01,
+      "phaseIn": "00",
+      "phaseOut": "01",
+      "costCode": "ENABLE-DEM",
+      "note": "Stair position inferred: rises over the first-floor landing on the hall side."
+    },
+    {
+      "id": "wall-living-kitchen",
+      "name": "Wall between living / dining and kitchen — removed",
+      "trade": "demolition",
+      "footprint": [
+        [
+          3.4,
+          6
+        ],
+        [
+          3.5,
+          6
+        ],
+        [
+          3.5,
+          9.6
+        ],
+        [
+          3.4,
+          9.6
+        ]
+      ],
+      "base": 0,
+      "top": 2.31,
+      "phaseIn": "00",
+      "phaseOut": "01",
+      "costCode": "ENABLE-DEM",
+      "note": "Kitchen taken as the rear right room (10 m²); the opening spans its length."
+    },
+    {
+      "id": "wall-hall-living",
+      "name": "Wall between hallway and living room — removed",
+      "trade": "demolition",
+      "footprint": [
+        [
+          3.4,
+          1.2
+        ],
+        [
+          3.5,
+          1.2
+        ],
+        [
+          3.5,
+          4.2
+        ],
+        [
+          3.4,
+          4.2
+        ]
+      ],
+      "base": 0,
+      "top": 2.31,
+      "phaseIn": "00",
+      "phaseOut": "01",
+      "costCode": "ENABLE-DEM",
+      "note": "Hall taken as the front right (door at 3.65–4.66 on the front); opening 3 m long."
+    },
+    {
+      "id": "wc-fittings",
+      "name": "Existing WC sanitaryware",
+      "trade": "demolition",
+      "footprint": [
+        [
+          3.6,
+          4.4
+        ],
+        [
+          4.4,
+          4.4
+        ],
+        [
+          4.4,
+          5.4
+        ],
+        [
+          3.6,
+          5.4
+        ]
+      ],
+      "base": 0,
+      "top": 0.8,
+      "phaseIn": "00",
+      "phaseOut": "01",
+      "costCode": "ENABLE-DEM"
+    },
+    {
+      "id": "garage-floor-finish",
+      "name": "Garage floor finish — removed",
+      "trade": "demolition",
+      "footprint": [
+        [
+          6,
+          4.6
+        ],
+        [
+          8.4,
+          4.6
+        ],
+        [
+          8.4,
+          10.6
+        ],
+        [
+          6,
+          10.6
+        ]
+      ],
+      "base": -0.02,
+      "top": 0,
+      "phaseIn": "00",
+      "phaseOut": "01",
+      "costCode": "ENABLE-DEM"
+    },
+    {
+      "id": "steel-loft-floor-1",
+      "name": "Steel beam to loft floor — front",
+      "trade": "structure",
+      "footprint": [
+        [
+          0.3,
+          3.3
+        ],
+        [
+          5.4,
+          3.3
+        ],
+        [
+          5.4,
+          3.5
+        ],
+        [
+          0.3,
+          3.5
+        ]
+      ],
+      "base": 5.08,
+      "top": 5.31,
+      "phaseIn": "02",
+      "phaseOut": null,
+      "costCode": "STR-STL",
+      "note": "Engineer's design to confirm; positions taken at the third points of the depth."
+    },
+    {
+      "id": "steel-loft-floor-2",
+      "name": "Steel beam to loft floor — rear",
+      "trade": "structure",
+      "footprint": [
+        [
+          0.3,
+          6.4
+        ],
+        [
+          5.4,
+          6.4
+        ],
+        [
+          5.4,
+          6.6
+        ],
+        [
+          0.3,
+          6.6
+        ]
+      ],
+      "base": 5.08,
+      "top": 5.31,
+      "phaseIn": "02",
+      "phaseOut": null,
+      "costCode": "STR-STL"
+    },
+    {
+      "id": "steel-ridge",
+      "name": "Steel ridge beam",
+      "trade": "structure",
+      "footprint": [
+        [
+          0.3,
+          4.85
+        ],
+        [
+          5.4,
+          4.85
+        ],
+        [
+          5.4,
+          5.05
+        ],
+        [
+          0.3,
+          5.05
+        ]
+      ],
+      "base": 8.77,
+      "top": 9.02,
+      "phaseIn": "02",
+      "phaseOut": null,
+      "costCode": "STR-STL"
+    },
+    {
+      "id": "steel-dormer-head",
+      "name": "Steel to dormer head and trimmers",
+      "trade": "structure",
+      "footprint": [
+        [
+          1.36,
+          6.5
+        ],
+        [
+          4.44,
+          6.5
+        ],
+        [
+          4.44,
+          6.7
+        ],
+        [
+          1.36,
+          6.7
+        ]
+      ],
+      "base": 7.65,
+      "top": 7.85,
+      "phaseIn": "02",
+      "phaseOut": null,
+      "costCode": "STR-STL"
+    },
+    {
+      "id": "steel-kitchen-living",
+      "name": "Steel beam over kitchen / living opening",
+      "trade": "structure",
+      "footprint": [
+        [
+          3.3,
+          5.8
+        ],
+        [
+          3.6,
+          5.8
+        ],
+        [
+          3.6,
+          9.8
+        ],
+        [
+          3.3,
+          9.8
+        ]
+      ],
+      "base": 2.11,
+      "top": 2.31,
+      "phaseIn": "02",
+      "phaseOut": null,
+      "costCode": "STR-STL"
+    },
+    {
+      "id": "steel-hall-living",
+      "name": "Steel beam over hallway / living opening",
+      "trade": "structure",
+      "footprint": [
+        [
+          3.3,
+          1
+        ],
+        [
+          3.6,
+          1
+        ],
+        [
+          3.6,
+          4.4
+        ],
+        [
+          3.3,
+          4.4
+        ]
+      ],
+      "base": 2.11,
+      "top": 2.31,
+      "phaseIn": "02",
+      "phaseOut": null,
+      "costCode": "STR-STL"
+    },
+    {
+      "id": "steel-garage-front",
+      "name": "Steel beam over garage front opening",
+      "trade": "structure",
+      "footprint": [
+        [
+          5.9,
+          4.3
+        ],
+        [
+          8.5,
+          4.3
+        ],
+        [
+          8.5,
+          4.6
+        ],
+        [
+          5.9,
+          4.6
+        ]
+      ],
+      "base": 2.1,
+      "top": 2.35,
+      "phaseIn": "02",
+      "phaseOut": null,
+      "costCode": "STR-STL"
+    },
+    {
+      "id": "loft-floor",
+      "name": "Loft floor — 50 × 200 joists and 22 mm chipboard",
+      "trade": "structure",
+      "footprint": [
+        [
+          0.3,
+          0.4
+        ],
+        [
+          5.4,
+          0.4
+        ],
+        [
+          5.4,
+          9.5
+        ],
+        [
+          0.3,
+          9.5
+        ]
+      ],
+      "base": 5.1,
+      "top": 5.33,
+      "phaseIn": "02",
+      "phaseOut": null,
+      "costCode": "CARP-1FX"
+    },
+    {
+      "id": "drain-utility-wc",
+      "name": "New below-ground drainage from utility and WC to the existing run",
+      "trade": "groundworks",
+      "footprint": [
+        [
+          6.6,
+          9
+        ],
+        [
+          6.9,
+          9
+        ],
+        [
+          6.9,
+          12.4
+        ],
+        [
+          6.6,
+          12.4
+        ]
+      ],
+      "base": -0.7,
+      "top": -0.4,
+      "phaseIn": "02",
+      "phaseOut": null,
+      "costCode": "SUB-DRN",
+      "note": "Route assumed to the rear manhole; the existing run is not dimensioned."
+    },
+    {
+      "id": "inspection-chamber",
+      "name": "New inspection chamber",
+      "trade": "external",
+      "footprint": [
+        [
+          6.5,
+          12.4
+        ],
+        [
+          7,
+          12.4
+        ],
+        [
+          7,
+          12.9
+        ],
+        [
+          6.5,
+          12.9
+        ]
+      ],
+      "base": -0.7,
+      "top": 0,
+      "phaseIn": "02",
+      "phaseOut": null,
+      "costCode": "SUB-DRN"
+    },
+    {
+      "id": "garage-floor-buildup",
+      "name": "Garage — insulated floor build-up, DPM and screed",
+      "trade": "groundworks",
+      "footprint": [
+        [
+          6,
+          4.6
+        ],
+        [
+          8.4,
+          4.6
+        ],
+        [
+          8.4,
+          10.6
+        ],
+        [
+          6,
+          10.6
+        ]
+      ],
+      "base": -0.15,
+      "top": 0,
+      "phaseIn": "03",
+      "phaseOut": null,
+      "costCode": "INT-INF"
+    },
+    {
+      "id": "stud-bed5-landing",
+      "name": "Loft — Bedroom 5 / landing partition",
+      "trade": "partitions",
+      "footprint": [
+        [
+          0.3,
+          5.9
+        ],
+        [
+          3.6,
+          5.9
+        ],
+        [
+          3.6,
+          6
+        ],
+        [
+          0.3,
+          6
+        ]
+      ],
+      "base": 5.33,
+      "top": 7.63,
+      "phaseIn": "04",
+      "phaseOut": null,
+      "costCode": "CARP-1FX",
+      "note": "Bedroom 5 is the rear room under the dormer; the landing sits over the stair on the hall side."
+    },
+    {
+      "id": "stud-bed5-ensuite",
+      "name": "Loft — Bedroom 5 / en-suite partition",
+      "trade": "partitions",
+      "footprint": [
+        [
+          3.6,
+          6
+        ],
+        [
+          3.7,
+          6
+        ],
+        [
+          3.7,
+          9.4
+        ],
+        [
+          3.6,
+          9.4
+        ]
+      ],
+      "base": 5.33,
+      "top": 7.63,
+      "phaseIn": "04",
+      "phaseOut": null,
+      "costCode": "CARP-1FX",
+      "note": "En-suite 2.34 m deep off the rear of the landing side."
+    },
+    {
+      "id": "stud-ensuite-landing",
+      "name": "Loft — en-suite / landing partition",
+      "trade": "partitions",
+      "footprint": [
+        [
+          3.6,
+          6
+        ],
+        [
+          5.4,
+          6
+        ],
+        [
+          5.4,
+          6.1
+        ],
+        [
+          3.6,
+          6.1
+        ]
+      ],
+      "base": 5.33,
+      "top": 7.63,
+      "phaseIn": "04",
+      "phaseOut": null,
+      "costCode": "CARP-1FX"
+    },
+    {
+      "id": "stud-bed6-landing",
+      "name": "Loft — Bedroom 6 / landing partition",
+      "trade": "partitions",
+      "footprint": [
+        [
+          3.5,
+          1.5
+        ],
+        [
+          3.6,
+          1.5
+        ],
+        [
+          3.6,
+          5.9
+        ],
+        [
+          3.5,
+          5.9
+        ]
+      ],
+      "base": 5.33,
+      "top": 7.63,
+      "phaseIn": "04",
+      "phaseOut": null,
+      "costCode": "CARP-1FX",
+      "note": "Bedroom 6 is the front room lit by R9–R11."
+    },
+    {
+      "id": "stud-bed6-eaves",
+      "name": "Loft — Bedroom 6 eaves-storage wall",
+      "trade": "partitions",
+      "footprint": [
+        [
+          0.3,
+          1.5
+        ],
+        [
+          5.4,
+          1.5
+        ],
+        [
+          5.4,
+          1.6
+        ],
+        [
+          0.3,
+          1.6
+        ]
+      ],
+      "base": 5.33,
+      "top": 6.83,
+      "phaseIn": "04",
+      "phaseOut": null,
+      "costCode": "CARP-1FX",
+      "note": "Eaves storage 5.24 m long along the front slope, 1.0 m head height at the front."
+    },
+    {
+      "id": "stud-tv-utility",
+      "name": "Ground — TV area / utility and WC partition",
+      "trade": "partitions",
+      "footprint": [
+        [
+          6,
+          8.8
+        ],
+        [
+          8.4,
+          8.8
+        ],
+        [
+          8.4,
+          8.9
+        ],
+        [
+          6,
+          8.9
+        ]
+      ],
+      "base": 0,
+      "top": 2.31,
+      "phaseIn": "04",
+      "phaseOut": null,
+      "costCode": "CARP-1FX",
+      "note": "TV area 4.19 m long from the garage front; utility and WC behind it."
+    },
+    {
+      "id": "stud-utility-wc",
+      "name": "Ground — utility / WC partition",
+      "trade": "partitions",
+      "footprint": [
+        [
+          7.45,
+          8.9
+        ],
+        [
+          7.55,
+          8.9
+        ],
+        [
+          7.55,
+          10.6
+        ],
+        [
+          7.45,
+          10.6
+        ]
+      ],
+      "base": 0,
+      "top": 2.31,
+      "phaseIn": "04",
+      "phaseOut": null,
+      "costCode": "CARP-1FX",
+      "note": "Utility 1.5 m wide on the house side, WC 0.9 m wide."
+    },
+    {
+      "id": "svp-ensuite",
+      "name": "Soil vent pipe and stub stack to the loft en-suite",
+      "trade": "first-fix-me",
+      "footprint": [
+        [
+          5.2,
+          9.2
+        ],
+        [
+          5.35,
+          9.2
+        ],
+        [
+          5.35,
+          9.35
+        ],
+        [
+          5.2,
+          9.35
+        ]
+      ],
+      "base": 0,
+      "top": 6.53,
+      "phaseIn": "04",
+      "phaseOut": null,
+      "costCode": "MEC-DRN",
+      "note": "Run assumed down the rear right corner to the new drainage."
+    },
+    {
+      "id": "plumbing-utility-wc",
+      "name": "Hot, cold and waste runs to the utility and WC",
+      "trade": "first-fix-me",
+      "footprint": [
+        [
+          6.1,
+          10.35
+        ],
+        [
+          8.3,
+          10.35
+        ],
+        [
+          8.3,
+          10.5
+        ],
+        [
+          6.1,
+          10.5
+        ]
+      ],
+      "base": 0,
+      "top": 0.9,
+      "phaseIn": "04",
+      "phaseOut": null,
+      "costCode": "MEC-PLM"
+    },
+    {
+      "id": "heating-loft",
+      "name": "Heating circuits extended to the loft",
+      "trade": "first-fix-me",
+      "footprint": [
+        [
+          5.2,
+          3
+        ],
+        [
+          5.35,
+          3
+        ],
+        [
+          5.35,
+          3.15
+        ],
+        [
+          5.2,
+          3.15
+        ]
+      ],
+      "base": 2.6,
+      "top": 5.83,
+      "phaseIn": "04",
+      "phaseOut": null,
+      "costCode": "MEC-HTS"
+    },
+    {
+      "id": "garage-wall-lining",
+      "name": "Garage — insulated wall lining",
+      "trade": "plaster",
+      "footprint": [
+        [
+          6,
+          4.6
+        ],
+        [
+          8.4,
+          4.6
+        ],
+        [
+          8.4,
+          10.6
+        ],
+        [
+          6,
+          10.6
+        ],
+        [
+          6,
+          10.5
+        ],
+        [
+          8.3,
+          10.5
+        ],
+        [
+          8.3,
+          4.7
+        ],
+        [
+          6,
+          4.7
+        ]
+      ],
+      "base": 0,
+      "top": 2.31,
+      "phaseIn": "05",
+      "phaseOut": null,
+      "costCode": "INT-INW",
+      "note": "Modelled as a thin lining to the three outside walls of the garage."
+    },
+    {
+      "id": "garage-ceiling-lining",
+      "name": "Garage — insulated ceiling lining",
+      "trade": "plaster",
+      "footprint": [
+        [
+          6,
+          4.6
+        ],
+        [
+          8.4,
+          4.6
+        ],
+        [
+          8.4,
+          10.6
+        ],
+        [
+          6,
+          10.6
+        ]
+      ],
+      "base": 2.31,
+      "top": 2.46,
+      "phaseIn": "05",
+      "phaseOut": null,
+      "costCode": "INT-INW"
+    },
+    {
+      "id": "staircase",
+      "name": "New softwood staircase to the loft with balustrade",
+      "trade": "joinery",
+      "footprint": [
+        [
+          4.5,
+          2.4
+        ],
+        [
+          5.4,
+          2.4
+        ],
+        [
+          5.4,
+          5.4
+        ],
+        [
+          4.5,
+          5.4
+        ]
+      ],
+      "base": 2.6,
+      "top": 6.23,
+      "phaseIn": "06",
+      "phaseOut": null,
+      "costCode": "STAIR-TIM",
+      "note": "Rises 2.73 m from the first-floor landing over 3.0 m — 13 risers at 210 mm."
+    },
+    {
+      "id": "door-bed5",
+      "name": "Door — Bedroom 5",
+      "trade": "joinery",
+      "footprint": [
+        [
+          2.8,
+          5.9
+        ],
+        [
+          3.6,
+          5.9
+        ],
+        [
+          3.6,
+          6
+        ],
+        [
+          2.8,
+          6
+        ]
+      ],
+      "base": 5.33,
+      "top": 7.37,
+      "phaseIn": "06",
+      "phaseOut": null,
+      "costCode": "CARP-DOR",
+      "note": "FD30 to the escape route."
+    },
+    {
+      "id": "door-bed6",
+      "name": "Door — Bedroom 6",
+      "trade": "joinery",
+      "footprint": [
+        [
+          3.5,
+          4.9
+        ],
+        [
+          3.6,
+          4.9
+        ],
+        [
+          3.6,
+          5.7
+        ],
+        [
+          3.5,
+          5.7
+        ]
+      ],
+      "base": 5.33,
+      "top": 7.37,
+      "phaseIn": "06",
+      "phaseOut": null,
+      "costCode": "CARP-DOR",
+      "note": "FD30 to the escape route."
+    },
+    {
+      "id": "door-ensuite",
+      "name": "Door — en-suite",
+      "trade": "joinery",
+      "footprint": [
+        [
+          4.4,
+          6
+        ],
+        [
+          5.2,
+          6
+        ],
+        [
+          5.2,
+          6.1
+        ],
+        [
+          4.4,
+          6.1
+        ]
+      ],
+      "base": 5.33,
+      "top": 7.37,
+      "phaseIn": "06",
+      "phaseOut": null,
+      "costCode": "CARP-DOR"
+    },
+    {
+      "id": "door-tv-area",
+      "name": "Door — TV area from the hallway",
+      "trade": "joinery",
+      "footprint": [
+        [
+          5.6,
+          5
+        ],
+        [
+          5.75,
+          5
+        ],
+        [
+          5.75,
+          5.8
+        ],
+        [
+          5.6,
+          5.8
+        ]
+      ],
+      "base": 0,
+      "top": 2.04,
+      "phaseIn": "06",
+      "phaseOut": null,
+      "costCode": "CARP-DOR",
+      "note": "FD30 to the escape route."
+    },
+    {
+      "id": "door-utility",
+      "name": "Door — utility",
+      "trade": "joinery",
+      "footprint": [
+        [
+          6.4,
+          8.8
+        ],
+        [
+          7.2,
+          8.8
+        ],
+        [
+          7.2,
+          8.9
+        ],
+        [
+          6.4,
+          8.9
+        ]
+      ],
+      "base": 0,
+      "top": 2.04,
+      "phaseIn": "06",
+      "phaseOut": null,
+      "costCode": "CARP-DOR"
+    },
+    {
+      "id": "door-wc",
+      "name": "Door — WC",
+      "trade": "joinery",
+      "footprint": [
+        [
+          7.6,
+          8.8
+        ],
+        [
+          8.3,
+          8.8
+        ],
+        [
+          8.3,
+          8.9
+        ],
+        [
+          7.6,
+          8.9
+        ]
+      ],
+      "base": 0,
+      "top": 2.04,
+      "phaseIn": "06",
+      "phaseOut": null,
+      "costCode": "CARP-DOR"
+    },
+    {
+      "id": "eaves-doors",
+      "name": "Eaves storage access doors",
+      "trade": "joinery",
+      "footprint": [
+        [
+          1,
+          1.5
+        ],
+        [
+          2.4,
+          1.5
+        ],
+        [
+          2.4,
+          1.6
+        ],
+        [
+          1,
+          1.6
+        ]
+      ],
+      "base": 5.33,
+      "top": 6.33,
+      "phaseIn": "06",
+      "phaseOut": null,
+      "costCode": "CARP-2FX"
+    },
+    {
+      "id": "ensuite-shower",
+      "name": "En-suite — shower",
+      "trade": "second-fix",
+      "footprint": [
+        [
+          4.4,
+          8.4
+        ],
+        [
+          5.3,
+          8.4
+        ],
+        [
+          5.3,
+          9.3
+        ],
+        [
+          4.4,
+          9.3
+        ]
+      ],
+      "base": 5.33,
+      "top": 7.33,
+      "phaseIn": "06",
+      "phaseOut": null,
+      "costCode": "SUP-SAN"
+    },
+    {
+      "id": "ensuite-basin-wc",
+      "name": "En-suite — basin and WC",
+      "trade": "second-fix",
+      "footprint": [
+        [
+          3.8,
+          6.2
+        ],
+        [
+          5.3,
+          6.2
+        ],
+        [
+          5.3,
+          6.7
+        ],
+        [
+          3.8,
+          6.7
+        ]
+      ],
+      "base": 5.33,
+      "top": 6.18,
+      "phaseIn": "06",
+      "phaseOut": null,
+      "costCode": "SUP-SAN"
+    },
+    {
+      "id": "wc-suite",
+      "name": "Ground WC — basin and WC",
+      "trade": "second-fix",
+      "footprint": [
+        [
+          7.6,
+          9.9
+        ],
+        [
+          8.3,
+          9.9
+        ],
+        [
+          8.3,
+          10.5
+        ],
+        [
+          7.6,
+          10.5
+        ]
+      ],
+      "base": 0,
+      "top": 0.85,
+      "phaseIn": "06",
+      "phaseOut": null,
+      "costCode": "SUP-SAN"
+    },
+    {
+      "id": "utility-sink",
+      "name": "Utility — sink and appliance space",
+      "trade": "second-fix",
+      "footprint": [
+        [
+          6.1,
+          9.9
+        ],
+        [
+          7.4,
+          9.9
+        ],
+        [
+          7.4,
+          10.5
+        ],
+        [
+          6.1,
+          10.5
+        ]
+      ],
+      "base": 0,
+      "top": 0.9,
+      "phaseIn": "06",
+      "phaseOut": null,
+      "costCode": "MEC-PLM"
+    },
+    {
+      "id": "radiators",
+      "name": "Radiators — loft bedrooms, TV area, utility; towel rail to the en-suite",
+      "trade": "second-fix",
+      "footprint": [
+        [
+          0.4,
+          7
+        ],
+        [
+          0.5,
+          7
+        ],
+        [
+          0.5,
+          8.2
+        ],
+        [
+          0.4,
+          8.2
+        ]
+      ],
+      "base": 5.48,
+      "top": 6.08,
+      "phaseIn": "06",
+      "phaseOut": null,
+      "costCode": "MEC-HTS",
+      "note": "One shown, on the party wall in Bedroom 5, standing for the five."
+    },
+    {
+      "id": "carpet-loft",
+      "name": "Carpet to the loft bedrooms and landing",
+      "trade": "decoration",
+      "footprint": [
+        [
+          0.3,
+          1.6
+        ],
+        [
+          5.4,
+          1.6
+        ],
+        [
+          5.4,
+          9.4
+        ],
+        [
+          0.3,
+          9.4
+        ]
+      ],
+      "base": 5.33,
+      "top": 5.35,
+      "phaseIn": "07",
+      "phaseOut": null,
+      "costCode": "FLR-CPT"
+    },
+    {
+      "id": "lvt-tv-area",
+      "name": "LVT floor to the TV area",
+      "trade": "decoration",
+      "footprint": [
+        [
+          6,
+          4.6
+        ],
+        [
+          8.4,
+          4.6
+        ],
+        [
+          8.4,
+          8.8
+        ],
+        [
+          6,
+          8.8
+        ]
+      ],
+      "base": 0,
+      "top": 0.02,
+      "phaseIn": "07",
+      "phaseOut": null,
+      "costCode": "FLR-LVT"
+    },
+    {
+      "id": "tiles-utility-wc",
+      "name": "Floor tiles to the utility and WC",
+      "trade": "decoration",
+      "footprint": [
+        [
+          6,
+          8.9
+        ],
+        [
+          8.4,
+          8.9
+        ],
+        [
+          8.4,
+          10.6
+        ],
+        [
+          6,
+          10.6
+        ]
+      ],
+      "base": 0,
+      "top": 0.02,
+      "phaseIn": "07",
+      "phaseOut": null,
+      "costCode": "TIL-STD"
+    },
+    {
+      "id": "tiles-ensuite",
+      "name": "Floor and wall tiles to the en-suite",
+      "trade": "decoration",
+      "footprint": [
+        [
+          3.7,
+          6.1
+        ],
+        [
+          5.4,
+          6.1
+        ],
+        [
+          5.4,
+          9.4
+        ],
+        [
+          3.7,
+          9.4
+        ]
+      ],
+      "base": 5.33,
+      "top": 5.35,
+      "phaseIn": "07",
+      "phaseOut": null,
+      "costCode": "TIL-STD"
+    }
+  ],
+  "programme": {
+    "scaffold": {
+      "standardsAt": [
+        -0.1,
+        1.85,
+        3.8,
+        5.75
+      ],
+      "rowsAt": [
+        10.35,
+        11.35
+      ],
+      "lifts": 3,
+      "phase": "construction"
+    },
+    "roofStrip": {
+      "name": "roof strip",
+      "block": "house",
+      "side": "rear",
+      "x": [
+        1.31,
+        4.49
+      ],
+      "alongSlope": [
+        1.15,
+        4.6
+      ],
+      "phase": "construction"
+    },
+    "stages": [
+      {
+        "title": "As it stands",
+        "view": "overview",
+        "hold": 5000,
+        "detail": "Four bedrooms over two floors, an integral garage to the side, and a loft that has never been used."
+      },
+      {
+        "title": "Scaffold the garden side",
+        "view": "garden",
+        "hold": 1500,
+        "detail": "Three lifts along the rear, up to the eaves — the roof works are done from here.",
+        "steps": [
+          {
+            "part": "scaffold standards",
+            "kind": "grow",
+            "duration": 2600
+          },
+          {
+            "part": "scaffold lift 1",
+            "kind": "drop",
+            "from": [
+              0,
+              0.4,
+              0
+            ],
+            "at": 2700,
+            "duration": 1000
+          },
+          {
+            "part": "scaffold lift 2",
+            "kind": "drop",
+            "from": [
+              0,
+              0.4,
+              0
+            ],
+            "at": 3500,
+            "duration": 1000
+          },
+          {
+            "part": "scaffold lift 3",
+            "kind": "drop",
+            "from": [
+              0,
+              0.4,
+              0
+            ],
+            "at": 4300,
+            "duration": 1000
+          }
+        ]
+      },
+      {
+        "title": "Open up the roof",
+        "view": "dormer",
+        "hold": 2200,
+        "detail": "The tiles come off where the dormer will sit, back to the battens, and the new loft floor goes in at 5.33 m.",
+        "steps": [
+          {
+            "part": "roof strip",
+            "kind": "fade",
+            "duration": 1800
+          }
+        ]
+      },
+      {
+        "title": "Raise the dormer",
+        "view": "dormer",
+        "hold": 1800,
+        "detail": "The frame goes up over the opening — 2.88 m wide, a steep front and a low-pitched top — closed with zinc cheeks either side.",
+        "steps": [
+          {
+            "part": "glazed dormer",
+            "kind": "grow",
+            "anchor": [
+              2.9,
+              5.89,
+              8.87
+            ],
+            "duration": 3200
+          }
+        ]
+      },
+      {
+        "title": "Glaze it",
+        "view": "dormer",
+        "hold": 2600,
+        "detail": "Six VELUX GPU windows: three across the front, three across the top.",
+        "steps": [
+          {
+            "part": "glazed dormer",
+            "kind": "fade",
+            "duration": 1800
+          }
+        ]
+      },
+      {
+        "title": "Rooflights to the front",
+        "view": "frontRoof",
+        "hold": 2400,
+        "detail": "Three VELUX GGU centre-pivot rooflights on the front slope light the landing and the front bedroom.",
+        "steps": [
+          {
+            "part": "rooflight R11",
+            "kind": "drop",
+            "from": [
+              0,
+              1.2,
+              0
+            ],
+            "at": 0,
+            "duration": 1000
+          },
+          {
+            "part": "rooflight R10",
+            "kind": "drop",
+            "from": [
+              0,
+              1.2,
+              0
+            ],
+            "at": 900,
+            "duration": 1000
+          },
+          {
+            "part": "rooflight R9",
+            "kind": "drop",
+            "from": [
+              0,
+              1.2,
+              0
+            ],
+            "at": 1800,
+            "duration": 1000
+          }
+        ]
+      },
+      {
+        "title": "The garage comes out of use",
+        "view": "garageFront",
+        "hold": 2200,
+        "detail": "The up-and-over door comes out and the opening is bricked up, with a window for the new utility room.",
+        "steps": [
+          {
+            "part": "garage door",
+            "kind": "lift",
+            "by": [
+              0,
+              2.3,
+              0
+            ],
+            "duration": 1800
+          },
+          {
+            "part": "garage infill",
+            "kind": "grow",
+            "at": 1900,
+            "duration": 2300
+          },
+          {
+            "part": "utility window",
+            "kind": "drop",
+            "from": [
+              0,
+              0,
+              -0.6
+            ],
+            "at": 4400,
+            "duration": 1000
+          }
+        ]
+      },
+      {
+        "title": "…and opens to the garden",
+        "view": "garageGarden",
+        "hold": 2600,
+        "detail": "Two windows and two rooflights to the garden: the TV room, with the utility and WC behind it.",
+        "steps": [
+          {
+            "part": "garden window 1",
+            "kind": "drop",
+            "from": [
+              0,
+              0,
+              0.6
+            ],
+            "at": 0,
+            "duration": 1000
+          },
+          {
+            "part": "garden window 2",
+            "kind": "drop",
+            "from": [
+              0,
+              0,
+              0.6
+            ],
+            "at": 700,
+            "duration": 1000
+          },
+          {
+            "part": "rooflight R7",
+            "kind": "drop",
+            "from": [
+              0,
+              1.2,
+              0
+            ],
+            "at": 1500,
+            "duration": 1000
+          },
+          {
+            "part": "rooflight R8",
+            "kind": "drop",
+            "from": [
+              0,
+              1.2,
+              0
+            ],
+            "at": 2200,
+            "duration": 1000
+          }
+        ]
+      },
+      {
+        "title": "Scaffold down",
+        "view": "overview",
+        "hold": 1200,
+        "detail": "Re-tiled around the dormer, the scaffold comes down.",
+        "steps": [
+          {
+            "part": "roof strip",
+            "kind": "vanish"
+          },
+          {
+            "part": "scaffold lift 3",
+            "kind": "vanish",
+            "at": 300
+          },
+          {
+            "part": "scaffold lift 2",
+            "kind": "vanish",
+            "at": 800
+          },
+          {
+            "part": "scaffold lift 1",
+            "kind": "vanish",
+            "at": 1300
+          },
+          {
+            "part": "scaffold standards",
+            "kind": "shrink",
+            "at": 1500,
+            "duration": 2000
+          }
+        ]
+      },
+      {
+        "title": "Finished — look around",
+        "view": "overview",
+        "hold": 0,
+        "detail": "Drag to orbit, scroll to zoom, right-drag to move — or take one of the drawings' viewpoints below."
+      }
+    ]
+  }
+}

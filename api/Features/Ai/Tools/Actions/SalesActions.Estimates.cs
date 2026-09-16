@@ -109,6 +109,37 @@ internal sealed partial class SalesActions
             Notes: "estimateId is the estimate's id from get_lead (estimates[].estimateId) or "
                 + "find_by_reference EST-#### — never the reference. status: Received, Pricing, "
                 + "Submitted, Won, Lost. Price it (update_estimate_details total) before Submitted.",
+            RequiresConfirmation: true),
+
+        new AiAction(
+            Name: "set_house_model",
+            Area: Area,
+            Description: "Stores the estimate's 3D model — the definition the lead page's viewer "
+                + "builds: the house as it stands (blocks, roof, openings, downpipes, context), the "
+                + "works (infills, rooflights, dormer), the programme the build-up plays, and the "
+                + "internal elements by trade with the phase each joins and leaves in. Drafted by "
+                + "the assistant from the enquiry's own drawings, checked by a person, then stored "
+                + "here; the lead page shows it in place of the demo house, and the caption names "
+                + "the sheets it came from. Replaced whole: the previous definition is gone. A Won "
+                + "or Lost estimate is refused.",
+            CommandType: typeof(SetEstimateHouseModel),
+            ResultType: typeof(LeadEstimate),
+            AuthorisationType: typeof(SetEstimateHouseModelAuthorisation),
+            ValidationType: typeof(SetEstimateHouseModelValidation),
+            VisibleTo: SalesRoles.SalesTeam,
+            EmailStamps: new[] { "ChangedByEmail" },
+            NameStamps: Array.Empty<string>(),
+            Notes: "estimateId is the estimate's id from get_lead (estimates[].estimateId) or "
+                + "find_by_reference EST-#### — never the reference. model is the definition OBJECT "
+                + "(not a string): load the jpms-house-model skill first — it gives the shape, the "
+                + "units (metres; x along the front from the party wall, z from the front wall to the "
+                + "garden, heights above the ground-floor FFL) and how to read each part off the "
+                + "drawings (read_record_emails record_type lead, then read_email_attachment). "
+                + "source names the sheets and revision it was read from, e.g. \"Resi B369214-1100 "
+                + "and B369214-3100 rev B (04/09/2026)\". Read the estimate first: get_lead lists "
+                + "estimates[].houseModel with the current definition, and a revision of the "
+                + "drawings means a re-read of the model, not a guess. Show the person what the "
+                + "model covers before writing.",
             RequiresConfirmation: true)
     };
 }

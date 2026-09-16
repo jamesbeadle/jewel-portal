@@ -8,7 +8,7 @@ namespace Jewel.JPMS.Api.Features.Sales;
 // write, the same gating as the lead ones — reads on SalesRoles.Readers, each write through its
 // command's Authorisation and Validation with the actor stamped from the signed-in user, never
 // taken from the body. Business refusals read back as 400 with the message. The edit and the
-// status move are SalesEstimateEndpoints.Changes.
+// status move are SalesEstimateEndpoints.Changes; the 3D model write is .HouseModel.
 public sealed partial class SalesEstimateEndpoints
 {
     private readonly SignedInUserResolver users;
@@ -26,6 +26,9 @@ public sealed partial class SalesEstimateEndpoints
     private readonly SetEstimateBreakdownAuthorisation breakdownAuthorisation;
     private readonly SetEstimateBreakdownValidation breakdownValidation;
     private readonly ICommandHandler<SetEstimateBreakdown, LeadEstimate> breakdown;
+    private readonly SetEstimateHouseModelAuthorisation houseModelAuthorisation;
+    private readonly SetEstimateHouseModelValidation houseModelValidation;
+    private readonly ICommandHandler<SetEstimateHouseModel, LeadEstimate> houseModel;
     // The PDF sheet (SalesEstimateEndpoints.Document) reads the estimate and its lead straight
     // from the register — no command, nothing stored.
     private readonly JpmsContext context;
@@ -46,9 +49,13 @@ public sealed partial class SalesEstimateEndpoints
         SetEstimateBreakdownAuthorisation breakdownAuthorisation,
         SetEstimateBreakdownValidation breakdownValidation,
         ICommandHandler<SetEstimateBreakdown, LeadEstimate> breakdown,
+        SetEstimateHouseModelAuthorisation houseModelAuthorisation,
+        SetEstimateHouseModelValidation houseModelValidation,
+        ICommandHandler<SetEstimateHouseModel, LeadEstimate> houseModel,
         JpmsContext context)
     {
         this.context = context;
+        this.houseModelAuthorisation = houseModelAuthorisation; this.houseModelValidation = houseModelValidation; this.houseModel = houseModel;
         this.breakdownAuthorisation = breakdownAuthorisation; this.breakdownValidation = breakdownValidation; this.breakdown = breakdown;
         this.users = users; this.auditActor = auditActor; this.get = get;
         this.createAuthorisation = createAuthorisation; this.createValidation = createValidation; this.create = create;

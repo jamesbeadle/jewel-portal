@@ -81,6 +81,9 @@ public static class SalesRouteRegistration
         commands.Register<SetEstimateBreakdown, LeadEstimate>(
             new CommandRoute("PUT", "/api/sales/estimates/{estimateId}/breakdown",
                 command => $"/api/sales/estimates/{((SetEstimateBreakdown)command).EstimateId}/breakdown"));
+        commands.Register<SetEstimateHouseModel, LeadEstimate>(
+            new CommandRoute("PUT", "/api/sales/estimates/{estimateId}/house-model",
+                command => $"/api/sales/estimates/{((SetEstimateHouseModel)command).EstimateId}/house-model"));
 
         // ---- Imagine + proposals (2026-09-06): the journey after a lead is identified ----
         commands.Register<IssueImagineLink, Lead>(
