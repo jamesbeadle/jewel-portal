@@ -8,10 +8,9 @@ description: "How an estimate's 3D model is read off the enquiry's architect dra
 The 3D model on a lead's page (Sales → Leads → the lead → 3D model) is the prospect's own
 house and their own works, read off their architect's drawings — never a demo, never a survey.
 It plays the works as a build-up (scaffold up, roof opened, dormer raised and glazed,
-rooflights in, the garage bricked up, scaffold down), hands the camera over at the end, and
-can be turned inside out to show the internal works by trade. One definition feeds both
-views. The assistant drafts it; a person checks it; `set_house_model` stores it on the
-estimate; the panel shows it in place of "no model drafted yet".
+rooflights in, the garage bricked up, scaffold down) and hands the camera over at the end.
+The assistant drafts it; a person checks it; `set_house_model` stores it on the estimate; the
+panel shows it in place of "no model drafted yet".
 
 ## What the definition is
 
@@ -86,21 +85,12 @@ floor — exactly as the drawings level. The viewer never looks a model up by na
     `set_house_model` (confirm-first) with `model` as the OBJECT and `source` as the sheets and
     revision. The previous definition is replaced whole.
 
-## The two views over the one definition
+## The view over the definition
 
 - **The build-up** (`LeadHouseModelPanel`, `js/house-model/`) is the prospect's view: the house
   as it stands, Play, the works going up stage by stage as the `programme` says, the camera
-  handed over at the end, Existing / Proposed chips.
-- **Works by trade** (`LeadWorksModelPanel`, `js/works-model/`) is the estimator's view over
-  the same JSON: the `elements` inside a translucent shell of the same house parts, a phase
-  scrubber along the bottom carrying the phase's name, Play easing through the phases with a
-  slow orbit (elements rising as they join), the trade legend down the side toggling trades,
-  ghost mode showing what a phase has removed in translucent red, a click opening the
-  element's card (name, trade, joins, leaves, cost code, variation, note), a marker over any
-  element with a `variationRef`, and Record capturing the play to a webm. The shell's own
-  parts follow the phases too: existing parts are there from `00`, `removed` parts leave at
-  `01`, `proposed` parts (dormer, rooflights, infill) join at `03`. The higher-quality video is
-  `tools/works-model/render-frames.mjs`, frames on a fixed clock stitched by ffmpeg.
+  handed over at the end, Existing / Proposed chips. The `elements` are stored with the
+  definition and read by the estimator from the JSON; the build-up does not draw them.
 
 ## What to say about it
 
@@ -109,5 +99,4 @@ floor — exactly as the drawings level. The viewer never looks a model up by na
   where it was scaled. Never call it a survey, a BIM model or "accurate".
 - The internal elements are a **first cut for the estimator to check** until they have been;
   the notes on them say what was inferred.
-- The build-up is the prospect's view; Works by trade is the estimator's. Both read the same
-  definition — never keep two.
+- One definition per estimate — never keep two.
