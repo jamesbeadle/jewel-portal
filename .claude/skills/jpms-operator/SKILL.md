@@ -47,7 +47,7 @@ picked project. Folders (in rail order):
 
 | Folder | Rows |
 |---|---|
-| **Project** | RFIs (`/projects/{p}/requests`) · Variation Orders (`…/variations`) · Architect's Instructions · Valuation Report Snapshots · Drawings · Programme · To-do · Progress · Defects · Communications · Useful Information · Project Settings |
+| **Project** | RFIs (`/projects/{p}/requests`) · Variation Orders (`…/variations`) · Architect's Instructions · Valuation Report Snapshots · Drawings · Programme · To-do · Progress · Site Photos (`/site-photos`, company-wide) · Defects · Communications · Useful Information · Project Settings |
 | **Subcontractor** | Bid Package Invites · Work Orders · Communications (`/subcontractors/communications`) |
 | **Internal** | Todo (`/todos`) · Directory · Registers · Policies |
 | **Time** | Labour overview · Labour (per project) · Workers · Xero mapping |
@@ -87,6 +87,8 @@ specific tab. Full page-by-page detail: `references/site-map.md`.
 | Approve the week's labour | Project Labour tab — tick and bulk-approve; only approved time posts to Financials |
 | Raise / progress a defect | Defects register (DEF-#### = its mailbox tag), raised WITH its supplier from the directory — a trade or a merchant — or from an email on the Control Centre's Subcontractor or Supplier pane; the defect's own page sends it to the supplier (first send moves Open → In progress), chases, reads its mail; `send_defect_to_supplier` over the connector |
 | Delay events, NOD / EOT / LADs | Programme tab → Claims sub-tab |
+| Get the week's site photographs into the portal | The site manager drops the week's files on **Site Photos** (`/site-photos`, the company-wide pool — any project, any day) BEFORE the weekly-report run. No photo ever goes through the assistant: a tool call carries words, not files |
+| Draft the weekly Contractor's Report from a WhatsApp export folder | Read the export as before, then **match, file, draft** — `shasum -a 256` every image in the folder → `match_site_photos` once with all the hashes → `file_site_photos` per day onto that day's progress update (`create_progress_update` for a day with none) → `create_contractors_report` / `get_contractors_report`. A hash the pool does not hold is a file nobody has dropped yet: name it and ask, never re-encode or paste it |
 | Chase money answers | Aged Receivables / Aged Payables (include drafts Xero's own reports can't see); Cash Forecast for the months ahead; Profit Summary for margin |
 | Plan the next 13 weeks' payments — who gets paid which week | Weekly Cashflow (`/finance/weekly-cashflow`): move entries with ‹ ›, group suppliers into one line, park with ⊘, add manual items; the Excel export is the grid one line per supplier. Over the connector, `get_weekly_cashflow_grid` reads the same grid |
 
