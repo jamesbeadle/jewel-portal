@@ -4,6 +4,7 @@ using Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
 using Jewel.JPMS.Api.Features.Progress.ContractorsReports.Documents;
 using Jewel.JPMS.Api.Features.Progress.ContractorsReports.Queries;
 using Jewel.JPMS.Api.Features.Progress.Photos;
+using Jewel.JPMS.Api.Features.Progress.SitePhotos;
 using Jewel.JPMS.Api.Features.Progress.WhatsApp;
 using Jewel.JPMS.Api.Features.Progress.Queries;
 using Jewel.JPMS.Api.Features.Progress.Storage;
@@ -61,6 +62,7 @@ public static class ProgressFeatureRegistration
         services.AddScoped<DeleteProgressReportAuthorisation>();
 
         AddContractorsReports(services);
+        services.AddSitePhotos();
         return services;
     }
 

@@ -504,6 +504,18 @@ public sealed partial class JpmsContext
             .IsUnique()
             .HasDatabaseName("IX_ContractorsReports_ProjectId_PeriodEnd");
 
+        // ---- Site photo pool (2026-09-16) ---------------------------------------------------------
+        // The pool is keyed by content: the same file dropped twice is one row, and the assistant's
+        // match_site_photos looks rows up by the laptop-side SHA-256. The update index is the
+        // "already filed onto this update" check at filing time.
+        modelBuilder.Entity<SitePhotoEntity>()
+            .HasIndex(row => row.ContentHash)
+            .IsUnique()
+            .HasDatabaseName("IX_SitePhotos_ContentHash");
+        modelBuilder.Entity<SitePhotoEntity>()
+            .HasIndex(row => row.FiledToProgressUpdateId)
+            .HasDatabaseName("IX_SitePhotos_FiledToProgressUpdateId");
+
         // ---- Drawing data rows (2026-09-16) -------------------------------------------------------
         // The transcription as rows: replaced per revision on every extraction (the revision index
         // is the delete and the per-sheet read), queried per project by the connector's

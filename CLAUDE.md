@@ -375,6 +375,35 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   `update_contractors_report`, `delete_contractors_report` (confirm-first); pinned by
   `ContractorsReports_reachTheConnector`, rules by `ContractorsReportTests`. Do not extend the
   three-box `ProgressReport` into any of this.
+- **The site photo pool: photographs reach the report run by FINGERPRINT, never through the
+  model** (2026-09-16, James, after the connector could not take Jeremy's Downloads folder:
+  "a big dumping ground for photos and any project … jeremy can do his normal weekly report mcp
+  stuff and it does the matching"). A tool call carries words, so no image is ever pasted,
+  base64'd or uploaded over the connector. Instead: **Site Photos** (`/site-photos`, Project
+  folder, company-wide — deliberately not per project) is a drop zone (`SitePhotos` page,
+  `SitePhotoDropZone` / `SitePhotoCard`, `HttpSitePhotoStore`) where a site manager drops the
+  week's files BEFORE the run, from the SAME files that go in the WhatsApp export folder. ONE
+  table, `SitePhotos` (migration `AddSitePhotos`, script `add-site-photos.sql`; `SitePhotoEntity`,
+  **unique on `ContentHash`** — the SHA-256 of the file as dropped, exactly what `shasum -a 256`
+  answers for the same file on the laptop), the files under the existing progress photo store at
+  `site-photos/pool/{id}/{name}` (`SitePhotoPool`); `SitePhotoIntake` prepares and dedupes through
+  the same `ProgressPhotoBatchPlan` / `ProgressPhotoPreparation` as every progress photo. The
+  assistant's run: hash the folder → `match_site_photos` (one call, all hashes; a miss is a file
+  nobody dropped — name it, never re-encode it) → `file_site_photos` per DAY onto that day's
+  progress update (`FileSitePhotosHandler` + `SitePhotoFiler`: copies the prepared file under the
+  update's own key, writes an ordinary `ProgressPhoto` carrying the pool's hash so the existing
+  dedupe recognises it, stamps `FiledTo*` on the pool row; per-photo outcomes `Filed` /
+  `AlreadyOnUpdate` / `AlreadyFiledElsewhere` / `NotFound` / `Failed`, never a batch failure) →
+  the Contractor's Report's section 9 reads the updates' photos unchanged. A photo goes onto one
+  update only; the pool row stays (Unfiled is the page's working view) and `delete_site_photo` /
+  the card's Delete removes the pool copy only. Gates are the Progress page's (`Contributors`
+  drop, file and delete; `Readers` read). Endpoints: `POST site-photos` (multipart), `GET
+  site-photos[?unfiled=1]`, `POST site-photos/match`, `POST progress-updates/{id}/site-photos`,
+  `DELETE site-photos/{id}`, `GET site-photos/{id}/file`. Connector: `list_site_photos`,
+  `match_site_photos` (`AiSitePhotoTools`), `file_site_photos` (`FiledByEmail` stamped),
+  `delete_site_photo` (confirm-first); pinned by `SitePhotosConnectorTests`, rules by
+  `SitePhotoPoolTests`; page guide `/site-photos`; the jpms-operator skill carries the recipe.
+  Never build a base64 image door on the connector — it was tried on 2026-09-16 and removed.
 
 ## The Sales pane: an enquiry tagged to its lead, and the estimate on it (api + jpms)
 

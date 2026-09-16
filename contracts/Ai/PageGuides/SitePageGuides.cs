@@ -69,7 +69,30 @@ public static class SitePageGuides
             + "report\" and Edit open the report form; Download PDF regenerates the report from the "
             + "register on every download; \"+ Record progress\" opens the update form; photos can "
             + "be added to an existing update or deleted, and reports/updates deleted (two-click "
-            + "confirm). You have no dialogs here; use navigate_to to bring the user to it."),
+            + "confirm). \"Import WhatsApp week…\" reads the site WhatsApp export into one update "
+            + "per day; \"Contractor's Reports…\" is the weekly report register. Over the connector: "
+            + "list_progress reads it, create_progress_update / update_progress_update write the "
+            + "words, add_progress_photos takes photographs from a source the portal can reach, and "
+            + "photographs that only exist in a folder on the laptop come in through the Site "
+            + "photos pool (/site-photos) and land here by fingerprint — match_site_photos, then "
+            + "file_site_photos onto the day's update."),
+
+        new("/site-photos", "Site photos",
+            "The company-wide site photo pool — James's \"big dumping ground for photos and any "
+            + "project\" (2026-09-16): photographs dropped in BEFORE anyone has said which project "
+            + "or day they belong to, so the weekly-report run can find them by fingerprint instead "
+            + "of carrying image bytes through the assistant. Reached from the Project folder; not "
+            + "per project. Manually (Admin, Director, PM, Site Manager): drop or pick up to fifty "
+            + "JPEG / PNG / HEIC files at a time — each is prepared exactly as a progress photo "
+            + "(HEIC → JPEG, upright, 1600px, metadata stripped) and skipped when the pool already "
+            + "holds the same bytes; Unfiled / Filed / All chips; a thumbnail opens the viewer; "
+            + "Delete (two-click) removes a pool photo and its file — a copy already filed onto an "
+            + "update stays there. Nothing here names a project: filing does. The site manager "
+            + "drops the week's files here from the SAME files that go in the WhatsApp export "
+            + "folder, so the laptop-side SHA-256 of a file is the pool's key for it. You: "
+            + "list_site_photos (unfiledOnly is the working view), match_site_photos with the "
+            + "folder's hashes, file_site_photos per day onto the progress update, delete_site_photo "
+            + "(confirm first). You never upload here — a tool call carries words, not files."),
 
         new("/projects/{project}/documents", "Document register",
             "The project's document register with revisions — drawings, party-wall awards, "

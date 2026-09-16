@@ -48,6 +48,7 @@ public static class PageContext
         ("/client", "Client portal"),
         ("/portal", "Subcontractor portal"),
         ("/document-control", "Document Triage"),
+        ("/site-photos", "Site photos"),
         ("/requests/triage", "Control Centre"),
     };
 }

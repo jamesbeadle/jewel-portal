@@ -69,6 +69,7 @@ internal sealed partial class SiteAndProgressActions : IAiActionSource
             .Concat(SiteActions())
             .Concat(ProgressProgrammeActions())
             .Concat(ContractorsReportActions())
+            .Concat(SitePhotoActions())
             .Concat(ProgrammeVariationActions())
             .Concat(DrawingsActions())
             .Concat(CloseoutDefectsActions());
