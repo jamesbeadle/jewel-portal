@@ -28,7 +28,7 @@ Where the repository has an AI connector or MCP layer — actions and reads a pe
 
 ## 3. The plain-English summary on the day's tasks
 
-For each task worked today in Your Business Today (`find_tasks` on the project, or the tasks this session was logged against), post one message a non-technical reader can follow: what changed for them, in their words, one short paragraph — what they can now do, what looks different, what still waits on someone. Then mark the task done if it is done, or leave it in progress and say what is next. Where the day found a gap in the connector or a figure the gate holds against, it goes in that paragraph too, plainly.
+For each task worked today in Your Business Today (`find_tasks` on the project, or the tasks this session was logged against), post one message a non-technical reader can follow: what changed for them, in their words, one short paragraph — what they can now do, what looks different, what still waits on someone. Then mark the task done if it is done, or leave it in progress and say what is next. Where the day found a gap in the connector or a figure the gate holds against, it goes in that paragraph too, plainly. Where the day produced something a reader needs to see — a before-and-after screenshot, a report, an export — attach it to the task with `attach_file_to_task` and mention it in the message.
 
 ## 4. Commit, push and open the pull request
 
