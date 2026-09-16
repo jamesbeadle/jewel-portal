@@ -1,0 +1,72 @@
+@page "/projects/{ProjectId}/progress/whatsapp-week"
+@using Jewel.JPMS.Contracts.Progress
+@using Jewel.JPMS.Features.Progress.WhatsApp
+@inject AuthService Auth
+@inject IWhatsAppWeekIntake Intake
+
+<PageTitle>Import WhatsApp week · JPMS</PageTitle>
+
+@*
+    A week of the site WhatsApp group brought in as progress updates (2026-09-16, the FD's
+    weekly-report spec): the export goes in, the portal cuts it Friday to Thursday, keeps this
+    project's senders, and shows what it found. Nothing is written until the person ticks the
+    days and confirms; Cancel leaves the project exactly as it was.
+*@
+
+<Page CanAccess="@CanContribute" AccessDeniedMessage="Recording progress is for the site and project team.">
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="progress">
+        <SectionHeader Title="Import WhatsApp week">
+            <Actions>
+                <a href="@($"/projects/{ProjectId}/progress")" class="btn-secondary">Back to progress</a>
+            </Actions>
+        </SectionHeader>
+        <p class="text-sm text-content-muted mb-5">
+            Export the group from WhatsApp ("Export chat", with media) and drop the zip here, or paste the chat text.
+            The week runs Friday to the Thursday you choose; each day with messages becomes one progress update, with
+            that day's photographs on it. Messages from senders on another project's list are left out; senders on
+            no list are shown for you to decide.
+        </p>
+
+        @if (error is { } message)
+        {
+            <Notice Tone="Tone.Negative" Class="mb-4" Dismissible OnDismiss="() => error = null">@message</Notice>
+        }
+
+        @if (applied is { } written)
+        {
+            <Notice Tone="Tone.Positive" Class="mb-4">
+                @written.Days.Count update@(written.Days.Count == 1 ? "" : "s") created — @written.Days.Sum(day => day.Photos.Count(photo => photo.Result == ProgressPhotoIntakeResult.Stored)) photograph(s) stored.
+                <a href="@($"/projects/{ProjectId}/progress")" class="underline">Open the progress feed.</a>
+            </Notice>
+        }
+        else
+        {
+            <LoadGate Overlay="true" IsLoading="@isBusy">
+                <WhatsAppWeekExportForm WeekEnding="@weekEnding" WeekEndingChanged="OnWeekEndingChanged"
+                                        ChatText="@chatText" ChatTextChanged="text => { chatText = text; preview = null; }"
+                                        OnExportChosen="OnExportChosen" ExportName="@export?.Name"
+                                        CanPreview="@CanPreview" OnPreview="PreviewAsync" />
+
+                @if (preview is { } week)
+                {
+                    <WhatsAppWeekReview Preview="week" TickedDays="tickedDays" OnTickedChanged="StateHasChanged" />
+
+                    <div class="flex flex-wrap items-center justify-end gap-3 mt-5">
+                        <a href="@($"/projects/{ProjectId}/progress")" class="btn-secondary">Cancel</a>
+                        <button type="button" class="btn-primary" disabled="@(tickedDays.Count == 0)" @onclick="() => confirming = true">
+                            Create @tickedDays.Count update@(tickedDays.Count == 1 ? "" : "s")
+                        </button>
+                    </div>
+                }
+            </LoadGate>
+        }
+
+        <ConfirmDialog IsOpen="@confirming"
+                       Title="Create the week's progress updates?"
+                       ConfirmLabel="Create updates"
+                       OnConfirm="ApplyAsync"
+                       OnCancel="() => confirming = false">
+            @ConfirmMessage
+        </ConfirmDialog>
+    </ProjectPageShell>
+</Page>

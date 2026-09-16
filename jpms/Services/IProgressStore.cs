@@ -21,13 +21,14 @@ public interface IProgressStore
     void Refresh(string projectId);
 
     /// <summary>Creates a progress update — a group of photos with a description and optional
-    /// weather conditions — uploading the files as multipart/form-data.</summary>
-    Task CreateUpdateAsync(
+    /// weather conditions — uploading the files as multipart/form-data. The answer says, per
+    /// photo, whether it was stored, skipped as a duplicate or failed.</summary>
+    Task<ProgressPhotoBatchResult> CreateUpdateAsync(
         string projectId, string title, string description, DateTimeOffset? workDate,
         ProgressWeather? weather, IReadOnlyList<IBrowserFile> photos, CancellationToken cancellationToken);
 
-    /// <summary>Appends photos to an existing progress update.</summary>
-    Task AddPhotosAsync(
+    /// <summary>Appends photos to an existing progress update, with an outcome per photo.</summary>
+    Task<ProgressPhotoBatchResult> AddPhotosAsync(
         string projectId, string progressUpdateId,
         IReadOnlyList<IBrowserFile> photos, CancellationToken cancellationToken);
 

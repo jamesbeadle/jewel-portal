@@ -54,4 +54,9 @@ public sealed class ProjectEntity
     // never creates a contact.
     [MaxLength(64)]      public string? XeroContactId { get; set; }
     [MaxLength(256)]     public string? XeroContactName { get; set; }
+
+    // The people whose WhatsApp messages are this project's site notes, one name per line as
+    // WhatsApp shows the sender (2026-09-16). Read by the WhatsApp week intake to keep this
+    // project's messages and set aside another project's.
+    [MaxLength(1024)]    public string? SiteNoteSenderNames { get; set; }
 }

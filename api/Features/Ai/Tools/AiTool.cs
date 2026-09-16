@@ -81,6 +81,19 @@ public static class AiToolSchema
         };
     }
 
+    /// <summary>Reads an array-of-strings argument; null when missing, not an array, or empty.</summary>
+    public static IReadOnlyList<string>? Texts(JsonElement input, string name)
+    {
+        if (input.ValueKind != JsonValueKind.Object
+            || !input.TryGetProperty(name, out var value)
+            || value.ValueKind != JsonValueKind.Array) return null;
+        var items = value.EnumerateArray()
+            .Where(element => element.ValueKind == JsonValueKind.String)
+            .Select(element => element.GetString()!)
+            .ToList();
+        return items.Count == 0 ? null : items;
+    }
+
     public static int? Number(JsonElement input, string name) =>
         input.ValueKind == JsonValueKind.Object
         && input.TryGetProperty(name, out var value)

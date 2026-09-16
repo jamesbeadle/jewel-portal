@@ -1,42 +1,42 @@
-using Jewel.JPMS.Api.Features.Progress.Storage;
+using Jewel.JPMS.Api.Features.Progress.Photos;
 using Jewel.JPMS.Contracts.Progress;
 
 namespace Jewel.JPMS.Api.Features.Progress.Commands;
 
 /// <summary>
-/// POST /api/projects/{projectId}/progress-updates — multipart/form-data upload.
-/// Form fields: <c>title</c>, optional <c>description</c>, optional <c>workDate</c> (ISO 8601),
-/// optional weather conditions (<c>weatherSummary</c>, <c>weatherObservedAt</c> (ISO 8601),
-/// <c>weatherTempHighC</c>, <c>weatherTempLowC</c>, <c>weatherWindMph</c>,
-/// <c>weatherHumidityPercent</c>, <c>weatherPrecipInches</c>), plus one or more image files.
-/// Streams every file to blob storage, then records the update and its photo rows in one save.
+/// POST /api/projects/{projectId}/progress-updates — multipart/form-data upload, the Progress
+/// page's own form. Form fields: <c>title</c>, optional <c>description</c>, optional
+/// <c>workDate</c> (ISO 8601), the optional weather fields <see cref="ProgressWeatherForm"/> reads,
+/// plus one or more image files (JPEG, PNG, HEIC — prepared and deduplicated by
+/// <see cref="ProgressPhotoIntake"/>). Records the update and its photo rows in one save and
+/// answers a <see cref="ProgressPhotoBatchResult"/>.
 /// </summary>
-public sealed class CreateProgressUpdateEndpoint
+public sealed class CreateProgressUpdateWithPhotosEndpoint
 {
     private readonly SignedInUserResolver users;
     private readonly JpmsContext context;
-    private readonly IProgressPhotoStore photoStore;
-    private readonly CreateProgressUpdateAuthorisation authorisation;
-    private readonly CreateProgressUpdateValidation validation;
-    private readonly ICommandHandler<CreateProgressUpdate, ProgressUpdate> handler;
+    private readonly ProgressPhotoIntake intake;
+    private readonly CreateProgressUpdateWithPhotosAuthorisation authorisation;
+    private readonly CreateProgressUpdateWithPhotosValidation validation;
+    private readonly ICommandHandler<CreateProgressUpdateWithPhotos, ProgressUpdate> handler;
 
-    public CreateProgressUpdateEndpoint(
+    public CreateProgressUpdateWithPhotosEndpoint(
         SignedInUserResolver users,
         JpmsContext context,
-        IProgressPhotoStore photoStore,
-        CreateProgressUpdateAuthorisation authorisation,
-        CreateProgressUpdateValidation validation,
-        ICommandHandler<CreateProgressUpdate, ProgressUpdate> handler)
+        ProgressPhotoIntake intake,
+        CreateProgressUpdateWithPhotosAuthorisation authorisation,
+        CreateProgressUpdateWithPhotosValidation validation,
+        ICommandHandler<CreateProgressUpdateWithPhotos, ProgressUpdate> handler)
     {
         this.users = users;
         this.context = context;
-        this.photoStore = photoStore;
+        this.intake = intake;
         this.authorisation = authorisation;
         this.validation = validation;
         this.handler = handler;
     }
 
-    [Function(nameof(CreateProgressUpdate))]
+    [Function(nameof(CreateProgressUpdateWithPhotos))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "projects/{projectId}/progress-updates")] HttpRequest request,
         string projectId)
@@ -49,80 +49,29 @@ public sealed class CreateProgressUpdateEndpoint
 
         if (!request.HasFormContentType) return new BadRequestObjectResult("Expected multipart/form-data.");
         var form = await request.ReadFormAsync(cancellationToken);
-        if (form.Files.Count == 0) return new BadRequestObjectResult("At least one photo is required.");
+        var read = await ProgressPhotoFormReader.ReadAsync(form, cancellationToken);
+        if (read.Refusal is not null) return new BadRequestObjectResult(read.Refusal);
 
-        var projectExists = await context.Projects
-            .AnyAsync(row => row.ProjectId == projectId, cancellationToken);
+        var projectExists = await context.Projects.AnyAsync(row => row.ProjectId == projectId, cancellationToken);
         if (!projectExists) return new NotFoundObjectResult($"Project {projectId} not found.");
 
         var title = form["title"].ToString().Trim();
         if (string.IsNullOrWhiteSpace(title)) return new BadRequestObjectResult("A title is required.");
         var description = form["description"].ToString().Trim();
         DateTimeOffset? workDate = DateTimeOffset.TryParse(form["workDate"], out var parsed) ? parsed : null;
-        var weather = ReadWeather(form);
+        var weather = ProgressWeatherForm.Read(form);
 
         var updateId = ProgressIdentifierFactory.NextProgressUpdateId();
+        var taken = await intake.TakeAsync(projectId, updateId, read.Images, cancellationToken);
+        if (taken.Stored.Count == 0)
+            return new BadRequestObjectResult(new { error = "None of the images could be stored.", outcomes = taken.Outcomes });
 
-        var photos = new List<NewProgressPhoto>();
-        try
-        {
-            var sortOrder = 0;
-            foreach (var file in form.Files)
-            {
-                if (file.Length == 0) continue;
-                var photoId = ProgressIdentifierFactory.NextProgressPhotoId();
-                var fileName = string.IsNullOrWhiteSpace(file.FileName) ? "photo" : file.FileName;
-                var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType;
-
-                await using var stream = file.OpenReadStream();
-                var blobRef = await photoStore.UploadAsync(
-                    projectId, updateId, photoId, fileName, contentType, stream, cancellationToken);
-
-                photos.Add(new NewProgressPhoto(photoId, fileName, blobRef, contentType, file.Length, sortOrder++));
-            }
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            // Storage misconfigured/unreachable — report it clearly rather than letting the request
-            // hang or surface as an opaque 500. Nothing is recorded, so no orphan rows.
-            return new ObjectResult($"Could not store the photos — check the progress photo storage configuration. ({ex.Message})")
-            {
-                StatusCode = StatusCodes.Status502BadGateway
-            };
-        }
-
-        var command = new CreateProgressUpdate(
-            updateId, projectId, title, description, workDate, weather, signedInUser.Email, photos);
-
+        var command = new CreateProgressUpdateWithPhotos(
+            updateId, projectId, title, description, workDate, weather, signedInUser.Email, taken.Stored);
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 
         var update = await handler.HandleAsync(command, cancellationToken);
-        return new OkObjectResult(update);
+        return new OkObjectResult(new ProgressPhotoBatchResult(update, taken.Outcomes));
     }
-
-    /// <summary>Reads the optional manually entered weather fields; null when none were sent.</summary>
-    private static ProgressWeather? ReadWeather(IFormCollection form)
-    {
-        var summary = form["weatherSummary"].ToString().Trim();
-        DateTimeOffset? observedAt = DateTimeOffset.TryParse(form["weatherObservedAt"], out var parsedObservedAt) ? parsedObservedAt : null;
-        var tempHighC = ReadInt(form, "weatherTempHighC");
-        var tempLowC = ReadInt(form, "weatherTempLowC");
-        var windMph = ReadInt(form, "weatherWindMph");
-        var humidityPercent = ReadInt(form, "weatherHumidityPercent");
-        // Invariant culture: the store formats the value, not the user's locale.
-        decimal? precipInches = decimal.TryParse(
-            form["weatherPrecipInches"], System.Globalization.NumberStyles.Number,
-            System.Globalization.CultureInfo.InvariantCulture, out var parsedPrecip) ? parsedPrecip : null;
-
-        var isEmpty = string.IsNullOrWhiteSpace(summary) && observedAt is null
-            && tempHighC is null && tempLowC is null && windMph is null
-            && humidityPercent is null && precipInches is null;
-        return isEmpty
-            ? null
-            : new ProgressWeather(summary, observedAt, tempHighC, tempLowC, windMph, humidityPercent, precipInches);
-    }
-
-    private static int? ReadInt(IFormCollection form, string field) =>
-        int.TryParse(form[field], out var value) ? value : null;
 }

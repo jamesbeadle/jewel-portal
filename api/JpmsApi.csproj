@@ -53,6 +53,11 @@
          images, and OCR'd when Azure AI Vision is configured). Docnet wraps pdfium with the native
          library for linux-x64 / win-x64 / osx in the package; nothing to install on the host. -->
     <PackageReference Include="Docnet.Core" Version="2.6.0" />
+    <!-- PHOTOGRAPH PREPARATION (progress photos, 2026-09-16): Magick.NET opens the HEIC an iPhone
+         exports as well as JPEG and PNG, turns each image by its EXIF orientation, shrinks it to
+         display size and re-encodes it (ProgressPhotoPreparation). The AnyCPU package carries the
+         native ImageMagick — with libheif — for linux-x64 / win-x64 / osx; nothing to install. -->
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="13.10.0" />
     <!--
       ClosedXML (MIT, pure managed — fine on the Linux Functions host) reads the spreadsheets users
       attach to the assistant chat (AiAttachmentReader): the boss's tracker workbook goes in, text

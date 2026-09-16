@@ -28,19 +28,7 @@ public sealed class AddProgressPhotosHandler
         var added = new List<ProgressPhotoEntity>();
         foreach (var photo in command.Photos)
         {
-            var entity = new ProgressPhotoEntity
-            {
-                ProgressPhotoId = photo.ProgressPhotoId,
-                ProgressUpdateId = command.ProgressUpdateId,
-                ProjectId = update.ProjectId,
-                FileName = photo.FileName,
-                BlobRef = photo.BlobRef,
-                ContentType = photo.ContentType,
-                FileSizeBytes = photo.FileSizeBytes,
-                SortOrder = nextSortOrder++,
-                UploadedByEmail = command.UploadedByEmail,
-                UploadedAt = now
-            };
+            var entity = ProgressPhotoRows.New(photo, command.ProgressUpdateId, update.ProjectId, nextSortOrder++, command.UploadedByEmail, now);
             added.Add(entity);
             context.ProgressPhotos.Add(entity);
         }

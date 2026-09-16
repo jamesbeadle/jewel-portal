@@ -95,10 +95,16 @@
             </div>
             @if (CanContribute)
             {
-                <button type="button" @onclick="() => isRecording = !isRecording"
-                        class="btn-primary">
-                    @(isRecording ? "Cancel" : "+ Record progress")
-                </button>
+                <div class="flex items-center gap-2">
+                    <a href="@($"/projects/{ProjectId}/progress/whatsapp-week")" class="btn-secondary"
+                       title="Bring a week of the site WhatsApp group in as one update per day, with its photographs">
+                        Import WhatsApp week…
+                    </a>
+                    <button type="button" @onclick="() => isRecording = !isRecording"
+                            class="btn-primary">
+                        @(isRecording ? "Cancel" : "+ Record progress")
+                    </button>
+                </div>
             }
         </div>
 

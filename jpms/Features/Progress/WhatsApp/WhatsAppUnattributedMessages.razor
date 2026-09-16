@@ -1,0 +1,37 @@
+@using Jewel.JPMS.Contracts.Progress
+
+@* The messages from senders on no project's list — shown for a person to decide, never guessed at. *@
+
+@if (Messages.Count > 0)
+{
+    <Notice Tone="Tone.Warning">
+        @Messages.Count message@(Messages.Count == 1 ? "" : "s") from senders on no project's list were not taken —
+        add the name under Project settings → Edit details → Site note senders and read the week again if they belong here.
+    </Notice>
+    <RecordsTable Dense="true" MaxHeight="" IsLoading="false" IsEmpty="false" EmptyMessage="">
+        <table class="data-table">
+            <thead><tr><th class="text-left">When</th><th class="text-left">Sender</th><th class="text-left">Message</th><th class="text-right">Photo</th></tr></thead>
+            <tbody>
+                @foreach (var message in Messages)
+                {
+                    <tr>
+                        <td class="whitespace-nowrap">@message.Date.ToString("ddd d MMM") @message.Time</td>
+                        <td class="whitespace-nowrap">@message.Sender</td>
+                        <td>@Clip(message.Text)</td>
+                        <td class="text-right">@(message.PhotoCount > 0 ? "yes" : "")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </RecordsTable>
+
+}
+
+@code {
+    private const int ClipLength = 600;
+
+    [Parameter] public IReadOnlyList<WhatsAppUnattributedMessage> Messages { get; set; } = Array.Empty<WhatsAppUnattributedMessage>();
+
+    private static string Clip(string text) =>
+        text.Length <= ClipLength ? text : text[..ClipLength] + "…";
+}

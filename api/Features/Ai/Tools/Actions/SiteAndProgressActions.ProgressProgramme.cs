@@ -129,6 +129,27 @@ internal sealed partial class SiteAndProgressActions
         // ── Progress & programme (progress updates and reports) ───────────────────────────────
 
         new AiAction(
+            Name: "create_progress_update",
+            Area: "Progress & programme",
+            Description: "Creates a progress update on a project's progress feed from its words — "
+                + "title, description and the date of the works, with an optional weather record — "
+                + "and returns its id. The counterpart to update_progress_update; photographs follow "
+                + "through add_progress_photos. Recorded as created by the signed-in user and "
+                + "indistinguishable on the Progress page from one typed into it.",
+            CommandType: typeof(CreateProgressUpdate),
+            ResultType: typeof(ProgressUpdate),
+            AuthorisationType: typeof(CreateProgressUpdateAuthorisation),
+            ValidationType: typeof(CreateProgressUpdateValidation),
+            VisibleTo: ProgressRoles.Contributors,
+            EmailStamps: new[] { "CreatedByEmail" },
+            NameStamps: Array.Empty<string>(),
+            Notes: "projectId comes from list_projects; workDate is the date the works were done, "
+                + "not today. A description is required — a day with nothing recorded should have "
+                + "no update, not a blank one. Two updates on the same day are allowed and never "
+                + "merged (a morning and an afternoon note). Site shorthand is kept as it is: the "
+                + "report language is written at drafting, so the original note stays on the record."),
+
+        new AiAction(
             Name: "update_progress_update",
             Area: "Progress & programme",
             Description: "Updates a progress update's title, description, work date or weather "

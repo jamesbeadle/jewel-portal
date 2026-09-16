@@ -4398,6 +4398,11 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(1024)
                         .HasColumnType("nvarchar(1024)");
 
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -4527,7 +4532,6 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(4096)
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ProjectId")
@@ -4884,6 +4888,10 @@ namespace Jewel.JPMS.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("SiteNoteSenderNames")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
 
                     b.Property<string>("Reference")
                         .IsRequired()

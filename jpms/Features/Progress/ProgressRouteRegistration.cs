@@ -24,6 +24,10 @@ public static class ProgressRouteRegistration
         // directly by HttpProgressStore, not via the JSON command sender, so they are
         // intentionally not registered here.
 
+        commands.Register<CreateProgressUpdate, ProgressUpdate>(
+            new CommandRoute("POST", "/api/projects/{projectId}/progress-updates/note",
+                command => $"/api/projects/{((CreateProgressUpdate)command).ProjectId}/progress-updates/note"));
+
         commands.Register<UpdateProgressUpdate, ProgressUpdate>(
             new CommandRoute("PUT", "/api/progress-updates/{progressUpdateId}",
                 command => $"/api/progress-updates/{((UpdateProgressUpdate)command).ProgressUpdateId}"));

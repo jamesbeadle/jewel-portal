@@ -27,4 +27,7 @@ public sealed record UpdateProjectDetails(
     // name as Xero holds it (2026-09-10). Same full-record convention as XeroSiteName: null/blank
     // clears the mapping, so carry the current values forward when they should not change.
     string? XeroContactId = null,
-    string? XeroContactName = null) : ICommand<Project>;
+    string? XeroContactName = null,
+    // The project's site-note senders for the WhatsApp week intake, one name per line. Same
+    // full-record convention: null/blank clears the list, so carry the current value forward.
+    string? SiteNoteSenderNames = null) : ICommand<Project>;

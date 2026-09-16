@@ -274,6 +274,57 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   contracts/Models). RFIs are not on the chart: nothing links an RFI to a task yet.
 
 
+## The site note and its photographs reach the portal (contracts + api + jpms)
+
+- **The Contractor's Report intake, changes 1–3 of the FD's 2026-09-15 spec** (`portal-change-spec-
+  weekly-report_2026-09-15.md`; change 4, the nine-section Word/PDF report, is not built and its
+  two open rules — Valuation No., Section 4's source — wait on Jeremy). The gap was one-directional:
+  the portal could be READ for everything the weekly Contractor's Report needs and could not be
+  WRITTEN the one thing it did not hold, the site note and its photographs.
+- **`CreateProgressUpdate` is the create from words alone** (ProjectId, Title, Description
+  required, WorkDate required, Weather optional, CreatedByEmail) — the connector's
+  `create_progress_update`, the counterpart to `update_progress_update`, and the JSON endpoint
+  `POST projects/{id}/progress-updates/note`. The Progress page's own multipart form is
+  `CreateProgressUpdateWithPhotos` (renamed from the old `CreateProgressUpdate`; same route, one
+  save). Two updates on the same day are two updates, never merged; an empty description is
+  refused on the words-only create (a day with nothing recorded has no update, not a blank one).
+- **Every photograph goes through `ProgressPhotoIntake`** (`api/Features/Progress/Photos`): the
+  page's two multipart forms, the connector and the WhatsApp intake alike. JPEG, PNG and HEIC
+  (Magick.NET, `ProgressPhotoPreparation`: HEIC → JPEG, EXIF auto-orient, longest edge
+  `ProgressPhotoLimits.MaxEdgePixels` = 1600, metadata stripped, PNG stays PNG); up to
+  `MaxImagesPerBatch` = 50 per call; **deduplicated on the SHA-256 of the file as received**
+  (`ProgressPhotoEntity.ContentHash`, migration `AddProgressPhotoContentHashAndSiteNoteSenders`)
+  against what the update already holds and within the batch — never on the file name; a failed
+  image is its own `ProgressPhotoIntakeOutcome`, never the batch's. Photos stored before
+  2026-09-16 carry an empty hash and are never deduplicated against. Both multipart endpoints and
+  the connector answer a `ProgressPhotoBatchResult` (the update + one outcome per image).
+- **The connector's `add_progress_photos` takes SOURCE IDS, not files** (`AiProgressPhotoTools`):
+  a tool call carries words, so the images come from an email attachment tagged to a record or a
+  document filed on the project, by the `source_id` `list_sources` hands out
+  (`AiSourceTools.FetchBytesAsync`). Photographs dropped into the chat never reach the portal —
+  the tool description says so and points at emailing them to the projects mailbox or the
+  WhatsApp intake. Never describe the connector as able to take a pasted image.
+- **Import WhatsApp week** (`/projects/{id}/progress/whatsapp-week`, `ProjectProgressWhatsAppWeek`,
+  the door beside "+ Record progress"): WhatsApp's export zip (or the .txt, or pasted text) plus
+  the week-ending Thursday → `PreviewWhatsAppWeekEndpoint` reads and writes nothing;
+  `ApplyWhatsAppWeekEndpoint` writes the ticked days. The parser (`WhatsAppExportParser`, pure)
+  reads both phones' line formats, multi-line messages, `<attached: …>` / `(file attached)` and
+  drops WhatsApp's own notices; `WhatsAppWeek.EndingOn(thursday)` is Friday → Thursday;
+  `WhatsAppWeekPlanner` (pure) sorts by sender against **`Project.SiteNoteSenderNames`** (one name
+  per line, Project settings → Edit details → "Site note senders"; By France lists James Everitt):
+  this project's list keeps, another project's list sets aside (counted, named), no list → the
+  review list, never a guess. One update per day with messages, titled `Site notes — Friday 4
+  September 2026`, the messages VERBATIM as `HH:mm Sender: text` (`WhatsAppDayText`; the report
+  language is written at drafting), that day's photographs on it; a photograph on more than one
+  day is kept on the first (by content) and said so; a day already holding an update arrives
+  unticked and apply refuses it by name — re-running a week never duplicates. Non-photo media
+  (video, voice notes) is counted and left out. `ProgressUpdates.Description` is nvarchar(max)
+  since this migration.
+- **Not built: change 4.** The nine-section Contractor's Report (Word + PDF from the template cut
+  from Report 29, Section 3 from open RFIs, Section 8 from work orders, photo grids under the
+  Section 1 day headings, the banned-word gate, Section 4 rebuilt from source every time) is the
+  next task; do not extend the three-box `ProgressReport` into it.
+
 ## The Sales pane: an enquiry tagged to its lead, and the estimate on it (api + jpms)
 
 - **A fifth pathway, Sales** (Nigel, 2026-09-15, the estimating brief): an estimate enquiry

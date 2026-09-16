@@ -1,0 +1,43 @@
+@using Microsoft.AspNetCore.Components.Forms
+
+@* Where the week goes in: the Thursday it ends on, and the export as WhatsApp's zip or pasted text. *@
+
+<div class="border border-line bg-surface p-5 space-y-4">
+    <div class="grid gap-4 md:grid-cols-2">
+        <FormField Label="Week ending (Thursday)" Required Hint="The week runs from the Friday before to this Thursday.">
+            <input type="date" class="field" value="@WeekEnding.ToString("yyyy-MM-dd")" @onchange="OnDateChanged" />
+        </FormField>
+        <FormField Label="WhatsApp export (.zip with media, or the .txt)" Hint="From WhatsApp: the group's menu → Export chat → Attach media.">
+            <InputFile OnChange="OnFileChanged" accept=".zip,.txt,application/zip,text/plain" class="w-full text-sm text-content-muted" />
+            @if (ExportName is { } name)
+            {
+                <p class="text-xs text-content-subtle mt-1">@name</p>
+            }
+        </FormField>
+    </div>
+    <FormField Label="Or paste the chat text" Hint="Without the zip there are no photographs — the days and their notes still come in.">
+        <textarea class="field" rows="6" placeholder="04/09/2026, 07:58 - James Everitt: Scaffold up to rear elevation…"
+                  value="@ChatText" @onchange="e => ChatTextChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"
+                  disabled="@(ExportName is not null)"></textarea>
+    </FormField>
+    <div class="flex justify-end">
+        <button type="button" class="btn-secondary" disabled="@(!CanPreview)" @onclick="OnPreview">Read the week</button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public DateOnly WeekEnding { get; set; }
+    [Parameter] public EventCallback<DateOnly> WeekEndingChanged { get; set; }
+    [Parameter] public string ChatText { get; set; } = "";
+    [Parameter] public EventCallback<string> ChatTextChanged { get; set; }
+    [Parameter] public string? ExportName { get; set; }
+    [Parameter] public EventCallback<IBrowserFile?> OnExportChosen { get; set; }
+    [Parameter] public bool CanPreview { get; set; }
+    [Parameter] public EventCallback OnPreview { get; set; }
+
+    private Task OnDateChanged(ChangeEventArgs e) =>
+        DateOnly.TryParse(e.Value?.ToString(), out var day) ? WeekEndingChanged.InvokeAsync(day) : Task.CompletedTask;
+
+    private Task OnFileChanged(InputFileChangeEventArgs e) =>
+        OnExportChosen.InvokeAsync(e.FileCount == 0 ? null : e.File);
+}

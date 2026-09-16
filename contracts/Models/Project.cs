@@ -37,4 +37,9 @@ public sealed record Project(
     // explicit mapping like XeroSiteName — Xero's ContactID and the name as Xero holds it — set
     // from the Xero contacts list in Project settings; Raise in Xero is blocked until it is set.
     string? XeroContactId = null,
-    string? XeroContactName = null);
+    string? XeroContactName = null,
+    // The people whose WhatsApp messages are this project's site notes, one name per line as
+    // WhatsApp shows the sender (2026-09-16, the FD's weekly-report spec). The WhatsApp week
+    // intake keeps their messages for this project and sets aside senders on another project's
+    // list; a sender on no list goes to review. Null means no list has been kept yet.
+    string? SiteNoteSenderNames = null);

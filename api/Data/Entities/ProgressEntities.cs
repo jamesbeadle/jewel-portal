@@ -12,7 +12,8 @@ public sealed class ProgressUpdateEntity
     [Key, MaxLength(64)] public string ProgressUpdateId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
-    [MaxLength(4096)]    public string Description { get; set; } = "";
+    /// <summary>nvarchar(max) — a day's WhatsApp site notes are kept verbatim (2026-09-16).</summary>
+    public string Description { get; set; } = "";
     /// <summary>The date the photographed works were carried out (not the upload date).</summary>
     public DateTimeOffset? WorkDate { get; set; }
 
@@ -42,6 +43,9 @@ public sealed class ProgressPhotoEntity
     [MaxLength(256)]     public string ContentType { get; set; } = "";
     public long FileSizeBytes { get; set; }
     public int SortOrder { get; set; }
+    /// <summary>SHA-256 (lower-case hex) of the file as received — what "the same image posted
+    /// twice" is judged by. Empty on photos stored before 2026-09-16.</summary>
+    [MaxLength(64)]      public string ContentHash { get; set; } = "";
     [MaxLength(256)]     public string UploadedByEmail { get; set; } = "";
     public DateTimeOffset UploadedAt { get; set; }
 }

@@ -1,17 +1,20 @@
-using Jewel.JPMS.Api.Features.Progress.Storage;
+using Jewel.JPMS.Api.Features.Progress.Photos;
 using Jewel.JPMS.Contracts.Progress;
 
 namespace Jewel.JPMS.Api.Features.Progress.Commands;
 
 /// <summary>
-/// POST /api/progress-updates/{progressUpdateId}/photos — multipart/form-data upload of one or
-/// more image files, appended to an existing progress update.
+/// POST /api/progress-updates/{progressUpdateId}/photos — multipart/form-data upload of up to
+/// <see cref="ProgressPhotoLimits.MaxImagesPerBatch"/> image files (JPEG, PNG, HEIC), appended to
+/// an existing progress update in the order posted. Answers a <see cref="ProgressPhotoBatchResult"/>:
+/// the update as it now stands and an outcome per image — stored, duplicate of one already held,
+/// or failed on its own.
 /// </summary>
 public sealed class AddProgressPhotosEndpoint
 {
     private readonly SignedInUserResolver users;
     private readonly JpmsContext context;
-    private readonly IProgressPhotoStore photoStore;
+    private readonly ProgressPhotoIntake intake;
     private readonly AddProgressPhotosAuthorisation authorisation;
     private readonly AddProgressPhotosValidation validation;
     private readonly ICommandHandler<AddProgressPhotos, ProgressUpdate> handler;
@@ -19,14 +22,14 @@ public sealed class AddProgressPhotosEndpoint
     public AddProgressPhotosEndpoint(
         SignedInUserResolver users,
         JpmsContext context,
-        IProgressPhotoStore photoStore,
+        ProgressPhotoIntake intake,
         AddProgressPhotosAuthorisation authorisation,
         AddProgressPhotosValidation validation,
         ICommandHandler<AddProgressPhotos, ProgressUpdate> handler)
     {
         this.users = users;
         this.context = context;
-        this.photoStore = photoStore;
+        this.intake = intake;
         this.authorisation = authorisation;
         this.validation = validation;
         this.handler = handler;
@@ -45,44 +48,17 @@ public sealed class AddProgressPhotosEndpoint
 
         if (!request.HasFormContentType) return new BadRequestObjectResult("Expected multipart/form-data.");
         var form = await request.ReadFormAsync(cancellationToken);
-        if (form.Files.Count == 0) return new BadRequestObjectResult("At least one photo is required.");
+        var read = await ProgressPhotoFormReader.ReadAsync(form, cancellationToken);
+        if (read.Refusal is not null) return new BadRequestObjectResult(read.Refusal);
 
-        var update = await context.ProgressUpdates
+        var update = await context.ProgressUpdates.AsNoTracking()
             .FirstOrDefaultAsync(row => row.ProgressUpdateId == progressUpdateId, cancellationToken);
         if (update is null) return new NotFoundObjectResult($"Progress update {progressUpdateId} not found.");
 
-        var photos = new List<NewProgressPhoto>();
-        try
-        {
-            var position = 0;
-            foreach (var file in form.Files)
-            {
-                if (file.Length == 0) continue;
-                var photoId = ProgressIdentifierFactory.NextProgressPhotoId();
-                var fileName = string.IsNullOrWhiteSpace(file.FileName) ? "photo" : file.FileName;
-                var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType;
-
-                await using var stream = file.OpenReadStream();
-                var blobRef = await photoStore.UploadAsync(
-                    update.ProjectId, progressUpdateId, photoId, fileName, contentType, stream, cancellationToken);
-
-                photos.Add(new NewProgressPhoto(photoId, fileName, blobRef, contentType, file.Length, position++));
-            }
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            return new ObjectResult($"Could not store the photos — check the progress photo storage configuration. ({ex.Message})")
-            {
-                StatusCode = StatusCodes.Status502BadGateway
-            };
-        }
-
-        var command = new AddProgressPhotos(progressUpdateId, signedInUser.Email, photos);
-
-        var validationOutcome = validation.Check(command);
-        if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
-
-        var result = await handler.HandleAsync(command, cancellationToken);
-        return new OkObjectResult(result);
+        var result = await ProgressPhotoBatches.AddAsync(
+            intake, validation, handler, update.ProjectId, progressUpdateId, signedInUser.Email, read.Images, cancellationToken);
+        return result.Failure is not null
+            ? new BadRequestObjectResult(result.Failure)
+            : new OkObjectResult(result.Batch);
     }
 }

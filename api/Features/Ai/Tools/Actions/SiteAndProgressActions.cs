@@ -76,7 +76,9 @@ internal sealed partial class SiteAndProgressActions : IAiActionSource
     // Skipped: AddGeneralTodoItem — already a first-class AiWriteTools tool (add_todo).
     // Skipped: UpdateTodoItem — already dispatched by AiWriteTools (complete_todo).
     // Skipped: LogTodoProgress — already a first-class AiWriteTools tool (log_todo_progress).
-    // Skipped: CreateProgressUpdate — multipart/form-data photo upload; cannot fit the pattern.
-    // Skipped: AddProgressPhotos — multipart/form-data photo upload; cannot fit the pattern.
+    // Skipped: CreateProgressUpdateWithPhotos — multipart/form-data photo upload; the plain
+    //          CreateProgressUpdate is create_progress_update above.
+    // Skipped: AddProgressPhotos — the files come by source_id through AiProgressPhotoTools'
+    //          add_progress_photos, not through the JSON command pattern.
     // Skipped: UploadDrawingRevision — multipart/form-data file upload; cannot fit the pattern.
 }

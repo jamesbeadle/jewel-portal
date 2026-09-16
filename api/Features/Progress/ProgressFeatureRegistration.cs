@@ -1,4 +1,6 @@
 using Jewel.JPMS.Api.Features.Progress.Commands;
+using Jewel.JPMS.Api.Features.Progress.Photos;
+using Jewel.JPMS.Api.Features.Progress.WhatsApp;
 using Jewel.JPMS.Api.Features.Progress.Queries;
 using Jewel.JPMS.Api.Features.Progress.Storage;
 using Jewel.JPMS.Contracts.Progress;
@@ -16,9 +18,18 @@ public static class ProgressFeatureRegistration
         services.AddScoped<IQueryHandler<ListProgressUpdatesForProject, IReadOnlyList<ProgressUpdate>>, ListProgressUpdatesForProjectHandler>();
         services.AddScoped<IQueryHandler<ListProgressReportsForProject, IReadOnlyList<ProgressReport>>, ListProgressReportsForProjectHandler>();
 
+        services.AddScoped<ProgressPhotoIntake>();
+        services.AddScoped<WhatsAppWeekAuthorisation>();
+        services.AddScoped<WhatsAppWeekReader>();
+        services.AddScoped<WhatsAppWeekWriter>();
+
         services.AddScoped<ICommandHandler<CreateProgressUpdate, ProgressUpdate>, CreateProgressUpdateHandler>();
         services.AddScoped<CreateProgressUpdateAuthorisation>();
         services.AddScoped<CreateProgressUpdateValidation>();
+
+        services.AddScoped<ICommandHandler<CreateProgressUpdateWithPhotos, ProgressUpdate>, CreateProgressUpdateWithPhotosHandler>();
+        services.AddScoped<CreateProgressUpdateWithPhotosAuthorisation>();
+        services.AddScoped<CreateProgressUpdateWithPhotosValidation>();
 
         services.AddScoped<ICommandHandler<AddProgressPhotos, ProgressUpdate>, AddProgressPhotosHandler>();
         services.AddScoped<AddProgressPhotosAuthorisation>();

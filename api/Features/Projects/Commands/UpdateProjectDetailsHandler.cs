@@ -30,6 +30,9 @@ public sealed class UpdateProjectDetailsHandler
         entity.XeroContactName = entity.XeroContactId is null || string.IsNullOrWhiteSpace(command.XeroContactName)
             ? null
             : command.XeroContactName.Trim();
+        entity.SiteNoteSenderNames = string.IsNullOrWhiteSpace(command.SiteNoteSenderNames)
+            ? null
+            : command.SiteNoteSenderNames.Trim();
 
         // The party this project corresponds with (client directly, or architect on a client's
         // behalf). A null/empty PartyId clears the assignment.

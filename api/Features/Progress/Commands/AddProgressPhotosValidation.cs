@@ -10,11 +10,7 @@ public sealed class AddProgressPhotosValidation
         if (string.IsNullOrWhiteSpace(command.ProgressUpdateId)) errors.Add("ProgressUpdateId is required.");
         if (string.IsNullOrWhiteSpace(command.UploadedByEmail)) errors.Add("Uploading email is required.");
         if (command.Photos.Count == 0) errors.Add("At least one photo is required.");
-        foreach (var photo in command.Photos)
-        {
-            if (string.IsNullOrWhiteSpace(photo.BlobRef)) errors.Add("Uploaded photo reference is required.");
-            if (photo.FileSizeBytes <= 0) errors.Add($"Uploaded photo '{photo.FileName}' is empty.");
-        }
+        NewProgressPhotoRules.Check(command.Photos, errors);
         if (errors.Count == 0) return ValidationOutcome.Passed;
         return new ValidationOutcome(errors);
     }

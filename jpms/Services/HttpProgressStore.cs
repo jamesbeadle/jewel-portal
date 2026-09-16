@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using Jewel.JPMS.Contracts.Progress;
 using Jewel.JPMS.Features.Progress;
 
@@ -44,7 +45,7 @@ public sealed class HttpProgressStore : IProgressStore
     // render) so tab navigation picks up changes made elsewhere (stale-while-revalidate).
     public void Refresh(string projectId) => RefreshInBackground(projectId);
 
-    public async Task CreateUpdateAsync(
+    public async Task<ProgressPhotoBatchResult> CreateUpdateAsync(
         string projectId, string title, string description, DateTimeOffset? workDate,
         ProgressWeather? weather, IReadOnlyList<IBrowserFile> photos, CancellationToken cancellationToken)
     {
@@ -61,9 +62,10 @@ public sealed class HttpProgressStore : IProgressStore
         // The write has been committed. Refresh caches in the background so a slow or stalled
         // refresh cannot keep the upload UI stuck on "Uploading…".
         RefreshInBackground(projectId);
+        return await ReadBatchAsync(response, cancellationToken);
     }
 
-    public async Task AddPhotosAsync(
+    public async Task<ProgressPhotoBatchResult> AddPhotosAsync(
         string projectId, string progressUpdateId,
         IReadOnlyList<IBrowserFile> photos, CancellationToken cancellationToken)
     {
@@ -73,7 +75,11 @@ public sealed class HttpProgressStore : IProgressStore
         var response = await httpClient.PostAsync($"api/progress-updates/{progressUpdateId}/photos", content, cancellationToken);
         await ThrowIfFailedAsync(response, cancellationToken);
         RefreshInBackground(projectId);
+        return await ReadBatchAsync(response, cancellationToken);
     }
+
+    private static async Task<ProgressPhotoBatchResult> ReadBatchAsync(HttpResponseMessage response, CancellationToken cancellationToken) =>
+        (await response.Content.ReadFromJsonAsync<ProgressPhotoBatchResult>(cancellationToken: cancellationToken))!;
 
     public async Task UpdateUpdateAsync(
         string projectId, string progressUpdateId, string title, string description,
