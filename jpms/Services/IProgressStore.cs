@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.Progress;
 
 namespace Jewel.JPMS.Services;
 
