@@ -8,6 +8,20 @@
     <AssemblyName>Jewel.JPMS.Api</AssemblyName>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!--
+      DEPLOY SIZE (2026-09-16). SWA managed functions reject an API over 100 MB, and this project
+      ships several packages that carry a native library for every platform (Docnet's pdfium,
+      Magick.NET's ImageMagick) plus EF Core Design's Roslyn with resources in eleven languages.
+      Two trims keep the published output to what the host can actually use:
+        - SatelliteResourceLanguages: only English resource assemblies are published (no cs/de/…).
+        - TrimPublishedRuntimes (below): after publish, runtimes/<rid> folders the host cannot load
+          are deleted. The SWA deploy log says the managed-functions host is Windows
+          ("Function Runtime Information. OS: windows"), so win, win-x64 and win-x86 are kept —
+          both bitnesses because the worker process bitness on that host is not under our control.
+      Override PublishRuntimesToKeep (semicolon list) or set KeepAllRuntimes=true if the host changes.
+    -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <PublishRuntimesToKeep Condition="'$(PublishRuntimesToKeep)' == ''">win;win-x64;win-x86</PublishRuntimesToKeep>
   </PropertyGroup>
 
   <ItemGroup>
@@ -56,7 +70,10 @@
     <!-- PHOTOGRAPH PREPARATION (progress photos, 2026-09-16): Magick.NET opens the HEIC an iPhone
          exports as well as JPEG and PNG, turns each image by its EXIF orientation, shrinks it to
          display size and re-encodes it (ProgressPhotoPreparation). The AnyCPU package carries the
-         native ImageMagick — with libheif — for linux-x64 / win-x64 / osx; nothing to install. -->
+         native ImageMagick — with libheif — for every platform (win/linux/osx, x64/x86/arm64);
+         nothing to install. AnyCPU rather than -x64 because local development on an Apple-silicon
+         Mac needs the osx-arm64 build; the unused platforms are removed at publish by
+         TrimPublishedRuntimes, otherwise ~150 MB of native libraries would go to Azure. -->
     <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="13.10.0" />
     <!--
       ClosedXML (MIT, pure managed — fine on the Linux Functions host) reads the spreadsheets users
@@ -87,5 +104,21 @@
          (2026-09-15). DocumentFontResolver probes the fonts folder beside the application first. -->
     <None Include="fonts\*.ttf;fonts\*.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <!-- See the DEPLOY SIZE note at the top. Runs on every publish, including the Oryx build the
+       SWA GitHub Action performs (it calls `dotnet publish` on this project). -->
+  <Target Name="TrimPublishedRuntimes" AfterTargets="Publish" Condition="'$(KeepAllRuntimes)' != 'true'">
+    <PropertyGroup>
+      <_PublishRuntimesRoot>$([MSBuild]::EnsureTrailingSlash('$(PublishDir)'))runtimes</_PublishRuntimesRoot>
+      <_PublishRuntimesKeepList>;$(PublishRuntimesToKeep);</_PublishRuntimesKeepList>
+    </PropertyGroup>
+    <ItemGroup Condition="Exists('$(_PublishRuntimesRoot)')">
+      <_PublishRuntimeDir Include="$([System.IO.Directory]::GetDirectories('$(_PublishRuntimesRoot)'))" />
+      <_PublishRuntimeDirToRemove Include="@(_PublishRuntimeDir)"
+                                  Condition="!$(_PublishRuntimesKeepList.Contains(';%(Filename)%(Extension);'))" />
+    </ItemGroup>
+    <RemoveDir Directories="@(_PublishRuntimeDirToRemove)" />
+    <Message Importance="high" Text="TrimPublishedRuntimes: kept [$(PublishRuntimesToKeep)], removed [@(_PublishRuntimeDirToRemove->'%(Filename)%(Extension)', ', ')] from $(_PublishRuntimesRoot)" />
+  </Target>
 
 </Project>
