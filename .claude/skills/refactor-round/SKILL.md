@@ -5,9 +5,18 @@ description: Run one measured refactor round on this repository — baseline fir
 
 # The refactor round
 
-A round is Stage 4 of `tools/refactor/playbook.md`: the extraction loop, run once, measured before and after. It never adds behaviour and never changes the schema, and it never commits: the changes stay in the working tree for the person to commit as they always do. It is due every N commits on the default branch since the baseline was last committed (`tools/refactor/deploys_since_baseline.sh`, ten unless the project says otherwise); Your Business Today may also have raised `REFACTOR: round N` on the project as the reminder — that task is where the round's record goes.
+A round is Stage 4 of `tools/refactor/playbook.md`: the extraction loop, run once, measured before and after. It never adds behaviour and never changes the schema, and it runs on its own branch: `refactor/round-N` off a fresh default branch, committed step by step, pushed, and handed to the person as a pull request to review and merge. It never commits to the default branch. It is due every N commits on the default branch since the baseline was last committed (`tools/refactor/deploys_since_baseline.sh`, ten unless the project says otherwise); Your Business Today may also have raised `REFACTOR: round N` on the project as the reminder — that task is where the round's record goes.
 
 Read, in this order, before the first change: the coding rules at the top of `CLAUDE.md`, `tools/refactor/playbook.md`, `tools/refactor/rules.json`, then `tools/refactor/baseline-report.md` (the current report — its "Next round, named" section is where this round starts). If the repository has no `tools/refactor/`, run the project-process bootstrap first (`bootstrap.sh --kit <a checkout of the kit>`, or the `curl` line in the kit's README when the kit is public) and tell the person it was installed.
+
+## 0. Branch
+
+```
+git fetch origin && git switch <default> && git pull --ff-only
+git switch -c refactor/round-N
+```
+
+If the working tree holds uncommitted changes, stop and ask the person what they belong to — a round starts clean.
 
 ## 1. Baseline first
 
@@ -16,7 +25,7 @@ python3 -m tools.refactor.audit.run_audit . --output tools/refactor/audit-output
 python3 -m tools.refactor.audit.gate tools/refactor/baseline.json tools/refactor/audit-output/audit.json
 ```
 
-The gate must pass before anything is touched. If it fails, the codebase has drifted since the last baseline: adopt the current reading as the new baseline first, write why in the report ("adopted from drift: <what grew>"), and tell the person so it goes in as its own commit — a round always starts from a green gate. The report you start from is the round's *before*.
+The gate must pass before anything is touched. If it fails, the codebase has drifted since the last baseline: adopt the current reading as the new baseline first, write why in the report ("adopted from drift: <what grew>"), and commit that as the branch's first commit, `Baseline vN: adopted from drift` — a round always starts from a green gate. The report you start from is the round's *before*.
 
 Duplication needs jscpd (`npm install -g jscpd`). A reading without it is incomplete; install it before the first audit.
 
@@ -28,7 +37,7 @@ Take the `fileLength` offender list. Skip anything the repository's own checks c
 2. Divide at the seam into two named things, repeatedly: page markup into components with explicit parameters; logic into partials or modules named for the concern; a table into its row family; a long function into a short sequence of named steps. Never invent an abstraction to make a split possible — if the split needs one, the split is wrong.
 3. Behaviour does not change. Same rendered output, same events, same refusals; every reset, guard and seeded draft moves with the code that owned it. Nothing is deleted unless every caller across the repository is gone, and the commit says so.
 4. Run the repository's checks (typecheck, lint, tests, build) and fix what fails. Then re-run the audit and the gate.
-5. Finish one verified step before starting the next, and keep a note per step as prose stating what became what ("The labour overview's three dialogs become components", "ProjectProgramme 750 → 78: a tab bar and four panes") — the notes become the report's round section and the commit messages the person writes.
+5. Commit the step on the branch before starting the next, its message a sentence stating what became what ("The labour overview's three dialogs become components", "ProjectProgramme 750 → 78: a tab bar and four panes") — the messages become the report's round section.
 
 Hold every ratcheted figure: a comment the new filename now carries comes off; a new `else` becomes an early return; a member chain becomes a local. Accept, with an honest note, only the division signature — `filesOverLimit` and `functionsOverLimit` rising when one 700-line file becomes eight 100-line ones — and inspect any clone pair before claiming duplication moved either way.
 
@@ -43,7 +52,7 @@ python3 -m tools.refactor.audit.run_audit . --output tools/refactor/audit-output
 cp tools/refactor/audit-output/audit.json tools/refactor/baseline.json
 ```
 
-Rewrite `tools/refactor/baseline-report.md` in this shape; it goes into the working tree with `baseline.json` and `audit-output/`, and the person's last commit of the round is "Baseline vN: <the round's name>":
+Rewrite `tools/refactor/baseline-report.md` in this shape and commit it with `baseline.json` and `audit-output/` as the round's last commit, "Baseline vN: <the round's name>":
 
 ```
 # Refactor audit — baseline vN, after round N-1
@@ -76,4 +85,4 @@ what the worst file is now.
 
 ## 4. Hand it back
 
-Leave everything in the working tree — nothing is committed, pushed or opened as a pull request by this script. Tell the person the before → after headline in two sentences and the commit messages the steps want, in order. Post the headline and the report's round section on the round's task in Your Business Today (the open `REFACTOR: round N` task if one was raised, else the task this session is logged against), and mark it done. The task carries the numbers — they are the argument.
+`git push -u origin refactor/round-N` and open the pull request into the default branch, titled `REFACTOR: round N — <the round's name>`, its body the report's Headline and round section (`gh pr create --base <default> …`, or the compare link the push printed). Never merge it. Tell the person the before → after headline in two sentences and give them the pull request. Post the headline and the report's round section on the round's task in Your Business Today (the open `REFACTOR: round N` task if one was raised, else the task this session is logged against), with the pull request's link, and mark it done. The task carries the numbers — they are the argument.
