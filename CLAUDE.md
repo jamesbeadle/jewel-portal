@@ -831,7 +831,28 @@ finds drift.
 - **`Pill`** is every status badge. A view never picks a status colour: it maps the enum to a
   `Tone` in `StatusTones.cs` (`status.ToTone()`) and that mapping is the status vocabulary.
   Domain badges (`ComplianceStatusPill`, `LeadStagePill`, `StatusPill`…) are one-line `Pill`
-  wrappers. With `OnClick` a Pill is the status's transition menu trigger.
+  wrappers. With `OnClick` a Pill is a button — the status opening its move DIALOG
+  (`EstimateStatusPill` → `EstimateStatusMoveDialog`). A status pill that opens a MENU is a
+  `DropdownMenu` whose `ToggleClass` is `Pill.ClassesFor(status.ToTone())`, never a `Pill` with
+  its own panel beside it.
+- **`DropdownMenu`** is EVERY toggle-and-panel on the site: a menu of actions, a row's status
+  transitions, a multi-select filter, a picker. There is no second way to open a panel from a
+  button. It owns the open-state and the whole dismissal contract — the toggle closes it, a
+  press anywhere outside closes it *and still lands on what was pressed*, Escape closes it, and
+  an item closes it before running. A page never holds its own `menuOpen`/`pickerOpen` bool, and
+  never renders a `fixed inset-0` backdrop to catch the outside click: a backdrop swallows the
+  press, so the user pays for the same click twice. Pass `Items` for the common case,
+  `ChildContent` (plus `@ref` and `Close()`) when the panel needs its own markup — a tick list
+  that must stay open across several picks, a swatch grid. `ToggleClass` makes the toggle look
+  like whatever it is (a pill, a chip, a nav row); `ShowCaret="false"` when the toggle draws its
+  own. Inside a scrolling table, wire `OnOpenChanged` to `RecordsTable HasOpenMenu` (or lift the
+  container's own overflow cap) or the last rows' panels are clipped. `ShouldKeepFocus` is only
+  for a menu acting on a text selection — it stops the toggle taking focus, at the cost of
+  keyboard reach. This rule exists because six menus were left hand-rolled when the component
+  was pulled out and drifted into three different dismissal behaviours (2026-09-17 fixed the
+  lot: the variations and requests status pills, the tagged-inbox filter, the role switcher, the
+  rich-text colour menu and the SideNav project picker); the typeahead
+  `SearchSelect` is the one deliberate exception, being a form control rather than a menu.
 - **`FormField`** wraps every labelled control — label (14/Med white), the control wearing the
   `field` class, `Hint`, `Error`, `Required`. No bare `<label>` over an input, select, textarea
   or picker. **`Checkbox`** for a labelled tick; native checkboxes and radios get the Figma box

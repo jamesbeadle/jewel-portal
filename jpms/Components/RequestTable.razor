@@ -1,6 +1,6 @@
 @inject NavigationManager Nav
 
-<RecordsTable>
+<RecordsTable HasOpenMenu="@(statusMenuRequestId is not null)">
     <thead>
         <tr>
             @if (SelectionEnabled)
@@ -81,16 +81,20 @@
                     {
                         @* The chip doubles as the status control (same as the detail page's pill):
                            click it, pick the new status. The cell swallows the click so changing
-                           a status never also navigates into the row. The panel itself renders
-                           outside the scroll box, below — see StatusMenuStyle. *@
-                        <Pill Tone="@record.Status.ToTone()"
-                              Title="Change status"
-                              aria-haspopup="menu"
-                              aria-expanded="@(statusMenuRequestId == record.RequestId ? "true" : "false")"
-                              Disabled="@(StatusBusyRequestId == record.RequestId)"
-                              OnClick="e => ToggleStatusMenu(record.RequestId, e)">
-                            @StatusLabel(record.Status)
-                        </Pill>
+                           a status never also navigates into the row. The table lifts its scroll
+                           clip while the panel is open, so the last rows' options show whole. *@
+                        <DropdownMenu WidthClass="w-48"
+                                      ToggleClass="@Pill.ClassesFor(record.Status.ToTone())"
+                                      ToggleTitle="Change status"
+                                      ShowCaret="false"
+                                      Disabled="@(StatusBusyRequestId == record.RequestId)"
+                                      Items="@StatusMenuItems(record)"
+                                      OnOpenChanged="open => TrackOpenStatusMenu(record.RequestId, open)">
+                            <ToggleContent>
+                                @StatusLabel(record.Status)
+                                <span aria-hidden="true" class="leading-none">▾</span>
+                            </ToggleContent>
+                        </DropdownMenu>
                     }
                     else
                     {
@@ -101,36 +105,6 @@
         }
     </tbody>
 </RecordsTable>
-
-@* The status panel lives outside the scroll box on purpose. The table wrapper above scrolls
-   (overflow-x-auto/overflow-y-auto), and a scroll box clips its overflow in both axes — so a panel
-   absolutely positioned inside a cell had its lower options cut off on the bottom rows. Fixed
-   positioning takes it out of that clip and anchors it to the viewport instead: the click's own
-   coordinates place it, and the clamps keep the whole panel on screen whichever row was clicked. *@
-@if (StatusMenuRecord is { } menuRecord)
-{
-    <button type="button" class="fixed inset-0 z-40 cursor-default" aria-hidden="true" tabindex="-1"
-            @onclick="CloseStatusMenu"></button>
-    <div class="fixed z-50 w-48 rounded border border-line bg-surface overflow-hidden"
-         style="@StatusMenuStyle" role="menu">
-        <ul class="divide-y divide-line">
-            @foreach (var option in StatusOptions)
-            {
-                var status = option;
-                var isCurrent = status == menuRecord.Status;
-                <li>
-                    <button type="button" role="menuitem"
-                            class="w-full text-left px-3 py-2 text-sm transition @(isCurrent ?"text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
-                            disabled="@isCurrent"
-                            title="@StatusHint(status)"
-                            @onclick="() => PickStatus(menuRecord, status)">
-                        @StatusLabel(status)@(isCurrent ? " ✓" : "")
-                    </button>
-                </li>
-            }
-        </ul>
-    </div>
-}
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<Request> Records { get; set; } = Array.Empty<Request>();
@@ -158,25 +132,15 @@
     /// <summary>The request whose status change is in flight — its chip is disabled meanwhile.</summary>
     [Parameter] public string? StatusBusyRequestId { get; set; }
 
-    // The row whose status dropdown is open, and where on screen its chip was clicked. Every pick
-    // closes the menu; the toggle and the transparent backdrop both dismiss it (the backdrop is
-    // needed here because the panel is detached from the chip — a click elsewhere must close it
-    // rather than leave it floating over the table).
+    // The row whose status menu is open. The menu dismisses itself (DropdownMenu); this is only
+    // so the table can lift its scroll clip while a panel is showing.
     private string? statusMenuRequestId;
-    private double statusMenuX;
-    private double statusMenuY;
 
-    /// <summary>The record whose menu is open, looked up fresh each render so a refreshed list
-    /// (or one the row has dropped out of) can never leave a stale panel on screen.</summary>
-    private Request? StatusMenuRecord =>
-        statusMenuRequestId is null ? null : Records.FirstOrDefault(r => r.RequestId == statusMenuRequestId);
-
-    // Panel box: w-48 (192px) wide, four rows ≈ 150px tall. Placed just under the click, centred on
-    // it, then clamped so neither edge leaves the viewport — the bottom clamp is what makes the last
-    // row's menu fully visible.
-    private string StatusMenuStyle =>
-        FormattableString.Invariant(
-            $"left: clamp(0.5rem, {statusMenuX - 96:0}px, calc(100vw - 12.5rem)); top: min({statusMenuY + 12:0}px, calc(100vh - 10.5rem));");
+    private void TrackOpenStatusMenu(string requestId, bool isOpen)
+    {
+        if (isOpen) { statusMenuRequestId = requestId; return; }
+        if (statusMenuRequestId == requestId) statusMenuRequestId = null;
+    }
 
     // Lifecycle order: the ball starts with us (Needs action), goes to the correspondent (Open),
     // may come back needing a variation order quote (Needs variation), then closes.
@@ -186,27 +150,15 @@
         RequestStatus.NeedsVariation, RequestStatus.Closed
     };
 
-    private void ToggleStatusMenu(string requestId, MouseEventArgs e)
-    {
-        if (statusMenuRequestId == requestId)
-        {
-            statusMenuRequestId = null;
-            return;
-        }
-
-        statusMenuRequestId = requestId;
-        statusMenuX = e.ClientX;
-        statusMenuY = e.ClientY;
-    }
-
-    private void CloseStatusMenu() => statusMenuRequestId = null;
-
-    private async Task PickStatus(Request record, RequestStatus status)
-    {
-        statusMenuRequestId = null;
-        if (status == record.Status) return;
-        await OnStatusChange.InvokeAsync((record, status));
-    }
+    // The record's current status renders as a disabled, ticked row — it names where the request
+    // is without offering a move to where it already is.
+    private List<DropdownMenu.Item> StatusMenuItems(Request record) =>
+        StatusOptions.Select(status => new DropdownMenu.Item(
+            Label: StatusLabel(status),
+            OnSelect: EventCallback.Factory.Create(this, () => OnStatusChange.InvokeAsync((record, status))),
+            Hint: StatusHint(status),
+            Disabled: status == record.Status,
+            Selected: status == record.Status)).ToList();
 
     private static string? StatusHint(RequestStatus status) => status switch
     {

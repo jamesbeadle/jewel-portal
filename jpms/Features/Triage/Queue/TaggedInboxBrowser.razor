@@ -43,33 +43,36 @@
 {
     <div class="flex flex-wrap items-center gap-2 mb-5">
         <span class="eyebrow mr-1">Filter</span>
-        <div class="relative">
-            <button type="button"
-                    class="rounded-full border border-line px-3 py-1 text-xs font-medium text-content-muted hover:text-content hover:border-line-strong transition inline-flex items-center gap-1.5 disabled:opacity-50"
-                    disabled="@SearchActive" title="@PathwayDisabledTitle"
-                    @onclick="() => OnToggleFilterMenu.InvokeAsync()">
+        @* ChildContent, not Items, so ticking a tag does NOT close the panel — narrowing to three
+           tags is one open, three ticks, one dismiss (the same reason ProjectMultiSelect uses it).
+           "All tags" is the one row that finishes the job, so it closes. *@
+        <DropdownMenu @ref="filterMenu" AlignLeft="true" WidthClass="w-60"
+                      ToggleClass="rounded-full border border-line px-3 py-1 text-xs font-medium text-content-muted hover:text-content hover:border-line-strong transition inline-flex items-center gap-1.5 disabled:opacity-50"
+                      ShowCaret="false"
+                      Disabled="@SearchActive"
+                      ToggleTitle="@(PathwayDisabledTitle ?? "")">
+            <ToggleContent>
                 @FilterButtonLabel
                 <span class="text-xs leading-none">▾</span>
-            </button>
-            @if (FilterOpen)
-            {
-                <div class="absolute z-20 mt-1 w-60 max-h-72 overflow-y-auto rounded border border-line bg-surface-raised p-1">
+            </ToggleContent>
+            <ChildContent>
+                <div class="max-h-72 overflow-y-auto p-1">
                     <button type="button"
-                            class="w-full text-left rounded px-3 py-1.5 text-sm text-content-muted hover:bg-surface hover:text-content"
-                            @onclick="() => OnClearTagFilters.InvokeAsync()">
+                            class="w-full text-left rounded px-3 py-1.5 text-sm text-content-muted hover:bg-surface-raised hover:text-content"
+                            @onclick="ClearTagFilters">
                         All tags
                     </button>
                     <div class="my-1 border-t border-line"></div>
                     @foreach (var tag in KnownTags)
                     {
-                        <label class="flex items-center gap-2 rounded px-3 py-1.5 text-sm text-content hover:bg-surface cursor-pointer">
+                        <label class="flex items-center gap-2 rounded px-3 py-1.5 text-sm text-content hover:bg-surface-raised cursor-pointer">
                             <input type="checkbox" checked="@SelectedTags.Contains(tag)" @onchange="() => OnToggleTag.InvokeAsync(tag)" />
                             <span>@TriageEmailDisplay.TagLabel(tag)</span>
                         </label>
                     }
                 </div>
-            }
-        </div>
+            </ChildContent>
+        </DropdownMenu>
         @foreach (var tag in SelectedTags)
         {
             <Pill Tone="Tone.Muted">
@@ -166,8 +169,6 @@ else if (SearchResults is not null)
 
     /// <summary>True once the tagged list's first page has answered — the gate lifts then.</summary>
     [Parameter] public bool Arrived { get; set; }
-    [Parameter] public bool FilterOpen { get; set; }
-    [Parameter] public EventCallback OnToggleFilterMenu { get; set; }
     [Parameter] public EventCallback OnClearTagFilters { get; set; }
     /// <summary>Every tag seen so far — the dropdown accrues as pages load.</summary>
     [Parameter] public IReadOnlyCollection<string> KnownTags { get; set; } = Array.Empty<string>();
@@ -196,7 +197,15 @@ else if (SearchResults is not null)
     [Parameter] public EventCallback OnPrevious { get; set; }
     [Parameter] public EventCallback OnNext { get; set; }
 
+    private DropdownMenu? filterMenu;
+
     private string FilterButtonLabel => SelectedTags.Count == 0 ? "All tags" : $"{SelectedTags.Count} selected";
+
+    private async Task ClearTagFilters()
+    {
+        filterMenu?.Close();
+        await OnClearTagFilters.InvokeAsync();
+    }
 
     private string PathwayFilterChipClass(string? bucket)
     {

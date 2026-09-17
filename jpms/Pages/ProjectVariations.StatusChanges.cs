@@ -35,12 +35,30 @@ public partial class ProjectVariations
 
     // ---- In-row variation status changes (the chip's dropdown) ----------------------------------
 
+    // The row whose status menu is open. The menu dismisses itself (DropdownMenu); this is only
+    // so the table can lift its scroll clip while a panel is showing.
     private string? variationStatusMenuId;
     private string? variationStatusBusyId;
     private string? variationStatusError;
 
-    private void ToggleVariationStatusMenu(string variationOrderId) =>
-        variationStatusMenuId = variationStatusMenuId == variationOrderId ? null : variationOrderId;
+    private void TrackOpenStatusMenu(string variationOrderId, bool isOpen)
+    {
+        if (isOpen) { variationStatusMenuId = variationOrderId; return; }
+        if (variationStatusMenuId == variationOrderId) variationStatusMenuId = null;
+    }
+
+    private List<DropdownMenu.Item> StatusMenuItems(IReadOnlyList<VariationStatusChoice> choices) =>
+        choices.Select(StatusMenuItem).ToList();
+
+    // The current status renders as a disabled, ticked row — it names where the variation is
+    // without offering a move to where it already is.
+    private DropdownMenu.Item StatusMenuItem(VariationStatusChoice choice) => new(
+        Label: choice.Label,
+        OnSelect: choice.Action is null ? null : EventCallback.Factory.Create(this, choice.Action),
+        Href: choice.Href,
+        Hint: choice.Hint,
+        Disabled: choice.IsCurrent,
+        Selected: choice.IsCurrent);
 
     // One dropdown entry: a direct move (Action) or a link through to the variation (Href) for the
     // transitions whose real flows — cost code, confirms, reversals — live on the record itself.
@@ -90,14 +108,6 @@ public partial class ProjectVariations
             false,
             Action: () => { decliningVariation = order; return Task.CompletedTask; }));
         return choices;
-    }
-
-    private async Task PickVariationStatus(VariationStatusChoice choice)
-    {
-        variationStatusMenuId = null;
-        if (choice.IsCurrent) return;
-        if (choice.Href is not null) { Nav.NavigateTo(choice.Href); return; }
-        if (choice.Action is not null) await choice.Action();
     }
 
     // The variation the decline modal is asking about; null when the modal is closed.

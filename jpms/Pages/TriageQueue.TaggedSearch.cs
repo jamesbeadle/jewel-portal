@@ -127,7 +127,6 @@ public partial class TriageQueue
     private async Task ClearTagFilters()
     {
         selectedTags.Clear();
-        filterOpen = false;
         ParkSelectedTriage();
         selected = null;
         detail = null;
@@ -143,7 +142,6 @@ public partial class TriageQueue
         if (pathwayBucketFilter == bucket) return;
         pathwayBucketFilter = bucket;
         selectedTags.Clear();
-        filterOpen = false;
         ParkSelectedTriage();
         selected = null;
         detail = null;

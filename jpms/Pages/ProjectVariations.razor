@@ -247,7 +247,7 @@
             {
                 <Notice Tone="Tone.Negative" Class="mb-3">@variationStatusError</Notice>
             }
-            <RecordsTable>
+            <RecordsTable HasOpenMenu="@(variationStatusMenuId is not null)">
                 <thead>
                     <tr>
                         <th>Ref</th>
@@ -306,34 +306,18 @@
                                        side-effect-free stages; the commercial transitions (approve,
                                        un-approve, reject) link through to the variation, where their
                                        real flows — cost code, confirms, reversals — live. *@
-                                    <div class="relative">
-                                        <Pill Tone="@order.Status.ToTone()"
-                                              Title="Change status"
-                                              Disabled="@(variationStatusBusyId == order.VariationOrderId)"
-                                              OnClick="() => ToggleVariationStatusMenu(order.VariationOrderId)">
+                                    <DropdownMenu AlignLeft="true" WidthClass="w-64"
+                                                  ToggleClass="@Pill.ClassesFor(order.Status.ToTone())"
+                                                  ToggleTitle="Change status"
+                                                  ShowCaret="false"
+                                                  Disabled="@(variationStatusBusyId == order.VariationOrderId)"
+                                                  Items="@StatusMenuItems(statusChoices)"
+                                                  OnOpenChanged="open => TrackOpenStatusMenu(order.VariationOrderId, open)">
+                                        <ToggleContent>
                                             @VariationStatusLabel(order)
-                                        </Pill>
-                                        @if (variationStatusMenuId == order.VariationOrderId)
-                                        {
-                                            <div class="absolute left-0 mt-2 w-64 rounded border border-line bg-surface z-30 overflow-hidden">
-                                                <ul class="divide-y divide-line">
-                                                    @foreach (var choice in statusChoices)
-                                                    {
-                                                        var pick = choice;
-                                                        <li>
-                                                            <button type="button"
-                                                                    class="w-full text-left px-3 py-2 text-sm transition @(pick.IsCurrent ?"text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
-                                                                    disabled="@pick.IsCurrent"
-                                                                    title="@pick.Hint"
-                                                                    @onclick="() => PickVariationStatus(pick)">
-                                                                @pick.Label@(pick.IsCurrent ? " ✓" : "")
-                                                            </button>
-                                                        </li>
-                                                    }
-                                                </ul>
-                                            </div>
-                                        }
-                                    </div>
+                                            <span aria-hidden="true" class="leading-none">▾</span>
+                                        </ToggleContent>
+                                    </DropdownMenu>
                                 }
                                 else
                                 {

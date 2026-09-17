@@ -52,10 +52,14 @@
             {
                 @* ---- Project picker: every {project}-templated row below targets this project. ---- *@
                 <li class="hidden md:block pt-2 pb-1">
-                    <div class="relative">
-                        <button type="button" @onclick="() => pickerOpen = !pickerOpen"
-                                class="w-full flex items-center gap-2 rounded border border-line bg-surface-raised px-3 py-2 text-left hover:border-line-strong transition"
-                                aria-haspopup="listbox" aria-expanded="@pickerOpen" title="Switch project">
+                    @* A picker, not a menu of actions — hence ChildContent and role="listbox" on
+                       the panel's own list. It is a DropdownMenu for its dismissal: the backdrop
+                       this used to carry swallowed the press that closed it. *@
+                    <DropdownMenu @ref="projectPicker" AlignLeft="true" Class="block"
+                                  WidthClass="left-0 right-0 w-auto"
+                                  ToggleClass="w-full flex items-center gap-2 rounded border border-line bg-surface-raised px-3 py-2 text-left hover:border-line-strong transition"
+                                  ShowCaret="false" ToggleTitle="Switch project">
+                        <ToggleContent>
                             @if (PickedProject is { } picked)
                             {
                                 <span class="min-w-0 flex-1">
@@ -67,17 +71,12 @@
                             {
                                 <span class="min-w-0 flex-1 text-sm text-content-subtle">Pick a project…</span>
                             }
-                            <svg class="w-4 h-4 text-content-subtle shrink-0 transition-transform @(pickerOpen ?"rotate-180" : "")"
+                            <svg class="w-4 h-4 text-content-subtle shrink-0"
                                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
-                        </button>
-
-                        @if (pickerOpen)
-                        {
-                            <button type="button" class="fixed inset-0 z-30 cursor-default" aria-hidden="true"
-                                    @onclick="() => pickerOpen = false" tabindex="-1"></button>
-                            <div class="absolute left-0 right-0 top-full z-40 mt-1 max-h-80 overflow-y-auto panel py-1"
-                                 role="listbox">
+                        </ToggleContent>
+                        <ChildContent>
+                            <div class="max-h-80 overflow-y-auto py-1" role="listbox">
                                 @if (RecentlyOpened.Count > 0)
                                 {
                                     @* The projects this user is actually working across, most
@@ -124,8 +123,8 @@
                                     </a>
                                 </div>
                             </div>
-                        }
-                    </div>
+                        </ChildContent>
+                    </DropdownMenu>
                 </li>
             }
 

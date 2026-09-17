@@ -8,7 +8,7 @@ public partial class SideNav
     [Parameter] public bool IsExpanded { get; set; } = true;
     [Parameter] public EventCallback OnToggleExpand { get; set; }
 
-    private bool pickerOpen;
+    private DropdownMenu? projectPicker;
     private bool projectsRequested;
 
     // Explicit folder toggles, remembered for the browser session. Static on purpose: it
@@ -118,7 +118,7 @@ public partial class SideNav
 
     private async Task PickProject(Project project)
     {
-        pickerOpen = false;
+        projectPicker?.Close();
         await CurrentProject.RememberAsync(project.ProjectId);
         // On a project page, follow the pick to the same page of the new project; on Home or a
         // company page, just retarget the workspace links and stay put.
@@ -136,7 +136,7 @@ public partial class SideNav
 
     private Task ClosePickerAndNavigate()
     {
-        pickerOpen = false;
+        projectPicker?.Close();
         return HandleNavigate();
     }
 
@@ -180,7 +180,7 @@ public partial class SideNav
 
     private void HandleLocationChanged(object? sender, EventArgs args)
     {
-        pickerOpen = false;
+        projectPicker?.Close();
         StateHasChanged();
     }
 

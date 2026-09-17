@@ -123,11 +123,13 @@ light email-body surfaces `bg-white text-gray-900`, and `LoadGate.razor`, the on
 render a `JewelSpinner`, are the known exceptions):
 
 ```
-grep -rnE "slate-|amber-|emerald-|rose-|red-[0-9]|text-\[1?[0-9]px\]|rounded-(xl|2xl|lg|md)|uppercase|tracking-|shadow-(sm|md|lg|xl|2xl)|bg-negative/10 border|btn-primary text-xs|<section class=\"px-|RequestAccessView Email|<label class=\"block eyebrow|<h1 |<thead class=|<tbody class=\"divide|ToString\(\"d{1,2} MMM yyyy|confirming[A-Z]|Armed\b|(Chip|Tab)Class\(|<JewelSpinner" Pages Components Features Layout
+grep -rnE "slate-|amber-|emerald-|rose-|red-[0-9]|text-\[1?[0-9]px\]|rounded-(xl|2xl|lg|md)|uppercase|tracking-|shadow-(sm|md|lg|xl|2xl)|bg-negative/10 border|btn-primary text-xs|<section class=\"px-|RequestAccessView Email|<label class=\"block eyebrow|<h1 |<thead class=|<tbody class=\"divide|ToString\(\"d{1,2} MMM yyyy|confirming[A-Z]|Armed\b|(Chip|Tab)Class\(|<JewelSpinner|fixed inset-0" Pages Components Features Layout
 ```
 
 (`rounded-lg` is allowed on the modal panel and `DropdownMenu`; `<h1` on the auth pages outside
-the shell.)
+the shell. `fixed inset-0` catches a hand-rolled dropdown backdrop — the panel-from-a-toggle is
+always `DropdownMenu`, which dismisses itself without swallowing the press; `Modal` owns the one
+legitimate full-screen scrim.)
 
 Still to read from the Figma (`docs/ui/open-book-design-rules.md` §8): row hover/select fill,
 the row-action dropdown, tabs vs pills, toggle switch, date picker, login page, button
