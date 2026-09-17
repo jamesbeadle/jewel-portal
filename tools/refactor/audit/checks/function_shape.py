@@ -1,59 +1,36 @@
-"""Heuristic function-length and else-block measurements for C-family and TypeScript sources."""
+"""Heuristic function-length, branch and else-block measurements for C-family and TypeScript sources."""
 from __future__ import annotations
 
 import re
 
+from ..declarations import declaredFunctions
 from ..source_files import SourceFile
 
-C_FAMILY_SIGNATURE = re.compile(
-    r"^\s*(?:public|private|protected|internal|static|async|override|sealed|partial|virtual)"
-    r"[\w\s<>,\[\]\?]*\s+\w+\s*\([^;]*$|^\s*(?:public|private|protected|internal)"
-    r"[\w\s<>,\[\]\?]*\s+\w+\s*\([^)]*\)\s*$"
-)
-TYPESCRIPT_SIGNATURE = re.compile(
-    r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s*\*?\s*\w*\s*(?:<[^>]*>)?\s*\("
-    r"|^\s*(?:export\s+)?(?:const|let)\s+\w+\s*(?::[^=]+)?=\s*(?:async\s*)?(?:\([^)]*\)|\w+)\s*(?::\s*[^=]+)?=>\s*\{\s*$"
-)
 ELSE_BLOCK = re.compile(r"^\s*}?\s*else\b")
+IF_BLOCK = re.compile(r"^\s*(?:}\s*)?(?:else\s+)?(?:@|\{#|\{:else\s+)?if\b")
 
 
-def isFunctionSignature(line: str) -> bool:
-    return bool(C_FAMILY_SIGNATURE.match(line) or TYPESCRIPT_SIGNATURE.match(line))
-
-
-def measureFunctionLengths(lines: list[str]) -> list[int]:
-    lengths = []
-    depthAtFunctionStart = None
-    depth = 0
-    startLine = 0
-    for lineNumber, line in enumerate(lines):
-        if depthAtFunctionStart is None and isFunctionSignature(line):
-            depthAtFunctionStart = depth
-            startLine = lineNumber
-        depth += line.count("{") - line.count("}")
-        isFunctionClosed = depthAtFunctionStart is not None and depth <= depthAtFunctionStart and "}" in line
-        if isFunctionClosed:
-            lengths.append(lineNumber - startLine + 1)
-            depthAtFunctionStart = None
-    return lengths
+def countMatchingLines(sourceFiles: list[SourceFile], pattern: re.Pattern) -> int:
+    return sum(1 for sourceFile in sourceFiles for line in sourceFile.lines if pattern.match(line))
 
 
 def check(sourceFiles: list[SourceFile], rules: dict) -> dict:
     limit = rules["maxFunctionLines"]
-    longFunctions = []
-    elseCount = 0
-    for sourceFile in sourceFiles:
-        elseCount += sum(1 for line in sourceFile.lines if ELSE_BLOCK.match(line))
-        for length in measureFunctionLengths(sourceFile.lines):
-            if length > limit:
-                longFunctions.append({"file": sourceFile.relative, "lines": length})
+    functions = [function for sourceFile in sourceFiles for function in declaredFunctions(sourceFile)]
+    longFunctions = [
+        {"file": function.file, "lines": function.lines, "name": function.name, "line": function.line}
+        for function in functions
+        if function.lines > limit
+    ]
     longFunctions.sort(key=lambda function: function["lines"], reverse=True)
     return {
         "name": "functionShape",
         "summary": {
             "limit": limit,
             "functionsOverLimit": len(longFunctions),
-            "elseBlocks": elseCount,
+            "totalFunctions": len(functions),
+            "elseBlocks": countMatchingLines(sourceFiles, ELSE_BLOCK),
+            "ifBlocks": countMatchingLines(sourceFiles, IF_BLOCK),
             "measurementIsHeuristic": True,
         },
         "offenders": longFunctions[:50],

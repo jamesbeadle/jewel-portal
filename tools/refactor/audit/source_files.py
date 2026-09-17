@@ -24,7 +24,10 @@ def loadRules(repositoryRoot: Path) -> dict:
 
 
 def matchesAny(relative: str, globs: list[str]) -> bool:
-    return any(fnmatch.fnmatch(relative, pattern) for pattern in globs)
+    return any(
+        fnmatch.fnmatch(relative, pattern) or fnmatch.fnmatch(relative, pattern.replace("**/", ""))
+        for pattern in globs
+    )
 
 
 def resolveSourceFiles(repositoryRoot: Path, rules: dict) -> list[SourceFile]:

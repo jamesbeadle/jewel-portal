@@ -20,7 +20,7 @@ python3 -m tools.refactor.audit.run_audit . --output tools/refactor/audit-output
 python3 -m tools.refactor.audit.gate tools/refactor/baseline.json tools/refactor/audit-output/audit.json
 ```
 
-A failing gate on a day with no round means today's work moved a figure the wrong way. Fix what today introduced if it is small (a comment the name now carries, an `else` that wants an early return, a file that wants dividing at its seam); otherwise name the figure and the file in the summary so tomorrow starts with it. Never reset the baseline outside a round.
+The audit prints the code quality score; put it, and how it moved against the baseline's, in the day's summary. A failing gate on a day with no round means today's work moved a figure the wrong way. Fix what today introduced if it is small (a comment the name now carries, an `else` that wants an early return, a file that wants dividing at its seam); otherwise name the figure and the file in the summary so tomorrow starts with it. Never reset the baseline outside a round.
 
 ## 2. The connector covers what changed
 
