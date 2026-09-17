@@ -7,7 +7,7 @@
 @* Relevant Events: every email tagged to this project's scheduling bucket, live from the
    mailbox. Emails render their short preview by default; expanding fetches the FULL body (with
    the quoted thread + attachment names) live, cached per message for the list's life. Replying
-   creates a reply-all draft in the projects mailbox — nothing is sent from here. *@
+   sends a reply-all from the projects mailbox, or leaves it in Drafts for Outlook. *@
 @if (Error is not null)
 {
     <Notice Tone="Tone.Negative" Class="mb-4">@Error</Notice>
@@ -105,30 +105,36 @@ else
                                   placeholder="Write your reply — in the draft it will sit above the quoted thread…"></textarea>
                         <div class="flex flex-wrap items-center justify-between gap-3">
                             <p class="text-xs text-content-subtle">
-                                Creates a reply-all draft in the projects mailbox — review and send it from Outlook; nothing is sent from here.
+                                Sends a reply-all from the projects mailbox. Save as draft to review it in Outlook first.
                             </p>
-                            <button type="button" class="btn-primary"
-                                    disabled="@(replyBusy || string.IsNullOrWhiteSpace(replyBody))"
-                                    @onclick="() => CreateReplyDraftAsync(email)">
-                                @(replyBusy ? "Creating draft…" : "Create reply draft")
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <button type="button" class="btn-secondary"
+                                        disabled="@(replyBusy || string.IsNullOrWhiteSpace(replyBody))"
+                                        @onclick="() => EmailReplyAsync(email, saveAsDraftOnly: true)">
+                                    Save as draft
+                                </button>
+                                <button type="button" class="btn-primary"
+                                        disabled="@(replyBusy || string.IsNullOrWhiteSpace(replyBody))"
+                                        @onclick="() => EmailReplyAsync(email, saveAsDraftOnly: false)">
+                                    @(replyBusy ? "Working…" : "Send reply")
+                                </button>
+                            </div>
                         </div>
                     </div>
                 }
                 @if (replyDraftForId == email.Id && replyDraft is not null)
                 {
-                    <Notice Tone="Tone.Positive" Class="mt-2">
-                        <p class="text-sm font-medium text-positive">
-                            Reply draft created in the projects mailbox — in this email's thread.
-                        </p>
+                    <Notice Tone="@(replyDraft.Sent ? Tone.Positive : replyDraft.FailureNote is null ? Tone.Info : Tone.Warning)" Class="mt-2">
+                        <p class="text-sm font-medium">@ReplyHeadline</p>
                         <p class="text-xs text-content-subtle mt-1">To: @string.Join(", ", replyDraft.Recipients)</p>
                         @if (replyDraft.Cc is { Count: > 0 } replyCc)
                         {
                             <p class="text-xs text-content-subtle">CC: @string.Join(", ", replyCc)</p>
                         }
                         <p class="text-xs text-content-subtle">
-                            Review the recipients and send it from Outlook — nothing has been sent.
-                            The sent copy keeps this thread's Programme tag, so it will appear here.
+                            @(replyDraft.Sent
+                                ? "The sent copy keeps this thread's Programme tag, so it appears here."
+                                : replyDraft.FailureNote ?? "Review the recipients and send it from Outlook — nothing has been sent.")
                         </p>
                         @if (!string.IsNullOrWhiteSpace(replyDraft.WebLink))
                         {
@@ -158,9 +164,9 @@ else
     private bool replyBusy;
     private string? replyError;
     private string? replyDraftForId; // email whose staged-draft confirmation is showing
-    private ProgrammeReplyDraft? replyDraft;
+    private ProgrammeReplyOutcome? replyDraft;
 
-    // Mirrors PrepareProgrammeReplyDraftEndpoint server-side (directors, project managers, site
+    // Mirrors SendProgrammeReplyEndpoint server-side (directors, project managers, site
     // managers; admins carry every role server-side).
     private bool CanDraftReply => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager);
@@ -202,15 +208,20 @@ else
         replyDraftForId = null;
     }
 
-    private async Task CreateReplyDraftAsync(MailboxMessage email)
+    private string ReplyHeadline =>
+        replyDraft is { Sent: true } ? "Reply sent from the projects mailbox — in this email's thread."
+        : replyDraft?.FailureNote is not null ? "The reply didn't send — it is waiting in the mailbox's Drafts folder."
+        : "Reply draft created in the projects mailbox — in this email's thread.";
+
+    private async Task EmailReplyAsync(MailboxMessage email, bool saveAsDraftOnly)
     {
         if (replyBusy || string.IsNullOrWhiteSpace(replyBody)) return;
         replyBusy = true;
         replyError = null;
         try
         {
-            replyDraft = await Commands.SendAsync(new PrepareProgrammeReplyDraft(
-                ProjectId, email.Id, replyBody.Trim(), email.InternetMessageId), CancellationToken.None);
+            replyDraft = await Commands.SendAsync(new SendProgrammeReply(
+                ProjectId, email.Id, replyBody.Trim(), email.InternetMessageId, saveAsDraftOnly), CancellationToken.None);
             replyDraftForId = email.Id;
             replyForId = null;
             replyBody = "";
@@ -223,7 +234,7 @@ else
         }
         catch
         {
-            replyError = "Couldn't create the reply draft. Check the mailbox connection and try again.";
+            replyError = "Couldn't email the reply. Check the mailbox connection and try again.";
         }
         finally
         {

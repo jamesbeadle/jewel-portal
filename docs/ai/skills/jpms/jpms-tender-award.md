@@ -36,12 +36,12 @@ Before preparing any invite:
    and do not prepare it again unless they say so.
 
 Then:
-- **First invite, everyone on the list should get it** → `prepare_bid_package_invite_draft` with
+- **First invite, everyone on the list should get it** → `send_bid_package_invite_to_tender_list` with
   no `recipientIds`. Know exactly what it does: it BCCs every tender-list row still in the
   running — status Invited (on the list) or Responded — that has a directory email; Declined and
   Won rows are skipped. It attaches the pricing schedule, the company T&Cs, the package's tender
   documents and its linked drawings. Say this to the user before calling it, with the names.
-- **Some of the list already had it, or someone has declined** → `prepare_bid_package_invite_draft`
+- **Some of the list already had it, or someone has declined** → `send_bid_package_invite_to_tender_list`
   with `recipientIds` for exactly those who should get it — the `tenderList[].recipientId` values
   from get_bid_package_context, never company names. Work the set out from the sent copy's `bcc`
   in read_record_emails against the tender list, and say who is in and who is out (and why:

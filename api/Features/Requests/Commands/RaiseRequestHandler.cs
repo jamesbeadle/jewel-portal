@@ -91,7 +91,7 @@ public sealed class RaiseRequestHandler : ICommandHandler<RaiseRequest, Request>
 
         // No email is drafted here — creating a request (even an emailable kind: RFI / NOD / EOT)
         // is a pure register action. A draft is only created when a person explicitly asks for one
-        // (PrepareRequestEmailDraft / PrepareRequestReplyDraft).
+        // (SendRequestEmail / SendRequestReply).
         return entity.ToModel();
     }
 

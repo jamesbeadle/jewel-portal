@@ -183,8 +183,15 @@
                                     <button type="button"
                                             class="text-xs font-medium text-accent hover:underline"
                                             disabled="@(replyingId is not null)"
-                                            @onclick="() => DraftReplyAsync(message)">
-                                        @(replyingId == message.MessageId ? "Drafting reply…" : "Reply with official PDF")
+                                            @onclick="() => EmailReplyAsync(message, saveAsDraftOnly: false)">
+                                        @(replyingId == message.MessageId ? "Sending reply…" : "Reply with official PDF")
+                                    </button>
+                                    <button type="button"
+                                            class="text-xs font-medium text-content-subtle hover:underline"
+                                            disabled="@(replyingId is not null)"
+                                            title="Stage the reply in the mailbox's Drafts folder instead of sending it"
+                                            @onclick="() => EmailReplyAsync(message, saveAsDraftOnly: true)">
+                                        Save as draft
                                     </button>
                                 }
                             </div>
@@ -194,20 +201,21 @@
                             }
                             @if (replyForMessageId == message.MessageId && replyDraft is not null)
                             {
-                                <Notice Tone="Tone.Positive" Class="mt-2">
-                                    <p class="text-sm font-medium text-positive">
-                                        Reply draft created in the projects mailbox — official PDF attached, in this email's thread.
-                                    </p>
+                                <Notice Tone="@(replyDraft.Sent ? Tone.Positive : replyDraft.FailureNote is null ? Tone.Info : Tone.Warning)" Class="mt-2">
+                                    <p class="text-sm font-medium">@ReplyHeadline</p>
                                     <p class="text-xs text-content-subtle mt-1">To: @string.Join(", ", replyDraft.Recipients)</p>
                                     @if (replyDraft.Cc is { Count: > 0 } replyCc)
                                     {
                                         <p class="text-xs text-content-subtle">CC: @string.Join(", ", replyCc)</p>
                                     }
-                                    <p class="text-xs text-content-subtle">Review the recipients and send it from Outlook — nothing has been sent.</p>
+                                    @if (!replyDraft.Sent)
+                                    {
+                                        <p class="text-xs text-content-subtle">@(replyDraft.FailureNote ?? "Review the recipients and send it from Outlook — nothing has been sent.")</p>
+                                    }
                                     @if (!string.IsNullOrWhiteSpace(replyDraft.WebLink))
                                     {
                                         <a href="@replyDraft.WebLink" target="_blank" rel="noopener"
-                                           class="text-xs text-accent hover:underline underline-offset-2">Open the draft in Outlook</a>
+                                           class="text-xs text-accent hover:underline underline-offset-2">Open it in Outlook</a>
                                     }
                                 </Notice>
                             }

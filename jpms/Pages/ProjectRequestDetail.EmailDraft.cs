@@ -25,10 +25,11 @@ public partial class ProjectRequestDetail
         emailModalOpen = false;
     }
 
-    // One confirm for both paths: no chain selected stages a fresh email (recipients from the
-    // correspondence profile); a selected chain stages a reply-all draft in that email's thread
-    // with the whole conversation quoted beneath. The PDF is attached either way.
-    private async Task ConfirmEmailDraft()
+    // One door for both paths: no chain selected emails the document as a fresh thread (recipients
+    // from the correspondence profile); a selected chain replies into that email's thread with the
+    // whole conversation quoted beneath. The PDF is attached either way, and saveAsDraftOnly leaves
+    // the reviewed email in the mailbox's Drafts folder instead of sending it.
+    private async Task EmailTheDocument(bool saveAsDraftOnly)
     {
         if (record is null || busy || preparingDraft || !CanDraftEmail) return;
         draftError = null;
@@ -37,9 +38,9 @@ public partial class ProjectRequestDetail
         {
             preparingDraft = true;
             draftResult = string.IsNullOrEmpty(selectedChainMailboxId)
-                ? await RequestRegister.PrepareEmailDraftAsync(record.RequestId)
-                : await RequestRegister.PrepareReplyDraftAsync(record.RequestId, selectedChainMailboxId);
-            // Drafting the official document moves an Open request to Awaiting Response server-side
+                ? await RequestRegister.EmailDocumentAsync(record.RequestId, saveAsDraftOnly: saveAsDraftOnly)
+                : await RequestRegister.EmailDocumentReplyAsync(record.RequestId, selectedChainMailboxId, saveAsDraftOnly);
+            // Emailing the official document moves an Open request to Awaiting Response server-side
             // (manually set back to Open if the send is cancelled) — reload so the status pill agrees.
             await LoadAsync();
         }
@@ -50,8 +51,8 @@ public partial class ProjectRequestDetail
         catch
         {
             draftError = string.IsNullOrEmpty(selectedChainMailboxId)
-                ? "Couldn't create the draft. Please try again."
-                : "Couldn't create the reply draft. The email may no longer be in the mailbox — refresh and try again.";
+                ? "Couldn't email the document. Please try again."
+                : "Couldn't email the reply. The original email may no longer be in the mailbox — refresh and try again.";
         }
         finally
         {

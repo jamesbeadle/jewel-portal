@@ -38,20 +38,21 @@ public interface IRequestRegister
     /// basis-of-queries / response-action-required / impact sections (replace-all for the items).</summary>
     Task<Request> SaveFormAsync(UpdateRequestForm command, CancellationToken cancellationToken = default);
 
-    /// <summary>Creates an Outlook draft in the projects mailbox carrying the official document PDF —
-    /// recipients and cover note pre-filled. Nothing is sent; the draft waits in Drafts.</summary>
-    Task<RequestEmailDraft> PrepareEmailDraftAsync(string requestId, string? recipientOverride = null, CancellationToken cancellationToken = default);
+    /// <summary>Emails the official document PDF from the projects mailbox as a new thread —
+    /// recipients and cover note resolved server-side. saveAsDraftOnly leaves it in Drafts for
+    /// Outlook instead of sending.</summary>
+    Task<RequestEmailOutcome> EmailDocumentAsync(string requestId, string? recipientOverride = null, bool saveAsDraftOnly = false, CancellationToken cancellationToken = default);
 
-    /// <summary>Creates an Outlook draft REPLY to a conversation email linked to the request —
-    /// same thread, official PDF attached, cover note above the quoted history. Nothing is sent;
-    /// the draft waits in Drafts. <paramref name="mailboxMessageId"/> is the email's Graph id.</summary>
-    Task<RequestEmailDraft> PrepareReplyDraftAsync(string requestId, string mailboxMessageId, CancellationToken cancellationToken = default);
+    /// <summary>Emails the official document as a REPLY to a conversation email linked to the
+    /// request — same thread, PDF attached, cover note above the quoted history. saveAsDraftOnly
+    /// leaves it in Drafts. <paramref name="mailboxMessageId"/> is the email's Graph id.</summary>
+    Task<RequestEmailOutcome> EmailDocumentReplyAsync(string requestId, string mailboxMessageId, bool saveAsDraftOnly = false, CancellationToken cancellationToken = default);
 
-    /// <summary>The bulk form of <see cref="PrepareEmailDraftAsync"/>: one Outlook draft per
-    /// request id. Partial success is expected — every id gets an outcome carrying either its
-    /// created draft or the user-fixable reason it couldn't be drafted. Selections larger than
-    /// the server's per-call cap are chunked into successive calls transparently.</summary>
-    Task<RequestEmailDraftBatch> PrepareEmailDraftsAsync(IReadOnlyList<string> requestIds, CancellationToken cancellationToken = default);
+    /// <summary>The bulk form of <see cref="EmailDocumentAsync"/>: one email per request id.
+    /// Partial success is expected — every id gets an outcome carrying either what became of its
+    /// email or the user-fixable reason there was none. Selections larger than the server's
+    /// per-call cap are chunked into successive calls transparently.</summary>
+    Task<RequestEmailBatch> EmailDocumentsAsync(IReadOnlyList<string> requestIds, bool saveAsDraftOnly = false, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<RequestMessage>> ListMessagesAsync(string requestId, CancellationToken cancellationToken = default);
 

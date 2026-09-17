@@ -2,19 +2,19 @@ using Jewel.JPMS.Contracts.Procurement;
 
 namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 
-public sealed class PrepareBidPackageInviteDraftEndpoint
+public sealed class SendBidPackageInviteToTenderListEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly PrepareBidPackageInviteDraftAuthorisation authorisation;
-    private readonly PrepareBidPackageInviteDraftValidation validation;
-    private readonly ICommandHandler<PrepareBidPackageInviteDraft, BidPackageInviteDraft> handler;
+    private readonly SendBidPackageInviteToTenderListAuthorisation authorisation;
+    private readonly SendBidPackageInviteToTenderListValidation validation;
+    private readonly ICommandHandler<SendBidPackageInviteToTenderList, BidPackageInviteOutcome> handler;
 
-    public PrepareBidPackageInviteDraftEndpoint(SignedInUserResolver users, PrepareBidPackageInviteDraftAuthorisation authorisation, PrepareBidPackageInviteDraftValidation validation, ICommandHandler<PrepareBidPackageInviteDraft, BidPackageInviteDraft> handler)
+    public SendBidPackageInviteToTenderListEndpoint(SignedInUserResolver users, SendBidPackageInviteToTenderListAuthorisation authorisation, SendBidPackageInviteToTenderListValidation validation, ICommandHandler<SendBidPackageInviteToTenderList, BidPackageInviteOutcome> handler)
     {
         this.users = users; this.authorisation = authorisation; this.validation = validation; this.handler = handler;
     }
 
-    [Function(nameof(PrepareBidPackageInviteDraft))]
+    [Function(nameof(SendBidPackageInviteToTenderList))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "bid-packages/{bidPackageId}/draft-invite")] HttpRequest request,
         string bidPackageId)
@@ -22,7 +22,7 @@ public sealed class PrepareBidPackageInviteDraftEndpoint
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        var command = await request.ReadFromJsonAsync<PrepareBidPackageInviteDraft>();
+        var command = await request.ReadFromJsonAsync<SendBidPackageInviteToTenderList>();
         if (command is null) return new BadRequestResult();
         if (command.BidPackageId != bidPackageId) return new BadRequestObjectResult("Route bidPackageId does not match body.");
 

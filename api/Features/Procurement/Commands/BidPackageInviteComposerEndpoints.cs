@@ -5,7 +5,7 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 /// <summary>
 /// The in-app invite composer's three endpoints: read the persisted draft, save it, send the
 /// invite. Sending an invite (and drafting one) is exactly the set who could create the draft in
-/// the old Outlook flow — PrepareBidPackageInviteDraftAuthorisation's roles — reused so moving
+/// the old Outlook flow — SendBidPackageInviteToTenderListAuthorisation's roles — reused so moving
 /// the send in-app widened nobody's reach.
 /// </summary>
 public sealed class BidPackageInviteComposerEndpoints

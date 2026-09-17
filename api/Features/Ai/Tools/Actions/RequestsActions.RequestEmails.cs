@@ -8,67 +8,74 @@ internal sealed partial class RequestsActions
     private static IEnumerable<AiAction> RequestEmailActions() => new AiAction[]
     {
         new AiAction(
-            Name: "prepare_request_email_draft",
+            Name: "send_request_email",
             Area: "Requests & RFIs",
-            Description: "Stages an Outlook draft in the projects mailbox carrying the request's "
-                + "official document PDF, addressed to the resolved client/architect preference (or "
-                + "one ad-hoc recipientOverride). Nothing is sent — the draft waits in the mailbox's "
-                + "Drafts folder for a person to review and send.",
-            CommandType: typeof(PrepareRequestEmailDraft),
-            ResultType: typeof(RequestEmailDraft),
-            AuthorisationType: typeof(PrepareRequestEmailDraftAuthorisation),
-            ValidationType: typeof(PrepareRequestEmailDraftValidation),
+            Description: "SENDS EMAIL: sends the request's official document PDF from the projects "
+                + "mailbox to the resolved client/architect preference (or one ad-hoc "
+                + "recipientOverride). saveAsDraftOnly true stops after staging, leaving the reviewed "
+                + "draft in Drafts for Outlook instead of sending.",
+            CommandType: typeof(SendRequestEmail),
+            ResultType: typeof(RequestEmailOutcome),
+            AuthorisationType: typeof(SendRequestEmailAuthorisation),
+            ValidationType: typeof(SendRequestEmailValidation),
             VisibleTo: RoleSet.Of(
                 JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.Architect),
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "The request must be an emailable kind (RFI/NOD/EOT) — promote it first if it is "
-                + "still General. requestId via find_by_reference. The result's draftMessageId is "
-                + "the handle for delete_mailbox_draft if the draft has to be withdrawn."),
+            Notes: "This reaches the client or architect the moment it succeeds — ALWAYS confirm the "
+                + "request and its recipients with the user before calling. The request must be an "
+                + "emailable kind (RFI/NOD/EOT) — promote it first if it is still General. requestId "
+                + "via find_by_reference. The result's draftMessageId is the handle for "
+                + "delete_mailbox_draft if a staged draft has to be withdrawn."),
 
         new AiAction(
-            Name: "prepare_request_email_drafts",
+            Name: "send_request_emails",
             Area: "Requests & RFIs",
-            Description: "Stages one Outlook draft in the projects mailbox per request id given, each "
-                + "carrying that request's official document PDF. Nothing is sent — every draft waits "
-                + "in the Drafts folder. A request that cannot be drafted (no resolvable recipient, "
-                + "unknown id) is reported in the batch result without stopping the others.",
-            CommandType: typeof(PrepareRequestEmailDrafts),
-            ResultType: typeof(RequestEmailDraftBatch),
-            AuthorisationType: typeof(PrepareRequestEmailDraftsAuthorisation),
-            ValidationType: typeof(PrepareRequestEmailDraftsValidation),
+            Description: "SENDS EMAIL: sends one email per request id given, each carrying that "
+                + "request's official document PDF, from the projects mailbox. saveAsDraftOnly true "
+                + "leaves them all in Drafts for Outlook instead. A request that cannot be emailed "
+                + "(no resolvable recipient, unknown id) is reported in the batch result without "
+                + "stopping the others.",
+            CommandType: typeof(SendRequestEmails),
+            ResultType: typeof(RequestEmailBatch),
+            AuthorisationType: typeof(SendRequestEmailsAuthorisation),
+            ValidationType: typeof(SendRequestEmailsValidation),
             VisibleTo: RoleSet.Of(
                 JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.Architect),
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "requestIds via find_by_reference or list_requests."),
+            Notes: "Every one of these reaches a client or architect the moment it succeeds — ALWAYS "
+                + "confirm the list with the user before calling. requestIds via find_by_reference or "
+                + "list_requests."),
 
         new AiAction(
-            Name: "prepare_request_reply_draft",
+            Name: "send_request_reply",
             Area: "Requests & RFIs",
-            Description: "Stages an Outlook draft REPLY, in the original email conversation thread, to "
-                + "an email linked to the request — carrying the request's official document PDF. "
-                + "Nothing is sent — the draft waits in the mailbox's Drafts folder.",
-            CommandType: typeof(PrepareRequestReplyDraft),
-            ResultType: typeof(RequestEmailDraft),
-            AuthorisationType: typeof(PrepareRequestReplyDraftAuthorisation),
-            ValidationType: typeof(PrepareRequestReplyDraftValidation),
+            Description: "SENDS EMAIL: replies in the original email conversation thread to an email "
+                + "linked to the request, carrying the request's official document PDF, from the "
+                + "projects mailbox. saveAsDraftOnly true leaves the reply in Drafts for Outlook "
+                + "instead of sending it.",
+            CommandType: typeof(SendRequestReply),
+            ResultType: typeof(RequestEmailOutcome),
+            AuthorisationType: typeof(SendRequestReplyAuthorisation),
+            ValidationType: typeof(SendRequestReplyValidation),
             VisibleTo: RoleSet.Of(
                 JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.Architect),
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "mailboxMessageId is the Graph id of the conversation email to reply to — "
-                + "list_request_correspondence / read_record_emails surface it. requestId via "
-                + "find_by_reference. The result's draftMessageId is the handle for "
-                + "delete_mailbox_draft if the draft has to be withdrawn."),
+            Notes: "This reaches the thread's correspondents the moment it succeeds — ALWAYS confirm "
+                + "with the user before calling. mailboxMessageId is the Graph id of the conversation "
+                + "email to reply to — list_request_correspondence / read_record_emails surface it. "
+                + "requestId via find_by_reference. The result's draftMessageId is the handle for "
+                + "delete_mailbox_draft if a staged draft has to be withdrawn."),
 
         new AiAction(
             Name: "resend_request_document",
             Area: "Requests & RFIs",
-            Description: "SENDS EMAIL: schedules the request's official document PDF to be emailed to "
-                + "the project's resolved external recipients (client / architect preference), or to "
-                + "one ad-hoc recipientOverride. The send happens in the background shortly after the "
-                + "call — there is no draft step and no recall.",
+            Description: "Queues the request's official document PDF for the background worker, which "
+                + "STAGES IT AS A DRAFT in the projects mailbox for a person to send from Outlook — "
+                + "it does not send, despite the name. Prefer send_request_email, which sends from "
+                + "the portal and reports what happened.",
             CommandType: typeof(ResendRequestDocument),
             ResultType: typeof(Acknowledgement),
             AuthorisationType: typeof(ResendRequestDocumentAuthorisation),
@@ -77,8 +84,9 @@ internal sealed partial class RequestsActions
                 JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.Architect),
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "Always confirm with the user before calling — this emails an external party. Only "
-                + "RFI, NOD and EOT documents are emailable; promote a General request first. "
-                + "requestId via find_by_reference."),
+            Notes: "The work happens in the background, so this returns before the draft exists and "
+                + "reports nothing about it — there is no outcome to read back. Only RFI, NOD and EOT "
+                + "documents are emailable; promote a General request first. requestId via "
+                + "find_by_reference."),
     };
 }

@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Features.MailboxIntake;
+using Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.MailboxIntake.Sharing;
 using Jewel.JPMS.Api.Features.Requests.Documents;
@@ -8,45 +9,47 @@ using Jewel.JPMS.Contracts.Requests;
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
 /// <summary>
-/// Creates an Outlook draft in the connected projects mailbox carrying the request's official
-/// document — recipients, subject, cover note and the freshly rendered PDF all pre-filled — so a
-/// person can review, adjust and send it from the mailbox itself. Nothing is sent, but an Open
-/// request moves to Awaiting Response the moment its draft lands in the mailbox — the working
-/// assumption is that a drafted document goes out. If the team cancels the send they set the
-/// request back to Open by hand. Requests already past Open (Responded, Approved, Closed…)
-/// keep their status: re-drafting never rewinds a lifecycle.
+/// Emails the request's official document from the projects mailbox as a new thread — recipients,
+/// subject, cover note and the freshly rendered PDF all composed here. SaveAsDraftOnly stops after
+/// staging, leaving the reviewed draft in Drafts for Outlook, which is what this handler did for
+/// everybody until 2026-09-17.
 ///
-/// Recipients come from the shared <see cref="RequestRecipientResolver"/> (request party →
-/// project party → project profile To rows, with the correspondence profile supplying CC/BCC) —
-/// the same resolution the worker send uses. An ad-hoc override addresses the draft to that one
-/// email instead, with no CC/BCC.
+/// Recipients come from the shared <see cref="RequestRecipientResolver"/> (request party → project
+/// party → project profile To rows, with the correspondence profile supplying CC/BCC). An ad-hoc
+/// override addresses it to that one email instead, with no CC/BCC. Files on the request ride out
+/// with the document, or travel as download links when they would push the message past the
+/// Exchange ceiling.
+///
+/// Staging, the send, the degrade back to a draft and the audit row are the dispatcher's
+/// (OutboundEmailDispatcher); the status move is RequestLifecycle's, shared with the reply.
 /// </summary>
-public sealed class PrepareRequestEmailDraftHandler : ICommandHandler<PrepareRequestEmailDraft, RequestEmailDraft>
+public sealed class SendRequestEmailHandler : ICommandHandler<SendRequestEmail, RequestEmailOutcome>
 {
+    private const string StagingRefused =
+        "The email couldn't be staged in the projects mailbox, so nothing was sent. "
+        + "Check the mailbox connection and try again.";
+
     private readonly JpmsContext context;
-    private readonly IMailboxGraphClient graph;
-    private readonly Audit.AuditTrail audit;
+    private readonly OutboundEmailDispatcher dispatcher;
     private readonly MailboxIntakeOptions mailboxOptions;
     private readonly Attachments.IRequestAttachmentStore attachmentStore;
     private readonly IEmailFileShareStore shareStore;
 
-    public PrepareRequestEmailDraftHandler(
+    public SendRequestEmailHandler(
         JpmsContext context,
-        IMailboxGraphClient graph,
-        Audit.AuditTrail audit,
+        OutboundEmailDispatcher dispatcher,
         MailboxIntakeOptions mailboxOptions,
         Attachments.IRequestAttachmentStore attachmentStore,
         IEmailFileShareStore shareStore)
     {
         this.context = context;
-        this.graph = graph;
-        this.audit = audit;
+        this.dispatcher = dispatcher;
         this.mailboxOptions = mailboxOptions;
         this.attachmentStore = attachmentStore;
         this.shareStore = shareStore;
     }
 
-    public async Task<RequestEmailDraft> HandleAsync(PrepareRequestEmailDraft command, CancellationToken cancellationToken)
+    public async Task<RequestEmailOutcome> HandleAsync(SendRequestEmail command, CancellationToken cancellationToken)
     {
         var request = await context.Requests
             .FirstOrDefaultAsync(r => r.RequestId == command.RequestId, cancellationToken);
@@ -129,56 +132,36 @@ public sealed class PrepareRequestEmailDraftHandler : ICommandHandler<PrepareReq
             Categories: new[] { TriageCategories.Marker, recordTag },
             Cc: recipients.Cc.Select(ToDraftRecipient).ToList());
 
-        var created = await graph.CreateDraftAsync(draft, cancellationToken);
-        if (created is null)
-            throw new InvalidOperationException(
-                "The draft couldn't be created in the projects mailbox. Check the mailbox connection and try again.");
+        var filing = new OutboundEmailFiling(
+            "Client", StagingRefused, request.ProjectId,
+            RecordType.Request, request.RequestId, model.DisplayNumber);
 
-        // The projects mailbox is copied on every draft by the Graph client itself, so report it
-        // back alongside the resolved Cc — the confirmation the user reads must match the draft
-        // that actually landed in Outlook.
-        var cc = recipients.Cc.Select(r => r.Email).ToList();
-        if (!string.IsNullOrWhiteSpace(mailboxOptions.Mailbox)
-            && !recipients.To.Concat(recipients.Cc).Concat(recipients.Bcc)
-                .Any(r => string.Equals(r.Email.Trim(), mailboxOptions.Mailbox, StringComparison.OrdinalIgnoreCase)))
-            cc.Add(mailboxOptions.Mailbox.Trim());
+        var dispatch = await dispatcher.DispatchAsync(draft, filing, command.SaveAsDraftOnly, cancellationToken);
+        await RequestLifecycle.OpenIfNeedsActionAsync(context, request, cancellationToken);
 
-        // Audit (client-facing): the drafted document, with its webLink, so the request's own
-        // history says when it most likely went out and who prepared it. Written after the draft
-        // actually landed — a failed create never records a send. To + Cc only, never Bcc.
-        await audit.WriteAsync(
-            AuditEventType.DraftCreated,
-            $"{model.TypeShort} {model.DisplayNumber} document drafted to " +
-            $"{string.Join(", ", recipients.To.Select(r => r.Email))}" +
-            (cc.Count > 0 ? $" (copied: {string.Join(", ", cc)})" : "") +
-            " — awaiting review and send.",
-            pathway: "Client",
-            projectId: request.ProjectId,
-            recordType: RecordType.Request,
-            recordId: request.RequestId,
-            recordReference: model.DisplayNumber,
-            emailMessageId: created.Id,
-            webLink: created.WebLink,
-            cancellationToken: cancellationToken);
-
-        // Drafted means it's going out: a Needs-action request moves to Open (with the
-        // correspondent, awaiting their response) now, and the team manually returns it to Needs
-        // action if the send is cancelled. Only Needs action moves — a request already Open,
-        // needing a variation or closed is never rewound by a re-draft.
-        if ((RequestStatus)request.Status == RequestStatus.NeedsAction)
-        {
-            request.Status = (int)RequestStatus.Open;
-            await context.SaveChangesAsync(cancellationToken);
-        }
-
-        return new RequestEmailDraft(
+        return new RequestEmailOutcome(
             request.RequestId,
             model.EmailSubject,
             recipients.To.Select(r => r.Email).ToList(),
-            created.WebLink,
-            Cc: cc,
+            dispatch.WebLink,
+            Cc: CopiedRecipients(recipients),
             Bcc: recipients.Bcc.Select(r => r.Email).ToList(),
-            DraftMessageId: created.Id);
+            DraftMessageId: dispatch.MessageId,
+            Sent: dispatch.Sent,
+            FailureNote: dispatch.FailureNote);
+    }
+
+    /// <summary>The resolved Cc plus the projects mailbox, which the Graph client copies on every
+    /// message itself — the confirmation the user reads must match the email that actually went.</summary>
+    private List<string> CopiedRecipients(RequestRecipientSet recipients)
+    {
+        var copied = recipients.Cc.Select(recipient => recipient.Email).ToList();
+        if (string.IsNullOrWhiteSpace(mailboxOptions.Mailbox)) return copied;
+        var alreadyThere = recipients.To.Concat(recipients.Cc).Concat(recipients.Bcc)
+            .Any(recipient => string.Equals(recipient.Email.Trim(), mailboxOptions.Mailbox, StringComparison.OrdinalIgnoreCase));
+        if (alreadyThere) return copied;
+        copied.Add(mailboxOptions.Mailbox.Trim());
+        return copied;
     }
 
     /// <summary>
@@ -250,7 +233,7 @@ public sealed class PrepareRequestEmailDraftHandler : ICommandHandler<PrepareReq
 
     /// <summary>The short branded HTML cover note — mirrors the worker's outbound send so a drafted
     /// email reads the same as an auto-issued one. Internal so the reply-draft path
-    /// (<see cref="PrepareRequestReplyDraftHandler"/>) reuses the identical note.</summary>
+    /// (<see cref="SendRequestReplyHandler"/>) reuses the identical note.</summary>
     internal static string BuildCoverNote(RequestDocumentModel model)
     {
         var due = model.ResponseDue is { } d

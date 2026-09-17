@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Api.Features.Procurement.Attachments;
 /// Stores the files kept on a bid package as tender documents — specification extracts, schedules
 /// of finishes, survey photos. Private container, downloads proxied through the API, same contract
 /// as the work-order attachment store. Unlike work-order attachments these ARE supplier-facing:
-/// PrepareBidPackageInviteDraft attaches them to the invite email alongside the linked drawings.
+/// SendBidPackageInviteToTenderList attaches them to the invite email alongside the linked drawings.
 /// </summary>
 public interface IBidPackageAttachmentStore
 {

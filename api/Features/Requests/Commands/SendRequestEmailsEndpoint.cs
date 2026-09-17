@@ -8,18 +8,18 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 /// outcomes; a request that can't be drafted (no resolvable recipient, unknown id) doesn't stop
 /// the others. Nothing is sent — every draft waits in the mailbox's Drafts folder.
 /// </summary>
-public sealed class PrepareRequestEmailDraftsEndpoint
+public sealed class SendRequestEmailsEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly PrepareRequestEmailDraftsAuthorisation authorisation;
-    private readonly PrepareRequestEmailDraftsValidation validation;
-    private readonly ICommandHandler<PrepareRequestEmailDrafts, RequestEmailDraftBatch> handler;
+    private readonly SendRequestEmailsAuthorisation authorisation;
+    private readonly SendRequestEmailsValidation validation;
+    private readonly ICommandHandler<SendRequestEmails, RequestEmailBatch> handler;
 
-    public PrepareRequestEmailDraftsEndpoint(
+    public SendRequestEmailsEndpoint(
         SignedInUserResolver users,
-        PrepareRequestEmailDraftsAuthorisation authorisation,
-        PrepareRequestEmailDraftsValidation validation,
-        ICommandHandler<PrepareRequestEmailDrafts, RequestEmailDraftBatch> handler)
+        SendRequestEmailsAuthorisation authorisation,
+        SendRequestEmailsValidation validation,
+        ICommandHandler<SendRequestEmails, RequestEmailBatch> handler)
     {
         this.users = users;
         this.authorisation = authorisation;
@@ -27,7 +27,7 @@ public sealed class PrepareRequestEmailDraftsEndpoint
         this.handler = handler;
     }
 
-    [Function(nameof(PrepareRequestEmailDrafts))]
+    [Function(nameof(SendRequestEmails))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "requests/email-drafts")] HttpRequest request)
     {
@@ -36,8 +36,8 @@ public sealed class PrepareRequestEmailDraftsEndpoint
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        PrepareRequestEmailDrafts? command = null;
-        try { command = await request.ReadFromJsonAsync<PrepareRequestEmailDrafts>(); }
+        SendRequestEmails? command = null;
+        try { command = await request.ReadFromJsonAsync<SendRequestEmails>(); }
         catch { /* a malformed body fails validation below */ }
         if (command is null) return new BadRequestObjectResult("A JSON body with requestIds is required.");
 

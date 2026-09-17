@@ -27,7 +27,7 @@ internal sealed partial class RequestsActions : IAiActionSource
     //  nothing is uploaded and the handler was already registered as an ICommandHandler; only Source=Upload
     //  attachments stay page-only, and the handler refuses them with a message when no bytes arrive.)
     // (LinkMessageToRecord is no longer skipped — gate classes added 2026-08-28, actions file_email_to_record and file_unfiled_replies above; RecordLinksEndpoints.Gate reads the same TriageRoles.AllowedToTriage set.)
-    // Skipped: PrepareProgrammeReplyDraft (RecordLinks) — no Authorisation class: the role set is a private field of the endpoint itself, and there is no validation class either.
+    // Skipped: SendProgrammeReply (RecordLinks) — no Authorisation class: the role set is a private field of the endpoint itself, and there is no validation class either.
     // Skipped: BackfillBucketsEndpoint (RecordLinks) — no command dispatch: the endpoint performs the Graph sweep directly.
     // Skipped: DiscardDocumentControlItem — no Authorisation class: inline DocumentControlRoles gate in DocumentControlItemCommandEndpoints.
     // Skipped: RestoreDocumentControlItem — no Authorisation class: inline DocumentControlRoles gate in DocumentControlItemCommandEndpoints.

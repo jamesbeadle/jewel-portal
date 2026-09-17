@@ -8,19 +8,19 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 /// JSON body: { "mailboxMessageId": "..." } — the Graph id of the conversation email to reply to.
 /// Nothing is sent — the draft waits in the mailbox's Drafts folder.
 /// </summary>
-public sealed class PrepareRequestReplyDraftEndpoint
+public sealed class SendRequestReplyEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly PrepareRequestReplyDraftAuthorisation authorisation;
-    private readonly PrepareRequestReplyDraftValidation validation;
-    private readonly ICommandHandler<PrepareRequestReplyDraft, RequestEmailDraft> handler;
+    private readonly SendRequestReplyAuthorisation authorisation;
+    private readonly SendRequestReplyValidation validation;
+    private readonly ICommandHandler<SendRequestReply, RequestEmailOutcome> handler;
     private readonly Audit.AuditActor auditActor;
 
-    public PrepareRequestReplyDraftEndpoint(
+    public SendRequestReplyEndpoint(
         SignedInUserResolver users,
-        PrepareRequestReplyDraftAuthorisation authorisation,
-        PrepareRequestReplyDraftValidation validation,
-        ICommandHandler<PrepareRequestReplyDraft, RequestEmailDraft> handler,
+        SendRequestReplyAuthorisation authorisation,
+        SendRequestReplyValidation validation,
+        ICommandHandler<SendRequestReply, RequestEmailOutcome> handler,
         Audit.AuditActor auditActor)
     {
         this.users = users;
@@ -30,7 +30,7 @@ public sealed class PrepareRequestReplyDraftEndpoint
         this.auditActor = auditActor;
     }
 
-    [Function(nameof(PrepareRequestReplyDraft))]
+    [Function(nameof(SendRequestReply))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "requests/{requestId}/email-draft/reply")] HttpRequest request,
         string requestId)
@@ -43,10 +43,10 @@ public sealed class PrepareRequestReplyDraftEndpoint
         // Attribute the handler's DraftCreated audit row to whoever pressed the button.
         auditActor.Email = signedInUser.Email;
 
-        PrepareRequestReplyDraft? body = null;
-        try { body = await request.ReadFromJsonAsync<PrepareRequestReplyDraft>(); }
+        SendRequestReply? body = null;
+        try { body = await request.ReadFromJsonAsync<SendRequestReply>(); }
         catch { /* validation reports the missing message id */ }
-        var command = new PrepareRequestReplyDraft(requestId, body?.MailboxMessageId ?? "");
+        var command = new SendRequestReply(requestId, body?.MailboxMessageId ?? "");
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 

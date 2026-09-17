@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using Jewel.JPMS.Api.Features.MailboxIntake.Compose;
+using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Ai.Tools;
@@ -66,15 +69,15 @@ public sealed class BidPackageInviteTests
         Assert.Equal(2, all.Count);
     }
 
-    // ---- PrepareBidPackageInviteDraftHandler ------------------------------------------------------
+    // ---- SendBidPackageInviteToTenderListHandler ------------------------------------------------------
 
     [Fact]
-    public async Task PrepareDraft_bccsTheChosenRecipients_andReportsTheAttachedFiles()
+    public async Task InviteToTenderList_bccsTheChosenRecipients_andReportsTheAttachedFiles()
     {
         var fixture = await Fixture.CreateAsync();
 
         var draft = await fixture.PrepareHandler.HandleAsync(
-            new PrepareBidPackageInviteDraft(PackageId, "Invitation to tender", "<p>Please price.</p>", new[] { "R-ACME" }),
+            new SendBidPackageInviteToTenderList(PackageId, "Invitation to tender", "<p>Please price.</p>", new[] { "R-ACME" }),
             CancellationToken.None);
 
         Assert.Equal(new[] { "acme@example.com" }, draft.Bcc);
@@ -88,27 +91,43 @@ public sealed class BidPackageInviteTests
             draft.AttachedFiles);
         Assert.Empty(draft.LinkedFiles!);
         Assert.Equal("draft-1", draft.DraftMessageId);
+        Assert.True(draft.Sent);
     }
 
     [Fact]
-    public async Task PrepareDraft_withoutRecipientIds_bccsEveryoneStillInTheRunning()
+    public async Task InviteToTenderList_withSaveAsDraftOnly_stagesTheInviteAndSendsNothing()
     {
         var fixture = await Fixture.CreateAsync();
 
         var draft = await fixture.PrepareHandler.HandleAsync(
-            new PrepareBidPackageInviteDraft(PackageId, "Invitation to tender", "<p>Please price.</p>"),
+            new SendBidPackageInviteToTenderList(
+                PackageId, "Invitation to tender", "<p>Please price.</p>", new[] { "R-ACME" }, SaveAsDraftOnly: true),
+            CancellationToken.None);
+
+        Assert.False(draft.Sent);
+        Assert.Null(draft.FailureNote);
+        Assert.NotNull(fixture.Graph.CreatedDraft);
+    }
+
+    [Fact]
+    public async Task InviteToTenderList_withoutRecipientIds_bccsEveryoneStillInTheRunning()
+    {
+        var fixture = await Fixture.CreateAsync();
+
+        var draft = await fixture.PrepareHandler.HandleAsync(
+            new SendBidPackageInviteToTenderList(PackageId, "Invitation to tender", "<p>Please price.</p>"),
             CancellationToken.None);
 
         Assert.Equal(new[] { "acme@example.com", "birch@example.com" }, draft.Bcc.OrderBy(e => e));
     }
 
     [Fact]
-    public async Task PrepareDraft_refusesWhenNoneOfTheRecipientIdsResolve()
+    public async Task InviteToTenderList_refusesWhenNoneOfTheRecipientIdsResolve()
     {
         var fixture = await Fixture.CreateAsync();
 
         var refusal = await Assert.ThrowsAsync<InvalidOperationException>(() => fixture.PrepareHandler.HandleAsync(
-            new PrepareBidPackageInviteDraft(PackageId, "s", "<p>b</p>", new[] { "R-DECLINED", "Acme Ltd" }),
+            new SendBidPackageInviteToTenderList(PackageId, "s", "<p>b</p>", new[] { "R-DECLINED", "Acme Ltd" }),
             CancellationToken.None));
 
         Assert.Contains("recipientId", refusal.Message);
@@ -207,7 +226,7 @@ public sealed class BidPackageInviteTests
         public JpmsContext Context { get; }
         public RecordingGraph Graph { get; } = new();
         public BidPackageInviteMailAssembler Assembler { get; }
-        public PrepareBidPackageInviteDraftHandler PrepareHandler { get; }
+        public SendBidPackageInviteToTenderListHandler PrepareHandler { get; }
         public SendBidPackageInviteHandler SendHandler { get; }
 
         private Fixture()
@@ -217,8 +236,11 @@ public sealed class BidPackageInviteTests
                 .Options);
             Assembler = new BidPackageInviteMailAssembler(Context, new Blobs(), new NoShareStore(), new Attachments(), new Terms());
             var options = new MailboxIntakeOptions { Mailbox = "projects@jewelbb.co.uk" };
-            PrepareHandler = new PrepareBidPackageInviteDraftHandler(Context, Graph, options, Assembler);
-            SendHandler = new SendBidPackageInviteHandler(Context, Graph, options, Assembler);
+            var dispatcher = new OutboundEmailDispatcher(
+                Graph,
+                new AuditTrail(Context, new AuditActor { Email = "pm@jewelbb.co.uk" }, NullLogger<AuditTrail>.Instance));
+            PrepareHandler = new SendBidPackageInviteToTenderListHandler(Context, dispatcher, options, Assembler);
+            SendHandler = new SendBidPackageInviteHandler(Context, dispatcher, options, Assembler);
         }
 
         public static async Task<Fixture> CreateAsync()

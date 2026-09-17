@@ -2,9 +2,9 @@ using Jewel.JPMS.Contracts.Requests;
 
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
-public sealed class PrepareRequestReplyDraftValidation
+public sealed class SendRequestReplyValidation
 {
-    public ValidationOutcome Check(PrepareRequestReplyDraft command)
+    public ValidationOutcome Check(SendRequestReply command)
     {
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(command.RequestId)) errors.Add("RequestId is required.");

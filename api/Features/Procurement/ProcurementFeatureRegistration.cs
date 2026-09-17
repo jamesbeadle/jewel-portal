@@ -108,9 +108,9 @@ public static class ProcurementFeatureRegistration
         // so the two can never disagree about what a tenderer receives.
         services.AddScoped<BidPackageInviteMailAssembler>();
 
-        services.AddScoped<ICommandHandler<PrepareBidPackageInviteDraft, BidPackageInviteDraft>, PrepareBidPackageInviteDraftHandler>();
-        services.AddScoped<PrepareBidPackageInviteDraftAuthorisation>();
-        services.AddScoped<PrepareBidPackageInviteDraftValidation>();
+        services.AddScoped<ICommandHandler<SendBidPackageInviteToTenderList, BidPackageInviteOutcome>, SendBidPackageInviteToTenderListHandler>();
+        services.AddScoped<SendBidPackageInviteToTenderListAuthorisation>();
+        services.AddScoped<SendBidPackageInviteToTenderListValidation>();
 
         // The in-app invite composer (2026-08-16): the invite is composed, persisted as a draft ON
         // the package, and SENT from the projects mailbox — no trip to Outlook. Same review-then-

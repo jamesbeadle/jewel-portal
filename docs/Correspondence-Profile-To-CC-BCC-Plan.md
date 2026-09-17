@@ -12,7 +12,7 @@ Recipient resolution today produces exactly **one To address** and exists in thr
 | Path | File | Behaviour |
 |---|---|---|
 | Auto-send on promotion | `api/Features/Requests/Commands/PromoteRequestToRfiHandler.cs` (`ResolveRecipientEmailAsync`) | Request party → project party → legacy Architect contact flagged `ReceivesRequests` |
-| Outlook draft | `api/Features/Requests/Commands/PrepareRequestEmailDraftHandler.cs` (`ResolveRecipientsAsync`) | Ad-hoc override → request party → project party → flagged project contacts |
+| Outlook draft | `api/Features/Requests/Commands/SendRequestEmailHandler.cs` (`ResolveRecipientsAsync`) | Ad-hoc override → request party → project party → flagged project contacts |
 | Worker send | `worker/MailboxIntake/Actions/MailboxActionWorker.cs` (`SendRequestDocumentAsync`) | Override → `model.Recipients` (flagged project contacts, collated by `RequestDocumentBuilder`) |
 
 The party link (`PartyKind` + `PartyId` on the request, falling back to the project) resolves to a single email: `ClientEntity.PrimaryContactEmail` or `ArchitectEntity.ContactEmail`.
@@ -80,7 +80,7 @@ Resolution order:
 2. **To** — the request's party link wins (its party's `IsPrimary` contact, falling back to the legacy email field), then the project's party, then project profile rows with `Routing = To`.
 3. **Cc / Bcc** — always the project's effective profile: the To-party's contacts whose effective routing is Cc/Bcc (default routing overlaid by any project-level override), plus ad-hoc project rows. The resolved To address is de-duplicated out of Cc/Bcc.
 
-Callers: `PromoteRequestToRfiHandler`, `PrepareRequestEmailDraftHandler`, `MailboxActionWorker`, and `RequestDocumentBuilder`. The queue message (`MailboxActionMessage`) needs no change — the worker already re-resolves from SQL.
+Callers: `PromoteRequestToRfiHandler`, `SendRequestEmailHandler`, `MailboxActionWorker`, and `RequestDocumentBuilder`. The queue message (`MailboxActionMessage`) needs no change — the worker already re-resolves from SQL.
 
 ## 5. Graph plumbing
 
@@ -92,14 +92,14 @@ Callers: `PromoteRequestToRfiHandler`, `PrepareRequestEmailDraftHandler`, `Mailb
 - `RequestDocumentModel.Recipients` gains a routing marker but carries **only To and Cc — never Bcc**. Keeping Bcc out of the document model makes a Bcc leak onto the PDF structurally impossible; the resolver supplies Bcc at send/draft time only.
 - The PDF's issued-to block shows To ("Issued to") and Cc ("Copied to").
 - The worker's Shared activity message ("RFI-0007 document issued to …") is client-facing: it lists **To + Cc only**. Bcc is logged internally (count only) via `ILogger`.
-- `RequestEmailDraft` (contract) gains `Cc`/`Bcc` lists so the UI can confirm what the draft carries (the person drafting is internal, so showing Bcc there is correct).
+- `RequestEmailOutcome` (contract) gains `Cc`/`Bcc` lists so the UI can confirm what the draft carries (the person drafting is internal, so showing Bcc there is correct).
 
 ## 7. API / contracts
 
 - New CQRS trio for party contacts: `ListPartyContacts`, `UpsertPartyContact`, `RemovePartyContact` (mirror the existing project-contacts feature; same authorisation shape).
 - Extend `UpsertProjectContact` / `ProjectContact` with `Routing` and `PartyContactId`; `ListProjectContacts` returns the *effective* profile (linked rows resolved, overrides applied).
 - New query `ResolveRequestRecipients(RequestId)` returning `RecipientSet` — powers a recipients preview on the request page so nobody is surprised by what Promote/Draft will send.
-- `PrepareRequestEmailDraft` unchanged in shape; doc comment updated (override = To only).
+- `SendRequestEmail` unchanged in shape; doc comment updated (override = To only).
 
 ## 8. jpms UI
 

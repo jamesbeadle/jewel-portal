@@ -8,19 +8,19 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 /// addresses the draft to one ad-hoc email instead of the resolved client / architect preference.
 /// Nothing is sent — the draft waits in the mailbox's Drafts folder.
 /// </summary>
-public sealed class PrepareRequestEmailDraftEndpoint
+public sealed class SendRequestEmailEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly PrepareRequestEmailDraftAuthorisation authorisation;
-    private readonly PrepareRequestEmailDraftValidation validation;
-    private readonly ICommandHandler<PrepareRequestEmailDraft, RequestEmailDraft> handler;
+    private readonly SendRequestEmailAuthorisation authorisation;
+    private readonly SendRequestEmailValidation validation;
+    private readonly ICommandHandler<SendRequestEmail, RequestEmailOutcome> handler;
     private readonly Audit.AuditActor auditActor;
 
-    public PrepareRequestEmailDraftEndpoint(
+    public SendRequestEmailEndpoint(
         SignedInUserResolver users,
-        PrepareRequestEmailDraftAuthorisation authorisation,
-        PrepareRequestEmailDraftValidation validation,
-        ICommandHandler<PrepareRequestEmailDraft, RequestEmailDraft> handler,
+        SendRequestEmailAuthorisation authorisation,
+        SendRequestEmailValidation validation,
+        ICommandHandler<SendRequestEmail, RequestEmailOutcome> handler,
         Audit.AuditActor auditActor)
     {
         this.users = users;
@@ -30,7 +30,7 @@ public sealed class PrepareRequestEmailDraftEndpoint
         this.auditActor = auditActor;
     }
 
-    [Function(nameof(PrepareRequestEmailDraft))]
+    [Function(nameof(SendRequestEmail))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "requests/{requestId}/email-draft")] HttpRequest request,
         string requestId)
@@ -44,13 +44,13 @@ public sealed class PrepareRequestEmailDraftEndpoint
         // don't carry the caller's identity, so it reaches the handler through the scoped actor.
         auditActor.Email = signedInUser.Email;
 
-        PrepareRequestEmailDraft? body = null;
+        SendRequestEmail? body = null;
         if (request.ContentLength > 0)
         {
-            try { body = await request.ReadFromJsonAsync<PrepareRequestEmailDraft>(); }
+            try { body = await request.ReadFromJsonAsync<SendRequestEmail>(); }
             catch { /* an empty or non-JSON body means "no override" */ }
         }
-        var command = new PrepareRequestEmailDraft(requestId, body?.RecipientOverride);
+        var command = new SendRequestEmail(requestId, body?.RecipientOverride);
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
 

@@ -2,9 +2,9 @@ using Jewel.JPMS.Contracts.Procurement;
 
 namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 
-public sealed class PrepareBidPackageInviteDraftValidation
+public sealed class SendBidPackageInviteToTenderListValidation
 {
-    public ValidationOutcome Check(PrepareBidPackageInviteDraft command)
+    public ValidationOutcome Check(SendBidPackageInviteToTenderList command)
     {
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(command.BidPackageId)) errors.Add("BidPackageId is required.");

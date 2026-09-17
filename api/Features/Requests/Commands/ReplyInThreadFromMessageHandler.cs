@@ -14,7 +14,7 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 /// conversation — "RE:" subject, thread headers, quoted history, original recipients — the written
 /// reply sits above the quoted history as the draft's body, and the draft carries the request's
 /// workflow category so the sent copy and its replies group under the request in triage. Unlike
-/// <see cref="PrepareRequestReplyDraftHandler"/> no document is attached; the pre-filled draft is
+/// <see cref="SendRequestReplyHandler"/> no document is attached; the pre-filled draft is
 /// reviewed and sent from the mailbox itself — code never sends. If the draft can't be staged, the
 /// just-created request is rolled back (tag removed, request deleted) so the email stays in the
 /// queue rather than being triaged without a reply.
@@ -122,7 +122,7 @@ public sealed class ReplyInThreadFromMessageHandler : ICommandHandler<ReplyInThr
 
         return new ReplyInThreadOutcome(
             request,
-            new RequestEmailDraft(request.RequestId, created.Subject, created.To, created.WebLink, Cc: created.Cc,
+            new RequestEmailOutcome(request.RequestId, created.Subject, created.To, created.WebLink, Cc: created.Cc,
                 DraftMessageId: created.Id));
     }
 

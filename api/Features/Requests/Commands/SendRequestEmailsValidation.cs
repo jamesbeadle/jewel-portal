@@ -2,14 +2,14 @@ using Jewel.JPMS.Contracts.Requests;
 
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
-public sealed class PrepareRequestEmailDraftsValidation
+public sealed class SendRequestEmailsValidation
 {
     // Each draft renders a PDF and makes a Graph call, so a run is capped to keep one HTTP
     // invocation comfortably inside function and client timeouts. The UI chunks larger
     // selections into successive calls.
     public const int MaxPerCall = 10;
 
-    public ValidationOutcome Check(PrepareRequestEmailDrafts command)
+    public ValidationOutcome Check(SendRequestEmails command)
     {
         var errors = new List<string>();
         if (command.RequestIds is not { Count: > 0 })

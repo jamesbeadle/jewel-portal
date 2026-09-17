@@ -5,18 +5,18 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Commands;
 /// <summary>
 /// POST /api/projects/{projectId}/programme/emails/reply-draft — stage the written reply as an
 /// Outlook draft (in the original conversation thread) on a programme-tagged email. JSON body: the
-/// <see cref="PrepareProgrammeReplyDraft"/> command; the route's projectId wins over the body's.
+/// <see cref="SendProgrammeReply"/> command; the route's projectId wins over the body's.
 /// Nothing is sent — the draft waits in the projects mailbox's Drafts folder.
 /// </summary>
-public sealed class PrepareProgrammeReplyDraftEndpoint
+public sealed class SendProgrammeReplyEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly ICommandHandler<PrepareProgrammeReplyDraft, ProgrammeReplyDraft> handler;
+    private readonly ICommandHandler<SendProgrammeReply, ProgrammeReplyOutcome> handler;
     private readonly Audit.AuditActor auditActor;
 
-    public PrepareProgrammeReplyDraftEndpoint(
+    public SendProgrammeReplyEndpoint(
         SignedInUserResolver users,
-        ICommandHandler<PrepareProgrammeReplyDraft, ProgrammeReplyDraft> handler,
+        ICommandHandler<SendProgrammeReply, ProgrammeReplyOutcome> handler,
         Audit.AuditActor auditActor)
     {
         this.users = users;
@@ -32,7 +32,7 @@ public sealed class PrepareProgrammeReplyDraftEndpoint
     private static readonly RoleSet RolesThatMayDraft =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager);
 
-    [Function(nameof(PrepareProgrammeReplyDraft))]
+    [Function(nameof(SendProgrammeReply))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "projects/{projectId}/programme/emails/reply-draft")] HttpRequest request,
         string projectId)
@@ -46,8 +46,8 @@ public sealed class PrepareProgrammeReplyDraftEndpoint
         // Attribute the handler's DraftCreated audit row to whoever pressed the button.
         auditActor.Email = signedInUser.Email;
 
-        PrepareProgrammeReplyDraft? body = null;
-        try { body = await request.ReadFromJsonAsync<PrepareProgrammeReplyDraft>(); }
+        SendProgrammeReply? body = null;
+        try { body = await request.ReadFromJsonAsync<SendProgrammeReply>(); }
         catch { /* the checks below report what's missing */ }
         if (body is null || string.IsNullOrWhiteSpace(body.MessageId))
             return new BadRequestObjectResult("messageId is required.");

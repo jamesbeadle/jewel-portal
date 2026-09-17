@@ -81,20 +81,20 @@ public static class RequestsFeatureRegistration
         services.AddScoped<UpdateRequestFormAuthorisation>();
         services.AddScoped<UpdateRequestFormValidation>();
 
-        services.AddScoped<ICommandHandler<PrepareRequestEmailDraft, RequestEmailDraft>, PrepareRequestEmailDraftHandler>();
-        services.AddScoped<PrepareRequestEmailDraftAuthorisation>();
-        services.AddScoped<PrepareRequestEmailDraftValidation>();
+        services.AddScoped<ICommandHandler<SendRequestEmail, RequestEmailOutcome>, SendRequestEmailHandler>();
+        services.AddScoped<SendRequestEmailAuthorisation>();
+        services.AddScoped<SendRequestEmailValidation>();
 
         // Reply drafting: the official PDF staged as a reply inside an existing email thread.
-        services.AddScoped<ICommandHandler<PrepareRequestReplyDraft, RequestEmailDraft>, PrepareRequestReplyDraftHandler>();
-        services.AddScoped<PrepareRequestReplyDraftAuthorisation>();
-        services.AddScoped<PrepareRequestReplyDraftValidation>();
+        services.AddScoped<ICommandHandler<SendRequestReply, RequestEmailOutcome>, SendRequestReplyHandler>();
+        services.AddScoped<SendRequestReplyAuthorisation>();
+        services.AddScoped<SendRequestReplyValidation>();
 
         // Bulk drafting: one Outlook draft per selected request, delegating each to the single
         // handler above so the drafts are identical to detail-page ones.
-        services.AddScoped<ICommandHandler<PrepareRequestEmailDrafts, RequestEmailDraftBatch>, PrepareRequestEmailDraftsHandler>();
-        services.AddScoped<PrepareRequestEmailDraftsAuthorisation>();
-        services.AddScoped<PrepareRequestEmailDraftsValidation>();
+        services.AddScoped<ICommandHandler<SendRequestEmails, RequestEmailBatch>, SendRequestEmailsHandler>();
+        services.AddScoped<SendRequestEmailsAuthorisation>();
+        services.AddScoped<SendRequestEmailsValidation>();
 
         services.AddScoped<ICommandHandler<PromoteRequestToRfi, Request>, PromoteRequestToRfiHandler>();
         services.AddScoped<PromoteRequestToRfiAuthorisation>();

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Jewel.JPMS.Api.Migrations
 {
     [DbContext(typeof(JpmsContext))]
-    [Migration("20260816113113_AddBidPackageInviteDraft")]
-    partial class AddBidPackageInviteDraft
+    [Migration("20260816113113_AddBidPackageInviteOutcome")]
+    partial class AddBidPackageInviteOutcome
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

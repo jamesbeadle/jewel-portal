@@ -5,7 +5,7 @@ namespace Jewel.JPMS.Contracts.Procurement;
 
 // Files kept on a bid package as tender documents. One file, because the whole feature is two
 // messages over one table — mirroring WorkOrderAttachmentContracts. Unlike work-order attachments
-// these ARE supplier-facing: PrepareBidPackageInviteDraft attaches them to the invite email
+// these ARE supplier-facing: SendBidPackageInviteToTenderList attaches them to the invite email
 // alongside the linked drawings.
 
 /// <summary>Everything attached to a bid package, oldest first — the order it was added in.</summary>

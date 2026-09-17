@@ -14,7 +14,7 @@ namespace Jewel.JPMS.Models;
 /// <param name="AttachedFiles">The file names attached to the draft, in attachment order: the
 /// generated pricing schedule, the company T&amp;Cs (when uploaded), the package's tender
 /// documents, then its linked drawings. Null only on legacy payloads.</param>
-public sealed record BidPackageInviteDraft(
+public sealed record BidPackageInviteOutcome(
     BidPackage Package,
     string Subject,
     IReadOnlyList<string> Bcc,
@@ -23,4 +23,9 @@ public sealed record BidPackageInviteDraft(
     // The staged draft's mailbox message id — the handle for withdrawing the draft
     // (DeleteMailboxDraft) if it was staged in error; null only on legacy payloads.
     string? DraftMessageId = null,
-    IReadOnlyList<string>? AttachedFiles = null);
+    IReadOnlyList<string>? AttachedFiles = null,
+    // Sent=true means the tender list has it. Sent=false is a draft waiting in the mailbox's
+    // Drafts folder — by choice when FailureNote is null, because the send was refused when it is
+    // not.
+    bool Sent = false,
+    string? FailureNote = null);

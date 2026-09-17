@@ -5,7 +5,7 @@ namespace Jewel.JPMS.Contracts.Requests;
 
 // Triage "Reply in thread": the triager writes the reply IN THE PORTAL (ReplyBody), and one action
 // stages it as an Outlook reply draft on the email (projects mailbox, written reply above the whole
-// quoted thread — same mechanics as PrepareRequestReplyDraft, but the body is the triager's own
+// quoted thread — same mechanics as SendRequestReply, but the body is the triager's own
 // words and no document is attached) AND creates a General request from the email in the
 // background, whose description carries that same written reply ("Replied to email in thread
 // with: …"). So one write-up both answers the email and papers the request — the act of replying

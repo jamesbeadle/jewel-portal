@@ -136,26 +136,26 @@ public sealed class HttpRequestRegister : IRequestRegister
     public Task<Request> SaveFormAsync(UpdateRequestForm command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
 
-    public Task<RequestEmailDraft> PrepareEmailDraftAsync(string requestId, string? recipientOverride = null, CancellationToken cancellationToken = default) =>
-        commands.SendAsync(new PrepareRequestEmailDraft(requestId, recipientOverride), cancellationToken);
+    public Task<RequestEmailOutcome> EmailDocumentAsync(string requestId, string? recipientOverride = null, bool saveAsDraftOnly = false, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(new SendRequestEmail(requestId, recipientOverride, saveAsDraftOnly), cancellationToken);
 
-    public Task<RequestEmailDraft> PrepareReplyDraftAsync(string requestId, string mailboxMessageId, CancellationToken cancellationToken = default) =>
-        commands.SendAsync(new PrepareRequestReplyDraft(requestId, mailboxMessageId), cancellationToken);
+    public Task<RequestEmailOutcome> EmailDocumentReplyAsync(string requestId, string mailboxMessageId, bool saveAsDraftOnly = false, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(new SendRequestReply(requestId, mailboxMessageId, saveAsDraftOnly), cancellationToken);
 
-    // The api caps each call (PDF render + Graph call per draft must fit one function
+    // The api caps each call (PDF render + Graph call per email must fit one function
     // invocation), so larger selections go up in chunks and the outcomes merge back into a
     // single batch — callers see one result however many round trips it took.
-    private const int DraftChunkSize = 10;
+    private const int EmailChunkSize = 10;
 
-    public async Task<RequestEmailDraftBatch> PrepareEmailDraftsAsync(IReadOnlyList<string> requestIds, CancellationToken cancellationToken = default)
+    public async Task<RequestEmailBatch> EmailDocumentsAsync(IReadOnlyList<string> requestIds, bool saveAsDraftOnly = false, CancellationToken cancellationToken = default)
     {
-        var outcomes = new List<RequestEmailDraftOutcome>(requestIds.Count);
-        foreach (var chunk in requestIds.Chunk(DraftChunkSize))
+        var outcomes = new List<RequestEmailResult>(requestIds.Count);
+        foreach (var chunk in requestIds.Chunk(EmailChunkSize))
         {
-            var batch = await commands.SendAsync(new PrepareRequestEmailDrafts(chunk), cancellationToken);
+            var batch = await commands.SendAsync(new SendRequestEmails(chunk, saveAsDraftOnly), cancellationToken);
             outcomes.AddRange(batch.Outcomes);
         }
-        return new RequestEmailDraftBatch(outcomes);
+        return new RequestEmailBatch(outcomes);
     }
 
     private async Task RaiseRecordAsync(Request record)

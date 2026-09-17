@@ -168,13 +168,17 @@ public partial class AttachmentPicker
         if (recordsByProject.ContainsKey(projectId)) return;
         try
         {
-            // Both record families that carry an official PDF: requests (RFI, NOD, EOT…) and
-            // variation orders. The variation provider lists every stage of a project's
-            // variations — a still-quoting order is offered under its VOQ identity, an approved
-            // one under its V-ref — so a VO can be attached and sent at any point in its life.
+            // Every record family that carries an official PDF: requests (RFI, NOD, EOT…),
+            // variation orders and work orders. The variation provider lists every stage of a
+            // project's variations — a still-quoting order is offered under its VOQ identity, an
+            // approved one under its V-ref — so a VO can be attached and sent at any point in its
+            // life. A work order's purchase order joins them so a supplier emailed from the order's
+            // own communications panel gets the sheet the PO email attaches; a draft order's is
+            // refused server-side, because the supplier must not see one.
             var requests = await Intake.ListLinkableRecordsAsync(projectId, RecordType.Request);
             var variations = await Intake.ListLinkableRecordsAsync(projectId, RecordType.Variation);
-            recordsByProject[projectId] = requests.Concat(variations).ToList();
+            var workOrders = await Intake.ListLinkableRecordsAsync(projectId, RecordType.WorkOrder);
+            recordsByProject[projectId] = requests.Concat(variations).Concat(workOrders).ToList();
         }
         catch
         {
