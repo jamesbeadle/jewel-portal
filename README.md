@@ -155,3 +155,83 @@ Each folder has its own README.
 - **Backlog** — [Must-have v1](docs/06-backlog/must-have-v1.md) · [Phase 2](docs/06-backlog/phase-2.md) · [Open questions](docs/06-backlog/open-questions.md)
 - **Site map** — [Phase 1 site map](docs/site-map.md) — every route, every story, build roadmap
 - **Production application** — [`/jpms`](jpms/README.md)
+
+<!-- code-quality:start -->
+## Code quality
+
+<table><tr><td align="center">
+<strong>Code quality score</strong><h2>74.9%</h2>
+<sub>measured 2026-09-17 · project-process kit 1.3.0</sub>
+</td></tr></table>
+
+4,912 files · api 2,144 · frontend 1,168 · contracts 629 · database 269 · connector 213 · docs 186 · tooling 136 · tests 114 · infrastructure 40 · worker 13
+
+<details>
+<summary><strong>How the 74.9% is made up</strong></summary>
+
+| Element | Reading | Score | Weight | 0% at |
+| --- | --- | --- | --- | --- |
+| **Standard baseline checks** | | **67.5%** | **60** | |
+| Files over the line limit | 799 in 4053 files | 60.6% | 10 | 50% of files |
+| Worst file, in limits over | 4.99 | 44.6% | 5 | 9 |
+| Functions over the line limit | 836 in 8121 functions | 58.8% | 8 | 25% of functions |
+| Else blocks | 1187 in 12029 branches | 80.3% | 5 | 50% of branches |
+| Duplication % | 2.35 | 88.2% | 8 | 20 |
+| Explanatory comment lines | 16313 in 274.81 thousand lines | 0.0% | 4 | 50 per thousand lines |
+| Inline magic values | 134 in 274.81 thousand lines | 97.6% | 4 | 20 per thousand lines |
+| Orphan components and functions | 27 in 8265 components and functions | 96.7% | 4 | 10% of components and functions |
+| Long member chain lines | 3171 in 274.81 thousand lines | 61.5% | 4 | 30 per thousand lines |
+| Deeply indented lines | 3125 in 274.81 thousand lines | 62.1% | 4 | 30 per thousand lines |
+| Overlong function names | 58 in 8121 functions | 92.9% | 4 | 10% of functions |
+| **Design pattern file count** | | **84.0%** | **10** | |
+| Files the patterns predict but are missing | 187 in 2338 predicted files | 84.0% | 10 | 50% of predicted files |
+| Entities outside their expected file count | not measured | not measured | — | 50% of entities |
+| **Prose** | | **92.6%** | **20** | |
+| Conditions with calls tangled inside calls | 278 in 12029 branches | 90.8% | 8 | 25% of branches |
+| Conditions compared to a raw literal | 246 in 12029 branches | 91.8% | 6 | 25% of branches |
+| Accessor names that want to be a property | 34 in 8121 functions | 95.8% | 6 | 10% of functions |
+
+Each element scores 100% with no offenders and falls in a straight line to 0% when its offenders, measured against the size of the codebase, reach the figure in the last column. The score is the weighted average of the elements that could be measured; an element that could not be measured lends its weight to the rest. Weights and zero points are set in `tools/refactor/rules.json` under `score.elements`. The offenders behind every reading are in `tools/refactor/audit-output/audit.json`.
+
+</details>
+
+<details>
+<summary><strong>The repository by area: 4,912 files</strong></summary>
+
+| Area | Files | Of which audited source | Source lines |
+| --- | --- | --- | --- |
+| api | 2,144 | 2,140 | 109,502 |
+| frontend | 1,168 | 1,058 | 117,288 |
+| contracts | 629 | 629 | 22,279 |
+| database | 269 | 0 | 0 |
+| connector | 213 | 213 | 24,137 |
+| docs | 186 | 0 | 0 |
+| tooling | 136 | 0 | 0 |
+| tests | 114 | 0 | 0 |
+| infrastructure | 40 | 0 | 0 |
+| worker | 13 | 13 | 1,603 |
+| **whole repository** | **4,912** | **4,053** | **274,809** |
+
+</details>
+
+<details>
+<summary><strong>The refactoring plan: 1250 steps, in order</strong></summary>
+
+**Pass 1 — Component breakout**
+
+1. Break `jpms/Pages/SalesLeadDetail.razor` (599 lines) into components. Component-sized blocks: lines 47–73 (27 lines, taking OpenWin); lines 82–153 (72 lines); lines 182–208 (27 lines, taking ActivityKindClass); lines 211–246 (36 lines, taking OpenMove).
+2. Break `jpms/Pages/SalesStrategyDetail.razor` (526 lines) into components. Component-sized blocks: lines 43–83 (41 lines, taking RunResearchAsync, SetStatusAsync); lines 133–167 (35 lines, taking OpenPlanEdit, OpenGenerate); lines 169–217 (49 lines); lines 220–280 (61 lines).
+3. Break `jpms/Pages/Imagine.razor` (462 lines) into components. Component-sized blocks: lines 67–125 (59 lines, taking OnPhotosChosen, SubmitAsync); lines 170–219 (50 lines, taking ConceptGridClass, OpenRevise, ReviseAsync, ToggleLikeAsync, SaveCommentAsync); lines 222–240 (19 lines).
+4. Break `jpms/Pages/SalesInbox.razor` (457 lines) into components. Component-sized blocks: lines 25–36 (12 lines, taking OnSearchChanged); lines 65–120 (56 lines, taking OpenAsync, When); lines 135–161 (27 lines, taking LogAsync, OpenNewLead, OpenLogPickerAsync); lines 162–231 (70 lines, taking ToggleAsync, ReplyAsync).
+5. Break `jpms/Pages/SalesEstimateDetail.razor` (442 lines) into components. Component-sized blocks: lines 48–69 (22 lines, taking SaveBreakdownAsync); lines 100–176 (77 lines); lines 186–229 (44 lines, taking SaveNarrativeAsync).
+6. Break `jpms/Components/ProjectDetailsEditor.razor` (440 lines) into components. Component-sized blocks: lines 41–65 (25 lines, taking OnPartyChanged); lines 67–80 (14 lines, taking OnOnBehalfOfClientChanged); lines 82–103 (22 lines, taking OnOrganisationChanged); lines 134–157 (24 lines, taking OnXeroContactChanged).
+7. Break `jpms/Pages/XeroAllocation.razor` (435 lines) into components. Component-sized blocks: lines 66–103 (38 lines); lines 162–177 (16 lines); lines 191–209 (19 lines); lines 212–232 (21 lines).
+8. Break `jpms/Pages/AdminKpis.razor` (429 lines) into components. Component-sized blocks: lines 88–101 (14 lines); lines 102–167 (66 lines, taking OpenInControlCentre, StartEdit, StartRemove, ConfirmRemoveAsync); lines 178–204 (27 lines, taking SaveEditAsync); lines 206–229 (24 lines, taking AddPersonAsync).
+9. Break `jpms/Pages/SubcontractorDetail.razor` (419 lines) into components. Component-sized blocks: lines 41–84 (44 lines); lines 101–150 (50 lines); lines 154–198 (45 lines); lines 203–279 (77 lines).
+10. Break `jpms/Pages/ProjectVariations.razor` (417 lines) into components. Component-sized blocks: lines 27–47 (21 lines); lines 51–76 (26 lines); lines 82–94 (13 lines); lines 96–113 (18 lines).
+
+… and 1240 more steps. The whole plan, with the measured detail, is in [`tools/refactor/refactor-plan.md`](tools/refactor/refactor-plan.md).
+
+</details>
+
+<!-- code-quality:end -->

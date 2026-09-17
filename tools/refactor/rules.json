@@ -97,11 +97,7 @@
     {
       "name": "tests",
       "globs": [
-        "**/*.test.*",
-        "**/*.spec.*",
-        "**/tests/**",
-        "**/Tests/**",
-        "**/*.Tests/**",
+        "tests/**",
         "**/*Tests.cs"
       ]
     },
@@ -109,7 +105,9 @@
       "name": "docs",
       "globs": [
         "**/*.md",
-        "docs/**"
+        "docs/**",
+        "handover-prompt/**",
+        "Claude outputs/**"
       ]
     },
     {
@@ -117,7 +115,8 @@
       "globs": [
         "tools/**",
         ".claude/**",
-        "scripts/**"
+        "scripts/**",
+        "patches/**"
       ]
     },
     {
@@ -128,44 +127,49 @@
       ]
     },
     {
+      "name": "infrastructure",
+      "globs": [
+        "infra/**",
+        ".github/**",
+        "**/*.csproj",
+        "**/*.sln",
+        "**/host.json",
+        "**/local.settings.json*",
+        ".gitignore"
+      ]
+    },
+    {
+      "name": "connector",
+      "globs": [
+        "api/Features/Ai/**",
+        "api/Features/Connect/**",
+        "contracts/Ai/**"
+      ]
+    },
+    {
       "name": "api",
       "globs": [
-        "**/Controllers/**",
-        "**/Endpoints/**",
-        "**/Api/**",
-        "**/Functions/**",
-        "**/Ai/**"
+        "api/**"
+      ]
+    },
+    {
+      "name": "worker",
+      "globs": [
+        "worker/**"
+      ]
+    },
+    {
+      "name": "contracts",
+      "globs": [
+        "contracts/**"
       ]
     },
     {
       "name": "frontend",
       "globs": [
-        "**/*.razor",
-        "**/*.razor.cs",
-        "**/*.razor.css",
-        "**/wwwroot/**",
-        "**/*.css",
-        "**/*.js"
-      ]
-    },
-    {
-      "name": "backend",
-      "globs": [
-        "**/*.cs"
-      ]
-    },
-    {
-      "name": "infrastructure",
-      "globs": [
-        "infra/**",
-        "**/*.bicep",
-        ".github/**",
-        "**/*.csproj",
-        "**/*.sln",
-        "*.json",
-        "*.yml",
-        "*.yaml",
-        ".*"
+        "jpms/**",
+        "prototypes/**",
+        "assets/**"
       ]
     }
   ],
