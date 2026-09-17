@@ -4,12 +4,19 @@
 @*
     The house dropdown: a toggle button and a panel of items beneath it.
 
-    This markup was hand-rolled in four places (the role switcher, the request page's status pill
-    and Actions menu, the variation page's status pill) before it was pulled out here. Dismissal:
-    the toggle, a press anywhere outside the menu, or Escape all close it (the outside press is
-    watched at the document by dropdown-menu.js while the panel is open, and still lands on
-    whatever was pressed), and each item closes the menu before running, so a click can never
-    leave it hanging open.
+    EVERY toggle-and-panel on the site is this component. It was pulled out of the hand-rolled
+    copies in 2026-09, and the copies left behind each drifted into their own dismissal
+    behaviour — two with none at all, three that closed but swallowed the outside press — which
+    is the bug this component exists to make impossible. A new menu that hand-rolls its own
+    open-state is that bug again.
+
+    Dismissal, the whole contract: the toggle closes it when open, a press anywhere outside it
+    closes it, and Escape closes it. The outside press is watched at the document by
+    dropdown-menu.js while the panel is open and STILL LANDS on whatever was pressed — a menu
+    dismissing is never a click the user has to spend twice. Each item closes the menu before
+    running, so a click can never leave it hanging open, and because each menu owns its own
+    open-state, pressing one toggle while another is open closes that one and opens this one in
+    the same click.
 
     Two ways to use it:
       • Pass Items and let it render them — the common case, and the one that keeps every menu
@@ -25,7 +32,8 @@
             disabled="@Disabled"
             aria-haspopup="menu"
             aria-expanded="@(open ? "true" : "false")"
-            @onclick="Toggle">
+            @onclick="Toggle"
+            @onmousedown:preventDefault="ShouldKeepFocus">
         @if (ToggleContent is not null)
         {
             @ToggleContent
@@ -123,6 +131,13 @@
     [Parameter] public bool AlignLeft { get; set; }
 
     [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Stops the toggle taking focus, so whatever the user had selected stays selected —
+    /// for a menu whose items act on that selection. The rich-text colour menu needs it: pressing
+    /// the toggle would otherwise collapse the caret in the contenteditable body and leave
+    /// foreColor with nothing to colour. Off everywhere else, because a toggle that cannot take
+    /// focus cannot be reached by keyboard.</summary>
+    [Parameter] public bool ShouldKeepFocus { get; set; }
 
     /// <summary>Raised whenever the panel opens (true) or closes (false). A host whose menu sits
     /// inside an overflow/scroll container listens to this to lift the clipping while the panel

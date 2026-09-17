@@ -6,8 +6,9 @@
     the only thing that colours it; a view never chooses a colour for a status, it maps its
     enum to a Tone in StatusTones.cs and that mapping is the status vocabulary.
 
-    With OnClick it renders as a <button> (a status that is also the menu of its transitions —
-    the ▾ says so); unmatched attributes (aria-*, data-*) pass through. Domain badges
+    With OnClick it renders as a <button> — a status that opens its move DIALOG, the ▾ saying
+    that something opens; unmatched attributes (aria-*, data-*) pass through. A status that opens
+    a MENU is a DropdownMenu wearing ClassesFor as its ToggleClass, not this. Domain badges
     (ComplianceStatusPill, StatusPill…) are one-line wrappers over this. Class is for placement
     only (margins, shrink-0).
 *@

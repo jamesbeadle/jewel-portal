@@ -93,7 +93,7 @@ public partial class TriageQueue
         if (next == QueueView.Discarded) { ResetDiscardedPaging(); await LoadDiscardedAsync(); }
         else if (next == QueueView.Tagged)
         {
-            selectedTags.Clear(); pathwayBucketFilter = null; filterOpen = false;
+            selectedTags.Clear(); pathwayBucketFilter = null;
             // Entering the tab starts from the unfiltered pile — the search resets with the rest.
             taggedSearchDebounce?.Cancel();
             taggedSearch = ""; taggedSearchPending = ""; taggedSearching = false;
@@ -161,5 +161,4 @@ public partial class TriageQueue
         await LoadDiscardedAsync();
     }
 
-    private void ToggleFilterMenu() => filterOpen = !filterOpen;
 }

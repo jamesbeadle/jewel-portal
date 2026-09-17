@@ -14,9 +14,14 @@
     ChildContent is the <thead>/<tbody>/<tfoot> — the columns stay the view's own. Dense is
     the 40px-row cut for long financial registers; MaxHeight caps the scroll box (default
     85vh); Class goes on the outer panel.
+
+    HasOpenMenu is for a table whose rows carry a DropdownMenu (a status pill, a row's Actions):
+    a scroll box clips its overflow in both axes, so the panel of a menu on one of the last rows
+    was cut off at the container's edge. While a menu is open the scrolling is lifted and the
+    panel shows whole. Wire it to the menu's OnOpenChanged.
 *@
 
-<div class="panel overflow-x-auto overflow-y-auto @MaxHeight @Class">
+<div class="panel @(HasOpenMenu ?"" : $"overflow-x-auto overflow-y-auto {MaxHeight}") @Class">
     <LoadGate IsLoading="IsLoading" Prominent="true" Label="@LoadingLabel">
         @if (IsEmpty)
         {
@@ -43,6 +48,9 @@
     [Parameter] public RenderFragment? EmptyContent { get; set; }
     [Parameter] public bool Dense { get; set; }
     [Parameter] public string MaxHeight { get; set; } = "max-h-[85vh]";
+    /// <summary>True while a row's DropdownMenu is open — lifts the scroll box so the menu's
+    /// panel isn't clipped at the container's edge.</summary>
+    [Parameter] public bool HasOpenMenu { get; set; }
     [Parameter] public string Class { get; set; } = "";
     [Parameter] public string TableClass { get; set; } = "";
 }

@@ -4,56 +4,52 @@
 
 @if (Session.HasMultipleRoles && Session.ActiveRole is not null)
 {
-    <div class="relative">
-        <button type="button" @onclick="ToggleOpen"
-                class="btn-secondary">
+    @* ChildContent rather than Items because a role row is a RoleBadge, not a label, and the
+       temporary-role footnote is not a menu item. Each row closes the menu itself. *@
+    <DropdownMenu @ref="menu" WidthClass="w-56" ShowCaret="false" ToggleTitle="Switch the role you are viewing as">
+        <ToggleContent>
             <span class="eyebrow">Viewing as</span>
             <RoleBadge Role="Session.ActiveRole.Value" />
-            <span class="text-content-faint text-xs" aria-hidden="true">@(isOpen ? "▲" : "▼")</span>
-        </button>
-
-        @if (isOpen)
-        {
-            <div class="absolute right-0 mt-2 w-56 rounded border border-line bg-surface z-20 overflow-hidden">
-                <ul class="divide-y divide-line">
-                    @foreach (var role in Session.AvailableRoles)
-                    {
-                        <li>
-                            <button type="button" @onclick="() => SelectRole(role)"
-                                    class="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-surface-raised transition">
-                                <RoleBadge Role="role" />
-                                @if (role == Session.ActiveRole)
-                                {
-                                    <span class="ml-auto text-xs text-content-faint font-semibold">Current</span>
-                                }
-                            </button>
-                        </li>
-                    }
-                </ul>
-                @if (Session.IsTemporaryRole && Session.HomeRole is { } home && Session.RevertDueAt is { } due)
+            <span class="text-content-faint text-xs" aria-hidden="true">▾</span>
+        </ToggleContent>
+        <ChildContent>
+            <ul class="divide-y divide-line">
+                @foreach (var role in Session.AvailableRoles)
                 {
-                    @* Only opted-in users (Admin → Users → "Defaults back to own role") see this;
-                       for everyone else a switch sticks indefinitely, as it always has. *@
-                    <p class="px-3 py-2 text-xs leading-snug text-content-faint border-t border-line">
-                        Temporary — defaults back to @home.DisplayName() around @due.ToLocalTime().ToString("HH:mm").
-                    </p>
+                    var pick = role;
+                    <li>
+                        <button type="button" role="menuitem" @onclick="() => SelectRole(pick)"
+                                class="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-surface-raised transition">
+                            <RoleBadge Role="pick" />
+                            @if (pick == Session.ActiveRole)
+                            {
+                                <span class="ml-auto text-xs text-content-faint font-semibold">Current</span>
+                            }
+                        </button>
+                    </li>
                 }
-            </div>
-        }
-    </div>
+            </ul>
+            @if (Session.IsTemporaryRole && Session.HomeRole is { } home && Session.RevertDueAt is { } due)
+            {
+                @* Only opted-in users (Admin → Users → "Defaults back to own role") see this;
+                   for everyone else a switch sticks indefinitely, as it always has. *@
+                <p class="px-3 py-2 text-xs leading-snug text-content-faint border-t border-line">
+                    Temporary — defaults back to @home.DisplayName() around @due.ToLocalTime().ToString("HH:mm").
+                </p>
+            }
+        </ChildContent>
+    </DropdownMenu>
 }
 
 @code {
-    private bool isOpen;
+    private DropdownMenu? menu;
 
     protected override void OnInitialized() => Session.OnChange += StateHasChanged;
 
-    private void ToggleOpen() => isOpen = !isOpen;
-
     private void SelectRole(Role role)
     {
+        menu?.Close();
         Session.SwitchTo(role);
-        isOpen = false;
         Nav.NavigateTo(NavigationCatalog.HomeRouteFor(role));
     }
 

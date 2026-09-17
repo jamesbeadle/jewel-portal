@@ -83,10 +83,10 @@ public partial class TriageQueue
     private int taggedIndex;
     private string? taggedNext;
     // The Tagged tab's multi-select filter: the set of tags currently ticked (empty = every tagged
-    // email), whether the dropdown is open, and the set of tags we've seen (offered in the dropdown).
-    // "Discarded" is always offered; the rest accrue as tagged emails load.
+    // email), and the set of tags we've seen (offered in the dropdown). "Discarded" is always
+    // offered; the rest accrue as tagged emails load. The dropdown's own open-state is its own —
+    // it is a DropdownMenu, so it dismisses itself.
     private readonly HashSet<string> selectedTags = new(StringComparer.OrdinalIgnoreCase);
-    private bool filterOpen;
     private readonly SortedSet<string> knownTags = new(StringComparer.OrdinalIgnoreCase) { "JPMS/Discarded", "JPMS/Replied", "JPMS/Admin" };
 
     // The Tagged tab's search box (see the markup comment). A resolved reference lives in
