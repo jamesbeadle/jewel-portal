@@ -13,7 +13,7 @@ internal sealed partial class ProcurementActions
             Description: "Adds one or more subcontractors to a bid package's tender list and moves "
                 + "a Draft package to Inviting. This records the invites in the portal only — no "
                 + "email is sent (the invite email is drafted separately with "
-                + "prepare_bid_package_invite_draft). Idempotent per subcontractor. Returns the "
+                + "send_bid_package_invite_to_tender_list). Idempotent per subcontractor. Returns the "
                 + "package's full recipient list.",
             CommandType: typeof(InviteSubcontractorsToBidPackage),
             ResultType: typeof(IReadOnlyList<BidPackageRecipient>),
@@ -61,24 +61,24 @@ internal sealed partial class ProcurementActions
                 + "tenderList[].recipientId — never the company name)."),
 
         new AiAction(
-            Name: "prepare_bid_package_invite_draft",
+            Name: "send_bid_package_invite_to_tender_list",
             Area: "Procurement",
-            Description: "Creates the tender-invite email as a DRAFT in the shared mailbox — "
-                + "NOTHING IS SENT; a person reviews and sends it from Outlook. BCC is every "
-                + "tender-list recipient still in the running (status Invited, i.e. on the list, "
-                + "or Responded) that has a directory email — Declined and Won rows are skipped — "
-                + "or, when recipientIds is given, exactly those recipients. The draft attaches "
-                + "the generated pricing schedule, the company T&Cs, the package's tender documents "
-                + "and its linked drawings; the result's attachedFiles lists them by name, and "
-                + "linkedFiles is ONLY the overflow (files too large to attach, sent as download "
-                + "links) — an empty linkedFiles never means no attachments. The draft carries the "
-                + "package's tag so the sent copy and replies group under the package. "
-                + "Confirm-first: the first call is refused; re-call with confirm true after the "
-                + "user's yes.",
-            CommandType: typeof(PrepareBidPackageInviteDraft),
-            ResultType: typeof(BidPackageInviteDraft),
-            AuthorisationType: typeof(PrepareBidPackageInviteDraftAuthorisation),
-            ValidationType: typeof(PrepareBidPackageInviteDraftValidation),
+            Description: "SENDS EMAIL: sends the tender invite from the shared mailbox to the "
+                + "package's tender list. BCC is every tender-list recipient still in the running "
+                + "(status Invited, i.e. on the list, or Responded) that has a directory email — "
+                + "Declined and Won rows are skipped — or, when recipientIds is given, exactly those "
+                + "recipients. saveAsDraftOnly true stops after staging, leaving the reviewed draft "
+                + "in Drafts for Outlook instead of sending. It attaches the generated pricing "
+                + "schedule, the company T&Cs, the package's tender documents and its linked "
+                + "drawings; the result's attachedFiles lists them by name, and linkedFiles is ONLY "
+                + "the overflow (files too large to attach, sent as download links) — an empty "
+                + "linkedFiles never means no attachments. The sent copy carries the package's tag "
+                + "so it and the replies group under the package. Confirm-first: the first call is "
+                + "refused; re-call with confirm true after the user's yes.",
+            CommandType: typeof(SendBidPackageInviteToTenderList),
+            ResultType: typeof(BidPackageInviteOutcome),
+            AuthorisationType: typeof(SendBidPackageInviteToTenderListAuthorisation),
+            ValidationType: typeof(SendBidPackageInviteToTenderListValidation),
             VisibleTo: PackageAdministrators,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),

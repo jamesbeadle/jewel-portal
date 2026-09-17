@@ -3,18 +3,15 @@
 @inject ICommandSender Commands
 
 @* The subcontractor's statement of account — their work orders across every project with the
-   invoices claimed against each — previewed here, downloadable as the branded PDF, and emailed
-   via the shared-mailbox convention: confirming creates a DRAFT (statement PDF attached, figures
-   rendered server-side from the live register) for a human to review and send from Outlook.
-   Nothing sends from here. Used from the directory record and the project Work Orders tab. *@
+   invoices claimed against each — previewed here, downloadable as the branded PDF, and sent from
+   the shared projects mailbox with the PDF attached and its figures rendered server-side from the
+   live register. Save as draft leaves it in Drafts for Outlook instead. Used from the directory
+   record and the project Work Orders tab. *@
 <Modal IsOpen="IsOpen"
        Title="@($"Statement of account · {statement?.CompanyName ?? SubcontractorName}")"
-       ConfirmLabel="@ConfirmLabelText"
-       ConfirmDisabled="@(busy || drafted || statement is null)"
-       CancelLabel="Close"
-       OnConfirm="CreateDraftAsync"
        OnCancel="Close"
        Class="max-w-3xl w-full">
+    <ChildContent>
     @if (loadError is not null)
     {
         <Notice Tone="Tone.Negative">@loadError</Notice>
@@ -26,10 +23,10 @@
     else
     {
         <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
-            Nothing sends from here — this creates a draft in the shared mailbox with the statement PDF
-            attached, addressed to @(string.IsNullOrWhiteSpace(statement.ContactEmail) ? "the subcontractor (no directory email yet)" : statement.ContactEmail),
-            for you to review and send from Outlook. The PDF is rendered from the register when the
-            draft is created, so its figures are always current.
+            Sends from the shared projects mailbox with the statement PDF attached, to
+            @(string.IsNullOrWhiteSpace(statement.ContactEmail) ? "the subcontractor (no directory email yet)" : statement.ContactEmail).
+            The PDF is rendered from the register as it goes, so its figures are always current.
+            Save as draft to review it in Outlook first.
         </p>
 
         <RecordsTable Dense="true" MaxHeight="" Class="mb-3">
@@ -88,14 +85,11 @@
 
         @if (drafted)
         {
-            <Notice Tone="Tone.Positive">
-                <p class="mb-1">
-                    Draft created in the shared mailbox to <span class="font-medium">@draftRecipient</span>,
-                    with the statement PDF attached. Review and send it from the mailbox's Drafts folder.
-                </p>
+            <Notice Tone="@(sent ? Tone.Positive : sendFailure is null ? Tone.Info : Tone.Warning)">
+                <p class="mb-1">@OutcomeText</p>
                 @if (draftLink is not null)
                 {
-                    <a class="underline underline-offset-4 font-medium" href="@draftLink" target="_blank" rel="noopener">Open the draft in Outlook on the web</a>
+                    <a class="underline underline-offset-4 font-medium" href="@draftLink" target="_blank" rel="noopener">Open it in Outlook on the web</a>
                 }
             </Notice>
         }
@@ -115,6 +109,14 @@
             <Notice Tone="Tone.Negative" Class="mt-3">@error</Notice>
         }
     }
+    </ChildContent>
+    <FooterContent>
+        <button type="button" class="btn-secondary btn-lg" @onclick="Close">Close</button>
+        <button type="button" class="btn-secondary btn-lg" disabled="@CannotSend"
+                @onclick="() => EmailStatementAsync(saveAsDraftOnly: true)">Save as draft</button>
+        <button type="button" class="btn-primary btn-lg" disabled="@CannotSend"
+                @onclick="() => EmailStatementAsync(saveAsDraftOnly: false)">@(busy ? "Working…" : "Send statement")</button>
+    </FooterContent>
 </Modal>
 
 @code {
@@ -134,6 +136,8 @@
 
     private bool busy;
     private bool drafted;
+    private bool sent;
+    private string? sendFailure;
     private string? error;
     private string? draftLink;
     private string draftRecipient = "";
@@ -141,8 +145,12 @@
     private string subject = "";
     private string htmlBody = "";
 
-    private string ConfirmLabelText =>
-        busy ? "Drafting…" : drafted ? "Draft created" : "Create draft in mailbox";
+    private bool CannotSend => busy || drafted || statement is null;
+
+    private string OutcomeText =>
+        sent ? $"Sent to {draftRecipient} with the statement PDF attached."
+        : sendFailure ?? $"Draft created in the shared mailbox to {draftRecipient}, with the statement PDF "
+            + "attached. Review and send it from the mailbox's Drafts folder.";
 
     protected override async Task OnParametersSetAsync()
     {
@@ -151,6 +159,8 @@
             // Reset the per-open outcome so reopening starts clean; the statement itself reloads
             // per open below, so figures never go stale between visits.
             drafted = false;
+            sent = false;
+            sendFailure = null;
             error = null;
             draftLink = null;
             loadedForId = null;
@@ -173,22 +183,24 @@
         }
     }
 
-    private async Task CreateDraftAsync()
+    private async Task EmailStatementAsync(bool saveAsDraftOnly)
     {
         if (busy || drafted || statement is null) return;
         error = null;
         try
         {
             busy = true;
-            var draft = await Commands.SendAsync(
-                new PrepareSubcontractorStatementEmailDraft(SubcontractorId, subject.Trim(), htmlBody),
+            var outcome = await Commands.SendAsync(
+                new SendSubcontractorStatementEmail(SubcontractorId, subject.Trim(), htmlBody, saveAsDraftOnly),
                 CancellationToken.None);
             drafted = true;
-            draftRecipient = draft.RecipientEmail;
-            draftLink = draft.WebLink;
+            sent = outcome.Sent;
+            sendFailure = outcome.FailureNote;
+            draftRecipient = outcome.RecipientEmail;
+            draftLink = outcome.WebLink;
         }
-        catch (CommandFailedException ex) { error = $"Couldn't create the draft: {ex.Message}"; }
-        catch { error = "Couldn't create the draft. Check the subcontractor has an email address in the directory and the mailbox connection, then try again."; }
+        catch (CommandFailedException ex) { error = $"Couldn't email the statement: {ex.Message}"; }
+        catch { error = "Couldn't email the statement. Check the subcontractor has an email address in the directory and the mailbox connection, then try again."; }
         finally { busy = false; }
     }
 

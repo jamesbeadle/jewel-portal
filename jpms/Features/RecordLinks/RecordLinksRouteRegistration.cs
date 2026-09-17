@@ -98,8 +98,8 @@ public static class RecordLinksRouteRegistration
         commands.Register<LinkMessageToRecord, Acknowledgement>(
             new CommandRoute("POST", "/api/mailbox/message/link", _ => "/api/mailbox/message/link"));
 
-        commands.Register<PrepareProgrammeReplyDraft, ProgrammeReplyDraft>(
+        commands.Register<SendProgrammeReply, ProgrammeReplyOutcome>(
             new CommandRoute("POST", "/api/projects/{projectId}/programme/emails/reply-draft",
-                command => $"/api/projects/{((PrepareProgrammeReplyDraft)command).ProjectId}/programme/emails/reply-draft"));
+                command => $"/api/projects/{((SendProgrammeReply)command).ProjectId}/programme/emails/reply-draft"));
     }
 }

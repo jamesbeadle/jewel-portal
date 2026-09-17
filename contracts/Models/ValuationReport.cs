@@ -198,14 +198,18 @@ public sealed record ValuationReportSnapshotDetail(
 /// attached PDF froze, who the draft is addressed to (the project's Client and Architect
 /// contacts), and where to open it. <see cref="WebLink"/> opens the draft in Outlook on the web
 /// when Graph returns one (it usually does); null otherwise — the draft is still in the mailbox's
-/// Drafts folder. Mirrors <see cref="SubcontractorStatementEmailDraft"/>.
+/// Drafts folder. Mirrors <see cref="SubcontractorStatementEmailOutcome"/>.
 /// </summary>
-public sealed record ValuationReportSnapshotEmailDraft(
+public sealed record ValuationReportSnapshotEmailOutcome(
     string ValuationReportSnapshotId,
     string Label,
     string Subject,
     IReadOnlyList<string> RecipientEmails,
     string? WebLink,
-    // The staged draft's mailbox message id — the handle for withdrawing the draft
-    // (DeleteMailboxDraft) if it was staged in error; null only on legacy payloads.
-    string? DraftMessageId = null);
+    // The staged message's mailbox id — the handle for withdrawing a draft staged in error
+    // (DeleteMailboxDraft); null only on legacy payloads.
+    string? DraftMessageId = null,
+    // Sent=true means the client has it. Sent=false is a draft waiting in the mailbox's Drafts
+    // folder — by choice when FailureNote is null, because the send was refused when it is not.
+    bool Sent = false,
+    string? FailureNote = null);

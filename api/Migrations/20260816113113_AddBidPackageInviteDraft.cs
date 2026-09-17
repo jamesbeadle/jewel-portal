@@ -19,7 +19,7 @@ namespace Jewel.JPMS.Api.Migrations
     /// api/Migrations/add-bid-package-invite-draft.sql, which records this migration id in
     /// __EFMigrationsHistory so EF never tries to apply this file itself.
     /// </summary>
-    public partial class AddBidPackageInviteDraft : Migration
+    public partial class AddBidPackageInviteOutcome : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

@@ -1,0 +1,70 @@
+using Jewel.JPMS.Contracts.Requests;
+
+namespace Jewel.JPMS.Api.Features.Requests.Commands;
+
+/// <summary>
+/// POST /api/requests/{requestId}/email-draft — create an Outlook draft in the projects mailbox
+/// carrying the official document PDF. Optional JSON body { "recipientOverride": "someone@x.com" }
+/// addresses the draft to one ad-hoc email instead of the resolved client / architect preference.
+/// Nothing is sent — the draft waits in the mailbox's Drafts folder.
+/// </summary>
+public sealed class SendRequestEmailEndpoint
+{
+    private readonly SignedInUserResolver users;
+    private readonly SendRequestEmailAuthorisation authorisation;
+    private readonly SendRequestEmailValidation validation;
+    private readonly ICommandHandler<SendRequestEmail, RequestEmailOutcome> handler;
+    private readonly Audit.AuditActor auditActor;
+
+    public SendRequestEmailEndpoint(
+        SignedInUserResolver users,
+        SendRequestEmailAuthorisation authorisation,
+        SendRequestEmailValidation validation,
+        ICommandHandler<SendRequestEmail, RequestEmailOutcome> handler,
+        Audit.AuditActor auditActor)
+    {
+        this.users = users;
+        this.authorisation = authorisation;
+        this.validation = validation;
+        this.handler = handler;
+        this.auditActor = auditActor;
+    }
+
+    [Function(nameof(SendRequestEmail))]
+    public async Task<IActionResult> Run(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "requests/{requestId}/email-draft")] HttpRequest request,
+        string requestId)
+    {
+        var cancellationToken = request.HttpContext.RequestAborted;
+
+        var signedInUser = await users.ResolveAsync(request, cancellationToken);
+        if (signedInUser is null) return new UnauthorizedResult();
+
+        // The handler's audit write attributes the draft to whoever pressed the button — commands
+        // don't carry the caller's identity, so it reaches the handler through the scoped actor.
+        auditActor.Email = signedInUser.Email;
+
+        SendRequestEmail? body = null;
+        if (request.ContentLength > 0)
+        {
+            try { body = await request.ReadFromJsonAsync<SendRequestEmail>(); }
+            catch { /* an empty or non-JSON body means "no override" */ }
+        }
+        var command = new SendRequestEmail(requestId, body?.RecipientOverride);
+
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
+
+        var validationOutcome = validation.Check(command);
+        if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
+
+        try
+        {
+            return new OkObjectResult(await handler.HandleAsync(command, cancellationToken));
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Missing recipients / unconfigured mailbox are user-fixable — surface the message verbatim.
+            return new BadRequestObjectResult(ex.Message);
+        }
+    }
+}

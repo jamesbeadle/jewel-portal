@@ -130,7 +130,7 @@ which actions are offered:
   thread-wide and writes an audit event. Cost-centre correspondence that is valuation-side, VO
   and VOQ threads are Client (per the buckets plan mapping).
 - **Subcontractor pathway.** Bid package invites are created and sent here (drafted by
-  `PrepareBidPackageInviteDraftHandler`, BCC-only recipients, tagged `JPMS/BPI-####` +
+  `SendBidPackageInviteToTenderListHandler`, BCC-only recipients, tagged `JPMS/BPI-####` +
   `JPMS/Subcontractor`). Work-order email drafts and subcontract-side cost-centre mail live
   here too.
 - **Internal pathway.** The project and company to-do list (`TodoItem`, `ProjectId == ""` for
@@ -208,7 +208,7 @@ material only. The enforcement points, from the inventory:
 
 | Surface | Today | Under the wall |
 |---|---|---|
-| `RequestMessageEntity` activity trail (`Visibility = Shared`) on `ProjectRequestDetail` | Shared rows list To+CC, BCC as count only | Unchanged mechanics; requests are Client-pathway by construction, so the trail is inside the wall already. Guard: reply-in-thread and `PrepareRequestReplyDraftHandler` must refuse to operate on a non-Client thread (belt-and-braces — they should never meet one). |
+| `RequestMessageEntity` activity trail (`Visibility = Shared`) on `ProjectRequestDetail` | Shared rows list To+CC, BCC as count only | Unchanged mechanics; requests are Client-pathway by construction, so the trail is inside the wall already. Guard: reply-in-thread and `SendRequestReplyHandler` must refuse to operate on a non-Client thread (belt-and-braces — they should never meet one). |
 | `ListProjectCommunications` (Communications tab) | Rolls up **every** record type's mail | Internal-staff surface — keeps showing everything, gains the pathway segmented control (buckets plan). If any client-visible export/report is ever built on it, that consumer must pass `Bucket=Client` server-side, not client-side. |
 | Request document PDFs (`RequestDocumentBuilder`) | To + CC only, BCC structurally absent | Unchanged — already wall-safe. |
 | Progress reports (client-facing PDF) | Assembled from `ProgressUpdate`s, no mail content | No change; progress photos/narrative are not correspondence. |
@@ -279,7 +279,7 @@ Writers — the choke points are already narrow, which is what makes this cheap:
 - `CreateRequestFromMessageHandler`, `ReplyInThreadFromMessageHandler` — `RecordCreatedFromEmail`.
 - `DiscardMessageHandler` / `RestoreMessageHandler` / `RemoveTagFromMessageHandler` — on
   Client-pathway threads.
-- `MailboxActionWorker.SendRequestDocumentAsync`, `PrepareRequestReplyDraftHandler` —
+- `MailboxActionWorker.SendRequestDocumentAsync`, `SendRequestReplyHandler` —
   `DraftCreated`, capturing the draft's Graph id + webLink at creation time. This is the
   findability half: the audit register becomes the index into Outlook for everything the portal
   drafts to the client side.

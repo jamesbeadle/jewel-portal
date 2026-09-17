@@ -171,9 +171,9 @@ public static class ProcurementRouteRegistration
             new CommandRoute("PUT", "/api/bid-packages/{bidPackageId}/drawings",
                 command => $"/api/bid-packages/{((SetBidPackageDrawings)command).BidPackageId}/drawings"));
 
-        commands.Register<PrepareBidPackageInviteDraft, BidPackageInviteDraft>(
+        commands.Register<SendBidPackageInviteToTenderList, BidPackageInviteOutcome>(
             new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/draft-invite",
-                command => $"/api/bid-packages/{((PrepareBidPackageInviteDraft)command).BidPackageId}/draft-invite"));
+                command => $"/api/bid-packages/{((SendBidPackageInviteToTenderList)command).BidPackageId}/draft-invite"));
 
         // The in-app invite composer (2026-08-16): read/save the draft persisted on the package,
         // and SEND the invite from the projects mailbox — no trip to Outlook.
@@ -188,10 +188,6 @@ public static class ProcurementRouteRegistration
         commands.Register<SendBidPackageInvite, BidPackageInviteSendOutcome>(
             new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/send-invite",
                 command => $"/api/bid-packages/{((SendBidPackageInvite)command).BidPackageId}/send-invite"));
-
-        commands.Register<PrepareWorkOrderEmailDraft, WorkOrderEmailDraft>(
-            new CommandRoute("POST", "/api/work-orders/{workOrderId}/draft-email",
-                command => $"/api/work-orders/{((PrepareWorkOrderEmailDraft)command).WorkOrderId}/draft-email"));
 
         commands.Register<SendWorkOrderPoEmail, WorkOrderPoEmailOutcome>(
             new CommandRoute("POST", "/api/work-orders/{workOrderId}/send-po-email",

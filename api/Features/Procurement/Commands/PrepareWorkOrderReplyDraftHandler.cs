@@ -9,7 +9,7 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 // rendered purchase-order PDF. Graph's createReplyAll keeps the reply in the original conversation —
 // "RE:" subject, thread headers, quoted history, original recipients — and the caller's cover note
 // is placed above the quoted history, so the formal purchase order arrives inside the email chain
-// the works were agreed in (the request flow's PrepareRequestReplyDraftHandler, retold for
+// the works were agreed in (the request flow's SendRequestReplyHandler, retold for
 // procurement). The draft carries the order's workflow tag (and the source package's, when there is
 // one) so the sent copy and the supplier's replies group under the order. Nothing is sent — a
 // person reviews, adjusts recipients if needed, and sends from the mailbox itself — and unlike the

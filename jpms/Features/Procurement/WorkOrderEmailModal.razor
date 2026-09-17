@@ -1,0 +1,40 @@
+@namespace Jewel.JPMS.Features.Procurement
+
+@* The work-order email to the winning subcontractor. It sends from the projects mailbox on Send,
+   with the purchase-order PDF attached by the API; "Save as draft" leaves it in Drafts for Outlook
+   instead — the same two doors the Control Centre's composer offers, so one email behaves one way
+   wherever it is written. The page seeds the subject and body from the order. *@
+<Modal IsOpen="IsOpen" Title="Email work order to winner" OnCancel="OnCancel" Class="max-w-3xl w-full">
+    <ChildContent>
+        <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+            Sends from the shared projects mailbox to the winning subcontractor, tagged @PackageReference,
+            with the purchase order attached. Save as draft to review it in Outlook first.
+        </p>
+
+        <FormField Label="Subject">
+            <input class="field mb-3" value="@Subject" @onchange='e => SubjectChanged.InvokeAsync(e.Value?.ToString() ?? "")' />
+        </FormField>
+
+        <FormField Label="Body (HTML)">
+            <textarea class="field font-mono text-xs" rows="14" value="@Body" @onchange='e => BodyChanged.InvokeAsync(e.Value?.ToString() ?? "")'></textarea>
+        </FormField>
+    </ChildContent>
+    <FooterContent>
+        <button type="button" class="btn-secondary btn-lg" @onclick="OnCancel">Cancel</button>
+        <button type="button" class="btn-secondary btn-lg" disabled="@Busy" @onclick="OnSaveAsDraft">Save as draft</button>
+        <button type="button" class="btn-primary btn-lg" disabled="@Busy" @onclick="OnSend">@(Busy ? "Working…" : "Send to winner")</button>
+    </FooterContent>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string? PackageReference { get; set; }
+    [Parameter] public string Subject { get; set; } = "";
+    [Parameter] public EventCallback<string> SubjectChanged { get; set; }
+    [Parameter] public string Body { get; set; } = "";
+    [Parameter] public EventCallback<string> BodyChanged { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnSend { get; set; }
+    [Parameter] public EventCallback OnSaveAsDraft { get; set; }
+}

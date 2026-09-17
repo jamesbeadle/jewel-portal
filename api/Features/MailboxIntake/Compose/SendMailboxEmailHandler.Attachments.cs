@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
+using Jewel.JPMS.Api.Features.Procurement.Documents;
 using Jewel.JPMS.Api.Features.Requests.Documents;
 using Jewel.JPMS.Api.Features.Variations.Documents;
 using Jewel.JPMS.Contracts.MailboxCompose;
@@ -93,6 +94,19 @@ public sealed partial class SendMailboxEmailHandler
                 var model = await VariationDocumentBuilder.BuildAsync(context, reference.Id, ct)
                     ?? throw new InvalidOperationException("A selected variation order no longer exists — remove its document and try again.");
                 return new MailboxDraftAttachment(model.FileName, "application/pdf", VariationDocumentRenderer.Render(model));
+            }
+
+            // The purchase order, so a supplier emailed from the order's own communications panel
+            // gets the same sheet the PO email attaches. A draft order has no purchase order the
+            // supplier may see, and a rejected one never will — the same promise the send keeps.
+            case RecordType.WorkOrder:
+            {
+                var model = await WorkOrderPoDocumentBuilder.BuildAsync(context, reference.Id, ct)
+                    ?? throw new InvalidOperationException("A selected work order no longer exists — remove its document and try again.");
+                if (model.Order.IsDraft || model.Order.IsRejected)
+                    throw new InvalidOperationException(
+                        "That work order is still a draft — approve it before attaching its purchase order.");
+                return new MailboxDraftAttachment(model.FileName, "application/pdf", WorkOrderPoRenderer.Render(model));
             }
 
             default:

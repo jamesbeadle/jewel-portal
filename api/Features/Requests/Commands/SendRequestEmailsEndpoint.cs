@@ -1,0 +1,60 @@
+using Jewel.JPMS.Contracts.Requests;
+
+namespace Jewel.JPMS.Api.Features.Requests.Commands;
+
+/// <summary>
+/// POST /api/requests/email-drafts — create one Outlook draft in the projects mailbox per request
+/// id in the JSON body { "requestIds": ["...", "..."] }. The response reports per-request
+/// outcomes; a request that can't be drafted (no resolvable recipient, unknown id) doesn't stop
+/// the others. Nothing is sent — every draft waits in the mailbox's Drafts folder.
+/// </summary>
+public sealed class SendRequestEmailsEndpoint
+{
+    private readonly SignedInUserResolver users;
+    private readonly SendRequestEmailsAuthorisation authorisation;
+    private readonly SendRequestEmailsValidation validation;
+    private readonly ICommandHandler<SendRequestEmails, RequestEmailBatch> handler;
+
+    public SendRequestEmailsEndpoint(
+        SignedInUserResolver users,
+        SendRequestEmailsAuthorisation authorisation,
+        SendRequestEmailsValidation validation,
+        ICommandHandler<SendRequestEmails, RequestEmailBatch> handler)
+    {
+        this.users = users;
+        this.authorisation = authorisation;
+        this.validation = validation;
+        this.handler = handler;
+    }
+
+    [Function(nameof(SendRequestEmails))]
+    public async Task<IActionResult> Run(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "requests/email-drafts")] HttpRequest request)
+    {
+        var cancellationToken = request.HttpContext.RequestAborted;
+
+        var signedInUser = await users.ResolveAsync(request, cancellationToken);
+        if (signedInUser is null) return new UnauthorizedResult();
+
+        SendRequestEmails? command = null;
+        try { command = await request.ReadFromJsonAsync<SendRequestEmails>(); }
+        catch { /* a malformed body fails validation below */ }
+        if (command is null) return new BadRequestObjectResult("A JSON body with requestIds is required.");
+
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
+
+        var validationOutcome = validation.Check(command);
+        if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
+
+        try
+        {
+            return new OkObjectResult(await handler.HandleAsync(command, cancellationToken));
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Per-request failures are reported inside the batch; reaching here means something
+            // run-wide and user-fixable (e.g. the mailbox connection) — surface it verbatim.
+            return new BadRequestObjectResult(ex.Message);
+        }
+    }
+}

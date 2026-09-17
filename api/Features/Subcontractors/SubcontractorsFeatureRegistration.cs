@@ -20,9 +20,9 @@ public static class SubcontractorsFeatureRegistration
         services.AddScoped<IQueryHandler<ListCurrentComplianceDocuments, IReadOnlyList<ComplianceDocument>>, ListCurrentComplianceDocumentsHandler>();
         services.AddScoped<IQueryHandler<GetSubcontractorStatement, SubcontractorStatement>, GetSubcontractorStatementHandler>();
 
-        services.AddScoped<ICommandHandler<PrepareSubcontractorStatementEmailDraft, SubcontractorStatementEmailDraft>, PrepareSubcontractorStatementEmailDraftHandler>();
-        services.AddScoped<PrepareSubcontractorStatementEmailDraftAuthorisation>();
-        services.AddScoped<PrepareSubcontractorStatementEmailDraftValidation>();
+        services.AddScoped<ICommandHandler<SendSubcontractorStatementEmail, SubcontractorStatementEmailOutcome>, SendSubcontractorStatementEmailHandler>();
+        services.AddScoped<SendSubcontractorStatementEmailAuthorisation>();
+        services.AddScoped<SendSubcontractorStatementEmailValidation>();
 
         services.AddScoped<ICommandHandler<AddSubcontractorToDirectory, Subcontractor>, AddSubcontractorToDirectoryHandler>();
         services.AddScoped<AddSubcontractorToDirectoryAuthorisation>();

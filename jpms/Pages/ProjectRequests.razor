@@ -141,12 +141,13 @@
             <div class="panel px-4 py-3 mb-4">
                 <div class="flex flex-wrap items-center gap-3">
                     <span class="text-sm font-medium text-content">@SelectedRfis.Count RFI@(SelectedRfis.Count == 1 ? "" : "s") selected</span>
-                    <button type="button" class="btn-primary" disabled="@preparingDrafts" @onclick="PrepareSelectedDrafts">
-                        @(preparingDrafts ? "Preparing drafts…" : $"Prepare email drafts ({SelectedRfis.Count})")
+                    <button type="button" class="btn-primary" disabled="@preparingDrafts" @onclick="() => EmailSelectedRfis(saveAsDraftOnly: false)">
+                        @(preparingDrafts ? "Working…" : $"Email these RFIs ({SelectedRfis.Count})")
                     </button>
+                    <button type="button" class="btn-secondary" disabled="@preparingDrafts" @onclick="() => EmailSelectedRfis(saveAsDraftOnly: true)">Save as drafts</button>
                     <button type="button" class="btn-secondary" disabled="@preparingDrafts" @onclick="ClearSelection">Clear selection</button>
                 </div>
-                <p class="text-xs text-content-subtle mt-2">Creates one draft per RFI in the projects mailbox — PDF attached, To/CC/BCC pre-filled from the correspondence profile. Review and send each from Outlook; nothing is sent from here.</p>
+                <p class="text-xs text-content-subtle mt-2">One email per RFI from the projects mailbox — PDF attached, To/CC/BCC from the correspondence profile. Save as drafts leaves them in Drafts for Outlook instead.</p>
             </div>
         }
 
@@ -197,7 +198,7 @@
         {
             <div class="panel px-4 py-3 mb-4 space-y-2">
                 <p class="text-sm font-medium @(draftBatch.FailedCount == 0 ?"text-positive" : "text-content")">
-                    @draftBatch.PreparedCount of @draftBatch.Outcomes.Count draft@(draftBatch.Outcomes.Count == 1 ? "" : "s") created in the projects mailbox.
+                    @draftBatch.PreparedCount of @draftBatch.Outcomes.Count RFI@(draftBatch.Outcomes.Count == 1 ? "" : "s") went through the projects mailbox — @draftBatch.SentCount sent.
                     @if (draftBatch.FailedCount > 0)
                     {
                         <span class="text-content-muted font-normal">Failed RFIs stay selected so you can fix and retry.</span>
@@ -210,11 +211,11 @@
                             <span class="font-mono text-xs text-content-muted">@LabelFor(outcome)</span>
                             @if (outcome.Succeeded)
                             {
-                                <span class="text-positive">Draft created</span>
-                                <span class="text-xs text-content-subtle">To: @string.Join(", ", outcome.Draft!.Recipients)</span>
-                                @if (!string.IsNullOrWhiteSpace(outcome.Draft.WebLink))
+                                <span class="@(outcome.Email!.Sent ? "text-positive" : "text-content-muted")">@(outcome.Email.Sent ? "Sent" : outcome.Email.FailureNote is null ? "Draft created" : "Send failed — draft kept")</span>
+                                <span class="text-xs text-content-subtle">To: @string.Join(", ", outcome.Email.Recipients)</span>
+                                @if (!string.IsNullOrWhiteSpace(outcome.Email.WebLink))
                                 {
-                                    <a href="@outcome.Draft.WebLink" target="_blank" rel="noopener"
+                                    <a href="@outcome.Email.WebLink" target="_blank" rel="noopener"
                                        class="text-xs text-accent hover:underline underline-offset-2">Open in Outlook</a>
                                 }
                             }

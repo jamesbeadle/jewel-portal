@@ -143,14 +143,19 @@ public partial class RequestConversation
         }
     }
 
-    // ---- Reply with the official PDF: an Outlook draft in this email's thread ----
+    // ---- Reply with the official PDF, in this email's thread ----
 
-    private string? replyingId;        // message currently being drafted against (disables the buttons)
-    private string? replyForMessageId; // where the latest outcome (error or draft) is displayed
+    private string? replyingId;        // message currently being emailed against (disables the buttons)
+    private string? replyForMessageId; // where the latest outcome (error or result) is displayed
     private string? replyError;
-    private RequestEmailDraft? replyDraft;
+    private RequestEmailOutcome? replyDraft;
 
-    private async Task DraftReplyAsync(RequestMessage message)
+    private string ReplyHeadline =>
+        replyDraft is { Sent: true } ? "Reply sent from the projects mailbox — official PDF attached, in this email's thread."
+        : replyDraft?.FailureNote is not null ? "The reply didn't send — official PDF attached, waiting in the mailbox's Drafts folder."
+        : "Reply draft created in the projects mailbox — official PDF attached, in this email's thread.";
+
+    private async Task EmailReplyAsync(RequestMessage message, bool saveAsDraftOnly)
     {
         if (replyingId is not null || string.IsNullOrEmpty(message.MailboxId)) return;
         replyError = null;
@@ -159,15 +164,15 @@ public partial class RequestConversation
         replyingId = message.MessageId;
         try
         {
-            replyDraft = await RequestRegister.PrepareReplyDraftAsync(RequestId, message.MailboxId!);
+            replyDraft = await RequestRegister.EmailDocumentReplyAsync(RequestId, message.MailboxId!, saveAsDraftOnly);
         }
         catch (CommandFailedException ex)
         {
-            replyError = $"Couldn't create the reply draft: {ex.Message}";
+            replyError = $"Couldn't email the reply: {ex.Message}";
         }
         catch
         {
-            replyError = "Couldn't create the reply draft. Check the mailbox connection and try again.";
+            replyError = "Couldn't email the reply. Check the mailbox connection and try again.";
         }
         finally
         {

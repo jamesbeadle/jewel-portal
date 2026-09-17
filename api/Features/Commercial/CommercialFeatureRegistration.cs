@@ -143,9 +143,9 @@ public static class CommercialFeatureRegistration
         // accountant, assembled from the same query handlers the tab itself reads.
         services.AddScoped<Documents.CostCentreReconciliationPdfBuilder>();
 
-        services.AddScoped<ICommandHandler<PrepareValuationReportSnapshotEmailDraft, ValuationReportSnapshotEmailDraft>, PrepareValuationReportSnapshotEmailDraftHandler>();
-        services.AddScoped<PrepareValuationReportSnapshotEmailDraftAuthorisation>();
-        services.AddScoped<PrepareValuationReportSnapshotEmailDraftValidation>();
+        services.AddScoped<ICommandHandler<SendValuationReportSnapshotEmail, ValuationReportSnapshotEmailOutcome>, SendValuationReportSnapshotEmailHandler>();
+        services.AddScoped<SendValuationReportSnapshotEmailAuthorisation>();
+        services.AddScoped<SendValuationReportSnapshotEmailValidation>();
 
         return services;
     }

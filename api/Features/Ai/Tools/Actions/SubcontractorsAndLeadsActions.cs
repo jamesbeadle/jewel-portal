@@ -50,7 +50,7 @@ internal sealed partial class SubcontractorsAndLeadsActions : IAiActionSource
 
     // Skipped: InviteSubcontractorPortalUser — no command dispatch: the endpoint calls the
     //          SubcontractorPortalInviter service directly instead of an ICommandHandler.
-    // Skipped: PrepareSubcontractorStatementEmailDraft — no HTTP endpoint dispatches it: the
+    // Skipped: SendSubcontractorStatementEmail — no HTTP endpoint dispatches it: the
     //          handler/authorisation/validation are registered but no [HttpTrigger] function
     //          exists for the client's /statement/draft-email route.
     // Skipped: AddComplianceDocumentVersion — constructed server-side by the multipart upload

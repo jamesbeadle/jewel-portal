@@ -90,6 +90,11 @@ public static class MailboxIntakeFeatureRegistration
         // Triage compose (POST mailbox/compose): send — or stage — an email from the projects
         // mailbox. The handler is registered by concrete type too so the multipart endpoint can
         // pass uploaded file bytes alongside the command.
+        // The one outbound door for every record's email — staging, the send, the degrade back to
+        // a draft and the audit row (Compose.OutboundEmailDispatcher). Registered here beside the
+        // Graph client it wraps, because every feature that emails a record depends on it.
+        services.AddScoped<Compose.OutboundEmailDispatcher>();
+
         services.AddSingleton<Compose.ComposeHtmlPipeline>();
         services.AddScoped<Compose.SendMailboxEmailHandler>();
         services.AddScoped<

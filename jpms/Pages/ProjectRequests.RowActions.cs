@@ -12,9 +12,9 @@ public partial class ProjectRequests
     private readonly HashSet<string> selectedIds = new();
     private bool preparingDrafts;
     private string? draftBatchError;
-    private RequestEmailDraftBatch? draftBatch;
+    private RequestEmailBatch? draftBatch;
 
-    // Mirrors PrepareRequestEmailDraftsAuthorisation server-side (directors, project managers,
+    // Mirrors SendRequestEmailsAuthorisation server-side (directors, project managers,
     // site managers and architects; admins carry every role server-side).
     private bool CanDraftEmail => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager or Role.Architect);

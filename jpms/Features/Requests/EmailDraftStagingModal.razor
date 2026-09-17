@@ -1,24 +1,21 @@
 @namespace Jewel.JPMS.Features.Requests
 
-@* Email this record as a staged Outlook draft — a pure VIEW over the host's staging state.
-   Two paths behind one confirm: a fresh email (To/CC/BCC from the project's correspondence
-   profile) or reply-all into a tagged email chain, the whole conversation quoted beneath; the
-   record's PDF is attached either way. Nothing is sent from here — the result card says what
-   was staged and hands over to Outlook. The host owns the chain fetch and the draft commands. *@
+@* Email this record — a pure VIEW over the host's sending state. Two paths behind the buttons: a
+   fresh email (To/CC/BCC from the project's correspondence profile) or reply-all into a tagged
+   email chain, the whole conversation quoted beneath; the record's PDF is attached either way.
+   Send delivers it from the projects mailbox, Save as draft leaves it in Drafts for Outlook, and
+   the result card says which happened. The host owns the chain fetch and the commands. *@
 <Modal IsOpen="IsOpen"
        Title="@($"Email this {KindLabel}")"
-       ConfirmLabel="@(Preparing ? "Creating draft…" : "Create draft")"
-       ConfirmDisabled="@Preparing"
-       ShowFooter="@(DraftResult is null)"
        OnCancel="() => OnCancel.InvokeAsync()"
-       OnConfirm="() => OnConfirm.InvokeAsync()"
        Class="max-w-xl">
+    <ChildContent>
     <div class="space-y-4">
         @if (DraftResult is null)
         {
             <p class="text-sm text-content-subtle">
-                Stages a draft in the projects mailbox with the @KindLabel PDF attached.
-                Review and send it from Outlook — nothing is sent from here.
+                Sends from the projects mailbox with the @KindLabel PDF attached.
+                Save as draft to review it in Outlook first.
             </p>
 
             <div class="space-y-2">
@@ -61,8 +58,8 @@
         }
         else
         {
-            <Notice Tone="Tone.Positive">
-                <p class="text-sm font-medium">Draft created in the projects mailbox.</p>
+            <Notice Tone="@(DraftResult.Sent ? Tone.Positive : DraftResult.FailureNote is null ? Tone.Info : Tone.Warning)">
+                <p class="text-sm font-medium">@Headline</p>
                 <p class="text-xs text-content-subtle mt-1">To: @string.Join(", ", DraftResult.Recipients)</p>
                 @if (DraftResult.Cc is { Count: > 0 } draftCc)
                 {
@@ -72,11 +69,14 @@
                 {
                     <p class="text-xs text-content-subtle">BCC: @string.Join(", ", draftBcc)</p>
                 }
-                <p class="text-xs text-content-subtle mt-1">Review the recipients and send it from Outlook — nothing has been sent.</p>
+                @if (!DraftResult.Sent)
+                {
+                    <p class="text-xs text-content-subtle mt-1">@(DraftResult.FailureNote ?? "Review the recipients and send it from Outlook — nothing has been sent.")</p>
+                }
                 @if (!string.IsNullOrWhiteSpace(DraftResult.WebLink))
                 {
                     <a href="@DraftResult.WebLink" target="_blank" rel="noopener"
-                       class="text-xs text-accent hover:underline underline-offset-2">Open the draft in Outlook</a>
+                       class="text-xs text-accent hover:underline underline-offset-2">Open it in Outlook</a>
                 }
             </Notice>
             <div class="flex justify-end">
@@ -84,6 +84,17 @@
             </div>
         }
     </div>
+    </ChildContent>
+    <FooterContent>
+        @if (DraftResult is null)
+        {
+            <button type="button" class="btn-secondary btn-lg" @onclick="() => OnCancel.InvokeAsync()">Cancel</button>
+            <button type="button" class="btn-secondary btn-lg" disabled="@Preparing"
+                    @onclick="() => OnSend.InvokeAsync(true)">Save as draft</button>
+            <button type="button" class="btn-primary btn-lg" disabled="@Preparing"
+                    @onclick="() => OnSend.InvokeAsync(false)">@(Preparing ? "Working…" : "Send")</button>
+        }
+    </FooterContent>
 </Modal>
 
 @code {
@@ -100,13 +111,20 @@
     [Parameter] public string SelectedChainId { get; set; } = "";
     [Parameter] public EventCallback<string> SelectedChainIdChanged { get; set; }
 
-    /// <summary>Set once the draft is staged — swaps the picker for the result card.</summary>
-    [Parameter] public RequestEmailDraft? DraftResult { get; set; }
+    /// <summary>Set once the email has gone or been staged — swaps the picker for the result card.</summary>
+    [Parameter] public RequestEmailOutcome? DraftResult { get; set; }
     [Parameter] public string? Error { get; set; }
     [Parameter] public bool Preparing { get; set; }
 
     [Parameter] public EventCallback OnCancel { get; set; }
-    [Parameter] public EventCallback OnConfirm { get; set; }
+
+    /// <summary>True asks for a draft in the mailbox instead of a send.</summary>
+    [Parameter] public EventCallback<bool> OnSend { get; set; }
+
+    private string Headline =>
+        DraftResult is { Sent: true } ? "Sent from the projects mailbox."
+        : DraftResult?.FailureNote is not null ? "The send didn't go through."
+        : "Draft created in the projects mailbox.";
 
     private static string AuthorLabel(RequestMessage email) =>
         string.IsNullOrWhiteSpace(email.AuthorName) ? email.AuthorEmail : email.AuthorName;

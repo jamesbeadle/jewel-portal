@@ -1,31 +1,38 @@
+using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.MailboxIntake;
+using Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Contracts.Procurement;
 
 namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 
 /// <summary>
-/// Sends the tender-invite email from the shared projects mailbox — the in-app counterpart of
-/// PrepareBidPackageInviteDraft, sharing its attachment plan through BidPackageInviteMailAssembler.
-/// The composer's envelope is authoritative: whatever To/Cc/Bcc it shows is exactly what goes on
-/// the wire (an empty To is addressed to the mailbox itself, the house convention for BCC
-/// fan-out). Staged as a draft first, then sent through the system's single send chokepoint
-/// (SendDraftAsync) — a failed send leaves the reviewed draft in the mailbox's Drafts folder and
-/// says so, never losing the email. A successful send clears the package's persisted composer
-/// draft: it has served its purpose.
+/// Sends the tender-invite email from the shared projects mailbox — the composer's door, the
+/// counterpart of SendBidPackageInviteToTenderList, sharing its attachment plan through
+/// BidPackageInviteMailAssembler. The composer's envelope is authoritative: whatever To/Cc/Bcc it
+/// shows is exactly what goes on the wire (an empty To is addressed to the mailbox itself, the
+/// house convention for BCC fan-out). Staging, the send, the degrade back to a draft and the audit
+/// row are the dispatcher's, so a failed send leaves the reviewed draft in the mailbox's Drafts
+/// folder and says so, never losing the email. A successful send clears the package's persisted
+/// composer draft: it has served its purpose.
 /// </summary>
-public sealed class SendBidPackageInviteHandler : ICommandHandler<SendBidPackageInvite, BidPackageInviteSendOutcome>
+public sealed partial class SendBidPackageInviteHandler : ICommandHandler<SendBidPackageInvite, BidPackageInviteSendOutcome>
 {
+    private const string StagingRefused =
+        "The invite couldn't be staged in the shared mailbox, so nothing was sent. "
+        + "Check the mailbox connection, then try again here.";
+
     private readonly JpmsContext context;
-    private readonly IMailboxGraphClient mailbox;
+    private readonly OutboundEmailDispatcher dispatcher;
     private readonly MailboxIntakeOptions options;
     private readonly BidPackageInviteMailAssembler assembler;
 
     public SendBidPackageInviteHandler(
-        JpmsContext context, IMailboxGraphClient mailbox, MailboxIntakeOptions options,
+        JpmsContext context, OutboundEmailDispatcher dispatcher, MailboxIntakeOptions options,
         BidPackageInviteMailAssembler assembler)
     {
-        this.context = context; this.mailbox = mailbox; this.options = options;
+        this.context = context; this.dispatcher = dispatcher; this.options = options;
         this.assembler = assembler;
     }
 
@@ -59,45 +66,22 @@ public sealed class SendBidPackageInviteHandler : ICommandHandler<SendBidPackage
             Categories: new[] { TriageCategories.Marker, TriageCategories.ForRecord(package.Reference), TriageCategories.Subcontractor },
             Cc: cc);
 
-        var draft = await mailbox.CreateDraftAsync(message, cancellationToken);
-        if (draft is null)
-            throw new InvalidOperationException(
-                "The invite couldn't be staged in the shared mailbox. Check the mailbox connection and try again — nothing was sent.");
+        var filing = new OutboundEmailFiling(
+            AuditTrail.PathwayLabel(TriageCategories.Subcontractor),
+            StagingRefused,
+            package.ProjectId,
+            RecordType.BidPackageInvite,
+            package.BidPackageId,
+            package.Reference);
 
-        var recipientCount = to.Count + cc.Count + bcc.Count;
+        var dispatch = await dispatcher.DispatchAsync(message, filing, saveAsDraftOnly: false, cancellationToken);
         var attachedFiles = plan.Attach.Select(file => file.FileName).ToList();
+        var recipientCount = to.Count + cc.Count + bcc.Count;
 
-        var sent = await mailbox.SendDraftAsync(draft.Id, cancellationToken);
-        if (!sent)
-        {
-            // The reviewed email survives in Drafts — degraded, never lost.
-            return new BidPackageInviteSendOutcome(
-                package.ToModel(), Sent: false, draft.WebLink, recipientCount, plan.LinkedFiles,
-                FailureNote: "The send didn't go through — the invite is saved as a draft in the projects mailbox. "
-                    + "Open it there to send, or try again here.",
-                AttachedFiles: attachedFiles);
-        }
+        if (dispatch.Sent) await ClearComposerDraftAsync(package, cancellationToken);
 
-        // The composer draft has served its purpose; the sent copy (tagged to the package) is the
-        // record now, readable under Tender responses & related emails.
-        package.InviteDraftSubject = null;
-        package.InviteDraftBody = null;
-        package.InviteDraftTo = null;
-        package.InviteDraftCc = null;
-        package.InviteDraftBcc = null;
-        package.InviteDraftSavedAt = null;
-        await context.SaveChangesAsync(cancellationToken);
-
-        var webLink = await mailbox.GetWebLinkAsync(draft.Id, cancellationToken) ?? draft.WebLink;
         return new BidPackageInviteSendOutcome(
-            package.ToModel(), Sent: true, webLink, recipientCount, plan.LinkedFiles, AttachedFiles: attachedFiles);
+            package.ToModel(), dispatch.Sent, dispatch.WebLink, recipientCount, plan.LinkedFiles,
+            FailureNote: dispatch.FailureNote, AttachedFiles: attachedFiles);
     }
-
-    private static List<MailboxDraftRecipient> ParseRecipients(string? raw) =>
-        (raw ?? "")
-            .Split(new[] { ';', ',' }, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-            .Where(address => address.Contains('@', StringComparison.Ordinal))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Select(address => new MailboxDraftRecipient(address))
-            .ToList();
 }

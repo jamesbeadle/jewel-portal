@@ -102,7 +102,7 @@ public sealed class QuoteEntity
 
 // A file kept on a bid package as part of its tender documents — a specification extract, a
 // schedule of finishes, anything a tenderer needs that isn't a drawing in the register. Supplier-
-// facing: PrepareBidPackageInviteDraft attaches these to the invite email alongside the linked
+// facing: SendBidPackageInviteToTenderList attaches these to the invite email alongside the linked
 // drawings. Bytes live in the bid-package-attachments blob container (BlobRef); the row is the
 // register entry the Documents section reads.
 public sealed class BidPackageAttachmentEntity

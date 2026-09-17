@@ -8,7 +8,7 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 
 /// <summary>
 /// Everything that travels with a tender invite, planned once and shared by BOTH invite paths —
-/// the stage-in-Drafts flow (PrepareBidPackageInviteDraft) and the in-app send
+/// the stage-in-Drafts flow (SendBidPackageInviteToTenderList) and the in-app send
 /// (SendBidPackageInvite) — so the two can never disagree about what a tenderer receives.
 ///
 /// The order is deliberate: the generated pricing schedule leads (the one file the tender can't

@@ -33,7 +33,7 @@ public sealed class AssignMessageToRequestHandler : ICommandHandler<AssignMessag
 /// existing callers — "Reply in thread" among them — still triage the whole thread; the Control
 /// Centre passes MessageOnly unless its "triage the entire thread" box is ticked. No document
 /// email is drafted here — drafts are only created when explicitly requested
-/// (PrepareRequestEmailDraft / PrepareRequestReplyDraft).
+/// (SendRequestEmail / SendRequestReply).
 /// </summary>
 public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequestFromMessage, Request>
 {
@@ -207,7 +207,7 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
         }
 
         // No email is drafted here — a draft is only created when a person explicitly asks for one
-        // (PrepareRequestEmailDraft / PrepareRequestReplyDraft).
+        // (SendRequestEmail / SendRequestReply).
         return request.ToModel();
     }
 

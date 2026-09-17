@@ -53,12 +53,12 @@ public partial class ProjectRequests
         }
     }
 
-    private string LabelFor(RequestEmailDraftOutcome outcome) =>
+    private string LabelFor(RequestEmailResult outcome) =>
         !string.IsNullOrWhiteSpace(outcome.Reference)
             ? outcome.Reference!
             : AllRecords.FirstOrDefault(r => r.RequestId == outcome.RequestId)?.Reference ?? outcome.RequestId;
 
-    private async Task PrepareSelectedDrafts()
+    private async Task EmailSelectedRfis(bool saveAsDraftOnly)
     {
         var rfiIds = SelectedRfis.Select(r => r.RequestId).ToList();
         if (preparingDrafts || rfiIds.Count == 0) return;
@@ -67,12 +67,12 @@ public partial class ProjectRequests
         draftBatchError = null;
         try
         {
-            var batch = await RequestRegister.PrepareEmailDraftsAsync(rfiIds);
+            var batch = await RequestRegister.EmailDocumentsAsync(rfiIds, saveAsDraftOnly);
             draftBatch = batch;
-            // Drafted RFIs come off the selection; failures stay ticked for a fix-and-retry.
+            // RFIs that went through come off the selection; failures stay ticked for a fix-and-retry.
             foreach (var outcome in batch.Outcomes.Where(o => o.Succeeded))
                 selectedIds.Remove(outcome.RequestId);
-            // Drafting moved each Open RFI to Awaiting Response server-side (manually set back to
+            // Emailing moved each Open RFI to Awaiting Response server-side (manually set back to
             // Open if a send is cancelled) — revalidate the register so the table shows it.
             if (batch.Outcomes.Any(o => o.Succeeded))
                 RequestRegister.Refresh(ProjectId);

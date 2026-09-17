@@ -62,7 +62,7 @@ public partial class ProjectRequestDetail
     private bool emailModalOpen;
     private bool preparingDraft;
     private string? draftError;
-    private RequestEmailDraft? draftResult;
+    private RequestEmailOutcome? draftResult;
     private RequestRecipientSet? recipientPreview;
 
     // The emails tagged to this request (inbound legs with a live mailbox id), offered in the
@@ -79,7 +79,7 @@ public partial class ProjectRequestDetail
     // Streams the official PDF from the api, regenerated from SQL on every download.
     private string DocumentHref => $"/api/requests/{RequestId}/document";
 
-    // Mirrors PrepareRequestEmailDraftAuthorisation server-side (directors, project managers, site
+    // Mirrors SendRequestEmailAuthorisation server-side (directors, project managers, site
     // managers and architects; admins carry every role server-side).
     private bool CanDraftEmail => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager or Role.Architect);

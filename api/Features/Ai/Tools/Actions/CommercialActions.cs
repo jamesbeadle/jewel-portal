@@ -56,7 +56,7 @@ internal sealed partial class CommercialActions : IAiActionSource
     // GrantEotAuthorisation.RolesThatMayGrantEots and UpdateEotAuthorisation.RolesThatMayUpdateEots).
     private static readonly RoleSet DirectorsOnly = RoleSet.Of(JpmsRoles.Director);
 
-    // Replica of PrepareValuationReportSnapshotEmailDraftAuthorisation.RolesThatMayEmailSnapshots.
+    // Replica of SendValuationReportSnapshotEmailAuthorisation.RolesThatMayEmailSnapshots.
     private static readonly RoleSet SnapshotEmailDrafters =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager);
 
