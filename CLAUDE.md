@@ -1,5 +1,5 @@
 <!-- project-process:begin -->
-<!-- project-process kit v1.3.0 — refreshed by bootstrap.sh; edit the kit, not this block -->
+<!-- project-process kit v1.3.1 — refreshed by bootstrap.sh; edit the kit, not this block -->
 
 # How We Work
 
@@ -191,7 +191,7 @@ Ask two questions of every function, when writing it and when reading it:
 **A long function is a contradiction in terms.** The entire point of a function is to break long content into small, named, understandable pieces — so a massive function is a function refusing to do its own job. There is no real reason for one to exist. **Soft limit: ~30 lines.** As with files, when a function approaches the limit the question is never "how do I make this fit" — it's "what have I failed to extract?" Almost always there's a smaller function, a utility, or a separately named step hiding inside. Extract until each function does one thing and its name says exactly what that thing is — then the parent function becomes a short sequence of named steps that reads like prose, which is the whole goal.
 
 - **Functions should be short.** If a function is long, it's doing too much. The extracted pieces don't need to be reused anywhere else to justify existing — a function whose only purpose is to give a name to one step of its caller has already earned its place.
-- **One dot per line (Law of Demeter, informally).** If you find yourself writing `order.customer.address.postcode.format()`, the structure is wrong. Either the data is poorly modelled or the operation belongs somewhere closer to the data. `apple.colour.hexCode` should be `Colours.getHexCode(apple.colour)`: the caller holds an apple and asks the thing that knows about colours, rather than walking through the apple's insides.
+- **One dot per line (Law of Demeter, informally).** If you find yourself writing `order.customer.address.postcode.format()`, the structure is wrong. Either the data is poorly modelled or the operation belongs somewhere closer to the data. `apple.colour.hexCode` should be `Colours.getHexCode(apple.colour)`: the caller holds an apple and asks the thing that knows about colours, rather than walking through the apple's insides. What counts is the depth of one chain of properties, not how many dots a line has: a fluent pipeline of calls — `invoices.Where(…).Select(…).ToList()`, `items.filter(…).map(…)` — hands back something new at each step and is not a walk into anything, while `invoice.project.client.name` is, wherever it appears, including inside a lambda or in markup.
 - **No arrow code.** Deep indentation is a visual smell — if the code is marching right across the page, the function is doing too much branching. It means a function should already have been called inside that block: the indented body is a named step that was never named. Extract, invert conditions, return early.
 - **Idempotent where possible.** A function called twice with the same input should behave the same way. Side effects should be obvious from the name (`saveUser`, not `processUser`).
 
