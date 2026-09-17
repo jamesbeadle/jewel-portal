@@ -2,27 +2,24 @@
 @inject ICommandSender Commands
 @inject ProjectListReadModel Projects
 
-@* The client-facing valuation statement on its way out: confirming creates a DRAFT in the shared
+@* The client-facing valuation statement on its way out: Send delivers it from the shared projects
    mailbox — the frozen report rendered server-side and attached as the branded PDF, addressed to
-   the project's Client and Architect contacts (projects@ is cc'd automatically) — for a human to
-   review and send from Outlook. Nothing sends from here. The snapshot is immutable, so the
-   attachment is the report exactly as frozen, however long the draft sits. Used from the
-   Valuation Report tab's snapshot register and the Valuation Snapshots page. *@
+   the project's Client and Architect contacts (projects@ is cc'd automatically) — and Save as draft
+   leaves it in Drafts for Outlook instead. The snapshot is immutable, so the attachment is the
+   report exactly as frozen, however long it sits. Used from the Valuation Report tab's snapshot
+   register and the Valuation Snapshots page. *@
 <Modal IsOpen="@(Snapshot is not null)"
        Title="@($"Email valuation report · {Snapshot?.Label}")"
-       ConfirmLabel="@ConfirmLabelText"
-       ConfirmDisabled="@(busy || drafted)"
-       CancelLabel="Close"
-       OnConfirm="CreateDraftAsync"
        OnCancel="Close"
        Class="max-w-3xl w-full">
+    <ChildContent>
     @if (Snapshot is { } snapshot)
     {
         <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
-            Nothing sends from here — this creates a draft in the shared mailbox with the frozen
-            report attached as a PDF, addressed to the project's client and architect contacts,
-            for you to review and send from Outlook. The snapshot is immutable, so the attachment
+            Sends from the shared projects mailbox with the frozen report attached as a PDF, to the
+            project's client and architect contacts. The snapshot is immutable, so the attachment
             shows the report exactly as it stood on @DateTimeText(snapshot.TakenAt).
+            Save as draft to review it in Outlook first.
         </p>
 
         @if (snapshot.IsSuperseded)
@@ -60,14 +57,11 @@
 
         @if (drafted)
         {
-            <Notice Tone="Tone.Positive">
-                <p class="mb-1">
-                    Draft created in the shared mailbox to <span class="font-medium">@draftRecipients</span>,
-                    with the report PDF attached. Review and send it from the mailbox's Drafts folder.
-                </p>
+            <Notice Tone="@(sent ? Tone.Positive : sendFailure is null ? Tone.Info : Tone.Warning)">
+                <p class="mb-1">@OutcomeText</p>
                 @if (draftLink is not null)
                 {
-                    <a class="underline underline-offset-4 font-medium" href="@draftLink" target="_blank" rel="noopener">Open the draft in Outlook on the web</a>
+                    <a class="underline underline-offset-4 font-medium" href="@draftLink" target="_blank" rel="noopener">Open it in Outlook on the web</a>
                 }
             </Notice>
         }
@@ -87,6 +81,14 @@
             <Notice Tone="Tone.Negative" Class="mt-3">@error</Notice>
         }
     }
+    </ChildContent>
+    <FooterContent>
+        <button type="button" class="btn-secondary btn-lg" @onclick="Close">Close</button>
+        <button type="button" class="btn-secondary btn-lg" disabled="@CannotSend"
+                @onclick="() => EmailSnapshotAsync(saveAsDraftOnly: true)">Save as draft</button>
+        <button type="button" class="btn-primary btn-lg" disabled="@CannotSend"
+                @onclick="() => EmailSnapshotAsync(saveAsDraftOnly: false)">@(busy ? "Working…" : "Send to client")</button>
+    </FooterContent>
 </Modal>
 
 @code {
@@ -101,6 +103,8 @@
 
     private bool busy;
     private bool drafted;
+    private bool sent;
+    private string? sendFailure;
     private string? error;
     private string? draftLink;
     private string draftRecipients = "";
@@ -108,8 +112,12 @@
     private string subject = "";
     private string htmlBody = "";
 
-    private string ConfirmLabelText =>
-        busy ? "Drafting…" : drafted ? "Draft created" : "Create draft in mailbox";
+    private bool CannotSend => busy || drafted || Snapshot is null;
+
+    private string OutcomeText =>
+        sent ? $"Sent to {draftRecipients} with the report PDF attached."
+        : sendFailure ?? $"Draft created in the shared mailbox to {draftRecipients}, with the report PDF "
+            + "attached. Review and send it from the mailbox's Drafts folder.";
 
     protected override void OnParametersSet()
     {
@@ -117,6 +125,8 @@
         {
             // Reset the per-open outcome so reopening starts clean.
             drafted = false;
+            sent = false;
+            sendFailure = null;
             error = null;
             draftLink = null;
             preparedForSnapshotId = null;
@@ -126,28 +136,33 @@
         if (preparedForSnapshotId == Snapshot.ValuationReportSnapshotId) return;
         preparedForSnapshotId = Snapshot.ValuationReportSnapshotId;
         drafted = false;
+        sent = false;
+        sendFailure = null;
         error = null;
         draftLink = null;
         subject = BuildDefaultSubject(Snapshot);
         htmlBody = BuildDefaultBody(Snapshot);
     }
 
-    private async Task CreateDraftAsync()
+    private async Task EmailSnapshotAsync(bool saveAsDraftOnly)
     {
         if (busy || drafted || Snapshot is null) return;
         error = null;
         try
         {
             busy = true;
-            var draft = await Commands.SendAsync(
-                new PrepareValuationReportSnapshotEmailDraft(Snapshot.ValuationReportSnapshotId, subject.Trim(), htmlBody),
+            var outcome = await Commands.SendAsync(
+                new SendValuationReportSnapshotEmail(
+                    Snapshot.ValuationReportSnapshotId, subject.Trim(), htmlBody, saveAsDraftOnly),
                 CancellationToken.None);
             drafted = true;
-            draftRecipients = string.Join(", ", draft.RecipientEmails);
-            draftLink = draft.WebLink;
+            sent = outcome.Sent;
+            sendFailure = outcome.FailureNote;
+            draftRecipients = string.Join(", ", outcome.RecipientEmails);
+            draftLink = outcome.WebLink;
         }
-        catch (CommandFailedException ex) { error = $"Couldn't create the draft: {ex.Message}"; }
-        catch { error = "Couldn't create the draft. Check the project has a client or architect contact with an email address and the mailbox connection, then try again."; }
+        catch (CommandFailedException ex) { error = $"Couldn't email the valuation report: {ex.Message}"; }
+        catch { error = "Couldn't email the valuation report. Check the project has a client or architect contact with an email address and the mailbox connection, then try again."; }
         finally { busy = false; }
     }
 

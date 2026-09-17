@@ -12,4 +12,7 @@ public sealed record WorkOrderPoEmailOutcome(
     bool Sent,
     string RecipientEmail,
     string? WebLink,
-    string? FailureNote = null);
+    string? FailureNote = null,
+    // The staged message's mailbox id — the handle for withdrawing a draft that was staged
+    // in error (DeleteMailboxDraft); null only on legacy payloads.
+    string? DraftMessageId = null);

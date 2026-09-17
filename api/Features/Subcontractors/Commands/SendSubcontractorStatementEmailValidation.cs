@@ -1,13 +1,13 @@
-using Jewel.JPMS.Contracts.Procurement;
+using Jewel.JPMS.Contracts.Subcontractors;
 
-namespace Jewel.JPMS.Api.Features.Procurement.Commands;
+namespace Jewel.JPMS.Api.Features.Subcontractors.Commands;
 
-public sealed class PrepareWorkOrderEmailDraftValidation
+public sealed class SendSubcontractorStatementEmailValidation
 {
-    public ValidationOutcome Check(PrepareWorkOrderEmailDraft command)
+    public ValidationOutcome Check(SendSubcontractorStatementEmail command)
     {
         var errors = new List<string>();
-        if (string.IsNullOrWhiteSpace(command.WorkOrderId)) errors.Add("WorkOrderId is required.");
+        if (string.IsNullOrWhiteSpace(command.SubcontractorId)) errors.Add("SubcontractorId is required.");
         if (string.IsNullOrWhiteSpace(command.Subject)) errors.Add("Subject is required.");
         if (string.IsNullOrWhiteSpace(command.HtmlBody)) errors.Add("HtmlBody is required.");
         if (errors.Count == 0) return ValidationOutcome.Passed;

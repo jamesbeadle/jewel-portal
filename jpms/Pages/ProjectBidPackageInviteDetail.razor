@@ -227,9 +227,11 @@
                            CanEdit="CanEdit"
                            OnSaved="LoadAsync" />
 
-    <WorkOrderEmailDraftModal IsOpen="showWoEmailModal" Busy="busy" PackageReference="@package?.Reference"
-                              @bind-Subject="woEmailSubject" @bind-Body="woEmailBody"
-                              OnCancel="CloseWorkOrderEmailModal" OnConfirm="ConfirmWorkOrderEmailDraft" />
+    <WorkOrderEmailModal IsOpen="showWoEmailModal" Busy="busy" PackageReference="@package?.Reference"
+                         @bind-Subject="woEmailSubject" @bind-Body="woEmailBody"
+                         OnCancel="CloseWorkOrderEmailModal"
+                         OnSend="() => EmailWorkOrderToWinner(saveAsDraftOnly: false)"
+                         OnSaveAsDraft="() => EmailWorkOrderToWinner(saveAsDraftOnly: true)" />
 
     <DeletePackageModal IsOpen="showDeleteModal" Busy="busy" PackageTitle="@package?.Title"
                         OnCancel="CloseDeleteModal" OnConfirm="ConfirmDelete" />

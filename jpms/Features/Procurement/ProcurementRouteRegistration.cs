@@ -189,10 +189,6 @@ public static class ProcurementRouteRegistration
             new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/send-invite",
                 command => $"/api/bid-packages/{((SendBidPackageInvite)command).BidPackageId}/send-invite"));
 
-        commands.Register<PrepareWorkOrderEmailDraft, WorkOrderEmailDraft>(
-            new CommandRoute("POST", "/api/work-orders/{workOrderId}/draft-email",
-                command => $"/api/work-orders/{((PrepareWorkOrderEmailDraft)command).WorkOrderId}/draft-email"));
-
         commands.Register<SendWorkOrderPoEmail, WorkOrderPoEmailOutcome>(
             new CommandRoute("POST", "/api/work-orders/{workOrderId}/send-po-email",
                 command => $"/api/work-orders/{((SendWorkOrderPoEmail)command).WorkOrderId}/send-po-email"));

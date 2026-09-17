@@ -50,24 +50,26 @@ internal sealed partial class CommercialActions
             Notes: "Confirm with the user which snapshot, by label and date, before calling."),
 
         new AiAction(
-            Name: "prepare_valuation_report_snapshot_email_draft",
+            Name: "send_valuation_report_snapshot_email",
             Area: "Commercial",
-            Description: "Creates a DRAFT email in the shared mailbox addressed to the project's Client "
-                + "and Architect contacts, with the frozen valuation report attached as a PDF — nothing "
-                + "is sent; a human reviews and sends it from Outlook. The subject and HTML cover note "
-                + "are supplied by the caller.",
-            CommandType: typeof(PrepareValuationReportSnapshotEmailDraft),
-            ResultType: typeof(ValuationReportSnapshotEmailDraft),
-            AuthorisationType: typeof(PrepareValuationReportSnapshotEmailDraftAuthorisation),
-            ValidationType: typeof(PrepareValuationReportSnapshotEmailDraftValidation),
+            Description: "SENDS EMAIL: sends the frozen valuation report from the shared projects "
+                + "mailbox to the project's Client and Architect contacts, attached as a PDF. "
+                + "saveAsDraftOnly true stops after staging, leaving the reviewed draft in Drafts for "
+                + "Outlook instead of sending. The subject and HTML cover note are the caller's.",
+            CommandType: typeof(SendValuationReportSnapshotEmail),
+            ResultType: typeof(ValuationReportSnapshotEmailOutcome),
+            AuthorisationType: typeof(SendValuationReportSnapshotEmailAuthorisation),
+            ValidationType: typeof(SendValuationReportSnapshotEmailValidation),
             VisibleTo: SnapshotEmailDrafters,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "This is client-facing money correspondence — confirm the subject and cover-note "
-                + "wording with the user before calling. Recipients are fixed to the project's Client "
-                + "and Architect contacts (projects@ is cc'd automatically). valuationReportSnapshotId "
+            RequiresConfirmation: true,
+            Notes: "This is client-facing money correspondence that reaches the client the moment "
+                + "this succeeds — ALWAYS confirm the snapshot, the subject and the cover-note wording "
+                + "with the user before calling. Recipients are fixed to the project's Client and "
+                + "Architect contacts (projects@ is cc'd automatically). valuationReportSnapshotId "
                 + "comes from the project's snapshots list. The result's draftMessageId is the handle "
-                + "for delete_mailbox_draft if the draft has to be withdrawn."),
+                + "for delete_mailbox_draft if a staged draft has to be withdrawn."),
 
     };
 }

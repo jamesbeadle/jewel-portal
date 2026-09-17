@@ -59,14 +59,17 @@ public sealed record SubcontractorStatementInvoice(
     decimal Amount);
 
 /// <summary>
-/// The outcome of drafting a statement-of-account email in the shared mailbox: who the draft is
-/// addressed to (the subcontractor's directory email) and where to open it. <see cref="WebLink"/>
-/// opens the draft in Outlook on the web when Graph returns one (it usually does); null otherwise —
-/// the draft is still in the mailbox's Drafts folder. Mirrors <see cref="WorkOrderEmailDraft"/>.
+/// What became of a statement-of-account email: who it went to (the subcontractor's directory
+/// email) and where to open it. Sent=true means they have it; Sent=false is a draft waiting in the
+/// mailbox's Drafts folder — by choice when <see cref="FailureNote"/> is null, because the send was
+/// refused when it is not. <see cref="WebLink"/> opens the message in Outlook on the web when Graph
+/// returns one. Mirrors <see cref="WorkOrderPoEmailOutcome"/>.
 /// </summary>
-public sealed record SubcontractorStatementEmailDraft(
+public sealed record SubcontractorStatementEmailOutcome(
     string SubcontractorId,
     string CompanyName,
     string Subject,
     string RecipientEmail,
-    string? WebLink);
+    string? WebLink,
+    bool Sent = false,
+    string? FailureNote = null);

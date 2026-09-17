@@ -4,6 +4,7 @@ using Jewel.JPMS.Contracts.Boq;
 using Jewel.JPMS.Contracts.Drawings;
 using Jewel.JPMS.Contracts.Variations;
 using Jewel.JPMS.Features.CostCenters;
+using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Features.Triage;
 using Jewel.JPMS.Features.Triage.Panels;
 
@@ -45,21 +46,9 @@ public partial class ProjectBidPackageInviteDetail
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"<p>Hello {awarded.SubcontractorName},</p>");
         sb.AppendLine($"<p>Following your tender for the <strong>{package!.Title}</strong> package (ref {package.Reference}), we are pleased to confirm the award and attach our work order <strong>WO-{order.Number:0000}</strong> below.</p>");
-        if (awarded.Lines.Count > 0)
-        {
-            sb.AppendLine("<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse\">");
-            sb.AppendLine("<tr><th align=\"left\">Item</th><th align=\"left\">Qty</th><th align=\"left\">Unit</th><th align=\"right\">Total</th></tr>");
-            foreach (var line in awarded.Lines.OrderBy(l => l.SortOrder))
-                sb.AppendLine($"<tr><td>{line.Title}</td><td>{line.Quantity}</td><td>{line.Unit}</td><td align=\"right\">{line.LineTotal:£#,##0.00}</td></tr>");
-            sb.AppendLine($"<tr><td colspan=\"3\"><strong>Order total</strong></td><td align=\"right\"><strong>{order.Value:£#,##0.00}</strong></td></tr>");
-            sb.AppendLine("</table>");
-        }
-        else
-        {
-            sb.AppendLine($"<p><strong>Order value:</strong> {order.Value:£#,##0.00}</p>");
-            if (!string.IsNullOrWhiteSpace(order.Scope))
-                sb.AppendLine($"<p><strong>Scope:</strong> {order.Scope}</p>");
-        }
+        sb.AppendLine(awarded.Lines.Count > 0
+            ? WorkOrderPoEmail.LinesTable(OrderedLines(awarded), order.Value)
+            : OrderValueAndScope(order));
         if (order.ScheduledCompletion is { } completion)
             sb.AppendLine($"<p><strong>Scheduled completion:</strong> {completion.LocalDateTime:d MMM yyyy}</p>");
         sb.AppendLine("<p>Please reply to confirm receipt and acceptance of this order, quoting the reference. Before starting on site, please provide your RAMS documentation and current insurance certificates as set out in the tender invitation.</p>");
@@ -67,22 +56,42 @@ public partial class ProjectBidPackageInviteDetail
         return sb.ToString();
     }
 
-    private async Task ConfirmWorkOrderEmailDraft()
+    private static IReadOnlyList<WorkOrderPoEmail.Line> OrderedLines(ProjectWorkOrderDetail awarded) =>
+        awarded.Lines.OrderBy(line => line.SortOrder).Select(WorkOrderPoEmail.ToLine).ToList();
+
+    private static string OrderValueAndScope(WorkOrder order)
+    {
+        var value = $"<p><strong>Order value:</strong> {order.Value:£#,##0.00}</p>";
+        if (string.IsNullOrWhiteSpace(order.Scope)) return value;
+        return value + Environment.NewLine + $"<p><strong>Scope:</strong> {order.Scope}</p>";
+    }
+
+    private async Task EmailWorkOrderToWinner(bool saveAsDraftOnly)
     {
         if (busy || !CanEdit || AwardedOrder is not { } awarded) return;
         error = null;
         try
         {
             busy = true;
-            var draft = await Commands.SendAsync(
-                new PrepareWorkOrderEmailDraft(awarded.Order.WorkOrderId, woEmailSubject.Trim(), woEmailBody), CancellationToken.None);
+            var outcome = await Commands.SendAsync(
+                new SendWorkOrderPoEmail(awarded.Order.WorkOrderId, woEmailSubject.Trim(), woEmailBody, saveAsDraftOnly),
+                CancellationToken.None);
             showWoEmailModal = false;
-            woEmailLink = draft.WebLink;
-            woEmailNote = $"Draft created in the shared mailbox to {draft.RecipientEmail}, tagged {package?.Reference}. Review and send it from the mailbox's Drafts folder.";
+            woEmailLink = outcome.WebLink;
+            woEmailNote = WorkOrderEmailNote(outcome);
         }
-        catch (CommandFailedException ex) { error = $"Couldn't create the draft: {ex.Message}"; }
-        catch { error = "Couldn't create the draft. Check the supplier has an email address in the directory and the mailbox connection, then try again."; }
+        catch (CommandFailedException ex) { error = $"Couldn't email the work order: {ex.Message}"; }
+        catch { error = "Couldn't email the work order. Check the supplier has an email address in the directory and the mailbox connection, then try again."; }
         finally { busy = false; }
+    }
+
+    private string WorkOrderEmailNote(WorkOrderPoEmailOutcome outcome)
+    {
+        if (outcome.Sent)
+            return $"Sent to {outcome.RecipientEmail} with the purchase order attached, tagged {package?.Reference}.";
+        if (outcome.FailureNote is { } failure) return failure;
+        return $"Draft created in the shared mailbox to {outcome.RecipientEmail}, tagged {package?.Reference}. "
+            + "Review and send it from the mailbox's Drafts folder.";
     }
 
     // ---- Award: winning quote → work order (the purchase-order record) ----

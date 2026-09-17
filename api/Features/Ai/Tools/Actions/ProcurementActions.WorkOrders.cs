@@ -169,9 +169,10 @@ internal sealed partial class ProcurementActions
             Area: "Procurement",
             Description: "SENDS EMAIL: sends the purchase-order email for a released work order to "
                 + "the supplier's directory email from the shared projects mailbox, with the given "
-                + "subject and HTML body. A failed send leaves the reviewed draft in the mailbox's "
-                + "Drafts folder (outcome sent false plus a webLink) and never affects the order. A "
-                + "draft or rejected order is refused outright.",
+                + "subject and HTML body and the purchase-order PDF attached. saveAsDraftOnly true "
+                + "stops after staging, leaving the reviewed draft in Drafts for Outlook instead of "
+                + "sending. A failed send leaves that same draft (outcome sent false plus a webLink) "
+                + "and never affects the order. A draft or rejected order is refused outright.",
             CommandType: typeof(SendWorkOrderPoEmail),
             ResultType: typeof(WorkOrderPoEmailOutcome),
             AuthorisationType: typeof(SendWorkOrderPoEmailAuthorisation),
@@ -181,28 +182,10 @@ internal sealed partial class ProcurementActions
             NameStamps: Array.Empty<string>(),
             Notes: "The email goes to an external supplier the moment this succeeds — ALWAYS "
                 + "confirm the order, recipient, subject and body with the user before calling. "
-                + "prepare_work_order_email_draft is the review-in-Outlook alternative. "
-                + "workOrderId comes from list_work_orders."),
-
-        new AiAction(
-            Name: "prepare_work_order_email_draft",
-            Area: "Procurement",
-            Description: "Drafts the work-order (purchase-order) email to the supplier in the "
-                + "shared mailbox — NOTHING IS SENT; a person reviews and sends it from Outlook. "
-                + "The recipient is the supplier's directory email; an order that came from an "
-                + "award carries the package's tag so correspondence groups under the package.",
-            CommandType: typeof(PrepareWorkOrderEmailDraft),
-            ResultType: typeof(WorkOrderEmailDraft),
-            AuthorisationType: typeof(PrepareWorkOrderEmailDraftAuthorisation),
-            ValidationType: typeof(PrepareWorkOrderEmailDraftValidation),
-            VisibleTo: PackageAdministrators,
-            EmailStamps: Array.Empty<string>(),
-            NameStamps: Array.Empty<string>(),
-            Notes: "The command drafts exactly the subject and htmlBody it is given — confirm the "
-                + "wording with the user first. workOrderId comes from list_work_orders. To land "
-                + "the purchase order inside an EXISTING email conversation instead, use "
-                + "prepare_work_order_reply_draft. The result's draftMessageId is the handle for "
-                + "delete_mailbox_draft if the draft has to be withdrawn."),
+                + "saveAsDraftOnly true is the review-in-Outlook alternative, and the result's "
+                + "draftMessageId is then the handle for delete_mailbox_draft. To land the purchase "
+                + "order inside an EXISTING email conversation instead, use "
+                + "prepare_work_order_reply_draft. workOrderId comes from list_work_orders."),
 
         new AiAction(
             Name: "prepare_work_order_reply_draft",

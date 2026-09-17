@@ -221,9 +221,9 @@ public static class CommercialRouteRegistration
 
         // The snapshot's PDF download is a plain GET (/api/valuation-report-snapshots/{id}/pdf,
         // linked directly from the UI); only the email draft goes through the command pipeline.
-        commands.Register<PrepareValuationReportSnapshotEmailDraft, ValuationReportSnapshotEmailDraft>(
+        commands.Register<SendValuationReportSnapshotEmail, ValuationReportSnapshotEmailOutcome>(
             new CommandRoute("POST", "/api/valuation-report-snapshots/{snapshotId}/draft-email",
-                command => $"/api/valuation-report-snapshots/{((PrepareValuationReportSnapshotEmailDraft)command).ValuationReportSnapshotId}/draft-email"));
+                command => $"/api/valuation-report-snapshots/{((SendValuationReportSnapshotEmail)command).ValuationReportSnapshotId}/draft-email"));
     }
 
     private static string SupplierAccountPath(GetProjectSupplierAccount query) =>

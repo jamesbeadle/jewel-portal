@@ -2,9 +2,9 @@ using Jewel.JPMS.Contracts.Commercial;
 
 namespace Jewel.JPMS.Api.Features.Commercial.Commands;
 
-public sealed class PrepareValuationReportSnapshotEmailDraftValidation
+public sealed class SendValuationReportSnapshotEmailValidation
 {
-    public ValidationOutcome Check(PrepareValuationReportSnapshotEmailDraft command)
+    public ValidationOutcome Check(SendValuationReportSnapshotEmail command)
     {
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(command.ValuationReportSnapshotId)) errors.Add("ValuationReportSnapshotId is required.");

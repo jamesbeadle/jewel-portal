@@ -121,9 +121,6 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<ICommandHandler<SaveBidPackageInviteComposerDraft, Jewel.JPMS.Contracts.Cqrs.Acknowledgement>, SaveBidPackageInviteComposerDraftHandler>();
 
         // Same review-then-send-from-Outlook convention as the invite draft above.
-        services.AddScoped<ICommandHandler<PrepareWorkOrderEmailDraft, WorkOrderEmailDraft>, PrepareWorkOrderEmailDraftHandler>();
-        services.AddScoped<PrepareWorkOrderEmailDraftAuthorisation>();
-        services.AddScoped<PrepareWorkOrderEmailDraftValidation>();
 
         // The threaded variant (2026-08-29): a REPLY draft inside an existing conversation linked
         // to the order, carrying the rendered purchase-order PDF — so the formal PO lands in the

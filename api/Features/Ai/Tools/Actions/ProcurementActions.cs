@@ -20,7 +20,7 @@ internal sealed partial class ProcurementActions : IAiActionSource
     // Mirrors the tender-administration gates: CreateBidPackageFromMessageAuthorisation,
     // InviteSubcontractorsToBidPackageAuthorisation, DeclineBidPackageRecipientAuthorisation,
     // RemoveBidPackageRecipientAuthorisation, PrepareBidPackageInviteDraftAuthorisation,
-    // PrepareWorkOrderEmailDraftAuthorisation, ExtractTenderFromMessageAuthorisation,
+    // ExtractTenderFromMessageAuthorisation,
     // RecordTenderResponseAuthorisation, SaveExtractedQuoteAuthorisation,
     // SetBidPackageDrawingsAuthorisation, SetBidPackageLineItemsAuthorisation,
     // UpdateBidPackageScopeAuthorisation, UpdateWorkOrderAuthorisation.
