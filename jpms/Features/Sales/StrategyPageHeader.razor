@@ -1,0 +1,56 @@
+@using Jewel.JPMS.Contracts.Sales
+@inject SessionService Session
+
+<PageHeader>
+    <TitleContent>
+        <span>@Strategy.Name</span>
+        <Pill Tone="@Strategy.Status.ToTone()">@Strategy.Status.DisplayName()</Pill>
+    </TitleContent>
+    <EyebrowContent>
+        <a href="/sales/strategies" class="hover:text-content">Strategies</a>
+    </EyebrowContent>
+    <SubtitleContent>
+        @Strategy.Audience.DisplayName() · @Strategy.Channel.DisplayName()
+        @if (!string.IsNullOrWhiteSpace(Strategy.TargetArea))
+        {
+            <text> · @Strategy.TargetArea</text>
+        }
+        · owned by @Strategy.OwnerEmail
+    </SubtitleContent>
+    <Actions>
+        <div class="flex items-center gap-2 shrink-0">
+            @if (CanDecide)
+            {
+                <select class="field h-8 py-1 text-sm w-36" value="@Strategy.Status" disabled="@IsBusy"
+                        @onchange="e => OnStatusChosen.InvokeAsync(Enum.Parse<SalesStrategyStatus>(e.Value?.ToString() ?? nameof(SalesStrategyStatus.Draft)))">
+                    @foreach (var status in Enum.GetValues<SalesStrategyStatus>())
+                    {
+                        <option value="@status">@status.DisplayName()</option>
+                    }
+                </select>
+            }
+            @if (CanWork)
+            {
+                <button type="button" class="btn-secondary" @onclick="OnEdit">Edit</button>
+                <button type="button" class="btn-secondary" disabled="@(IsBusy || Strategy.ResearchStatus.IsInProgress())"
+                        title="Claude reads the brief, searches the web, fills in the blanks and drafts the plan — a few minutes, in the background"
+                        @onclick="OnResearch">
+                    @(Strategy.ResearchStatus == StrategyResearchStatus.Complete ? "Research again with AI" : "Research with AI")
+                </button>
+                <button type="button" class="btn-primary" @onclick="OnAddLead">Add lead</button>
+            }
+        </div>
+    </Actions>
+</PageHeader>
+
+@code {
+    [Parameter, EditorRequired] public SalesStrategy Strategy { get; set; } = default!;
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public EventCallback<SalesStrategyStatus> OnStatusChosen { get; set; }
+    [Parameter] public EventCallback OnEdit { get; set; }
+    [Parameter] public EventCallback OnResearch { get; set; }
+    [Parameter] public EventCallback OnAddLead { get; set; }
+
+    private bool CanWork => SalesAccess.CanWork(Session.ActiveRole);
+    private bool CanDecide => SalesAccess.CanDecide(Session.ActiveRole);
+}

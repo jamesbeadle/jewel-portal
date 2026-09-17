@@ -1,0 +1,72 @@
+@using Jewel.JPMS.Contracts.Sales
+@inject SalesInboxReadModel Inbox
+
+<div class="panel overflow-hidden">
+    @if (Page.Items.Count == 0)
+    {
+        <p class="p-6 text-sm text-content-subtle italic">@(IsSearching ? "No emails match." : "Nothing in the inbox.")</p>
+    }
+    else
+    {
+        <ul class="divide-y divide-line">
+            @foreach (var item in Page.Items)
+            {
+                var m = item;
+                var match = Inbox.MatchFor(m.FromEmail);
+                var isOpen = OpenedId == m.Id;
+                <li>
+                    <button type="button" class="w-full text-left px-4 py-3 hover:bg-surface transition @(isOpen ? "bg-surface" : "")" @onclick="() => OnOpen.InvokeAsync(m)">
+                        <div class="flex items-baseline justify-between gap-3">
+                            <span class="text-sm font-medium text-content truncate">@(string.IsNullOrWhiteSpace(m.FromName) ? m.FromEmail : m.FromName)</span>
+                            <span class="text-xs text-content-subtle shrink-0">@When(m.ReceivedAt)</span>
+                        </div>
+                        <p class="text-sm text-content-muted truncate">@(string.IsNullOrWhiteSpace(m.Subject) ? "(no subject)" : m.Subject)</p>
+                        <p class="text-xs text-content-subtle truncate">@m.BodyPreview</p>
+                        <div class="flex items-center gap-2 mt-1">
+                            @if (match is not null)
+                            {
+                                <Pill Tone="@match.Stage.ToTone()" Title="@match.ContactName">@match.Reference · @match.Stage.DisplayName()</Pill>
+                            }
+                            else
+                            {
+                                <span class="text-xs text-content-faint">no lead</span>
+                            }
+                            @if (m.HasAttachments)
+                            {
+                                <span class="text-xs text-content-subtle">📎</span>
+                            }
+                        </div>
+                    </button>
+                </li>
+            }
+        </ul>
+        <div class="flex items-center justify-between px-4 py-3 border-t border-line text-xs text-content-subtle">
+            <span>@(Page.Total > 0 ? $"{Page.Total} in the inbox" : $"{Page.Items.Count} shown")</span>
+            <div class="flex gap-2">
+                @if (!string.IsNullOrWhiteSpace(Inbox.Cursor))
+                {
+                    <button type="button" class="btn-ghost text-xs" @onclick="() => OnPage.InvokeAsync(null)">First page</button>
+                }
+                @if (Page.NextCursor is { } next)
+                {
+                    <button type="button" class="btn-ghost text-xs" @onclick="() => OnPage.InvokeAsync(next)">Older</button>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public MailboxPage Page { get; set; } = default!;
+    [Parameter] public string? OpenedId { get; set; }
+    [Parameter] public bool IsSearching { get; set; }
+    [Parameter] public EventCallback<MailboxMessage> OnOpen { get; set; }
+    /// <summary>Raised with the cursor of the page asked for — null is the first page.</summary>
+    [Parameter] public EventCallback<string?> OnPage { get; set; }
+
+    private static string When(DateTimeOffset at)
+    {
+        var local = at.ToLocalTime();
+        return local.Date == DateTime.Today ? local.ToString("HH:mm") : local.ToString("d MMM");
+    }
+}

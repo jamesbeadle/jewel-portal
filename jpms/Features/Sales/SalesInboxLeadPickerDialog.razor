@@ -1,0 +1,60 @@
+@inject LeadListReadModel LeadList
+
+<Modal IsOpen="@IsOpen" Title="Log this email on a lead" ConfirmLabel="@(IsBusy ? "Logging…" : "Log it")"
+       ConfirmDisabled="@(IsBusy || string.IsNullOrWhiteSpace(logLeadId))" OnCancel="OnCancel" OnConfirm="() => OnPicked.InvokeAsync(logLeadId)">
+    <FormField Label="Lead reference or name" Hint="Type LD-0012, a name or an address">
+    <input type="text" class="field w-full" value="@logLeadSearch" @oninput="e => logLeadSearch = e.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    @if (leads is not null)
+    {
+        <ul class="mt-2 max-h-56 overflow-y-auto divide-y divide-line border border-line rounded">
+            @foreach (var lead in leads.Where(MatchesLeadSearch).Take(20))
+            {
+                var l = lead;
+                <li>
+                    <button type="button" class="w-full text-left px-3 py-2 text-sm hover:bg-surface @(logLeadId == l.LeadId ? "bg-surface text-content" : "text-content-muted")" @onclick="() => logLeadId = l.LeadId">
+                        @l.Reference · @l.Headline() <span class="text-xs text-content-subtle">@l.PropertyAddress</span>
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    /// <summary>What the search box opens with — the sender's email.</summary>
+    [Parameter] public string InitialSearch { get; set; } = "";
+    [Parameter] public bool IsBusy { get; set; }
+    /// <summary>Raised with the id of the lead picked.</summary>
+    [Parameter] public EventCallback<string> OnPicked { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool wasOpen;
+    private string logLeadSearch = "";
+    private string logLeadId = "";
+    private IReadOnlyList<Lead>? leads;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen == wasOpen) return;
+        wasOpen = IsOpen;
+        if (!IsOpen) return;
+        logLeadId = "";
+        logLeadSearch = InitialSearch;
+        if (leads is not null) return;
+        try { await LeadList.RefreshAsync(CancellationToken.None); leads = LeadList.Current; }
+        catch (OperationCanceledException) { throw; }
+        catch { leads = Array.Empty<Lead>(); }
+    }
+
+    private bool MatchesLeadSearch(Lead lead)
+    {
+        if (string.IsNullOrWhiteSpace(logLeadSearch)) return true;
+        var q = logLeadSearch.Trim();
+        return lead.Reference.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || lead.ContactName.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || lead.CompanyName.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || lead.PropertyAddress.Contains(q, StringComparison.OrdinalIgnoreCase);
+    }
+}

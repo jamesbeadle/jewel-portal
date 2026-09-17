@@ -1,0 +1,56 @@
+@using Jewel.JPMS.Contracts.Sales
+@inject ICommandSender Commands
+
+<Modal IsOpen="@IsOpen"
+       Title="@($"Delete {Lead.Reference}?")"
+       ConfirmLabel="@(busy ? "Deleting…" : "Delete lead")"
+       ConfirmDisabled="@busy"
+       OnCancel="OnCancel"
+       OnConfirm="DeleteAsync">
+    <p class="text-sm text-content mb-4">
+        This permanently removes <span class="font-mono">@Lead.Reference</span> — @Lead.Headline()@(string.IsNullOrWhiteSpace(Lead.Summary) ? "" : $", “{Lead.Summary}”") —
+        with its whole timeline@(EstimateCount > 0 ? $", {EstimateCount} estimate{(EstimateCount == 1 ? "" : "s")}" : "")@(ProposalCount > 0 ? $", {ProposalCount} proposal{(ProposalCount == 1 ? "" : "s")}" : "")@(HasImagineConcepts ? " and its imagine concepts" : "").
+        This cannot be undone. A real lead that went nowhere should be moved to Lost instead, so the register keeps its history.
+    </p>
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
+    }
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter, EditorRequired] public LeadDetail Detail { get; set; } = default!;
+    [Parameter] public EventCallback OnDeleted { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool busy;
+    private bool wasOpen;
+    private string? error;
+
+    private Lead Lead => Detail.Lead;
+    private int EstimateCount => Detail.Estimates?.Count ?? 0;
+    private int ProposalCount => Detail.Proposals?.Count ?? 0;
+    private IReadOnlyList<ImagineRoundView> ImagineRounds => Detail.Imagine?.Rounds ?? Array.Empty<ImagineRoundView>();
+    private bool HasImagineConcepts => ImagineRounds.Any(round => round.Concepts.Count > 0);
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen == wasOpen) return;
+        wasOpen = IsOpen;
+        if (IsOpen) error = null;
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (busy) return;
+        busy = true; error = null;
+        try
+        {
+            await Commands.SendAsync(new DeleteLead(Lead.LeadId), CancellationToken.None);
+            await OnDeleted.InvokeAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+}

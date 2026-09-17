@@ -1,0 +1,14 @@
+@using Jewel.JPMS.Contracts.Sales
+
+<div class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+    <StatTile Label="Leads found" Value="@Funnel.Leads.ToString()" />
+    <StatTile Label="Contacted" Value="@Funnel.Contacted.ToString()" />
+    <StatTile Label="Engaged" Value="@Funnel.Engaged.ToString()" />
+    <StatTile Label="Proposals" Value="@Funnel.Proposals.ToString()" />
+    <StatTile Label="Won" Value="@($"{Funnel.Won}{(Funnel.Lost > 0 ? $" · {Funnel.Lost} lost" : "")}")" />
+    <StatTile Label="Open pipeline" Value="@WholeMoney(Funnel.PipelineValue)" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SalesStrategyFunnel Funnel { get; set; } = default!;
+}

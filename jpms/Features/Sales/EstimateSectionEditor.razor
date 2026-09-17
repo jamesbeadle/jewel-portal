@@ -1,0 +1,66 @@
+<div class="border-b border-line last:border-b-0">
+    <div class="flex flex-wrap items-center gap-2 px-4 py-3 bg-surface-raised/40">
+        @if (Editable)
+        {
+            <input type="text" class="field flex-1 min-w-[16rem] font-semibold" maxlength="256" placeholder="Section — e.g. Structural steelwork"
+                   value="@Section.Name" @oninput="e => { Section.Name = e.Value?.ToString() ?? string.Empty; Touched(); }" />
+            <label class="flex items-center gap-1.5 text-xs text-content-muted whitespace-nowrap">
+                <input type="checkbox" checked="@Section.Provisional" @onchange="e => { Section.Provisional = e.Value is true; Touched(); }" />
+                Provisional allowance
+            </label>
+            <span class="text-sm font-semibold whitespace-nowrap ml-auto">@WholeMoney(Section.Total)</span>
+            <button type="button" class="btn-ghost text-xs" title="Move up" disabled="@(Breakdown.Sections.IndexOf(Section) == 0)" @onclick="() => Move(-1)">↑</button>
+            <button type="button" class="btn-ghost text-xs" title="Move down" disabled="@(Breakdown.Sections.IndexOf(Section) == Breakdown.Sections.Count - 1)" @onclick="() => Move(1)">↓</button>
+            <button type="button" class="btn-ghost text-xs text-negative" title="Remove the section and its lines" @onclick="Remove">Remove</button>
+        }
+        else
+        {
+            <span class="font-semibold">@Section.Name</span>
+            @if (Section.Provisional) { <span class="text-xs text-negative">Provisional allowance</span> }
+            <span class="text-sm font-semibold whitespace-nowrap ml-auto">@WholeMoney(Section.Total)</span>
+        }
+    </div>
+    <table class="w-full text-sm">
+        <thead class="text-xs text-content-subtle">
+            <tr>
+                <th class="text-left px-4 py-1.5 w-40">Cost code</th>
+                <th class="text-left px-2 py-1.5">Description</th>
+                <th class="text-right px-2 py-1.5 w-20">Qty</th>
+                <th class="text-left px-2 py-1.5 w-20">Unit</th>
+                <th class="text-right px-2 py-1.5 w-28">Unit price £</th>
+                <th class="text-right px-2 py-1.5 w-28">Total £</th>
+                @if (Editable) { <th class="w-16"></th> }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var line in Section.Lines)
+            {
+                var l = line;
+                <EstimateLineRow Line="@l" Editable="@Editable" OnTouched="OnTouched" OnRemove="() => RemoveLine(l)" />
+            }
+        </tbody>
+    </table>
+    @if (Editable)
+    {
+        <div class="px-4 py-2">
+            <button type="button" class="btn-ghost text-xs" @onclick="AddLine">+ Add line</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EstimateBreakdownDraft Breakdown { get; set; } = default!;
+    [Parameter, EditorRequired] public EstimateSectionDraft Section { get; set; } = default!;
+    [Parameter] public bool Editable { get; set; }
+    [Parameter] public EventCallback OnTouched { get; set; }
+
+    private Task Touched() => OnTouched.InvokeAsync();
+
+    private Task Move(int delta) { Breakdown.Move(Section, delta); return Touched(); }
+
+    private Task Remove() { Breakdown.Remove(Section); return Touched(); }
+
+    private Task AddLine() { Section.Lines.Add(new EstimateLineDraft()); return Touched(); }
+
+    private Task RemoveLine(EstimateLineDraft line) { Section.Lines.Remove(line); return Touched(); }
+}

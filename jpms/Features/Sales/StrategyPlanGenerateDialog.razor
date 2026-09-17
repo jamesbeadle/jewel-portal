@@ -1,0 +1,36 @@
+<Modal IsOpen="@IsOpen"
+       Title="@(HasPlan ? "Regenerate the approach plan" : "Generate the approach plan")"
+       ConfirmLabel="Draft it"
+       OnCancel="OnCancel"
+       OnConfirm="() => OnGenerate.InvokeAsync(guidance)">
+    <p class="text-sm text-content-muted mb-4">
+        Claude drafts the plan from the strategy's own argument — audience, area, hypothesis, evidence, channel,
+        proposition. It does not search the web; put research findings in Evidence first.
+        @if (HasPlan)
+        {
+            <text> The current plan is replaced.</text>
+        }
+    </p>
+    <FormField Label="Steer (optional)">
+    <textarea class="field w-full" rows="3" maxlength="2000" placeholder="e.g. keep it to one mailing and one follow-up call; assume a £3k budget; we have two people for two days a month"
+              value="@guidance" @oninput="e => guidance = e.Value?.ToString() ?? string.Empty"></textarea>
+    </FormField>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public bool HasPlan { get; set; }
+    /// <summary>Raised with the steer as typed — the page drafts the plan, because the drafting outlives this dialog.</summary>
+    [Parameter] public EventCallback<string> OnGenerate { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool wasOpen;
+    private string guidance = "";
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen == wasOpen) return;
+        wasOpen = IsOpen;
+        if (IsOpen) guidance = "";
+    }
+}

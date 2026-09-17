@@ -1,0 +1,27 @@
+@if (Round.Status.IsInProgress())
+{
+    <div class="panel p-6 flex items-center gap-4">
+        <JewelIcon Class="w-6 h-6 animate-jewel-pulse text-content shrink-0" />
+        <div>
+            <p class="text-content font-medium">@(Round.Kind == ImagineRoundKind.Concepts ? "We're imagining your home" : "We're revising your concept")</p>
+            <p class="text-sm text-content-muted">This takes a few minutes. You can close the page — we'll email you when it's ready — or leave it open and it'll appear here.</p>
+        </div>
+    </div>
+}
+else if (Round.Status == ImagineRoundStatus.Failed)
+{
+    <div class="panel p-6">
+        <p class="text-content font-medium">Something went wrong on our side</p>
+        <p class="text-sm text-content-muted">Your photos are safe and we've been told. We'll be in touch — or email <a class="text-info underline underline-offset-4" href="mailto:sales@jewelbb.co.uk">sales@jewelbb.co.uk</a>.</p>
+    </div>
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter, EditorRequired] public ImagineRoundView Round { get; set; } = default!;
+    /// <summary>The round's concepts — shown once it has settled without failing.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

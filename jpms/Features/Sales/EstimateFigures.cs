@@ -17,6 +17,8 @@ public static class EstimateFigures
     public static string? MoneyError(string text) =>
         string.IsNullOrWhiteSpace(text) || ParseMoney(text) is not null ? null : "Not a number.";
 
+    public static string Pence(decimal value) => value.ToString("N2", CultureInfo.GetCultureInfo("en-GB"));
+
     public static string MoneyText(decimal? value) => value?.ToString(CultureInfo.InvariantCulture) ?? "";
     public static string DateInputText(DateOnly? value) => value?.ToString("yyyy-MM-dd") ?? "";
 }

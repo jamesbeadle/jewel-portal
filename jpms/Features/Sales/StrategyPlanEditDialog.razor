@@ -1,0 +1,49 @@
+@using Jewel.JPMS.Contracts.Sales
+@inject ICommandSender Commands
+
+<Modal IsOpen="@IsOpen"
+       Title="Approach plan"
+       ConfirmLabel="@(busy ? "Saving…" : "Save plan")"
+       ConfirmDisabled="@busy"
+       OnCancel="OnCancel"
+       OnConfirm="SavePlanAsync"
+       Class="max-w-3xl">
+    <p class="text-xs text-content-subtle mb-3">Markdown: # headings, - bullets, 1. numbered steps, **bold**.</p>
+    <textarea class="field w-full font-mono text-xs" rows="22" value="@planDraft" @oninput="e => planDraft = e.Value?.ToString() ?? string.Empty"></textarea>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter, EditorRequired] public SalesStrategy Strategy { get; set; } = default!;
+    [Parameter] public EventCallback OnSaved { get; set; }
+    /// <summary>Raised with the server's refusal — the page shows it under its header — and with null as each save starts.</summary>
+    [Parameter] public EventCallback<string?> OnFailed { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool busy;
+    private bool wasOpen;
+    private string planDraft = "";
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen == wasOpen) return;
+        wasOpen = IsOpen;
+        if (IsOpen) planDraft = Strategy.ApproachPlan ?? "";
+    }
+
+    private async Task SavePlanAsync()
+    {
+        if (busy) return;
+        busy = true;
+        await OnFailed.InvokeAsync(null);
+        try
+        {
+            await Commands.SendAsync(new UpdateSalesStrategy(
+                Strategy.StrategyId, Strategy.Name, Strategy.Brief, Strategy.Audience, Strategy.TargetArea, Strategy.Hypothesis,
+                Strategy.Evidence, Strategy.Channel, Strategy.Proposition, planDraft, Strategy.OwnerEmail), CancellationToken.None);
+            await OnSaved.InvokeAsync();
+        }
+        catch (CommandFailedException ex) { await OnFailed.InvokeAsync(ex.Message); }
+        finally { busy = false; }
+    }
+}

@@ -1,0 +1,40 @@
+<Panel Title="Timeline">
+    @if (Activities.Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic">Nothing logged yet.</p>
+    }
+    else
+    {
+        <ol class="space-y-4">
+            @foreach (var activity in Activities)
+            {
+                <li class="flex gap-4">
+                    <div class="shrink-0 w-28 text-xs text-content-subtle pt-0.5" title="@DateTimeText(activity.OccurredAt.ToLocalTime())">
+                        @DateText(activity.OccurredAt)<br />@activity.OccurredAt.ToLocalTime().ToString("HH:mm")
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-xs font-medium @ActivityKindClass(activity.Kind)">@activity.Kind.DisplayName()</p>
+                        <p class="text-sm text-content whitespace-pre-wrap">@activity.Summary</p>
+                        @if (!string.IsNullOrWhiteSpace(activity.RecordedByEmail))
+                        {
+                            <p class="text-xs text-content-faint">@activity.RecordedByEmail</p>
+                        }
+                    </div>
+                </li>
+            }
+        </ol>
+    }
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<LeadActivity> Activities { get; set; } = Array.Empty<LeadActivity>();
+
+    // The lead's own milestones read in the accent, the things sent out or priced (imagine,
+    // proposals, estimates) in info, everything else quietly.
+    private static string ActivityKindClass(LeadActivityKind kind) => kind switch
+    {
+        LeadActivityKind.StageChange or LeadActivityKind.ProposalAccepted => "text-accent",
+        LeadActivityKind.Imagine or LeadActivityKind.ProposalSent or LeadActivityKind.Estimate => "text-info",
+        _ => "text-content-subtle"
+    };
+}

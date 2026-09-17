@@ -1,0 +1,44 @@
+@using Jewel.JPMS.Contracts.Sales
+
+<Panel Title="The argument">
+    <dl class="space-y-4 text-sm">
+        <div>
+            <dt class="eyebrow">The brief — the idea in our words</dt>
+            <dd class="text-content mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(Strategy.Brief) ? "—" : Strategy.Brief)</dd>
+        </div>
+        <div>
+            <dt class="eyebrow">Hypothesis — why these people, why now</dt>
+            <dd class="text-content mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(Strategy.Hypothesis) ? "—" : Strategy.Hypothesis)</dd>
+        </div>
+        <div>
+            <dt class="eyebrow">Evidence</dt>
+            <dd class="text-content-muted mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(Strategy.Evidence) ? "—" : Strategy.Evidence)</dd>
+        </div>
+        <div>
+            <dt class="eyebrow">Proposition</dt>
+            <dd class="text-content mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(Strategy.Proposition) ? "—" : Strategy.Proposition)</dd>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <dt class="eyebrow">Audience</dt>
+                <dd class="text-content mt-1">@Strategy.Audience.DisplayName()</dd>
+            </div>
+            <div>
+                <dt class="eyebrow">Channel</dt>
+                <dd class="text-content mt-1">@Strategy.Channel.DisplayName()</dd>
+            </div>
+            <div>
+                <dt class="eyebrow">Where</dt>
+                <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(Strategy.TargetArea) ? "—" : Strategy.TargetArea)</dd>
+            </div>
+            <div>
+                <dt class="eyebrow">Since</dt>
+                <dd class="text-content mt-1">@DateText(Strategy.CreatedAt)</dd>
+            </div>
+        </div>
+    </dl>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public SalesStrategy Strategy { get; set; } = default!;
+}

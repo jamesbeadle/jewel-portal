@@ -1,0 +1,81 @@
+@inject HttpClient Http
+
+@foreach (var round in View.Rounds.OrderByDescending(r => r.Number))
+{
+    var r = round;
+    <section class="mb-10">
+        <div class="flex items-baseline justify-between gap-4 mb-3">
+            <h2 class="text-xl font-semibold text-content">
+                @(r.Kind == ImagineRoundKind.Concepts ? "Your concepts" : $"Revision {r.Number - 1}")
+            </h2>
+            <span class="text-xs text-content-subtle">@r.RequestedAt.ToLocalTime().ToString("d MMM yyyy")</span>
+        </div>
+        @if (r.Kind == ImagineRoundKind.Revision && !string.IsNullOrWhiteSpace(r.Brief))
+        {
+            <p class="text-sm text-content-muted mb-4">You asked: <em>@r.Brief</em></p>
+        }
+
+        <ImagineRoundOutcome Round="@r">
+            @if (!string.IsNullOrWhiteSpace(r.Observations))
+            {
+                <p class="text-content-muted leading-relaxed max-w-3xl mb-6">@r.Observations</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(r.Error))
+            {
+                <p class="text-xs text-content-subtle mb-4">Not every idea rendered this time — the ones that did are below.</p>
+            }
+            <div class="@ConceptGridClass(r.Concepts.Count)">
+                @foreach (var concept in r.Concepts)
+                {
+                    var c = concept;
+                    <article class="panel overflow-hidden flex flex-col">
+                        <a href="@ImagineRequests.ImageUrl(Token, c.ImageId)" target="_blank" rel="noopener" class="block aspect-[3/2] bg-surface">
+                            <img src="@ImagineRequests.ImageUrl(Token, c.ImageId)" alt="@c.Title" class="w-full h-full object-cover" loading="lazy" />
+                        </a>
+                        <div class="p-5 flex-1 flex flex-col gap-3">
+                            <div>
+                                <h3 class="font-semibold text-content">@c.Title</h3>
+                                <p class="text-sm text-content-muted leading-relaxed mt-1">@c.Description</p>
+                            </div>
+                            <div class="mt-auto space-y-3">
+                                <div class="flex items-center gap-2">
+                                    <button type="button" class="@(c.Liked ? "btn-primary" : "btn-secondary") text-sm" disabled="@busy" @onclick="() => ToggleLikeAsync(c)">
+                                        @(c.Liked ? "♥ You like this" : "♡ I like this")
+                                    </button>
+                                    @if (View.RoundsRemaining > 0 && !AnyInProgress)
+                                    {
+                                        <button type="button" class="btn-ghost text-sm" disabled="@busy" @onclick="() => OpenRevise(c)">Change something</button>
+                                    }
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="text" class="field w-full text-sm" maxlength="2000" placeholder="A thought about this one (optional)" disabled="@busy"
+                                           value="@CommentDraft(c)" @oninput="e => commentDrafts[c.ImageId] = e.Value?.ToString() ?? string.Empty" />
+                                    @if (CommentDraft(c) != c.Comment)
+                                    {
+                                        <button type="button" class="btn-secondary text-sm shrink-0" disabled="@busy" @onclick="() => SaveCommentAsync(c)">Save</button>
+                                    }
+                                </div>
+                                @if (revising?.ImageId == c.ImageId)
+                                {
+                                    <div class="border-t border-line pt-3 space-y-2">
+                                        <label class="block eyebrow">What would you change?</label>
+                                        <textarea class="field w-full text-sm" rows="3" maxlength="4000" disabled="@busy"
+                                                  placeholder="e.g. Love the glazing — could the roof be flat rather than pitched, and the brick a paler tone?"
+                                                  value="@feedback" @oninput="e => feedback = e.Value?.ToString() ?? string.Empty"></textarea>
+                                        <div class="flex items-center gap-2">
+                                            <button type="button" class="btn-primary text-sm" disabled="@(busy || string.IsNullOrWhiteSpace(feedback))" @onclick="ReviseAsync">@(busy ? "Sending…" : "Revise this concept")</button>
+                                            <button type="button" class="btn-ghost text-sm" disabled="@busy" @onclick="() => revising = null">Cancel</button>
+                                        </div>
+                                        <p class="text-xs text-content-subtle">@(View.RoundsRemaining == 1 ? "This is your last revision on this page — after that, let's talk." : $"{View.RoundsRemaining} rounds left on this page.")</p>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </article>
+                }
+            </div>
+        </ImagineRoundOutcome>
+
+        <ImagineRoundPhotos Token="@Token" Round="@r" />
+    </section>
+}

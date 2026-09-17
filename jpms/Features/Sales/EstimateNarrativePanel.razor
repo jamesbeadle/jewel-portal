@@ -1,0 +1,50 @@
+<Panel Title="What the document says">
+    <HeaderActions>
+        @if (Editable)
+        {
+            <button type="button" class="btn-secondary text-sm" disabled="@(IsBusy || !isDirty)" @onclick="() => OnSave.InvokeAsync(new EstimateNarrative(executiveSummary, buildTime, exclusions))">@(IsBusy ? "Saving…" : "Save")</button>
+        }
+    </HeaderActions>
+    <ChildContent>
+        <p class="text-xs text-content-muted mb-3">These print on the estimate PDF, after the project page. Blank lines separate paragraphs; a line starting "- " is a bullet.</p>
+        <div class="space-y-3">
+            <FormField Label="Executive summary">
+                <textarea class="field w-full text-sm" rows="8" disabled="@(!Editable)" placeholder="What we understand the project to be, how we would approach it, what is included"
+                          value="@executiveSummary" @oninput="e => { executiveSummary = e.Value?.ToString() ?? string.Empty; isDirty = true; }"></textarea>
+            </FormField>
+            <FormField Label="Build time">
+                <textarea class="field w-full text-sm" rows="3" maxlength="1024" disabled="@(!Editable)" placeholder="How long on site, and when, given the start the prospect wants"
+                          value="@buildTime" @oninput="e => { buildTime = e.Value?.ToString() ?? string.Empty; isDirty = true; }"></textarea>
+            </FormField>
+            <FormField Label="Exclusions">
+                <textarea class="field w-full text-sm" rows="4" maxlength="4000" disabled="@(!Editable)" placeholder="What the figure leaves out — VAT, kitchens, fees, party wall…"
+                          value="@exclusions" @oninput="e => { exclusions = e.Value?.ToString() ?? string.Empty; isDirty = true; }"></textarea>
+            </FormField>
+        </div>
+    </ChildContent>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public LeadEstimate Estimate { get; set; } = default!;
+    [Parameter] public bool Editable { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+    /// <summary>The page's count of seedings — a new one re-seeds the text from the record, a re-render never does.</summary>
+    [Parameter] public int Seeding { get; set; }
+    [Parameter] public EventCallback<EstimateNarrative> OnSave { get; set; }
+
+    private int seeded;
+    private bool isDirty;
+    private string executiveSummary = "";
+    private string buildTime = "";
+    private string exclusions = "";
+
+    protected override void OnParametersSet()
+    {
+        if (seeded == Seeding) return;
+        seeded = Seeding;
+        executiveSummary = Estimate.ExecutiveSummary;
+        buildTime = Estimate.BuildTime;
+        exclusions = Estimate.Exclusions;
+        isDirty = false;
+    }
+}

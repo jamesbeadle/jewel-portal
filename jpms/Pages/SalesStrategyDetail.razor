@@ -12,11 +12,9 @@
 <PageTitle>@(Strategy?.Name ?? "Strategy") · JPMS</PageTitle>
 
 @*
-    One sales strategy (2026-09-06): the argument (audience, area, hypothesis, evidence, channel,
-    proposition), the approach plan — drafted by Claude from the argument with "Generate with AI"
-    (an optional steer, one call, under the gateway's ceiling) or written by hand — the funnel its
-    leads make, and those leads. "Add lead" captures one already attributed to the strategy.
-    Status (Draft / Active / Paused / Retired) is the directors' call. Edits are modals.
+    One sales strategy (2026-09-06): the argument, the approach plan — drafted by Claude from the
+    argument or written by hand — the funnel its leads make, and those leads. Status (Draft /
+    Active / Paused / Retired) is the directors' call. Edits are modals.
 *@
 
 <Page>
@@ -37,85 +35,18 @@
     else
     {
         var strategy = Strategy;
-        var funnel = Funnel;
         <div>
             <WorkspaceSectionNav />
-            <PageHeader>
-                <TitleContent>
-                    <span>@strategy.Name</span>
-                    <Pill Tone="@strategy.Status.ToTone()">@strategy.Status.DisplayName()</Pill>
-                </TitleContent>
-                <EyebrowContent>
-                    <a href="/sales/strategies" class="hover:text-content">Strategies</a>
-                </EyebrowContent>
-                <SubtitleContent>
-                    @strategy.Audience.DisplayName() · @strategy.Channel.DisplayName()
-                    @if (!string.IsNullOrWhiteSpace(strategy.TargetArea))
-                    {
-                        <text> · @strategy.TargetArea</text>
-                    }
-                    · owned by @strategy.OwnerEmail
-                </SubtitleContent>
-                <Actions>
-                    <div class="flex items-center gap-2 shrink-0">
-                        @if (CanDecide)
-                        {
-                            <select class="field h-8 py-1 text-sm w-36" value="@strategy.Status" disabled="@busy"
-                                    @onchange="e => SetStatusAsync(Enum.Parse<SalesStrategyStatus>(e.Value?.ToString() ?? nameof(SalesStrategyStatus.Draft)))">
-                                @foreach (var status in Enum.GetValues<SalesStrategyStatus>())
-                                {
-                                    <option value="@status">@status.DisplayName()</option>
-                                }
-                            </select>
-                        }
-                        @if (CanWork)
-                        {
-                            <button type="button" class="btn-secondary" @onclick="() => editOpen = true">Edit</button>
-                            <button type="button" class="btn-secondary" disabled="@(busy || strategy.ResearchStatus.IsInProgress())"
-                                    title="Claude reads the brief, searches the web, fills in the blanks and drafts the plan — a few minutes, in the background"
-                                    @onclick="RunResearchAsync">
-                                @(strategy.ResearchStatus == StrategyResearchStatus.Complete ? "Research again with AI" : "Research with AI")
-                            </button>
-                            <button type="button" class="btn-primary" @onclick="() => addLeadOpen = true">Add lead</button>
-                        }
-                    </div>
-                </Actions>
-            </PageHeader>
+            <StrategyPageHeader Strategy="@strategy" IsBusy="@busy" OnStatusChosen="SetStatusAsync" OnEdit="() => editOpen = true"
+                                OnResearch="RunResearchAsync" OnAddLead="() => addLeadOpen = true" />
 
             @if (actionError is not null)
             {
                 <Notice Tone="Tone.Negative" Class="mb-4">@actionError</Notice>
             }
 
-            @if (strategy.ResearchStatus.IsInProgress())
-            {
-                <div class="panel px-6 py-4 mb-6 flex items-center gap-4">
-                    <JewelIcon Class="w-5 h-5 animate-jewel-pulse shrink-0" />
-                    <div class="text-sm">
-                        <p class="text-content font-medium">@(strategy.ResearchStatus == StrategyResearchStatus.Queued ? "Research queued" : "Claude is researching this strategy")</p>
-                        <p class="text-content-subtle">Reading the brief, searching the web for the areas, the numbers and the sources, then drafting the plan. Usually two to five minutes — this page checks back every few seconds; you can leave and come back.</p>
-                    </div>
-                </div>
-            }
-            else if (strategy.ResearchStatus == StrategyResearchStatus.Failed)
-            {
-                <Notice Tone="Tone.Negative" Title="The research didn't complete." Class="mb-6">
-                    <p class="whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.ResearchError) ? "No reason was recorded." : strategy.ResearchError)</p>
-                    @if (CanWork)
-                    {
-                        <p class="mt-2">Fix the cause if it names one, then Research with AI again.</p>
-                    }
-                </Notice>
-            }
-
-            <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-                <StatTile Label="Leads found" Value="@funnel.Leads.ToString()" />
-                <StatTile Label="Contacted" Value="@funnel.Contacted.ToString()" />
-                <StatTile Label="Engaged" Value="@funnel.Engaged.ToString()" />
-                <StatTile Label="Proposals" Value="@funnel.Proposals.ToString()" />
-                <StatTile Label="Won" Value="@($"{funnel.Won}{(funnel.Lost > 0 ? $" · {funnel.Lost} lost" : "")}")" />
-                <StatTile Label="Open pipeline" Value="@WholeMoney(funnel.PipelineValue)" />
-            </div>
+            <StrategyResearchStatusNotice Strategy="@strategy" />
+            <StrategyFunnelTiles Funnel="@Funnel" />
 
             <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 <div class="xl:col-span-2 space-y-6">
@@ -130,153 +61,14 @@
                         </Panel>
                     }
 
-                    <Panel Title="Approach plan">
-                        <HeaderActions>
-                            @if (CanWork)
-                            {
-                                <button type="button" class="btn-secondary" disabled="@busy" @onclick="OpenPlanEdit">
-                                    @(string.IsNullOrWhiteSpace(strategy.ApproachPlan) ? "Write plan" : "Edit plan")
-                                </button>
-                                <button type="button" class="btn-secondary" disabled="@busy" @onclick="OpenGenerate">
-                                    @(generating ? "Drafting…" : string.IsNullOrWhiteSpace(strategy.ApproachPlan) ? "Generate with AI" : "Regenerate with AI")
-                                </button>
-                            }
-                        </HeaderActions>
-                        <ChildContent>
-                            @* Drafting REPLACES a plan the reader is already looking at, so the gate veils it
-                               and takes the clicks rather than removing it: regenerating must not read as
-                               though the plan had been thrown away while Claude works. *@
-                            <LoadGate Overlay="true" IsLoading="@generating" Label="Claude is drafting the plan from the strategy's argument">
-                                @if (string.IsNullOrWhiteSpace(strategy.ApproachPlan))
-                                {
-                                    <p class="text-sm text-content-subtle italic">
-                                        No plan yet. Research with AI (above) finds the evidence and drafts the plan in one go; Generate with AI
-                                        drafts one from what is written here; or write it by hand.
-                                    </p>
-                                }
-                                else
-                                {
-                                    <SimpleMarkdown Text="@strategy.ApproachPlan" />
-                                    @if (strategy.PlanGeneratedAt is { } generatedAt)
-                                    {
-                                        <p class="text-xs text-content-faint mt-4">Drafted by Claude @DateTimeText(generatedAt.ToLocalTime()) — edited since if the text differs.</p>
-                                    }
-                                }
-                            </LoadGate>
-                        </ChildContent>
-                    </Panel>
-
-                    <Panel Title="Leads this strategy found" BodyClass="p-0">
-                        @if (Leads.Count == 0)
-                        {
-                            <p class="px-6 py-6 text-sm text-content-subtle italic">None yet — Add lead captures one attributed to this strategy.</p>
-                        }
-                        else
-                        {
-                            <div class="overflow-x-auto">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Ref</th>
-                                            <th>Lead</th>
-                                            <th>Property</th>
-                                            <th>Stage</th>
-                                            <th class="text-right">Value</th>
-                                            <th>Captured</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var lead in Leads)
-                                        {
-                                            var row = lead;
-                                            <tr class="is-clickable cursor-pointer" @key="row.LeadId" @onclick="() => OpenLead(row)">
-                                                <td class="whitespace-nowrap font-mono text-xs">@row.Reference</td>
-                                                <td>
-                                                    <p class="text-content font-medium">@(string.IsNullOrWhiteSpace(row.ContactName) ? row.CompanyName : row.ContactName)</p>
-                                                    @if (!string.IsNullOrWhiteSpace(row.Summary))
-                                                    {
-                                                        <p class="text-xs text-content-subtle line-clamp-1 max-w-sm">@row.Summary</p>
-                                                    }
-                                                </td>
-                                                <td>
-                                                    <p class="max-w-xs truncate" title="@row.PropertyAddress">@(string.IsNullOrWhiteSpace(row.PropertyAddress) ? "—" : row.PropertyAddress)</p>
-                                                    @if (!string.IsNullOrWhiteSpace(row.Postcode))
-                                                    {
-                                                        <p class="text-xs text-content-subtle">@row.Postcode</p>
-                                                    }
-                                                </td>
-                                                <td><LeadStagePill Stage="@row.Stage" /></td>
-                                                <td class="text-right whitespace-nowrap">@(row.EstimatedValue is { } v ? WholeMoney(v) : "—")</td>
-                                                <td class="whitespace-nowrap text-xs">@DateText(row.CapturedAt)</td>
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        }
-                    </Panel>
+                    <StrategyApproachPlanPanel Strategy="@strategy" IsBusy="@busy" IsGenerating="@generating"
+                                               OnEditPlan="OpenPlanEdit" OnGenerate="OpenGenerate" />
+                    <StrategyLeadsPanel Leads="@Leads" />
                 </div>
 
                 <div class="space-y-6">
-                    <Panel Title="The argument">
-                        <dl class="space-y-4 text-sm">
-                            <div>
-                                <dt class="eyebrow">The brief — the idea in our words</dt>
-                                <dd class="text-content mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.Brief) ? "—" : strategy.Brief)</dd>
-                            </div>
-                            <div>
-                                <dt class="eyebrow">Hypothesis — why these people, why now</dt>
-                                <dd class="text-content mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.Hypothesis) ? "—" : strategy.Hypothesis)</dd>
-                            </div>
-                            <div>
-                                <dt class="eyebrow">Evidence</dt>
-                                <dd class="text-content-muted mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.Evidence) ? "—" : strategy.Evidence)</dd>
-                            </div>
-                            <div>
-                                <dt class="eyebrow">Proposition</dt>
-                                <dd class="text-content mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.Proposition) ? "—" : strategy.Proposition)</dd>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <dt class="eyebrow">Audience</dt>
-                                    <dd class="text-content mt-1">@strategy.Audience.DisplayName()</dd>
-                                </div>
-                                <div>
-                                    <dt class="eyebrow">Channel</dt>
-                                    <dd class="text-content mt-1">@strategy.Channel.DisplayName()</dd>
-                                </div>
-                                <div>
-                                    <dt class="eyebrow">Where</dt>
-                                    <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(strategy.TargetArea) ? "—" : strategy.TargetArea)</dd>
-                                </div>
-                                <div>
-                                    <dt class="eyebrow">Since</dt>
-                                    <dd class="text-content mt-1">@DateText(strategy.CreatedAt)</dd>
-                                </div>
-                            </div>
-                        </dl>
-                    </Panel>
-                    <Panel Title="Funnel">
-                        <ol class="space-y-2 text-sm">
-                            @foreach (var step in FunnelSteps)
-                            {
-                                var width = funnel.Leads == 0 ? 0 : (int)Math.Round(100.0 * step.Count / funnel.Leads);
-                                <li>
-                                    <div class="flex items-center justify-between mb-1">
-                                        <span class="text-content-muted">@step.Label</span>
-                                        <span class="text-content font-medium">@step.Count</span>
-                                    </div>
-                                    <div class="h-1.5 bg-surface-raised rounded overflow-hidden">
-                                        <div class="h-full @(step.Label =="Won" ? "bg-positive" : "bg-info")" style="width: @(width)%"></div>
-                                    </div>
-                                </li>
-                            }
-                        </ol>
-                        @if (funnel.Lost + funnel.Nurture > 0)
-                        {
-                            <p class="text-xs text-content-subtle mt-3">@funnel.Lost lost · @funnel.Nurture in nurture</p>
-                        }
-                    </Panel>
+                    <StrategyArgumentPanel Strategy="@strategy" />
+                    <StrategyFunnelPanel Funnel="@Funnel" />
                 </div>
             </div>
         </div>
@@ -286,241 +78,9 @@
         <LeadFormModal IsOpen="@addLeadOpen" Strategies="@StrategyOptionsList" FixedStrategyId="@StrategyId"
                        OnSaved="OnLeadAddedAsync" OnCancel="() => addLeadOpen = false" />
 
-        <Modal IsOpen="@planEditOpen"
-               Title="Approach plan"
-               ConfirmLabel="@(busy ? "Saving…" : "Save plan")"
-               ConfirmDisabled="@busy"
-               OnCancel="() => planEditOpen = false"
-               OnConfirm="SavePlanAsync"
-               Class="max-w-3xl">
-            <p class="text-xs text-content-subtle mb-3">Markdown: # headings, - bullets, 1. numbered steps, **bold**.</p>
-            <textarea class="field w-full font-mono text-xs" rows="22" value="@planDraft" @oninput="e => planDraft = e.Value?.ToString() ?? string.Empty"></textarea>
-        </Modal>
-
-        <Modal IsOpen="@generateOpen"
-               Title="@(string.IsNullOrWhiteSpace(strategy.ApproachPlan) ? "Generate the approach plan" : "Regenerate the approach plan")"
-               ConfirmLabel="@(busy ? "Drafting…" : "Draft it")"
-               ConfirmDisabled="@busy"
-               OnCancel="() => generateOpen = false"
-               OnConfirm="GenerateAsync">
-            <p class="text-sm text-content-muted mb-4">
-                Claude drafts the plan from the strategy's own argument — audience, area, hypothesis, evidence, channel,
-                proposition. It does not search the web; put research findings in Evidence first.
-                @if (!string.IsNullOrWhiteSpace(strategy.ApproachPlan))
-                {
-                    <text> The current plan is replaced.</text>
-                }
-            </p>
-            <FormField Label="Steer (optional)">
-            <textarea class="field w-full" rows="3" maxlength="2000" placeholder="e.g. keep it to one mailing and one follow-up call; assume a £3k budget; we have two people for two days a month"
-                      value="@guidance" @oninput="e => guidance = e.Value?.ToString() ?? string.Empty"></textarea>
-            </FormField>
-        </Modal>
+        <StrategyPlanEditDialog IsOpen="@planEditOpen" Strategy="@strategy" OnSaved="OnPlanSavedAsync"
+                                OnFailed="message => actionError = message" OnCancel="() => planEditOpen = false" />
+        <StrategyPlanGenerateDialog IsOpen="@generateOpen" HasPlan="@(!string.IsNullOrWhiteSpace(strategy.ApproachPlan))"
+                                    OnGenerate="GenerateAsync" OnCancel="() => generateOpen = false" />
     }
 </Page>
-
-@code {
-    [Parameter] public string StrategyId { get; set; } = "";
-
-    private bool sessionReady;
-    private bool dataFailed;
-    private bool busy;
-    private bool generating;
-    private string? actionError;
-    private string loadedForId = "";
-
-    private bool editOpen;
-    private bool addLeadOpen;
-    private bool planEditOpen;
-    private bool generateOpen;
-    private string planDraft = "";
-    private string guidance = "";
-
-    // While the research is queued or running the page re-reads the strategy every few
-    // seconds, so the findings and plan appear without a reload; the timer stops itself as
-    // soon as the status settles, and on navigating away.
-    private CancellationTokenSource? polling;
-
-    private SalesStrategy? Strategy => Detail.Current(StrategyId)?.Strategy;
-    private SalesStrategyFunnel Funnel => Detail.Current(StrategyId)?.Funnel ?? SalesStrategyFunnel.Empty;
-    private IReadOnlyList<Lead> Leads => Detail.Current(StrategyId)?.Leads ?? Array.Empty<Lead>();
-
-    private IReadOnlyList<(string Label, int Count)> FunnelSteps => new[]
-    {
-        ("Found", Funnel.Leads), ("Contacted", Funnel.Contacted), ("Engaged", Funnel.Engaged),
-        ("Proposals", Funnel.Proposals), ("Won", Funnel.Won)
-    };
-
-    // The lead form's picker needs the overview list; this page has the one strategy, so offer
-    // the list when it has loaded and fall back to just this strategy.
-    private IReadOnlyList<SalesStrategyOverview> StrategyOptionsList =>
-        Strategies.Current ?? (Strategy is { } s ? new[] { new SalesStrategyOverview(s, Funnel) } : Array.Empty<SalesStrategyOverview>());
-
-    private bool CanWork => Session.ActiveRole is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
-        or Role.ProjectManager or Role.QuantitySurveyor or Role.SalesMarketing;
-    private bool CanDecide => Session.ActiveRole is Role.Admin or Role.ManagingDirector or Role.FinanceDirector;
-
-    protected override async Task OnInitializedAsync()
-    {
-        Detail.OnChanged += StateHasChanged;
-        Strategies.OnChanged += StateHasChanged;
-        await Session.EnsureLoadedAsync();
-        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
-        await LoadAsync();
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (!sessionReady || loadedForId == StrategyId) return;
-        dataFailed = false;
-        actionError = null;
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        loadedForId = StrategyId;
-        try
-        {
-            await Task.WhenAll(
-                Detail.RefreshAsync(StrategyId, CancellationToken.None),
-                Strategies.Current is null ? Strategies.RefreshAsync(CancellationToken.None) : Task.CompletedTask);
-        }
-        catch { dataFailed = true; }
-        EnsurePolling();
-    }
-
-    private void EnsurePolling()
-    {
-        if (Strategy is not { } strategy || !strategy.ResearchStatus.IsInProgress() || polling is not null) return;
-        polling = new CancellationTokenSource();
-        _ = PollAsync(polling.Token);
-    }
-
-    private async Task PollAsync(CancellationToken ct)
-    {
-        try
-        {
-            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(6));
-            while (await timer.WaitForNextTickAsync(ct))
-            {
-                try { await Detail.RefreshAsync(StrategyId, ct); }
-                catch (OperationCanceledException) { throw; }
-                catch { continue; } // the toast has the detail; try again next tick
-                if (Strategy is not { } current || !current.ResearchStatus.IsInProgress()) break;
-            }
-        }
-        catch (OperationCanceledException) { }
-        finally
-        {
-            polling?.Dispose();
-            polling = null;
-            // The status settled: the strategies list's card carries it too.
-            try { await Strategies.RefreshAsync(CancellationToken.None); } catch { }
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async Task RunResearchAsync()
-    {
-        if (busy) return;
-        busy = true; actionError = null;
-        try
-        {
-            await Commands.SendAsync(new RunStrategyResearch(StrategyId), CancellationToken.None);
-            await ReloadAsync();
-            EnsurePolling();
-        }
-        catch (CommandFailedException ex) { actionError = ex.Message; }
-        finally { busy = false; }
-    }
-
-    private async Task ReloadAsync()
-    {
-        try { await Detail.RefreshAsync(StrategyId, CancellationToken.None); }
-        catch (OperationCanceledException) { throw; }
-        catch { }
-    }
-
-    private void OpenLead(Lead lead) => Nav.NavigateTo($"/sales/leads/{lead.LeadId}");
-
-    private async Task OnEditedAsync(SalesStrategy _)
-    {
-        editOpen = false;
-        await ReloadAsync();
-    }
-
-    private async Task OnLeadAddedAsync(Lead lead)
-    {
-        addLeadOpen = false;
-        await ReloadAsync();
-        Nav.NavigateTo($"/sales/leads/{lead.LeadId}");
-    }
-
-    private async Task SetStatusAsync(SalesStrategyStatus status)
-    {
-        if (busy || Strategy is not { } strategy || strategy.Status == status) return;
-        busy = true; actionError = null;
-        try
-        {
-            await Commands.SendAsync(new SetSalesStrategyStatus(StrategyId, status), CancellationToken.None);
-            await ReloadAsync();
-            try { await Strategies.RefreshAsync(CancellationToken.None); } catch { }
-        }
-        catch (CommandFailedException ex) { actionError = ex.Message; }
-        finally { busy = false; }
-    }
-
-    private void OpenPlanEdit()
-    {
-        planDraft = Strategy?.ApproachPlan ?? "";
-        actionError = null;
-        planEditOpen = true;
-    }
-
-    private async Task SavePlanAsync()
-    {
-        if (busy || Strategy is not { } strategy) return;
-        busy = true; actionError = null;
-        try
-        {
-            await Commands.SendAsync(new UpdateSalesStrategy(
-                strategy.StrategyId, strategy.Name, strategy.Brief, strategy.Audience, strategy.TargetArea, strategy.Hypothesis,
-                strategy.Evidence, strategy.Channel, strategy.Proposition, planDraft, strategy.OwnerEmail), CancellationToken.None);
-            planEditOpen = false;
-            await ReloadAsync();
-        }
-        catch (CommandFailedException ex) { actionError = ex.Message; }
-        finally { busy = false; }
-    }
-
-    private void OpenGenerate()
-    {
-        guidance = "";
-        actionError = null;
-        generateOpen = true;
-    }
-
-    private async Task GenerateAsync()
-    {
-        if (busy) return;
-        busy = true; generating = true; actionError = null;
-        generateOpen = false;
-        try
-        {
-            await Commands.SendAsync(new GenerateStrategyApproachPlan(StrategyId,
-                string.IsNullOrWhiteSpace(guidance) ? null : guidance.Trim()), CancellationToken.None);
-            await ReloadAsync();
-        }
-        catch (CommandFailedException ex) { actionError = ex.Message; }
-        finally { busy = false; generating = false; }
-    }
-
-    public void Dispose()
-    {
-        polling?.Cancel();
-        Detail.OnChanged -= StateHasChanged;
-        Strategies.OnChanged -= StateHasChanged;
-    }
-}

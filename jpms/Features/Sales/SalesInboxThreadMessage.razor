@@ -1,0 +1,47 @@
+@inject SalesInboxReadModel Inbox
+
+@{
+    var detail = Inbox.Detail(Message.Id);
+}
+<article class="rounded border @(IsOpened ? "border-line-strong" : "border-line")">
+    <button type="button" class="w-full text-left px-4 py-3 flex items-baseline justify-between gap-3" @onclick="OnToggle">
+        <span class="min-w-0">
+            <span class="text-sm font-medium text-content">@(string.IsNullOrWhiteSpace(Message.FromName) ? Message.FromEmail : Message.FromName)</span>
+            <span class="text-xs text-content-subtle ml-2">@Message.FromEmail</span>
+            @if (!IsExpanded)
+            {
+                <span class="block text-xs text-content-subtle truncate">@Message.BodyPreview</span>
+            }
+        </span>
+        <span class="text-xs text-content-subtle shrink-0">@DateTimeText(Message.ReceivedAt.ToLocalTime())</span>
+    </button>
+    @if (IsExpanded)
+    {
+        <div class="px-4 pb-4">
+            @if (detail is null)
+            {
+                <LoadGate IsLoading="true" Label="Reading" />
+            }
+            else if (detail.BodyIsHtml)
+            {
+                <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto max-h-[32rem] overflow-y-auto">@((MarkupString)detail.BodyHtml)</div>
+            }
+            else
+            {
+                <pre class="text-sm text-content-muted whitespace-pre-wrap font-sans">@detail.BodyHtml</pre>
+            }
+            @if (detail is { Attachments.Count: > 0 })
+            {
+                <p class="text-xs text-content-subtle mt-3">Attachments: @string.Join(", ", detail.Attachments.Select(a => a.Name))</p>
+            }
+        </div>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public MailboxMessage Message { get; set; } = default!;
+    /// <summary>The email the thread was opened from wears the stronger border.</summary>
+    [Parameter] public bool IsOpened { get; set; }
+    [Parameter] public bool IsExpanded { get; set; }
+    [Parameter] public EventCallback OnToggle { get; set; }
+}

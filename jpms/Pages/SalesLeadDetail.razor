@@ -7,21 +7,16 @@
 @inject NavigationManager Nav
 @inject LeadDetailReadModel Detail
 @inject SalesStrategyListReadModel Strategies
-@inject ICommandSender Commands
 @implements IDisposable
 
 <PageTitle>@(Lead?.Reference ?? "Lead") · JPMS</PageTitle>
 
 @*
-    One lead (2026-09-06): who and where, the stage with its move control, and the timeline —
-    every touch logged by hand plus every stage change. Moves along the open ladder are the sales
-    team's; Lost (with a reason) and Nurture are the directors'; Won is its own button, directors
-    only, because it creates the Client account and the project shell in one move and cannot be
-    undone from here. Delete (2026-09-15) is the directors' too, never on a Won lead, and takes
-    the lead's whole timeline, estimates, proposals and imagine rounds with it — for a mistaken
-    capture or a duplicate; a real lead that went nowhere is Lost. The rail is the house one:
-    Won on its own as the primary step, everything else (edit, log, delete) in the Actions
-    menu. Edits are modals; the page never renders an inline form.
+    Moves along the open ladder are the sales team's; Lost (with a reason) and Nurture are the
+    directors'; Won is its own button, directors only, because it creates the Client account and
+    the project shell in one move and cannot be undone from here. Delete (2026-09-15) is the
+    directors' too, never on a Won lead — for a mistaken capture or a duplicate; a real lead that
+    went nowhere is Lost.
 *@
 
 <Page>
@@ -42,35 +37,11 @@
     else
     {
         var lead = Lead;
+        var detail = Current!;
         <div>
             <WorkspaceSectionNav />
-            <PageHeader>
-                <TitleContent>
-                    <span>@Headline</span>
-                    <LeadStagePill Stage="@lead.Stage" />
-                </TitleContent>
-                <EyebrowContent>
-                    <a href="/sales/leads" class="hover:text-content">Leads</a> · @lead.Reference
-                </EyebrowContent>
-                <SubtitleContent>
-                    @(string.IsNullOrWhiteSpace(lead.Summary) ? lead.Stage.Meaning() : lead.Summary)
-                </SubtitleContent>
-                <Actions>
-                    @* The house rail (as the request and variation pages): the one primary step
-                       on its own, everything else — edit, log, and the destructive tail — in
-                       the Actions menu. *@
-                    <div class="flex flex-wrap items-center gap-2 shrink-0">
-                        @if (CanDecide && lead.Stage != LeadStage.Won)
-                        {
-                            <button type="button" class="btn-primary" title="@(Proposals.Any(p => p.Status == SalesProposalStatus.Accepted) ? "The proposal is accepted — this creates the client and the project" : "Creates the client and the project")" @onclick="OpenWin">Won — create client &amp; project</button>
-                        }
-                        @if (ActionMenuItems.Count > 0)
-                        {
-                            <DropdownMenu Label="Actions" WidthClass="w-64" Disabled="@busy" Items="ActionMenuItems" />
-                        }
-                    </div>
-                </Actions>
-            </PageHeader>
+            <LeadPageHeader Lead="@lead" HasAcceptedProposal="@Proposals.Any(proposal => proposal.Status == SalesProposalStatus.Accepted)"
+                            OnWin="() => winOpen = true" OnEdit="() => editOpen = true" OnLog="() => logOpen = true" OnDelete="() => deleteOpen = true" />
 
             @if (actionNote is not null)
             {
@@ -79,78 +50,7 @@
 
             <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 <div class="xl:col-span-2 space-y-6">
-                    <Panel Title="Details">
-                        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-                            <div>
-                                <dt class="eyebrow">Contact</dt>
-                                <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(lead.ContactName) ? "—" : lead.ContactName)</dd>
-                                @if (!string.IsNullOrWhiteSpace(lead.ContactEmail))
-                                {
-                                    <dd class="text-content-muted"><a href="mailto:@lead.ContactEmail" class="text-info hover:underline underline-offset-4">@lead.ContactEmail</a></dd>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(lead.ContactPhone))
-                                {
-                                    <dd class="text-content-muted">@lead.ContactPhone</dd>
-                                }
-                            </div>
-                            <div>
-                                <dt class="eyebrow">Company / practice</dt>
-                                <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(lead.CompanyName) ? "—" : lead.CompanyName)</dd>
-                                <dd class="text-content-muted">@lead.ProspectKind.DisplayName()</dd>
-                            </div>
-                            <div class="sm:col-span-2">
-                                <dt class="eyebrow">Property / site</dt>
-                                <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(lead.PropertyAddress) ? "—" : lead.PropertyAddress)</dd>
-                                @if (!string.IsNullOrWhiteSpace(lead.Postcode))
-                                {
-                                    <dd class="text-content-muted">@lead.Postcode</dd>
-                                }
-                            </div>
-                            <div>
-                                <dt class="eyebrow">Estimated value</dt>
-                                <dd class="text-content mt-1">@(lead.EstimatedValue is { } v ? WholeMoney(v) : "—")</dd>
-                            </div>
-                            <div>
-                                <dt class="eyebrow">Owner</dt>
-                                <dd class="text-content mt-1">@lead.OwnerEmail</dd>
-                            </div>
-                            <div>
-                                <dt class="eyebrow">Found by</dt>
-                                <dd class="text-content mt-1">
-                                    @if (lead.StrategyId is not null)
-                                    {
-                                        <a href="/sales/strategies/@lead.StrategyId" class="text-info hover:underline underline-offset-4">@(lead.StrategyName ?? "Strategy")</a>
-                                    }
-                                    else
-                                    {
-                                        @lead.Source.DisplayName()
-                                    }
-                                </dd>
-                            </div>
-                            <div>
-                                <dt class="eyebrow">Captured</dt>
-                                <dd class="text-content mt-1">@DateText(lead.CapturedAt)</dd>
-                                <dd class="text-content-muted">@lead.Stage.DisplayName() since @DateText(lead.StageChangedAt)</dd>
-                            </div>
-                            @if (lead.Stage == LeadStage.Won && lead.ProjectId is not null)
-                            {
-                                <div class="sm:col-span-2">
-                                    <dt class="eyebrow">Became</dt>
-                                    <dd class="text-content mt-1">
-                                        <a href="/projects/@lead.ProjectId" class="text-info hover:underline underline-offset-4">Open the project</a>
-                                        <span class="text-content-subtle"> · client account created</span>
-                                    </dd>
-                                </div>
-                            }
-                            @if (lead.Stage == LeadStage.Lost && !string.IsNullOrWhiteSpace(lead.LostReason))
-                            {
-                                <div class="sm:col-span-2">
-                                    <dt class="eyebrow">Why lost</dt>
-                                    <dd class="text-content mt-1">@lead.LostReason</dd>
-                                </div>
-                            }
-                        </dl>
-                    </Panel>
+                    <LeadDetailsPanel Lead="@lead" />
 
                     @if (!string.IsNullOrWhiteSpace(lead.Notes))
                     {
@@ -175,425 +75,24 @@
 
                     @* The journey after identification (2026-09-06): the QR-coded imagine link and
                        its rounds, then the proposals — acceptance there is what Won builds on. *@
-                    <LeadImaginePanel LeadId="@LeadId" LeadReference="@lead.Reference" Imagine="@Detail.Current(LeadId)?.Imagine" CanWork="@CanWork" OnChanged="ReloadAsync" />
+                    <LeadImaginePanel LeadId="@LeadId" LeadReference="@lead.Reference" Imagine="@detail.Imagine" CanWork="@CanWork" OnChanged="ReloadAsync" />
                     <LeadProposalsPanel LeadId="@LeadId" ContactEmail="@lead.ContactEmail" Proposals="@Proposals" Concepts="@Concepts"
                                         CanWork="@CanWork" CanDecide="@CanDecide" OnChanged="ReloadAsync" />
 
-                    <Panel Title="Timeline">
-                        @if (Activities.Count == 0)
-                        {
-                            <p class="text-sm text-content-subtle italic">Nothing logged yet.</p>
-                        }
-                        else
-                        {
-                            <ol class="space-y-4">
-                                @foreach (var activity in Activities)
-                                {
-                                    <li class="flex gap-4">
-                                        <div class="shrink-0 w-28 text-xs text-content-subtle pt-0.5" title="@DateTimeText(activity.OccurredAt.ToLocalTime())">
-                                            @DateText(activity.OccurredAt)<br />@activity.OccurredAt.ToLocalTime().ToString("HH:mm")
-                                        </div>
-                                        <div class="min-w-0">
-                                            <p class="text-xs font-medium @ActivityKindClass(activity.Kind)">@activity.Kind.DisplayName()</p>
-                                            <p class="text-sm text-content whitespace-pre-wrap">@activity.Summary</p>
-                                            @if (!string.IsNullOrWhiteSpace(activity.RecordedByEmail))
-                                            {
-                                                <p class="text-xs text-content-faint">@activity.RecordedByEmail</p>
-                                            }
-                                        </div>
-                                    </li>
-                                }
-                            </ol>
-                        }
-                    </Panel>
+                    <LeadTimelinePanel Activities="@Activities" />
                 </div>
 
                 <div class="space-y-6">
-                    <Panel Title="Stage">
-                        <p class="text-sm text-content-muted mb-4">@lead.Stage.Meaning()</p>
-                        @if (lead.Stage == LeadStage.Won)
-                        {
-                            <p class="text-sm text-content-subtle">Won leads stay put — the project carries on from here.</p>
-                        }
-                        else
-                        {
-                            <ol class="space-y-1.5">
-                                @foreach (var stage in LeadStageExtensions.Ladder.Where(s => s != LeadStage.Won))
-                                {
-                                    var s = stage;
-                                    var isCurrent = s == lead.Stage;
-                                    var allowed = s.IsOpen() ? CanWork : CanDecide;
-                                    <li>
-                                        <button type="button" disabled="@(isCurrent || !allowed || busy)"
-                                                class="w-full text-left rounded border px-3 py-2 text-sm transition disabled:opacity-60 @(isCurrent ?"border-accent bg-accent/10 text-content" : "border-line text-content-muted hover:border-line-strong hover:text-content")"
-                                                title="@(allowed ? s.Meaning() : "Directors decide Lost and Nurture")"
-                                                @onclick="() => OpenMove(s)">
-                                            <span class="font-medium">@s.DisplayName()</span>
-                                            @if (isCurrent)
-                                            {
-                                                <span class="text-xs text-content-subtle ml-2">current</span>
-                                            }
-                                        </button>
-                                    </li>
-                                }
-                            </ol>
-                            @if (CanDecide)
-                            {
-                                <p class="text-xs text-content-subtle mt-3">Won is the green button above — it creates the client and the project.</p>
-                            }
-                        }
-                    </Panel>
+                    <LeadStageLadder Stage="@lead.Stage" CanWork="@CanWork" CanDecide="@CanDecide" OnMove="stage => moveTo = stage" />
                 </div>
             </div>
         </div>
 
         <LeadFormModal IsOpen="@editOpen" Existing="@lead" Strategies="@Strategies.Current" OnSaved="OnEditedAsync" OnCancel="() => editOpen = false" />
 
-        <Modal IsOpen="@(moveTo is not null)"
-               Title="@(moveTo is { } m ? $"Move to {m.DisplayName()}" : "")"
-               ConfirmLabel="@(busy ? "Saving…" : moveTo is { } t ? $"Move to {t.DisplayName()}" : "Move")"
-               ConfirmDisabled="@(busy || (moveTo == LeadStage.Lost && string.IsNullOrWhiteSpace(lostReason)))"
-               OnCancel="() => moveTo = null"
-               OnConfirm="MoveAsync">
-            @if (moveTo is { } target)
-            {
-                <p class="text-sm text-content-muted mb-4">@target.Meaning()</p>
-            }
-            @if (actionError is not null)
-            {
-                <Notice Tone="Tone.Negative" Class="mb-4">@actionError</Notice>
-            }
-            @if (moveTo == LeadStage.Lost)
-            {
-                <div class="mb-4">
-                    <FormField Label="Why" Required>
-                    <input type="text" class="field w-full" maxlength="1024" placeholder="Went with another builder; not going ahead; budget"
-                           value="@lostReason" @oninput="e => lostReason = e.Value?.ToString() ?? string.Empty" />
-                    </FormField>
-                </div>
-            }
-            <div>
-                <FormField Label="Note">
-                <textarea class="field w-full" rows="3" maxlength="4000" placeholder="Optional — goes on the timeline with the move"
-                          value="@moveNote" @oninput="e => moveNote = e.Value?.ToString() ?? string.Empty"></textarea>
-                </FormField>
-            </div>
-        </Modal>
-
-        <Modal IsOpen="@winOpen"
-               Title="Won — create client and project"
-               ConfirmLabel="@(busy ? "Creating…" : "Create client & project")"
-               ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(projectReference) || string.IsNullOrWhiteSpace(projectName))"
-               OnCancel="() => winOpen = false"
-               OnConfirm="WinAsync">
-            <p class="text-sm text-content-muted mb-4">
-                This creates the client account (<span class="text-content">@(string.IsNullOrWhiteSpace(lead.CompanyName) ? lead.ContactName : lead.CompanyName)</span>)
-                and the project shell, links both to @lead.Reference and marks it Won. It runs once.
-            </p>
-            @if (actionError is not null)
-            {
-                <Notice Tone="Tone.Negative" Class="mb-4">@actionError</Notice>
-            }
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <FormField Label="Project reference" Required>
-                    <input type="text" class="field w-full" maxlength="64" placeholder="e.g. JBB-2026-014"
-                           value="@projectReference" @oninput="e => projectReference = e.Value?.ToString() ?? string.Empty" />
-                    </FormField>
-                </div>
-                <div>
-                    <FormField Label="Project name" Required>
-                    <input type="text" class="field w-full" maxlength="256"
-                           value="@projectName" @oninput="e => projectName = e.Value?.ToString() ?? string.Empty" />
-                    </FormField>
-                </div>
-                <div class="sm:col-span-2">
-                    <FormField Label="Project manager">
-                    <input type="email" class="field w-full" maxlength="256" placeholder="@($"Blank = the lead's owner ({lead.OwnerEmail})")"
-                           value="@projectManagerEmail" @oninput="e => projectManagerEmail = e.Value?.ToString() ?? string.Empty" />
-                    </FormField>
-                </div>
-                <div class="sm:col-span-2">
-                    <FormField Label="Note">
-                    <textarea class="field w-full" rows="2" maxlength="4000" placeholder="Optional — goes on the timeline"
-                              value="@winNote" @oninput="e => winNote = e.Value?.ToString() ?? string.Empty"></textarea>
-                    </FormField>
-                </div>
-            </div>
-        </Modal>
-
-        <Modal IsOpen="@deleteOpen"
-               Title="@($"Delete {lead.Reference}?")"
-               ConfirmLabel="@(busy ? "Deleting…" : "Delete lead")"
-               ConfirmDisabled="@busy"
-               OnCancel="() => deleteOpen = false"
-               OnConfirm="DeleteAsync">
-            <p class="text-sm text-content mb-4">
-                This permanently removes <span class="font-mono">@lead.Reference</span> — @Headline@(string.IsNullOrWhiteSpace(lead.Summary) ? "" : $", “{lead.Summary}”") —
-                with its whole timeline@(Estimates.Count > 0 ? $", {Estimates.Count} estimate{(Estimates.Count == 1 ? "" : "s")}" : "")@(Proposals.Count > 0 ? $", {Proposals.Count} proposal{(Proposals.Count == 1 ? "" : "s")}" : "")@(Concepts.Count > 0 ? " and its imagine concepts" : "").
-                This cannot be undone. A real lead that went nowhere should be moved to Lost instead, so the register keeps its history.
-            </p>
-            @if (actionError is not null)
-            {
-                <Notice Tone="Tone.Negative" Class="mb-4">@actionError</Notice>
-            }
-        </Modal>
-
-        <Modal IsOpen="@logOpen"
-               Title="Log activity"
-               ConfirmLabel="@(busy ? "Saving…" : "Add to timeline")"
-               ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(logSummary))"
-               OnCancel="() => logOpen = false"
-               OnConfirm="LogAsync">
-            @if (actionError is not null)
-            {
-                <Notice Tone="Tone.Negative" Class="mb-4">@actionError</Notice>
-            }
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <FormField Label="What">
-                    <select class="field w-full" value="@logKind" @onchange="e => logKind = Enum.Parse<LeadActivityKind>(e.Value?.ToString() ?? nameof(LeadActivityKind.Note))">
-                        @foreach (var kind in LeadActivityKindExtensions.Loggable)
-                        {
-                            <option value="@kind">@kind.DisplayName()</option>
-                        }
-                    </select>
-                    </FormField>
-                </div>
-                <div>
-                    <FormField Label="When">
-                    <input type="datetime-local" class="field w-full" value="@logWhen" @onchange="e => logWhen = e.Value?.ToString() ?? string.Empty" />
-                    </FormField>
-                </div>
-                <div class="sm:col-span-2">
-                    <FormField Label="What happened" Required>
-                    <textarea class="field w-full" rows="4" maxlength="4000" placeholder="Who you spoke to, what was said, what happens next"
-                              value="@logSummary" @oninput="e => logSummary = e.Value?.ToString() ?? string.Empty"></textarea>
-                    </FormField>
-                </div>
-            </div>
-        </Modal>
+        <LeadStageMoveDialog Target="@moveTo" LeadId="@LeadId" OnMoved="OnMovedAsync" OnCancel="() => moveTo = null" />
+        <LeadWinDialog IsOpen="@winOpen" Lead="@lead" OnWon="OnWonAsync" OnCancel="() => winOpen = false" />
+        <LeadDeleteDialog IsOpen="@deleteOpen" Detail="@detail" OnDeleted="OnDeleted" OnCancel="() => deleteOpen = false" />
+        <LeadActivityLogDialog IsOpen="@logOpen" LeadId="@LeadId" OnLogged="OnLoggedAsync" OnCancel="() => logOpen = false" />
     }
 </Page>
-
-@code {
-    [Parameter] public string LeadId { get; set; } = "";
-
-    private bool sessionReady;
-    private bool dataFailed;
-    private bool busy;
-    private string? actionError;
-    private string? actionNote;
-    private string loadedForId = "";
-
-    private bool editOpen;
-    private bool winOpen;
-    private bool logOpen;
-    private bool deleteOpen;
-    private LeadStage? moveTo;
-    private string moveNote = "";
-    private string lostReason = "";
-    private string projectReference = "";
-    private string projectName = "";
-    private string projectManagerEmail = "";
-    private string winNote = "";
-    private LeadActivityKind logKind = LeadActivityKind.Call;
-    private string logSummary = "";
-    private string logWhen = "";
-
-    private Lead? Lead => Detail.Current(LeadId)?.Lead;
-    private IReadOnlyList<LeadActivity> Activities => Detail.Current(LeadId)?.Activities ?? Array.Empty<LeadActivity>();
-    private IReadOnlyList<SalesProposal> Proposals => Detail.Current(LeadId)?.Proposals ?? Array.Empty<SalesProposal>();
-    private IReadOnlyList<LeadEstimate> Estimates => Detail.Current(LeadId)?.Estimates ?? Array.Empty<LeadEstimate>();
-    private IReadOnlyList<ImagineImageView> Concepts =>
-        Detail.Current(LeadId)?.Imagine?.Rounds.SelectMany(round => round.Concepts).ToList() ?? new List<ImagineImageView>();
-
-    // The 3D model (2026-09-15) fronts every estimate with the one demo house until models are
-    // made per enquiry; the caption says so and names the estimate it stands in for.
-
-    // The timeline's kind label: the lead's own milestones read in the accent, the things sent
-    // out or priced (imagine, proposals, estimates) in info, everything else quietly.
-    private static string ActivityKindClass(LeadActivityKind kind) => kind switch
-    {
-        LeadActivityKind.StageChange or LeadActivityKind.ProposalAccepted => "text-accent",
-        LeadActivityKind.Imagine or LeadActivityKind.ProposalSent or LeadActivityKind.Estimate => "text-info",
-        _ => "text-content-subtle"
-    };
-
-    private string Headline => Lead is { } lead
-        ? (string.IsNullOrWhiteSpace(lead.ContactName) ? lead.CompanyName : lead.ContactName)
-        : "";
-
-    // Client-side mirrors of SalesRoles.SalesTeam / Deciders — visibility only, the API is the gate.
-    private bool CanWork => Session.ActiveRole is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
-        or Role.ProjectManager or Role.QuantitySurveyor or Role.SalesMarketing;
-    private bool CanDecide => Session.ActiveRole is Role.Admin or Role.ManagingDirector or Role.FinanceDirector;
-
-    protected override async Task OnInitializedAsync()
-    {
-        Detail.OnChanged += StateHasChanged;
-        Strategies.OnChanged += StateHasChanged;
-        await Session.EnsureLoadedAsync();
-        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
-        await LoadAsync();
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (!sessionReady || loadedForId == LeadId) return;
-        dataFailed = false;
-        actionNote = null;
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        loadedForId = LeadId;
-        try
-        {
-            await Task.WhenAll(
-                Detail.RefreshAsync(LeadId, CancellationToken.None),
-                Strategies.Current is null ? Strategies.RefreshAsync(CancellationToken.None) : Task.CompletedTask);
-        }
-        catch { dataFailed = true; }
-    }
-
-    private async Task ReloadAsync()
-    {
-        // Post-write reload: swallow query failures (the toast already reported them).
-        try { await Detail.RefreshAsync(LeadId, CancellationToken.None); }
-        catch (OperationCanceledException) { throw; }
-        catch { }
-    }
-
-    private async Task OnEditedAsync(Lead _)
-    {
-        editOpen = false;
-        await ReloadAsync();
-    }
-
-    private void OpenMove(LeadStage stage)
-    {
-        actionError = null;
-        moveNote = ""; lostReason = "";
-        moveTo = stage;
-    }
-
-    private async Task MoveAsync()
-    {
-        if (moveTo is not { } target || busy) return;
-        busy = true; actionError = null;
-        try
-        {
-            await Commands.SendAsync(new MoveLeadStage(LeadId, target,
-                string.IsNullOrWhiteSpace(moveNote) ? null : moveNote.Trim(),
-                target == LeadStage.Lost ? lostReason.Trim() : null), CancellationToken.None);
-            moveTo = null;
-            await ReloadAsync();
-        }
-        catch (CommandFailedException ex) { actionError = ex.Message; }
-        finally { busy = false; }
-    }
-
-    private void OpenWin()
-    {
-        actionError = null;
-        projectReference = "";
-        projectName = Lead is { } lead
-            ? (string.IsNullOrWhiteSpace(lead.PropertyAddress) ? Headline : lead.PropertyAddress.Split(',')[0].Trim())
-            : "";
-        projectManagerEmail = "";
-        winNote = "";
-        winOpen = true;
-    }
-
-    private async Task WinAsync()
-    {
-        if (busy) return;
-        busy = true; actionError = null;
-        try
-        {
-            var outcome = await Commands.SendAsync(new WinLead(LeadId, projectReference.Trim(), projectName.Trim(),
-                string.IsNullOrWhiteSpace(projectManagerEmail) ? null : projectManagerEmail.Trim(),
-                string.IsNullOrWhiteSpace(winNote) ? null : winNote.Trim()), CancellationToken.None);
-            winOpen = false;
-            actionNote = $"{outcome.Lead.Reference} is Won — the client account and project {projectReference.Trim()} are created; open the project from Details.";
-            await ReloadAsync();
-        }
-        catch (CommandFailedException ex) { actionError = ex.Message; }
-        finally { busy = false; }
-    }
-
-    // The Actions menu: editing and logging for the sales team, the destructive tail for the
-    // deciders, last and marked — the same shape as ProjectRequestDetail.Menus.
-    private List<DropdownMenu.Item> ActionMenuItems
-    {
-        get
-        {
-            var items = new List<DropdownMenu.Item>();
-            if (Lead is not { } lead) return items;
-            if (CanWork)
-            {
-                items.Add(new(Label: "Edit details…", OnSelect: EventCallback.Factory.Create(this, () => { editOpen = true; })));
-                items.Add(new(Label: "Log activity…", OnSelect: EventCallback.Factory.Create(this, OpenLog),
-                    Hint: "A call, email, letter, meeting, site visit, proposal or note on the timeline"));
-            }
-            if (CanDecide && lead.Stage != LeadStage.Won)
-                items.Add(new(Label: "Delete lead…", OnSelect: EventCallback.Factory.Create(this, OpenDelete),
-                    Hint: "Removes the lead and everything on it — no undo", Destructive: true, Group: 1));
-            return items;
-        }
-    }
-
-    private void OpenDelete()
-    {
-        actionError = null;
-        deleteOpen = true;
-    }
-
-    private async Task DeleteAsync()
-    {
-        if (busy) return;
-        busy = true; actionError = null;
-        try
-        {
-            await Commands.SendAsync(new DeleteLead(LeadId), CancellationToken.None);
-            deleteOpen = false;
-            Nav.NavigateTo("/sales/leads");
-            Detail.Forget(LeadId);
-        }
-        catch (CommandFailedException ex) { actionError = ex.Message; }
-        finally { busy = false; }
-    }
-
-    private void OpenLog()
-    {
-        actionError = null;
-        logKind = LeadActivityKind.Call;
-        logSummary = "";
-        logWhen = DateTime.Now.ToString("yyyy-MM-dd'T'HH:mm");
-        logOpen = true;
-    }
-
-    private async Task LogAsync()
-    {
-        if (busy || string.IsNullOrWhiteSpace(logSummary)) return;
-        busy = true; actionError = null;
-        try
-        {
-            DateTimeOffset? when = DateTime.TryParse(logWhen, out var parsed) ? new DateTimeOffset(parsed, TimeZoneInfo.Local.GetUtcOffset(parsed)) : null;
-            await Commands.SendAsync(new LogLeadActivity(LeadId, logKind, logSummary.Trim(), when), CancellationToken.None);
-            logOpen = false;
-            await ReloadAsync();
-        }
-        catch (CommandFailedException ex) { actionError = ex.Message; }
-        finally { busy = false; }
-    }
-
-    public void Dispose()
-    {
-        Detail.OnChanged -= StateHasChanged;
-        Strategies.OnChanged -= StateHasChanged;
-    }
-}

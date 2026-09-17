@@ -1,0 +1,37 @@
+<Panel Title="Priced breakdown" BodyClass="p-0">
+    <HeaderActions>
+        <span class="text-sm text-content-muted mr-3">Total <span class="text-content font-semibold">@WholeMoney(Breakdown.GrandTotal)</span> ex VAT</span>
+        @if (Editable)
+        {
+            <button type="button" class="btn-secondary text-sm" @onclick="AddSection">Add section</button>
+        }
+    </HeaderActions>
+    <ChildContent>
+        @if (Breakdown.Sections.Count == 0)
+        {
+            <p class="p-6 text-sm text-content-muted">
+                No priced lines yet. @(Editable ? "Add a section — Preliminaries & preambles, Demolition & stripping out, Structural steelwork… — then its lines; the total follows." : "")
+            </p>
+        }
+        @foreach (var sectionDraft in Breakdown.Sections)
+        {
+            <EstimateSectionEditor Breakdown="@Breakdown" Section="@sectionDraft" Editable="@Editable" OnTouched="OnTouched" />
+        }
+        <datalist id="estimate-units">
+            <option value="m²"></option><option value="m³"></option><option value="m"></option><option value="nr"></option>
+            <option value="item"></option><option value="week"></option><option value="day"></option><option value="kg"></option><option value="skips"></option>
+        </datalist>
+    </ChildContent>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public EstimateBreakdownDraft Breakdown { get; set; } = default!;
+    [Parameter] public bool Editable { get; set; }
+    [Parameter] public EventCallback OnTouched { get; set; }
+
+    private Task AddSection()
+    {
+        Breakdown.AddSection();
+        return OnTouched.InvokeAsync();
+    }
+}

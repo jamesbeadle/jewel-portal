@@ -1,0 +1,21 @@
+<Panel Title="Details">
+    <dl class="grid grid-cols-1 gap-y-3 text-sm">
+        <div><dt class="eyebrow">Property</dt><dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(Lead.PropertyAddress) ? "—" : Lead.PropertyAddress) @Lead.Postcode</dd></div>
+        <div><dt class="eyebrow">Contact</dt><dd class="text-content mt-1">@Lead.Headline()</dd></div>
+        <div><dt class="eyebrow">Architect</dt><dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(Estimate.ArchitectName) ? "—" : Estimate.ArchitectName)</dd></div>
+        <div class="grid grid-cols-2 gap-3">
+            <div><dt class="eyebrow">Price due</dt><dd class="text-content mt-1">@(Estimate.PriceDueOn is { } due ? due.ToString("dd MMM yyyy") : "—")</dd></div>
+            <div><dt class="eyebrow">Budget mentioned</dt><dd class="text-content mt-1">@(Estimate.BudgetMentioned is { } budget ? WholeMoney(budget) : "—")</dd></div>
+        </div>
+        <div><dt class="eyebrow">Total</dt><dd class="text-content mt-1 text-lg font-semibold">@(Estimate.Total is { } total ? WholeMoney(total) : "Not yet priced")</dd></div>
+        @if (!string.IsNullOrWhiteSpace(Estimate.Notes))
+        {
+            <div><dt class="eyebrow">Internal notes</dt><dd class="text-content-muted mt-1 whitespace-pre-line text-xs">@Estimate.Notes</dd></div>
+        }
+    </dl>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public Lead Lead { get; set; } = default!;
+    [Parameter, EditorRequired] public LeadEstimate Estimate { get; set; } = default!;
+}

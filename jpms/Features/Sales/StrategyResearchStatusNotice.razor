@@ -1,0 +1,29 @@
+@using Jewel.JPMS.Contracts.Sales
+@inject SessionService Session
+
+@if (Strategy.ResearchStatus.IsInProgress())
+{
+    <div class="panel px-6 py-4 mb-6 flex items-center gap-4">
+        <JewelIcon Class="w-5 h-5 animate-jewel-pulse shrink-0" />
+        <div class="text-sm">
+            <p class="text-content font-medium">@(Strategy.ResearchStatus == StrategyResearchStatus.Queued ? "Research queued" : "Claude is researching this strategy")</p>
+            <p class="text-content-subtle">Reading the brief, searching the web for the areas, the numbers and the sources, then drafting the plan. Usually two to five minutes — this page checks back every few seconds; you can leave and come back.</p>
+        </div>
+    </div>
+}
+else if (Strategy.ResearchStatus == StrategyResearchStatus.Failed)
+{
+    <Notice Tone="Tone.Negative" Title="The research didn't complete." Class="mb-6">
+        <p class="whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(Strategy.ResearchError) ? "No reason was recorded." : Strategy.ResearchError)</p>
+        @if (CanWork)
+        {
+            <p class="mt-2">Fix the cause if it names one, then Research with AI again.</p>
+        }
+    </Notice>
+}
+
+@code {
+    [Parameter, EditorRequired] public SalesStrategy Strategy { get; set; } = default!;
+
+    private bool CanWork => SalesAccess.CanWork(Session.ActiveRole);
+}

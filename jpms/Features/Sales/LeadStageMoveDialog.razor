@@ -1,0 +1,70 @@
+@using Jewel.JPMS.Contracts.Sales
+@inject ICommandSender Commands
+
+<Modal IsOpen="@(Target is not null)"
+       Title="@(Target is { } m ? $"Move to {m.DisplayName()}" : "")"
+       ConfirmLabel="@(busy ? "Saving…" : Target is { } t ? $"Move to {t.DisplayName()}" : "Move")"
+       ConfirmDisabled="@(busy || (Target == LeadStage.Lost && string.IsNullOrWhiteSpace(lostReason)))"
+       OnCancel="OnCancel"
+       OnConfirm="MoveAsync">
+    @if (Target is { } target)
+    {
+        <p class="text-sm text-content-muted mb-4">@target.Meaning()</p>
+    }
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
+    }
+    @if (Target == LeadStage.Lost)
+    {
+        <div class="mb-4">
+            <FormField Label="Why" Required>
+            <input type="text" class="field w-full" maxlength="1024" placeholder="Went with another builder; not going ahead; budget"
+                   value="@lostReason" @oninput="e => lostReason = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
+        </div>
+    }
+    <div>
+        <FormField Label="Note">
+        <textarea class="field w-full" rows="3" maxlength="4000" placeholder="Optional — goes on the timeline with the move"
+                  value="@moveNote" @oninput="e => moveNote = e.Value?.ToString() ?? string.Empty"></textarea>
+        </FormField>
+    </div>
+</Modal>
+
+@code {
+    /// <summary>The stage the lead is being moved to — null closes the dialog.</summary>
+    [Parameter] public LeadStage? Target { get; set; }
+    [Parameter, EditorRequired] public string LeadId { get; set; } = "";
+    [Parameter] public EventCallback OnMoved { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool busy;
+    private string? error;
+    private string moveNote = "";
+    private string lostReason = "";
+    private LeadStage? openedFor;
+
+    protected override void OnParametersSet()
+    {
+        if (Target == openedFor) return;
+        openedFor = Target;
+        error = null;
+        moveNote = ""; lostReason = "";
+    }
+
+    private async Task MoveAsync()
+    {
+        if (Target is not { } target || busy) return;
+        busy = true; error = null;
+        try
+        {
+            await Commands.SendAsync(new MoveLeadStage(LeadId, target,
+                string.IsNullOrWhiteSpace(moveNote) ? null : moveNote.Trim(),
+                target == LeadStage.Lost ? lostReason.Trim() : null), CancellationToken.None);
+            await OnMoved.InvokeAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+}

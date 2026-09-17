@@ -1,0 +1,88 @@
+@using Jewel.JPMS.Contracts.Sales
+@inject ICommandSender Commands
+
+<Modal IsOpen="@IsOpen"
+       Title="Won — create client and project"
+       ConfirmLabel="@(busy ? "Creating…" : "Create client & project")"
+       ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(projectReference) || string.IsNullOrWhiteSpace(projectName))"
+       OnCancel="OnCancel"
+       OnConfirm="WinAsync">
+    <p class="text-sm text-content-muted mb-4">
+        This creates the client account (<span class="text-content">@(string.IsNullOrWhiteSpace(Lead.CompanyName) ? Lead.ContactName : Lead.CompanyName)</span>)
+        and the project shell, links both to @Lead.Reference and marks it Won. It runs once.
+    </p>
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
+    }
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <FormField Label="Project reference" Required>
+            <input type="text" class="field w-full" maxlength="64" placeholder="e.g. JBB-2026-014"
+                   value="@projectReference" @oninput="e => projectReference = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
+        </div>
+        <div>
+            <FormField Label="Project name" Required>
+            <input type="text" class="field w-full" maxlength="256"
+                   value="@projectName" @oninput="e => projectName = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
+        </div>
+        <div class="sm:col-span-2">
+            <FormField Label="Project manager">
+            <input type="email" class="field w-full" maxlength="256" placeholder="@($"Blank = the lead's owner ({Lead.OwnerEmail})")"
+                   value="@projectManagerEmail" @oninput="e => projectManagerEmail = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
+        </div>
+        <div class="sm:col-span-2">
+            <FormField Label="Note">
+            <textarea class="field w-full" rows="2" maxlength="4000" placeholder="Optional — goes on the timeline"
+                      value="@winNote" @oninput="e => winNote = e.Value?.ToString() ?? string.Empty"></textarea>
+            </FormField>
+        </div>
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter, EditorRequired] public Lead Lead { get; set; } = default!;
+    /// <summary>Raised with the project reference the lead became.</summary>
+    [Parameter] public EventCallback<string> OnWon { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool busy;
+    private bool wasOpen;
+    private string? error;
+    private string projectReference = "";
+    private string projectName = "";
+    private string projectManagerEmail = "";
+    private string winNote = "";
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen == wasOpen) return;
+        wasOpen = IsOpen;
+        if (!IsOpen) return;
+        error = null;
+        projectReference = "";
+        var address = Lead.PropertyAddress;
+        projectName = string.IsNullOrWhiteSpace(address) ? Lead.Headline() : address.Split(',')[0].Trim();
+        projectManagerEmail = "";
+        winNote = "";
+    }
+
+    private async Task WinAsync()
+    {
+        if (busy) return;
+        busy = true; error = null;
+        try
+        {
+            await Commands.SendAsync(new WinLead(Lead.LeadId, projectReference.Trim(), projectName.Trim(),
+                string.IsNullOrWhiteSpace(projectManagerEmail) ? null : projectManagerEmail.Trim(),
+                string.IsNullOrWhiteSpace(winNote) ? null : winNote.Trim()), CancellationToken.None);
+            await OnWon.InvokeAsync(projectReference.Trim());
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+}

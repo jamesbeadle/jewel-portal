@@ -1,0 +1,57 @@
+@inject NavigationManager Nav
+
+<Panel Title="Leads this strategy found" BodyClass="p-0">
+    @if (Leads.Count == 0)
+    {
+        <p class="px-6 py-6 text-sm text-content-subtle italic">None yet — Add lead captures one attributed to this strategy.</p>
+    }
+    else
+    {
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Ref</th>
+                        <th>Lead</th>
+                        <th>Property</th>
+                        <th>Stage</th>
+                        <th class="text-right">Value</th>
+                        <th>Captured</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var lead in Leads)
+                    {
+                        var row = lead;
+                        <tr class="is-clickable cursor-pointer" @key="row.LeadId" @onclick="() => OpenLead(row)">
+                            <td class="whitespace-nowrap font-mono text-xs">@row.Reference</td>
+                            <td>
+                                <p class="text-content font-medium">@row.Headline()</p>
+                                @if (!string.IsNullOrWhiteSpace(row.Summary))
+                                {
+                                    <p class="text-xs text-content-subtle line-clamp-1 max-w-sm">@row.Summary</p>
+                                }
+                            </td>
+                            <td>
+                                <p class="max-w-xs truncate" title="@row.PropertyAddress">@(string.IsNullOrWhiteSpace(row.PropertyAddress) ? "—" : row.PropertyAddress)</p>
+                                @if (!string.IsNullOrWhiteSpace(row.Postcode))
+                                {
+                                    <p class="text-xs text-content-subtle">@row.Postcode</p>
+                                }
+                            </td>
+                            <td><LeadStagePill Stage="@row.Stage" /></td>
+                            <td class="text-right whitespace-nowrap">@(row.EstimatedValue is { } v ? WholeMoney(v) : "—")</td>
+                            <td class="whitespace-nowrap text-xs">@DateText(row.CapturedAt)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Lead> Leads { get; set; } = Array.Empty<Lead>();
+
+    private void OpenLead(Lead lead) => Nav.NavigateTo($"/sales/leads/{lead.LeadId}");
+}

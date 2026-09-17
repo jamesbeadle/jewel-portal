@@ -90,3 +90,6 @@ _nuget_*.tar.gz
 
 # NuGet cache chunks packed on the Mac for an offline cloud restore
 nuget-cache.tgz*
+
+# The plan's machine copy is 27 MB and is rewritten by every audit; the readable plan is refactor-plan.md
+tools/refactor/audit-output/refactor-plan.json

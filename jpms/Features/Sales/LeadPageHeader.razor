@@ -1,0 +1,61 @@
+@inject SessionService Session
+
+<PageHeader>
+    <TitleContent>
+        <span>@Lead.Headline()</span>
+        <LeadStagePill Stage="@Lead.Stage" />
+    </TitleContent>
+    <EyebrowContent>
+        <a href="/sales/leads" class="hover:text-content">Leads</a> · @Lead.Reference
+    </EyebrowContent>
+    <SubtitleContent>
+        @(string.IsNullOrWhiteSpace(Lead.Summary) ? Lead.Stage.Meaning() : Lead.Summary)
+    </SubtitleContent>
+    <Actions>
+        @* The house rail (as the request and variation pages): the one primary step
+           on its own, everything else — edit, log, and the destructive tail — in
+           the Actions menu. *@
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+            @if (CanDecide && Lead.Stage != LeadStage.Won)
+            {
+                <button type="button" class="btn-primary" title="@(HasAcceptedProposal ? "The proposal is accepted — this creates the client and the project" : "Creates the client and the project")" @onclick="OnWin">Won — create client &amp; project</button>
+            }
+            @if (ActionMenuItems.Count > 0)
+            {
+                <DropdownMenu Label="Actions" WidthClass="w-64" Items="ActionMenuItems" />
+            }
+        </div>
+    </Actions>
+</PageHeader>
+
+@code {
+    [Parameter, EditorRequired] public Lead Lead { get; set; } = default!;
+    [Parameter] public bool HasAcceptedProposal { get; set; }
+    [Parameter] public EventCallback OnWin { get; set; }
+    [Parameter] public EventCallback OnEdit { get; set; }
+    [Parameter] public EventCallback OnLog { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    private bool CanWork => SalesAccess.CanWork(Session.ActiveRole);
+    private bool CanDecide => SalesAccess.CanDecide(Session.ActiveRole);
+
+    // Editing and logging for the sales team, the destructive tail for the deciders, last and
+    // marked — the same shape as ProjectRequestDetail.Menus.
+    private List<DropdownMenu.Item> ActionMenuItems
+    {
+        get
+        {
+            var items = new List<DropdownMenu.Item>();
+            if (CanWork)
+            {
+                items.Add(new(Label: "Edit details…", OnSelect: OnEdit));
+                items.Add(new(Label: "Log activity…", OnSelect: OnLog,
+                    Hint: "A call, email, letter, meeting, site visit, proposal or note on the timeline"));
+            }
+            if (CanDecide && Lead.Stage != LeadStage.Won)
+                items.Add(new(Label: "Delete lead…", OnSelect: OnDelete,
+                    Hint: "Removes the lead and everything on it — no undo", Destructive: true, Group: 1));
+            return items;
+        }
+    }
+}

@@ -1,0 +1,76 @@
+<Panel Title="Details">
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+        <div>
+            <dt class="eyebrow">Contact</dt>
+            <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(Lead.ContactName) ? "—" : Lead.ContactName)</dd>
+            @if (!string.IsNullOrWhiteSpace(Lead.ContactEmail))
+            {
+                <dd class="text-content-muted"><a href="mailto:@Lead.ContactEmail" class="text-info hover:underline underline-offset-4">@Lead.ContactEmail</a></dd>
+            }
+            @if (!string.IsNullOrWhiteSpace(Lead.ContactPhone))
+            {
+                <dd class="text-content-muted">@Lead.ContactPhone</dd>
+            }
+        </div>
+        <div>
+            <dt class="eyebrow">Company / practice</dt>
+            <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(Lead.CompanyName) ? "—" : Lead.CompanyName)</dd>
+            <dd class="text-content-muted">@Lead.ProspectKind.DisplayName()</dd>
+        </div>
+        <div class="sm:col-span-2">
+            <dt class="eyebrow">Property / site</dt>
+            <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(Lead.PropertyAddress) ? "—" : Lead.PropertyAddress)</dd>
+            @if (!string.IsNullOrWhiteSpace(Lead.Postcode))
+            {
+                <dd class="text-content-muted">@Lead.Postcode</dd>
+            }
+        </div>
+        <div>
+            <dt class="eyebrow">Estimated value</dt>
+            <dd class="text-content mt-1">@(Lead.EstimatedValue is { } v ? WholeMoney(v) : "—")</dd>
+        </div>
+        <div>
+            <dt class="eyebrow">Owner</dt>
+            <dd class="text-content mt-1">@Lead.OwnerEmail</dd>
+        </div>
+        <div>
+            <dt class="eyebrow">Found by</dt>
+            <dd class="text-content mt-1">
+                @if (Lead.StrategyId is not null)
+                {
+                    <a href="/sales/strategies/@Lead.StrategyId" class="text-info hover:underline underline-offset-4">@(Lead.StrategyName ?? "Strategy")</a>
+                }
+                else
+                {
+                    @Lead.Source.DisplayName()
+                }
+            </dd>
+        </div>
+        <div>
+            <dt class="eyebrow">Captured</dt>
+            <dd class="text-content mt-1">@DateText(Lead.CapturedAt)</dd>
+            <dd class="text-content-muted">@Lead.Stage.DisplayName() since @DateText(Lead.StageChangedAt)</dd>
+        </div>
+        @if (Lead.Stage == LeadStage.Won && Lead.ProjectId is not null)
+        {
+            <div class="sm:col-span-2">
+                <dt class="eyebrow">Became</dt>
+                <dd class="text-content mt-1">
+                    <a href="/projects/@Lead.ProjectId" class="text-info hover:underline underline-offset-4">Open the project</a>
+                    <span class="text-content-subtle"> · client account created</span>
+                </dd>
+            </div>
+        }
+        @if (Lead.Stage == LeadStage.Lost && !string.IsNullOrWhiteSpace(Lead.LostReason))
+        {
+            <div class="sm:col-span-2">
+                <dt class="eyebrow">Why lost</dt>
+                <dd class="text-content mt-1">@Lead.LostReason</dd>
+            </div>
+        }
+    </dl>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public Lead Lead { get; set; } = default!;
+}

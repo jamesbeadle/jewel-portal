@@ -1,0 +1,33 @@
+@using Jewel.JPMS.Contracts.Sales
+
+<Panel Title="Funnel">
+    <ol class="space-y-2 text-sm">
+        @foreach (var step in FunnelSteps)
+        {
+            var width = Funnel.Leads == 0 ? 0 : (int)Math.Round(100.0 * step.Count / Funnel.Leads);
+            <li>
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-content-muted">@step.Label</span>
+                    <span class="text-content font-medium">@step.Count</span>
+                </div>
+                <div class="h-1.5 bg-surface-raised rounded overflow-hidden">
+                    <div class="h-full @(step.Label =="Won" ? "bg-positive" : "bg-info")" style="width: @(width)%"></div>
+                </div>
+            </li>
+        }
+    </ol>
+    @if (Funnel.Lost + Funnel.Nurture > 0)
+    {
+        <p class="text-xs text-content-subtle mt-3">@Funnel.Lost lost · @Funnel.Nurture in nurture</p>
+    }
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public SalesStrategyFunnel Funnel { get; set; } = default!;
+
+    private IReadOnlyList<(string Label, int Count)> FunnelSteps => new[]
+    {
+        ("Found", Funnel.Leads), ("Contacted", Funnel.Contacted), ("Engaged", Funnel.Engaged),
+        ("Proposals", Funnel.Proposals), ("Won", Funnel.Won)
+    };
+}

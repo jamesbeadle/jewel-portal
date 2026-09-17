@@ -1,0 +1,42 @@
+@using Jewel.JPMS.Features.CostCenters
+@using static Jewel.JPMS.Features.Sales.EstimateFigures
+@inject CostCentersReadModel CostCenters
+
+<tr class="border-t border-line/60">
+    @if (Editable)
+    {
+        <td class="px-4 py-1">
+            <select class="field w-full text-xs" value="@Line.CostCode" @onchange="e => { Line.CostCode = e.Value?.ToString() ?? string.Empty; Touched(); }">
+                <option value="">—</option>
+                @foreach (var centre in CostCenters.Alphabetical)
+                {
+                    <option value="@centre.Code">@centre.Code — @centre.Name</option>
+                }
+            </select>
+        </td>
+        <td class="px-2 py-1"><input type="text" class="field w-full text-sm" maxlength="1024" placeholder="What is priced" value="@Line.Description" @oninput="e => { Line.Description = e.Value?.ToString() ?? string.Empty; Touched(); }" /></td>
+        <td class="px-2 py-1"><input type="number" class="field w-full text-sm text-right" min="0" step="any" value="@Line.QuantityText" @oninput="e => { Line.QuantityText = e.Value?.ToString() ?? string.Empty; Touched(); }" /></td>
+        <td class="px-2 py-1"><input type="text" class="field w-full text-sm" maxlength="32" list="estimate-units" placeholder="m²" value="@Line.Unit" @oninput="e => { Line.Unit = e.Value?.ToString() ?? string.Empty; Touched(); }" /></td>
+        <td class="px-2 py-1"><input type="number" class="field w-full text-sm text-right" min="0" step="any" value="@Line.UnitPriceText" @oninput="e => { Line.UnitPriceText = e.Value?.ToString() ?? string.Empty; Touched(); }" /></td>
+        <td class="px-2 py-1 text-right whitespace-nowrap">@Pence(Line.Total)</td>
+        <td class="px-2 py-1 text-right"><button type="button" class="btn-ghost text-xs text-negative" title="Remove line" @onclick="OnRemove">✕</button></td>
+    }
+    else
+    {
+        <td class="px-4 py-1.5 font-mono text-xs">@Line.CostCode</td>
+        <td class="px-2 py-1.5">@Line.Description</td>
+        <td class="px-2 py-1.5 text-right">@Line.QuantityText</td>
+        <td class="px-2 py-1.5">@Line.Unit</td>
+        <td class="px-2 py-1.5 text-right">@Pence(Line.UnitPrice)</td>
+        <td class="px-2 py-1.5 text-right">@Pence(Line.Total)</td>
+    }
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public EstimateLineDraft Line { get; set; } = default!;
+    [Parameter] public bool Editable { get; set; }
+    [Parameter] public EventCallback OnTouched { get; set; }
+    [Parameter] public EventCallback OnRemove { get; set; }
+
+    private void Touched() => OnTouched.InvokeAsync();
+}

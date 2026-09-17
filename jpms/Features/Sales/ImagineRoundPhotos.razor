@@ -1,0 +1,24 @@
+@if (Round.Kind == ImagineRoundKind.Concepts && Round.Photos.Count > 0)
+{
+    <div class="mt-5">
+        <p class="eyebrow mb-2">Your photos</p>
+        <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            @foreach (var photo in Round.Photos)
+            {
+                var p = photo;
+                <a href="@ImagineRequests.ImageUrl(Token, p.ImageId)" target="_blank" rel="noopener" class="block aspect-square rounded overflow-hidden border border-line bg-surface">
+                    <img src="@ImagineRequests.ImageUrl(Token, p.ImageId)" alt="" class="w-full h-full object-cover" loading="lazy" />
+                </a>
+            }
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Round.Brief))
+        {
+            <p class="text-sm text-content-muted mt-3">You wrote: <em>@Round.Brief</em></p>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Token { get; set; } = "";
+    [Parameter, EditorRequired] public ImagineRoundView Round { get; set; } = default!;
+}

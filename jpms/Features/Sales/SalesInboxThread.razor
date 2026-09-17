@@ -1,0 +1,77 @@
+@using Jewel.JPMS.Contracts.Sales
+@inject SessionService Session
+@inject SalesInboxReadModel Inbox
+@inject ICommandSender Commands
+
+@{
+    var open = Message;
+    var openMatch = Inbox.MatchFor(open.FromEmail);
+    var thread = string.IsNullOrWhiteSpace(open.ConversationId) ? null : Inbox.Conversation(open.ConversationId);
+}
+<div class="panel">
+    <div class="panel-header flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
+            <h2 class="text-base font-semibold text-content">@(string.IsNullOrWhiteSpace(open.Subject) ? "(no subject)" : open.Subject)</h2>
+            <p class="text-xs text-content-subtle">
+                @open.FromName &lt;@open.FromEmail&gt;
+                @if (openMatch is not null)
+                {
+                    <text> · <a href="/sales/leads/@openMatch.LeadId" class="text-info hover:underline underline-offset-4">@openMatch.Reference @openMatch.ContactName</a></text>
+                }
+            </p>
+        </div>
+        @if (CanWork)
+        {
+            <div class="flex flex-wrap gap-2">
+                @if (openMatch is not null)
+                {
+                    <button type="button" class="btn-secondary text-sm" disabled="@busy" @onclick="() => LogAsync(open, openMatch)">Log on @openMatch.Reference</button>
+                }
+                else
+                {
+                    <button type="button" class="btn-secondary text-sm" disabled="@busy" @onclick="() => OnNewLead.InvokeAsync(open)">New lead from this email</button>
+                    <button type="button" class="btn-ghost text-sm" disabled="@busy" @onclick="OpenLogPicker">Log on a lead…</button>
+                }
+                <button type="button" class="btn-primary text-sm" disabled="@busy" @onclick="() => replyOpen = !replyOpen">Reply</button>
+            </div>
+        }
+    </div>
+    <div class="p-6 space-y-4">
+        @if (actionError is not null)
+        {
+            <Notice Tone="Tone.Negative">@actionError</Notice>
+        }
+        @if (replyOpen && CanWork)
+        {
+            <div class="rounded border border-line p-4 space-y-3">
+                <p class="text-xs text-content-subtle">Reply-all from @MailboxAddress, your text above the quoted thread.</p>
+                <textarea class="field w-full" rows="6" maxlength="20000" placeholder="Hello…" value="@replyBody" @oninput="e => replyBody = e.Value?.ToString() ?? string.Empty"></textarea>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="btn-primary text-sm" disabled="@(busy || string.IsNullOrWhiteSpace(replyBody))" @onclick="() => ReplyAsync(open, openMatch)">@(busy ? "Sending…" : "Send")</button>
+                    <button type="button" class="btn-ghost text-sm" disabled="@busy" @onclick="() => replyOpen = false">Cancel</button>
+                    @if (openMatch is not null)
+                    {
+                        <span class="text-xs text-content-subtle">Logged on @openMatch.Reference when sent.</span>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (thread is null)
+        {
+            <LoadGate IsLoading="true" Label="Reading the thread" />
+        }
+        else
+        {
+            var members = thread.Items.Count == 0 ? new List<MailboxMessage> { Message } : thread.Items.ToList();
+            @foreach (var member in members)
+            {
+                var msg = member;
+                <SalesInboxThreadMessage Message="@msg" IsOpened="@(msg.Id == Message.Id)" IsExpanded="@expandedIds.Contains(msg.Id)" OnToggle="() => ToggleAsync(msg)" />
+            }
+        }
+    </div>
+</div>
+
+<SalesInboxLeadPickerDialog IsOpen="@logPickerOpen" InitialSearch="@Message.FromEmail" IsBusy="@busy"
+                            OnPicked="LogPickedAsync" OnCancel="() => logPickerOpen = false" />

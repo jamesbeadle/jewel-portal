@@ -1,0 +1,48 @@
+@using Jewel.JPMS.Contracts.Sales
+@inject SessionService Session
+
+<Panel Title="Approach plan">
+    <HeaderActions>
+        @if (CanWork)
+        {
+            <button type="button" class="btn-secondary" disabled="@IsBusy" @onclick="OnEditPlan">
+                @(string.IsNullOrWhiteSpace(Strategy.ApproachPlan) ? "Write plan" : "Edit plan")
+            </button>
+            <button type="button" class="btn-secondary" disabled="@IsBusy" @onclick="OnGenerate">
+                @(IsGenerating ? "Drafting…" : string.IsNullOrWhiteSpace(Strategy.ApproachPlan) ? "Generate with AI" : "Regenerate with AI")
+            </button>
+        }
+    </HeaderActions>
+    <ChildContent>
+        @* Drafting REPLACES a plan the reader is already looking at, so the gate veils it
+           and takes the clicks rather than removing it: regenerating must not read as
+           though the plan had been thrown away while Claude works. *@
+        <LoadGate Overlay="true" IsLoading="@IsGenerating" Label="Claude is drafting the plan from the strategy's argument">
+            @if (string.IsNullOrWhiteSpace(Strategy.ApproachPlan))
+            {
+                <p class="text-sm text-content-subtle italic">
+                    No plan yet. Research with AI (above) finds the evidence and drafts the plan in one go; Generate with AI
+                    drafts one from what is written here; or write it by hand.
+                </p>
+            }
+            else
+            {
+                <SimpleMarkdown Text="@Strategy.ApproachPlan" />
+                @if (Strategy.PlanGeneratedAt is { } generatedAt)
+                {
+                    <p class="text-xs text-content-faint mt-4">Drafted by Claude @DateTimeText(generatedAt.ToLocalTime()) — edited since if the text differs.</p>
+                }
+            }
+        </LoadGate>
+    </ChildContent>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public SalesStrategy Strategy { get; set; } = default!;
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public bool IsGenerating { get; set; }
+    [Parameter] public EventCallback OnEditPlan { get; set; }
+    [Parameter] public EventCallback OnGenerate { get; set; }
+
+    private bool CanWork => SalesAccess.CanWork(Session.ActiveRole);
+}
