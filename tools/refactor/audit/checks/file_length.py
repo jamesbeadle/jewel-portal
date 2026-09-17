@@ -14,13 +14,16 @@ def check(sourceFiles: list[SourceFile], rules: dict) -> dict:
         and not matchesAny(sourceFile.relative, exemptGlobs)
     ]
     offenders.sort(key=lambda offender: offender["lines"], reverse=True)
+    worstFileLines = offenders[0]["lines"] if offenders else 0
     return {
         "name": "fileLength",
         "summary": {
             "limit": limit,
             "filesOverLimit": len(offenders),
             "totalFiles": len(sourceFiles),
-            "worstFileLines": offenders[0]["lines"] if offenders else 0,
+            "totalLines": sum(sourceFile.lineCount for sourceFile in sourceFiles),
+            "worstFileLines": worstFileLines,
+            "worstFileTimesOverLimit": round(max(worstFileLines - limit, 0) / limit, 2),
         },
         "offenders": offenders,
     }

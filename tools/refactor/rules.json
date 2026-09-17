@@ -92,5 +92,95 @@
   "functionNames": {
     "maxWords": 5,
     "maxLength": 40
+  },
+  "areas": [
+    {
+      "name": "tests",
+      "globs": [
+        "**/*.test.*",
+        "**/*.spec.*",
+        "**/tests/**",
+        "**/Tests/**",
+        "**/*.Tests/**",
+        "**/*Tests.cs"
+      ]
+    },
+    {
+      "name": "docs",
+      "globs": [
+        "**/*.md",
+        "docs/**"
+      ]
+    },
+    {
+      "name": "tooling",
+      "globs": [
+        "tools/**",
+        ".claude/**",
+        "scripts/**"
+      ]
+    },
+    {
+      "name": "database",
+      "globs": [
+        "**/Migrations/**",
+        "**/*.sql"
+      ]
+    },
+    {
+      "name": "api",
+      "globs": [
+        "**/Controllers/**",
+        "**/Endpoints/**",
+        "**/Api/**",
+        "**/Functions/**",
+        "**/Ai/**"
+      ]
+    },
+    {
+      "name": "frontend",
+      "globs": [
+        "**/*.razor",
+        "**/*.razor.cs",
+        "**/*.razor.css",
+        "**/wwwroot/**",
+        "**/*.css",
+        "**/*.js"
+      ]
+    },
+    {
+      "name": "backend",
+      "globs": [
+        "**/*.cs"
+      ]
+    },
+    {
+      "name": "infrastructure",
+      "globs": [
+        "infra/**",
+        "**/*.bicep",
+        ".github/**",
+        "**/*.csproj",
+        "**/*.sln",
+        "*.json",
+        "*.yml",
+        "*.yaml",
+        ".*"
+      ]
+    }
+  ],
+  "designPatterns": {
+    "entityGlobs": [
+      "**/Domain/**/*.cs",
+      "**/Entities/**/*.cs",
+      "**/Models/**/*.cs"
+    ],
+    "minimumFamilySize": 4,
+    "cooccurrenceThreshold": 0.75,
+    "fileCountBand": 2.0,
+    "acceptedGaps": []
+  },
+  "score": {
+    "elements": {}
   }
 }
