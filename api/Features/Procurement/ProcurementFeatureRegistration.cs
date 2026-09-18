@@ -117,6 +117,8 @@ public static class ProcurementFeatureRegistration
         // send discipline, just reviewed here; the send still passes through the system's single
         // Graph send chokepoint.
         services.AddScoped<ICommandHandler<SendBidPackageInvite, BidPackageInviteSendOutcome>, SendBidPackageInviteHandler>();
+        services.AddScoped<SendBidPackageInviteAuthorisation>();
+        services.AddScoped<SendBidPackageInviteValidation>();
         services.AddScoped<IQueryHandler<GetBidPackageInviteComposerDraft, BidPackageInviteComposerDraft?>, GetBidPackageInviteComposerDraftHandler>();
         services.AddScoped<ICommandHandler<SaveBidPackageInviteComposerDraft, Jewel.JPMS.Contracts.Cqrs.Acknowledgement>, SaveBidPackageInviteComposerDraftHandler>();
 

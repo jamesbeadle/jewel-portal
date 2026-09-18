@@ -17,13 +17,16 @@
             @(savingDraft ? "Saving…" : "Save draft")
         </button>
         <button type="button" class="btn-neutral" disabled="@sending" @onclick="CloseAsync">Close</button>
+        <button type="button" class="btn-secondary" disabled="@(sending || RecipientCount == 0)"
+                @onclick="StageInDraftsAsync">Stage in Outlook</button>
         <button type="button" class="btn-primary" disabled="@(sending || RecipientCount == 0)" @onclick="ConfirmSendAsync">
             @(sending ? "Sending…" : RecipientCount == 0 ? "No recipients" : $"Send to {RecipientCount} recipient{(RecipientCount == 1 ? "" : "s")}")
         </button>
     </FooterContent>
     <ChildContent>
     <p class="text-xs text-content-subtle mb-3">
-        Sends now, from the projects mailbox — no trip to Outlook. Recipients are pre-filled into
+        Sends now from the projects mailbox, or stages it in Drafts — attached and tagged exactly
+        as a send would be — to read once more in Outlook. Recipients are pre-filled into
         BCC so subcontractors never see each other; the whole envelope is editable. The email is
         tagged to this package, and tagged replies appear under Tender responses.
         <span> Attached automatically: the pricing schedule (@(Package?.Reference ?? "BPI")&nbsp;- Pricing Schedule.xlsx, generated from the line items) and the company terms &amp; conditions (when uploaded in Admin → System).</span>
