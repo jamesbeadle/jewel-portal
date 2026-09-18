@@ -16,7 +16,7 @@ public sealed partial class SendMailboxEmailHandler
         var attachments = await ResolveAttachmentsAsync(command, uploads, cancellationToken);
 
         var composed = command.BodyIsHtml
-            ? pipeline.FromHtml(command.Body)
+            ? pipeline.FromTypedHtml(command.Body)
             : new ComposeHtmlPipeline.ComposedBody(ComposeHtmlPipeline.FromPlainText(command.Body), Array.Empty<MailboxDraftAttachment>());
         compose.BodyHtml = composed.Html;
 
