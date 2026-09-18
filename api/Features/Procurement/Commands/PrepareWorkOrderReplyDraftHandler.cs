@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
