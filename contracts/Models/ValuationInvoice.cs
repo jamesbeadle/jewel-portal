@@ -39,7 +39,8 @@ public enum ValuationInvoiceEventType
 }
 
 // A valuation invoice: the client invoice raised against the current valuation/CVR. Drawn from a
-// valuation claim when one is linked. Issued/Paid invoices drive "Certified to date" on the
+// valuation claim when one is linked — that claim's statement is the report behind the invoice
+// (until 2026-09-18 a separate snapshot was frozen at raise; now the locked claim is the record). Issued/Paid invoices drive "Certified to date" on the
 // valuation report; when paid, the amount rolls into the project-level total. Submitted/Approved
 // invoices are pending — they never count toward certified until issued. Manual invoices are
 // backdated historical entries created directly as Issued or Paid; they bypass the approval loop.
@@ -68,7 +69,6 @@ public sealed record ValuationInvoice(
     string? RejectionReason = null,
     int AmendmentCount = 0,
     bool IsManual = false,
-    string? ValuationReportSnapshotId = null,  // latest snapshot backing this invoice
     decimal DepositCredited = 0m,              // deposit credit embedded in Amount; gross certificate = Amount + DepositCredited
     // The AUTHORISED sales invoice this raised in Xero (2026-09-09, the accountant's ask): Xero's
     // InvoiceID, its number (INV-0123) and when. XeroInvoiceId is set only when the PORTAL raised

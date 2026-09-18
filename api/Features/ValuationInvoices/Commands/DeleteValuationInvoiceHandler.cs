@@ -27,19 +27,12 @@ public sealed class DeleteValuationInvoiceHandler : ICommandHandler<DeleteValuat
         var countedTowardCertified = entity.Status is (int)ValuationInvoiceStatus.Issued or (int)ValuationInvoiceStatus.Paid;
         var projectId = entity.ProjectId;
 
-        // The invoice takes its report snapshots and audit trail with it.
-        var snapshots = await context.ValuationReportSnapshots
-            .Where(snapshot => snapshot.ValuationInvoiceId == entity.ValuationInvoiceId)
+        // The invoice takes its audit trail with it. Its statement is the locked claim's, which
+        // stays (2026-09-18); the retired snapshot aliases that named the invoice forget it.
+        var aliases = await context.ValuationClaimLegacyStatements
+            .Where(alias => alias.ValuationInvoiceId == entity.ValuationInvoiceId)
             .ToListAsync(cancellationToken);
-        if (snapshots.Count > 0)
-        {
-            var snapshotIds = snapshots.Select(snapshot => snapshot.ValuationReportSnapshotId).ToList();
-            var snapshotLines = await context.ValuationReportSnapshotLines
-                .Where(line => snapshotIds.Contains(line.ValuationReportSnapshotId))
-                .ToListAsync(cancellationToken);
-            context.ValuationReportSnapshotLines.RemoveRange(snapshotLines);
-            context.ValuationReportSnapshots.RemoveRange(snapshots);
-        }
+        foreach (var alias in aliases) alias.ValuationInvoiceId = null;
         var events = await context.ValuationInvoiceEvents
             .Where(entry => entry.ValuationInvoiceId == entity.ValuationInvoiceId)
             .ToListAsync(cancellationToken);

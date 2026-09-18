@@ -54,16 +54,17 @@ the whole bill; Xero never un-approves.
 
 ### Valuation Report — `/projects/{project}/valuation`
 The picked project's LIVE valuation report — the system's flagship output,
-internal only (clients only ever receive frozen snapshots). Work runs in
+internal only (clients only ever receive a locked claim's statement). Work runs in
 monthly claims; the claim card's stepper is **Value & lock → Claim → Approve →
 Invoice → Paid → Confirm & roll over**, one primary button per stage, with an
 Actions menu for rename, reopen, record rejection/payment, issue without
-approval, delete. Lines are added/edited while the claim is Draft; Valuation
-Invoices, Snapshots and Correspondence sections sit inline; working-copy
-PDF/Excel exports always available. Valuation mail files in the Control
-Centre (Client → Valuation reports — one row per period: the live frozen
-statement when one exists, else the claim); Correspondence here reads mail
-filed to the claim and to every statement frozen from it; rolling over
+approval, delete. Lines are added/edited while the claim is Draft; locking
+freezes the claim's statement (the claim IS the statement, 2026-09-18) and
+the card gains View statement / Statement PDF / Email statement. Valuation
+Invoices and Correspondence sections sit inline; working-copy PDF/Excel
+exports always available. Valuation mail files in the Control Centre (Client
+→ Valuation reports — one row per period: the claim); Correspondence here
+reads mail filed to the claim (retired snapshot tags included); rolling over
 starts the next claim with its own tag. Approving variations — which
 writes their lines here — happens on the variation record, not here.
 
@@ -120,14 +121,9 @@ arrives), tick-boxes for the variations covered (Awaiting-AI first). One
 instruction routinely covers several variations. Rows link to variations,
 offer Link/Unlink, the stored document, Delete (variations survive).
 
-### Valuation Snapshots — `/projects/{project}/valuation-snapshots`
-Read-only register of frozen valuation report snapshots — what the client was
-actually sent. A snapshot freezes automatically when a valuation invoice is
-raised, and again on submit/issue after an amendment; superseded rows stay,
-muted. Row click opens the frozen report; branded PDF download; Email button
-(report-running roles) drafts the report to the client from the shared mailbox
-— nothing sends from this page. Managing invoices/snapshots is done on the
-Valuation Report tab.
+### Valuation Snapshots — `/projects/{project}/valuation-snapshots` (retired)
+Retired 2026-09-18: the address redirects to the Valuation Report tab, where
+each locked claim's statement is viewed, downloaded and emailed from its card.
 
 ### Drawings — `/projects/{project}/drawings`
 Drawing register with revisions: each row a drawing with latest approved

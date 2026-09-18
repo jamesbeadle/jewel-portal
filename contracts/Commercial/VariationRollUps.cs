@@ -4,7 +4,7 @@ namespace Jewel.JPMS.Contracts.Commercial;
 
 /// <summary>
 /// What a variation line must expose to be rolled up on the valuation report. Implemented by
-/// the live <see cref="ValuationLineItem"/> and the frozen <see cref="ValuationReportSnapshotLine"/>
+/// the live <see cref="ValuationLineItem"/> and the frozen <see cref="ValuationStatementLine"/>
 /// so one grouping rule serves every surface.
 /// </summary>
 public interface IVariationBillLine

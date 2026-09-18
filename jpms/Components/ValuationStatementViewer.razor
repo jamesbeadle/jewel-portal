@@ -1,0 +1,232 @@
+@using Jewel.JPMS.Features.Commercial
+@using Jewel.JPMS.Features.Triage.Panels
+@inject IValuationReportStore Store
+@inject IQueryClient Queries
+@inject ICostCenterStore CostCenters
+@inject IVariationStore Variations
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
+@implements IDisposable
+
+@* Read-only rendering of one valuation's STATEMENT: the same grouped-bill + summary-footer
+   layout as the live ValuationReportTable, fed from the statement's lines — a locked claim's own
+   frozen rows (later edits to the live bill never show here), or a Draft's working copy, said so
+   in the banner. Exports leave from here too: the branded PDF (rendered server-side from the
+   same lines), the line-level Excel workbook (built from exactly what this viewer shows), and —
+   when the host page wires OnEmailRequested — the email flow that attaches the same PDF. *@
+@if (detail is null)
+{
+    @if (loadFailed)
+    {
+        <p class="rounded bg-negative/10 px-4 py-3 text-sm text-negative">Couldn't load the statement. Close and try again.</p>
+    }
+    else
+    {
+        <p class="px-1 py-6 text-sm text-content-subtle">Loading statement…</p>
+    }
+}
+else
+{
+    var snapshot = detail.Claim;
+    @if (detail.IsDraft)
+    {
+        <Notice Tone="Tone.Warning" Class="mb-4">
+            <span class="font-medium">Working copy — @snapshot.DisplayName is still a draft.</span>
+            <span class="text-content-subtle"> These lines are the live report as it stands right now; lock the claim ("We're claiming this") to freeze them into the statement the client is sent.</span>
+        </Notice>
+    }
+    else
+    {
+        <Notice Tone="Tone.Info" Class="mb-4">
+            <span class="font-medium">Statement locked @DateTimeText(detail.AsAt)</span>
+            <span class="text-content-muted"> — @snapshot.DisplayName.</span>
+            <span class="text-content-subtle"> Read-only: this is the report exactly as it stood when the claim was locked; live changes never alter it.</span>
+        </Notice>
+    }
+
+    <div class="mb-4">
+        <Toolbar>
+            @* Document group: the report as a file, out of the system. *@
+            <ToolbarButton Icon="download" Label="Download PDF" Target="_blank"
+                           Href="@($"/api/valuation-claims/{snapshot.ValuationClaimId}/statement/pdf")" />
+            @* Named as the PDF above is (ValuationReportFileNames): the pair share one name. *@
+            @* Waits for the variations register too: the workbook's Pending tab reads it live,
+               and exporting before it answers would pass "not loaded" off as "none pending". *@
+            <ExportToExcelButton FileName="@ExportFileName(snapshot)" FileDate="@detail.AsAt"
+                                 Disabled="@PendingVariationsUnanswered"
+                                 BuildWorkbook="BuildExportWorkbook" />
+            @if (OnEmailRequested.HasDelegate && !detail.IsDraft)
+            {
+                <ToolbarDivider />
+                @* Correspondence group: the statement to the client, from the shared mailbox. *@
+                <ToolbarButton Icon="email" Label="Email statement to client — opens the email for review first"
+                               OnClick="() => OnEmailRequested.InvokeAsync(snapshot.ValuationClaimId)" />
+            }
+        </Toolbar>
+    </div>
+
+    <div class="space-y-3">
+        @foreach (var valuationSection in Sections)
+        {
+            @if (valuationSection.Lines.Count > 0)
+            {
+                <div class="panel overflow-hidden">
+                    <div class="flex items-center gap-3 px-4 py-3 bg-surface-raised/60">
+                        <span class="font-semibold text-content whitespace-nowrap">@valuationSection.Title</span>
+                        <span class="text-xs text-content-subtle whitespace-nowrap">
+                            @valuationSection.Lines.Count @(valuationSection.Lines.Count == 1 ? "line" : "lines")
+                        </span>
+                        <span class="ml-auto flex items-baseline gap-6 whitespace-nowrap">
+                            <span class="text-sm">
+                                <span class="eyebrow mr-1.5">Claimed</span>
+                                <span class="text-content-muted">@Money(valuationSection.Claimed)</span>
+                            </span>
+                            <span class="text-sm">
+                                <span class="eyebrow mr-1.5">Total</span>
+                                <span class="text-content font-medium">@Money(valuationSection.Amount)</span>
+                            </span>
+                        </span>
+                    </div>
+                    <div class="border-t border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
+                        <table class="data-table data-table-dense">
+                            <thead>
+                                <tr>
+                                    <th class="w-[72px]">Code</th>
+                                    <th class="min-w-[220px]">Description</th>
+                                    <th class="text-right whitespace-nowrap">Qty</th>
+                                    <th class="text-right whitespace-nowrap">Rate £</th>
+                                    <th class="text-right whitespace-nowrap">Amount £</th>
+                                    <th class="text-right whitespace-nowrap">% Complete</th>
+                                    <th class="text-right whitespace-nowrap">Claimed £</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{ var currentArea = ""; }
+                                @foreach (var row in RowsFor(valuationSection))
+                                {
+                                    @* Variations consolidate per variation per cost centre (VariationRollUps);
+                                       a consolidated row opens to show the frozen lines beneath it. The client's
+                                       PDF and the workbook's Summary tab go one further, to one row per order. *@
+                                    @if (row.RollUp is { } rollUp)
+                                    {
+                                        var isRollUpOpen = IsRollUpOpen(rollUp);
+                                        <tr class="@(rollUp.CountsTowardTotals ?"bg-surface-raised" : "bg-surface-raised opacity-60")">
+                                            <td class="font-mono text-xs text-content-subtle whitespace-nowrap">@rollUp.VariationRef</td>
+                                            <td class="text-content">
+                                                <button type="button" @onclick="() => ToggleRollUp(rollUp)" aria-expanded="@isRollUpOpen"
+                                                        title="@(isRollUpOpen ? "Hide this row's lines" : "Show this row's lines")"
+                                                        class="flex items-start gap-1.5 text-left">
+                                                    <svg class="@(isRollUpOpen ?"w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle transition-transform")"
+                                                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                        <path d="M9 6l6 6-6 6" />
+                                                    </svg>
+                                                    <span>
+                                                        <span class="font-medium">@rollUp.VariationTitle</span>
+                                                        <span class="block text-xs text-content-subtle">@RollUpSubtitle(rollUp)</span>
+                                                    </span>
+                                                </button>
+                                            </td>
+                                            <td class="text-right text-content-subtle whitespace-nowrap">—</td>
+                                            <td class="text-right text-content-subtle whitespace-nowrap">—</td>
+                                            <td class="text-right text-content font-medium whitespace-nowrap">@Money(rollUp.Amount)</td>
+                                            <td class="text-right whitespace-nowrap">@(rollUp.CountsTowardTotals ? Pct(RollUpPercent(rollUp)) : "—")</td>
+                                            <td class="text-right whitespace-nowrap">@(rollUp.CountsTowardTotals ? Money(RollUpClaimed(rollUp)) : "—")</td>
+                                        </tr>
+                                        continue;
+                                    }
+                                    var line = row.Line!;
+                                    @* Area title rows, same rule as the live report table (ValuationReportAreas):
+                                       the estimate valuationSection frozen on the line, else its cost-centre name. *@
+                                    @if (ValuationReportAreas.GroupsByArea(valuationSection.Type))
+                                    {
+                                        var area = AreaTitleFor(line);
+                                        if (ValuationReportAreas.StartsNewArea(area, currentArea))
+                                        {
+                                            currentArea = area;
+                                            <tr>
+                                                <td colspan="7" class="pb-1.5 text-xs font-semibold whitespace-nowrap">@area</td>
+                                            </tr>
+                                        }
+                                    }
+                                    <tr class="@(line.CountsTowardTotals ?"" : "opacity-60")">
+                                        <td class="font-mono text-xs text-content-subtle whitespace-nowrap">
+                                            <div>@(row.IsDetail ? "↳ " : "")@CodeFor(line)</div>
+                                            @* The client's item number frozen at lock — how the contract document reads. *@
+                                            @if (!string.IsNullOrWhiteSpace(line.ClientReference))
+                                            {
+                                                <div class="text-xs text-content-muted">@line.ClientReference</div>
+                                            }
+                                        </td>
+                                        <td class="text-content @(row.IsDetail ?"pl-7" : "")">
+                                            <div class="font-medium">@TitleFor(line)</div>
+                                            @if (!string.IsNullOrWhiteSpace(line.Comments))
+                                            {
+                                                <div class="text-xs text-content-subtle">@line.Comments</div>
+                                            }
+                                            @if (!line.CountsTowardTotals)
+                                            {
+                                                <span class="inline-block mt-0.5 eyebrow">@line.LineType</span>
+                                            }
+                                        </td>
+                                        <td class="text-right whitespace-nowrap">@Num(line.Quantity)</td>
+                                        <td class="text-right whitespace-nowrap">@Num(line.Rate)</td>
+                                        <td class="text-right text-content whitespace-nowrap">@Money(line.LineAmount)</td>
+                                        <td class="text-right whitespace-nowrap">@(line.CountsTowardTotals ? Pct(line.PercentComplete) : "—")</td>
+                                        <td class="text-right whitespace-nowrap">@(line.CountsTowardTotals ? Money(line.CumulativeClaimed) : "—")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <div class="mt-4 panel-raised p-5">
+        <h3 class="text-sm font-semibold text-content mb-3">Valuation summary — @detail.Label</h3>
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-sm max-w-2xl">
+            <SummaryRow Label="Original contract sum" Value="@Money(snapshot.ContractSum)" />
+            <SummaryRow Label="Net variations" Value="@Money(snapshot.NetVariations)" />
+            <SummaryRow Label="Revised contract sum" Value="@Money(snapshot.RevisedContractSum)" Strong="true" />
+            <SummaryRow Label="Total works complete" Value="@Money(snapshot.TotalWorksComplete)" />
+            <SummaryRow Label=@($"Retention held ({Pct(snapshot.RetentionPercent)})") Value="@Money(snapshot.RetentionHeld)" />
+            <SummaryRow Label=@($"Retention released ({Pct(snapshot.RetentionReleasePercent)})") Value="@Money(snapshot.RetentionReleased)" />
+            <SummaryRow Label="Certified to date" Value="@Money(snapshot.CertifiedToDate)" />
+            @if (snapshot.DepositPercent > 0m || snapshot.DepositReleased != 0m)
+            {
+                <SummaryRow Label="Payment due before deposit (ex VAT)" Value="@Money(snapshot.PaymentDueExVat + snapshot.DepositReleased)" />
+                <SummaryRow Label=@($"Less deposit released ({Pct(snapshot.DepositPercent)})") Value="@Money(snapshot.DepositReleased)" />
+            }
+            <SummaryRow Label="Payment due (ex VAT)" Value="@Money(snapshot.PaymentDueExVat)" Strong="true" />
+        </dl>
+    </div>
+
+    @* The mail behind this valuation: everything triaged to its tag (and, for periods locked
+       before 2026-09-18, to the retired statement stems frozen from it — one read, merged
+       server-side by RecordEmailReader) — the same record-agnostic mechanism as the variation
+       page's Communications. Reading only: tagging (and replying from a record) stays in the Control
+       Centre, where the pathway guards live. *@
+    <div class="mt-4 panel p-5">
+        <h3 class="text-sm font-semibold text-content mb-3">Correspondence</h3>
+        @* One gate for the region; a failed fetch opens it and says so (never pulses forever). *@
+        <LoadGate IsLoading="@(emails is null && emailsError is null)" Label="Loading correspondence">
+            @if (emailsError is not null)
+            {
+                <Notice Tone="Tone.Negative">@emailsError</Notice>
+            }
+            else if (emails is { Count: 0 })
+            {
+                <p class="text-sm text-content-subtle italic">
+                    No emails are linked to this valuation yet. File one in the Control Centre —
+                    Client → Valuation reports — and it appears here.
+                </p>
+            }
+            else if (emails is not null)
+            {
+                <CorrespondenceThreadList Emails="emails" />
+            }
+        </LoadGate>
+    </div>
+}
+

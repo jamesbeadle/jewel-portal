@@ -100,9 +100,10 @@ public static class AiRegistryDriftCheck
             [RecordType.VariationQuote] = RecordReach.Via("list_variations", "get_variation_context", "find_by_reference"),
             [RecordType.WorkOrder] = RecordReach.Via("list_work_orders", "get_work_order_context", "find_by_reference"),
             [RecordType.Defect] = RecordReach.Via("list_defects", "find_by_reference"),
-            [RecordType.ValuationReportSnapshot] = RecordReach.Via("get_valuation_context"),
-            // The claims list (ids, names, statuses) comes back with the report.
-            [RecordType.ValuationClaim] = RecordReach.Via("get_valuation_context"),
+            // Retired 2026-09-18 — a snapshot id resolves to its claim; the claim is the record.
+            [RecordType.ValuationReportSnapshot] = RecordReach.Via("list_valuations", "get_valuation_context"),
+            // The claims list (ids, names, statuses, stages) — one row per valuation.
+            [RecordType.ValuationClaim] = RecordReach.Via("list_valuations", "get_valuation_context"),
             // The Sales pane's record (2026-09-15): company-wide, no project; LD-#### resolves too.
             [RecordType.Lead] = RecordReach.Via("list_leads", "get_lead", "find_by_reference"),
 

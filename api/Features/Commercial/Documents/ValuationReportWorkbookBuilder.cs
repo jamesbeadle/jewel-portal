@@ -12,8 +12,8 @@ public sealed record ValuationReportWorkbook(byte[] Content, string FileName);
 /// server-side (2026-09-02, the accountant's ask: pull the portal's own file through the
 /// connector rather than rebuild it). The workbook shape, cell styles and line mapping are the
 /// shared ones the browser uses (<see cref="ValuationReportExportWorkbook"/>,
-/// <see cref="ValuationSnapshotExport"/>), so the file is the same file whichever way it is
-/// fetched. Renders a statement <see cref="ValuationReportSnapshotPdfBuilder"/> loaded, so a
+/// <see cref="ValuationStatementExport"/>), so the file is the same file whichever way it is
+/// fetched. Renders a statement <see cref="ValuationStatementPdfBuilder"/> loaded, so a
 /// PDF and a workbook exported together read the same figures.
 /// </summary>
 public sealed class ValuationReportWorkbookBuilder
@@ -28,8 +28,8 @@ public sealed class ValuationReportWorkbookBuilder
 
     public async Task<ValuationReportWorkbook> BuildAsync(ValuationReportStatement statement, CancellationToken cancellationToken)
     {
-        // The Pending variations tab reads the LIVE register at export time (a snapshot freezes
-        // the report, not the register). If the register cannot be read the export still runs and
+        // The Pending variations tab reads the LIVE register at export time (a lock freezes the
+        // report, not the register). If the register cannot be read the export still runs and
         // the tab says so outright — the same courtesy the page's export gives.
         IReadOnlyList<VariationOrder>? orders;
         try
@@ -41,16 +41,16 @@ public sealed class ValuationReportWorkbookBuilder
             orders = null;
         }
 
-        var detail = statement.Detail;
+        var detail = statement.Statement;
         var workbook = ValuationReportExportWorkbook.Build(
-            ValuationSnapshotExport.Meta(detail.Snapshot, statement.IsDraft),
-            ValuationSnapshotExport.Lines(detail.Lines,
+            ValuationStatementExport.Meta(detail),
+            ValuationStatementExport.Lines(detail.Lines,
                 code => statement.CostCentreNames.TryGetValue(code, out var name) ? name : null),
-            ValuationSnapshotExport.Summary(detail.Snapshot, detail.Lines),
+            ValuationStatementExport.Summary(detail.Claim, detail.Lines),
             orders is null ? null : ValuationExportPendingVariations.From(orders));
 
         return new ValuationReportWorkbook(
             ExcelWorkbookWriter.Write(workbook),
-            ValuationReportSnapshotPdfBuilder.SanitiseFileName($"{statement.FileNameStem}.xlsx"));
+            ValuationStatementPdfBuilder.SanitiseFileName($"{statement.FileNameStem}.xlsx"));
     }
 }

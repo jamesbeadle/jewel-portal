@@ -17,10 +17,11 @@ public sealed class RemoveValuationLineItemHandler : ICommandHandler<RemoveValua
                 throw new InvalidOperationException(
                     "Variation lines mirror approved variation orders and cannot be removed directly. Cancel the variation order instead.");
 
-            // Drop any claim entries that referenced this line so claims stay reconcilable.
-            var orphanedClaimLines = await context.ClaimLines
-                .Where(line => line.ValuationLineItemId == command.ValuationLineItemId)
-                .ToListAsync(cancellationToken);
+            // Drop the Draft claim's entry for this line so it stays reconcilable. A locked
+            // claim's row stays: it is a line of the frozen statement the client was sent, with
+            // the bill line copied onto it, and its money is the claim's (2026-09-18).
+            var orphanedClaimLines = await DraftClaimRows.ForLinesAsync(
+                context, new[] { command.ValuationLineItemId }, cancellationToken);
             context.ClaimLines.RemoveRange(orphanedClaimLines);
             context.ValuationLineItems.Remove(entity);
             await context.SaveChangesAsync(cancellationToken);

@@ -95,9 +95,9 @@ public partial class ProjectValuation
                 "Set each line's cumulative % complete (Bulk edit % handles many at once), then lock the claim.",
             // The handover: the project team's part is done; from here the card is accounts'.
             ClaimStage.AwaitingInvoice =>
-                $"Valued and locked by the project team — {Money(claim.TotalWorksComplete)} works complete. Over to accounts: raise the invoice for the amount due. Raising files it as a draft and freezes the report behind it — nothing is sent from here.",
+                $"Valued and locked by the project team — {Money(claim.TotalWorksComplete)} works complete; the statement is frozen. Over to accounts: raise the invoice for the amount due. Raising files it as a draft — nothing is sent from here.",
             ClaimStage.InvoiceDraft =>
-                $"Invoice {invoice?.DisplayNumber} raised for {Money(invoice?.Amount ?? 0m)}, not yet claimed. Send the frozen report to the architect/client as usual (Report Snapshots can draft the email), then record the claim as sent — or, if this client runs no approval loop, issue it directly from Actions.",
+                $"Invoice {invoice?.DisplayNumber} raised for {Money(invoice?.Amount ?? 0m)}, not yet claimed. Send the statement to the architect/client (Email statement, above), then record the claim as sent — or, if this client runs no approval loop, issue it directly from Actions.",
             ClaimStage.AwaitingApproval =>
                 $"Claimed — invoice {invoice?.DisplayNumber} for {Money(invoice?.Amount ?? 0m)} is with the architect/client{(invoice?.SubmittedAt is { } sub ? $" since {sub:dd MMM yyyy}" : "")}. Record their approval (or rejection, in Actions) when it comes.",
             ClaimStage.ApprovedAwaitingIssue =>
@@ -149,16 +149,17 @@ public partial class ProjectValuation
     // re-frozen any Preapproved claim's totals, so re-pull claims to show them.
     private void OnCertifiedChanged() => Store.Refresh(ProjectId);
 
-    // Read-only viewer for a frozen report snapshot ("show me the report behind VI-0007").
-    private string? viewingSnapshotId;
-    private void OpenSnapshot(string snapshotId) => viewingSnapshotId = snapshotId;
-    private void CloseSnapshot() => viewingSnapshotId = null;
+    // Read-only viewer for a valuation's statement ("show me the report behind VI-0007" — the
+    // claim as locked; a Draft shows as the working copy).
+    private string? viewingStatementClaimId;
+    private void OpenStatement(string claimId) => viewingStatementClaimId = claimId;
+    private void CloseStatement() => viewingStatementClaimId = null;
 
-    // Email-draft flow for a snapshot — closes the viewer (one modal at a time) and opens the
-    // draft modal on the snapshot's cached header row. Same circle as the snapshot register's
-    // take/delete gate: the roles that run the report, not everyone who may read it.
-    private ValuationReportSnapshot? emailingSnapshot;
-    private bool CanEmailSnapshot => Session.AvailableRoles.Any(role =>
+    // Email flow for a locked claim's statement — closes the viewer (one modal at a time) and
+    // opens the email modal on the claim. The roles that run the report, not everyone who may
+    // read it (mirrors SendValuationStatementEmailAuthorisation).
+    private ValuationClaim? emailingClaim;
+    private bool CanEmailStatement => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
 
     // Who may map cost centres to the client's references — the bill's drafters plus the FD,
@@ -242,26 +243,19 @@ public partial class ProjectValuation
             // Group 2 — the destructive tail.
             items.Add(new(Label: "Delete claim…",
                 OnSelect: EventCallback.Factory.Create(this, () => showDeleteClaim = true),
-                Hint: "Delete this claim and its entries — invoices and snapshots survive with the link cleared",
+                Hint: "Delete this claim and its statement lines — refused while an invoice stands against it",
                 Destructive: true, Group: 2));
             return items;
         }
     }
 
-    private void OpenSnapshotEmail(string snapshotId)
+    private void OpenStatementEmail(string claimId)
     {
-        viewingSnapshotId = null;
-        emailingSnapshot = Store.SnapshotsFor(ProjectId)
-            .FirstOrDefault(snapshot => snapshot.ValuationReportSnapshotId == snapshotId);
+        viewingStatementClaimId = null;
+        emailingClaim = Claims.FirstOrDefault(claim => claim.ValuationClaimId == claimId && claim.IsLocked);
     }
 
-    // Deleting a snapshot clears any invoice's link to it server-side — reload the
-    // invoice section so a dead "View report" link doesn't linger.
     private ValuationInvoicesSection? invoicesSection;
-    private async Task OnSnapshotDeleted()
-    {
-        if (invoicesSection is not null) await invoicesSection.ReloadAsync();
-    }
 
     private DateTime newClaimDate = DateTime.Today;
     private string newClaimName = "";

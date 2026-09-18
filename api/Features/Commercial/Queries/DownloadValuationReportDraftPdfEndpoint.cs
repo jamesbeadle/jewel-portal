@@ -3,27 +3,25 @@ using Jewel.JPMS.Api.Features.Commercial.Documents;
 namespace Jewel.JPMS.Api.Features.Commercial.Queries;
 
 /// <summary>
-/// GET /api/projects/{projectId}/valuation-report/pdf — renders and streams the LIVE valuation
-/// report as a working-copy PDF: the same branded statement a snapshot produces, computed by the
-/// same capture maths (latest claim, certified from issued/paid invoices), but stamped
-/// "WORKING COPY — NOT AN ISSUED STATEMENT" throughout and never persisted. This is the
-/// review-before-you-claim export the accountant asked for; the client-facing record remains the
-/// frozen snapshot behind the invoice.
+/// GET /api/projects/{projectId}/valuation-report/pdf — renders and streams the project's LATEST
+/// valuation as its statement: a Draft prints as the working copy, stamped "WORKING COPY — NOT AN
+/// ISSUED STATEMENT" throughout and never persisted (the review-before-you-claim export the
+/// accountant asked for); a locked latest claim prints its frozen statement. Nothing is stored.
 /// </summary>
 public sealed class DownloadValuationReportDraftPdfEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly ValuationReportSnapshotPdfBuilder builder;
+    private readonly ValuationStatementPdfBuilder builder;
 
     public DownloadValuationReportDraftPdfEndpoint(
         SignedInUserResolver users,
-        ValuationReportSnapshotPdfBuilder builder)
+        ValuationStatementPdfBuilder builder)
     {
         this.users = users; this.builder = builder;
     }
 
     // Commercial reads are internal-only; external portal logins have no view of project money.
-    // Mirrors DownloadValuationReportSnapshotPdfEndpoint — this is the same report, one stage earlier.
+    // Mirrors DownloadValuationStatementPdfEndpoint — the same report, addressed by project.
     private static readonly RoleSet InternalReadRoles = JpmsRoleSets.AllInternal;
 
     [Function(nameof(DownloadValuationReportDraftPdfEndpoint))]
@@ -37,7 +35,7 @@ public sealed class DownloadValuationReportDraftPdfEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
         if (!InternalReadRoles.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
-        ValuationReportSnapshotPdf pdf;
+        ValuationStatementPdf pdf;
         try
         {
             pdf = await builder.BuildDraftAsync(projectId, cancellationToken);

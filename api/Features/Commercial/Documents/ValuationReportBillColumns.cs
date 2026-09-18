@@ -10,7 +10,7 @@ namespace Jewel.JPMS.Api.Features.Commercial.Documents;
 /// </summary>
 internal sealed record ValuationReportBillColumns(bool HasClientReference)
 {
-    public static ValuationReportBillColumns For(IEnumerable<ValuationReportSnapshotLine> lines) =>
+    public static ValuationReportBillColumns For(IEnumerable<ValuationStatementLine> lines) =>
         new(lines.Any(line => !string.IsNullOrWhiteSpace(line.ClientReference)));
 
     public int Code => 0;
@@ -30,7 +30,7 @@ internal sealed record ValuationReportBillColumns(bool HasClientReference)
     // ONE line first (accountant 2026-09-02: negatives printed as a bare "-" with the figure
     // spilling onto the next line). Sized for the host's DejaVu Sans, the widest face the
     // resolver may pick: a six-figure negative on a line and a seven-figure bold total both
-    // fit MoneyWidthCentimetres at the money font sizes ValuationReportSnapshotRenderer uses.
+    // fit MoneyWidthCentimetres at the money font sizes ValuationStatementRenderer uses.
     public double CodeWidthCentimetres => 1.1;
     public double ClientReferenceWidthCentimetres => 1.1;
     public double DescriptionWidthCentimetres => HasClientReference ? 4.15 : 5.25;

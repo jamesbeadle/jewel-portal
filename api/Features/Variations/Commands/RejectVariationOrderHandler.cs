@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.Variations;
 
@@ -28,8 +29,9 @@ public sealed class RejectVariationOrderHandler : ICommandHandler<RejectVariatio
 
         if (wasApproved)
         {
-            // 1) Take the Variation line off the Valuation Report, dropping any claim entries so
-            //    claims stay reconcilable.
+            // 1) Take the Variation line off the Valuation Report, dropping the DRAFT claim's
+            //    entries so it stays reconcilable. A locked claim keeps its rows: they are its
+            //    frozen statement — what the client was sent — and its money (2026-09-18).
             var lines = await context.ValuationLineItems
                 .Where(line => line.ProjectId == entity.ProjectId
                                && line.ElementType == (int)ValuationElementType.Variation
@@ -43,9 +45,7 @@ public sealed class RejectVariationOrderHandler : ICommandHandler<RejectVariatio
             if (lines.Count > 0)
             {
                 var lineIds = lines.Select(line => line.ValuationLineItemId).ToList();
-                var claimLines = await context.ClaimLines
-                    .Where(line => lineIds.Contains(line.ValuationLineItemId))
-                    .ToListAsync(cancellationToken);
+                var claimLines = await DraftClaimRows.ForLinesAsync(context, lineIds, cancellationToken);
                 context.ClaimLines.RemoveRange(claimLines);
                 context.ValuationLineItems.RemoveRange(lines);
             }

@@ -37,16 +37,13 @@ public interface IValuationReportStore
     Task<ValuationClaim> ConfirmClaimAsync(string projectId, string claimId);
     /// <summary>Sets the claim's period name ("June 2026"); allowed at any status. Empty clears it.</summary>
     Task<ValuationClaim> RenameClaimAsync(string projectId, string claimId, string name);
-    /// <summary>Deletes a claim and its entries; linked invoices/snapshots survive with the link cleared.</summary>
+    /// <summary>Deletes a claim and its lines (refused while a live invoice stands against it).</summary>
     Task DeleteClaimAsync(string projectId, string claimId);
 
-    // Immutable report snapshots — frozen copies behind invoice submissions plus
-    // on-demand period-end records. Headers are cached per project (Refresh
-    // revalidates); the full line-level detail is fetched per snapshot on demand.
-    IReadOnlyList<ValuationReportSnapshot> SnapshotsFor(string projectId);
-    Task<ValuationReportSnapshot> TakeSnapshotAsync(string projectId, string label);
-    Task<ValuationReportSnapshotDetail> GetSnapshotAsync(string snapshotId);
-    Task DeleteSnapshotAsync(string projectId, string snapshotId);
+    // The valuation as a statement (2026-09-18: the locked claim IS the statement): a locked
+    // claim's frozen rows, a Draft's working copy. Fetched on demand, never cached — the viewer
+    // and the export read it fresh. A retired snapshot id resolves to its claim's statement.
+    Task<ValuationStatement> GetStatementAsync(string claimId);
 
     event Action? OnChange;
 }

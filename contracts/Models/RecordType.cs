@@ -16,7 +16,7 @@ public enum RecordType
     WorkOrder = 8,         // a work order (purchase order) awarded to a subcontractor — subcontract-side
     Defect = 9,            // a defect logged on the project — remediation chased with the subcontractor
     SubcontractorComms = 10, // the record-less "subcontractor communication" tag family (general + categories) — subcontract-side correspondence tied to no record
-    ValuationReportSnapshot = 11, // a frozen valuation report snapshot — the client-facing statement a valuation email travels with
+    ValuationReportSnapshot = 11, // RETIRED 2026-09-18 — the statement is the valuation claim itself now. Kept so links, ids and JPMS/VRS-… mailbox tags stamped before then still resolve to their claim (ValuationClaimLegacyStatements); never write new ones
     InternalComms = 12,    // the record-less "internal communication" tag family (general + categories) — staff-to-staff correspondence tied to no record
     TenderEnquiry = 13,    // an architect's invitation for Jewel to tender (PQQ → shortlist → tender) — client-side, on a Lead-stage project
     CalendarEvent = 14,    // a project calendar entry (site visit, delivery, meeting, attendance) — shown on the project's Calendar tab
@@ -25,6 +25,6 @@ public enum RecordType
     SupplierComms = 17,    // the record-less "supplier communication" tag family (general + categories) — supplier-side correspondence tied to no record
     Inventory = 18,        // an inventory item on a project (product + location details) — supplier-side, the Supplier pathway's first linkable record
     SiteInstruction = 19,  // a written instruction to site on a project (title + instruction + location) — internal-side; the email alone is rarely the instruction, so the record carries the words (2026-09-03)
-    ValuationClaim = 20,   // a valuation claim — one period of the live valuation report (Draft → Issued → Confirmed); the period's correspondence files here before anything is put to the client, and every snapshot frozen from the claim reads it too (2026-09-04)
+    ValuationClaim = 20,   // a valuation claim — one period of the live valuation report (Draft → Issued → Confirmed); the ONE record a valuation email files to (2026-09-18): its statement, its invoice and its correspondence are all this row's
     Lead = 21              // a sales lead (Sales → Leads) — the Sales pathway's linkable record: an enquiry email tagged to the person and property it is about, so the estimate is priced from the mail (2026-09-15); a lead belongs to no project
 }

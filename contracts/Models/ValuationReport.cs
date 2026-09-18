@@ -107,10 +107,18 @@ public sealed record ValuationClaim(
     // constructor stable for pre-deposit callers.
     decimal DepositPercent = 0m,
     decimal DepositReleased = 0m,
-    decimal DepositReleasedOpening = 0m)
+    decimal DepositReleasedOpening = 0m,
+    // When the valuation's lines were frozen onto its own rows — the moment "We're claiming
+    // this" locked it (2026-09-18: the lock IS the statement; there is no separate snapshot).
+    // Null while Draft, when the statement is a working copy computed from the live bill.
+    DateTimeOffset? LockedAt = null)
 {
     // "June 2026" when named, otherwise "Claim 3" — one rule for every claim label.
     public string DisplayName => string.IsNullOrWhiteSpace(Name) ? $"Claim {ClaimNumber}" : Name;
+
+    // A locked valuation (Preapproved or Confirmed) carries its own frozen statement lines;
+    // a Draft's statement is computed from the live bill each time it is read.
+    public bool IsLocked => Status != ValuationClaimStatus.Draft;
 }
 
 // Per claim, per line item: the cumulative % complete entered and the resulting amounts.
@@ -123,46 +131,15 @@ public sealed record ClaimLine(
     decimal PeriodIncrement);   // CumulativeClaimed - the line's cumulative on the claim immediately
                                 // before (whatever its status); the API's ClaimPeriodBaseline rule
 
-// An immutable, line-level copy of the valuation report frozen at a moment in time — the report
-// behind a valuation invoice, captured when the invoice is raised (or a period-end record when
-// taken on demand). Snapshots are the only client-facing form of the report; the live report tab
-// is internal. Unlike a claim (whose Preapproved totals are re-frozen when certified moves), a
-// snapshot never changes after capture; amending an invoice flags its snapshot superseded and
-// the next submit/issue freezes a NEW one.
-public sealed record ValuationReportSnapshot(
-    string ValuationReportSnapshotId,
-    string ProjectId,
-    string? ValuationInvoiceId,   // the invoice this submission backs; null for on-demand snapshots
-    string? ValuationClaimId,     // the claim the figures came from, if one was open
-    string Label,                 // e.g. "VI-0007 submission" / "June 2026 period end"
-    DateTimeOffset TakenAt,
-    bool IsSuperseded,            // a later snapshot exists for the same invoice
-    // Frozen summary footer:
-    decimal ContractSum,
-    decimal NetVariations,
-    decimal RevisedContractSum,
-    decimal TotalWorksComplete,
-    decimal RetentionPercent,
-    decimal RetentionHeld,
-    decimal RetentionReleasePercent,
-    decimal RetentionReleased,
-    decimal CertifiedToDate,
-    decimal PaymentDueExVat,
-    // Cash-up-front deposit as frozen at capture: the claim's deposit % and the cumulative
-    // amount released back to the client. Trailing defaults for pre-deposit callers.
-    decimal DepositPercent = 0m,
-    decimal DepositReleased = 0m,
-    // Per-project sequential number minted at capture — the stem of the snapshot's mailbox tag
-    // ("JPMS/VRS-{projectRef}-{Number}"), which is how a triaged email is associated with the
-    // snapshot. Trailing default keeps the positional constructor stable for older callers.
-    int Number = 0);
-
-// One frozen row of a snapshot: values copied (not referenced) from the live line item and its
-// claim entry at capture time, so later edits/deletions of live data never disturb the snapshot.
-public sealed record ValuationReportSnapshotLine(
-    string ValuationReportSnapshotLineId,
-    string ValuationReportSnapshotId,
-    string SourceValuationLineItemId,  // provenance only — not a live FK
+// One line of a valuation's STATEMENT — the client-facing form of the valuation. For a locked
+// valuation these are its own frozen rows (the bill line's description, code, quantity, rate and
+// amount copied by value at lock, with the % complete and money claimed), so later edits or
+// deletions of the live bill never disturb what the client was sent. For a Draft the same shape
+// is computed from the live bill on every read (the working copy). ValuationLineItemId is
+// provenance only — never a live FK; the line it names may since have been re-priced or removed.
+public sealed record ValuationStatementLine(
+    string ValuationClaimId,
+    string ValuationLineItemId,
     ValuationElementType ElementType,
     string SectionCode,
     string SectionName,
@@ -180,28 +157,38 @@ public sealed record ValuationReportSnapshotLine(
     decimal PeriodIncrement,
     string Comments,
     int DisplayOrder,
-    // The client's schedule-of-works reference for the line's cost centre, frozen from the
-    // project's ClientCostReference map at capture — so a later remap never rewrites what the
-    // client was sent. Trailing default keeps the positional constructor stable for older callers.
+    // The client's schedule-of-works reference frozen at lock: the line's own when it had one,
+    // else the project's ClientCostReferences map entry for the cost centre. Empty when neither.
     string ClientReference = "") : IVariationBillLine
 {
     public bool CountsTowardTotals => LineType is not (ValuationLineType.Declined or ValuationLineType.Tbc);
 }
 
-// A snapshot with its lines — the payload for the read-only snapshot viewer.
-public sealed record ValuationReportSnapshotDetail(
-    ValuationReportSnapshot Snapshot,
-    IReadOnlyList<ValuationReportSnapshotLine> Lines);
+// A valuation as a statement: the claim (its footer is the statement's summary — frozen when
+// locked, computed for the working copy) with its lines in statement order. IsDraft says which:
+// a working copy of a Draft valuation prints its "not an issued statement" stamps, a locked one
+// is the record the client was sent. AsAt is when the lines were frozen (LockedAt) or, for a
+// working copy, when it was computed. One record feeds the on-screen viewer, the PDF, the
+// spreadsheet, the emailed attachment and the connector's get_valuation_statement.
+public sealed record ValuationStatement(
+    ValuationClaim Claim,
+    IReadOnlyList<ValuationStatementLine> Lines,
+    bool IsDraft,
+    DateTimeOffset AsAt)
+{
+    // "Valuation 05 - September 2026", or "… — working copy" while the valuation is a Draft.
+    public string Label => IsDraft ? $"{Claim.DisplayName} — working copy" : Claim.DisplayName;
+}
 
 /// <summary>
-/// The outcome of drafting a valuation-report email in the shared mailbox: which snapshot the
-/// attached PDF froze, who the draft is addressed to (the project's Client and Architect
+/// The outcome of emailing a valuation statement from the shared mailbox: which valuation the
+/// attached PDF printed, who the draft is addressed to (the project's Client and Architect
 /// contacts), and where to open it. <see cref="WebLink"/> opens the draft in Outlook on the web
 /// when Graph returns one (it usually does); null otherwise — the draft is still in the mailbox's
 /// Drafts folder. Mirrors <see cref="SubcontractorStatementEmailOutcome"/>.
 /// </summary>
-public sealed record ValuationReportSnapshotEmailOutcome(
-    string ValuationReportSnapshotId,
+public sealed record ValuationStatementEmailOutcome(
+    string ValuationClaimId,
     string Label,
     string Subject,
     IReadOnlyList<string> RecipientEmails,

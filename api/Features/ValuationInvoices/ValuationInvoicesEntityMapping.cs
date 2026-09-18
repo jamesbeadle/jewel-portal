@@ -24,7 +24,6 @@ internal static class ValuationInvoicesEntityMapping
         RejectionReason: entity.RejectionReason,
         AmendmentCount: entity.AmendmentCount,
         IsManual: entity.IsManual,
-        ValuationReportSnapshotId: entity.ValuationReportSnapshotId,
         DepositCredited: entity.DepositCredited,
         XeroInvoiceId: entity.XeroInvoiceId,
         XeroInvoiceNumber: entity.XeroInvoiceNumber,

@@ -3,7 +3,8 @@ using System.ComponentModel.DataAnnotations;
 namespace Jewel.JPMS.Api.Data.Entities;
 
 // A monthly valuation invoice (see Jewel.JPMS.Models.ValuationInvoice). When Paid, its AmountPaid is added to
-// ProjectEntity.ValuationInvoicePaidTotal.
+// ProjectEntity.ValuationInvoicePaidTotal. The report behind it is the locked claim it names
+// (ValuationClaimId) — its statement lines; no separate snapshot since 2026-09-18.
 public sealed class ValuationInvoiceEntity
 {
     [Key, MaxLength(64)] public string ValuationInvoiceId { get; set; } = "";
@@ -25,7 +26,6 @@ public sealed class ValuationInvoiceEntity
     [MaxLength(1024)]    public string? RejectionReason { get; set; }
     public int AmendmentCount { get; set; }
     public bool IsManual { get; set; }
-    [MaxLength(64)]      public string? ValuationReportSnapshotId { get; set; }
     // Cash-up-front deposit credit embedded in Amount (stamped from the claim's outstanding
     // deduction at raise time). The gross certificate = Amount + DepositCredited.
     public decimal DepositCredited { get; set; }

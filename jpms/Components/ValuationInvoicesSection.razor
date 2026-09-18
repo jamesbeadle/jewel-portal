@@ -8,7 +8,7 @@
    report summary; the total is reported up via OnInvoicedToDateChanged.
 
    Lifecycle: Raised (accounts raise it from the claim card once the project team has locked
-   the claim — a draft; the raise froze the report snapshot) → Submitted (the claim recorded
+   the claim — a draft; the locked claim's statement is the report behind it) → Submitted (the claim recorded
    as sent to the architect/client — the portal emails nothing) → Approved → Issued → Paid,
    with Rejected returning an invoice for amendment or cancellation, and a Submitted/Raised →
    Issued skip path for projects without a formal approval loop. An invoice added below also
@@ -119,10 +119,10 @@
                                 </td>
                                 <td class="text-right whitespace-nowrap">@(invoice.AmountPaid > 0 ? Money(invoice.AmountPaid) : "—")</td>
                                 <td class="whitespace-nowrap">
-                                    @if (invoice.ValuationReportSnapshotId is not null)
+                                    @if (invoice.ValuationClaimId is not null)
                                     {
-                                        <button type="button" @onclick="() => OnViewSnapshot.InvokeAsync(invoice.ValuationReportSnapshotId)"
-                                                title="The valuation report frozen when this invoice was submitted/issued"
+                                        <button type="button" @onclick="() => OnViewStatement.InvokeAsync(invoice.ValuationClaimId)"
+                                                title="The valuation statement behind this invoice — the claim as locked"
                                                 class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">View report</button>
                                     }
                                     else
@@ -326,7 +326,7 @@
             {
                 <p class="text-sm text-content">
                     Amending <span class="font-mono">@editInvoice.DisplayNumber</span> returns it to
-                    draft — record the claim as sent again and a fresh report snapshot freezes for the client.
+                    draft — record the claim as sent again. The statement is the locked claim's; to change the figures, cancel the invoice and reopen the claim.
                 </p>
             }
             <div>

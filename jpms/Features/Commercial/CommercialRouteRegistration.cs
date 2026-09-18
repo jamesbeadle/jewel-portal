@@ -13,7 +13,6 @@ public static class CommercialRouteRegistration
         services.AddScoped<CostCentreGroupsReadModel>();
         services.AddScoped<ValuationClaimsReadModel>();
         services.AddScoped<ClaimLinesReadModel>();
-        services.AddScoped<ValuationReportSnapshotsReadModel>();
         return services;
     }
 
@@ -201,29 +200,16 @@ public static class CommercialRouteRegistration
             new CommandRoute("PUT", "/api/projects/{projectId}/client-cost-references",
                 command => $"/api/projects/{((SetClientCostReferences)command).ProjectId}/client-cost-references"));
 
-        // Valuation report snapshots — immutable frozen copies behind invoice submissions
-        // and on-demand period-end records.
-        queries.Register<ListValuationReportSnapshotsForProject, IReadOnlyList<ValuationReportSnapshot>>(
-            new QueryRoute("/api/projects/{projectId}/valuation-report-snapshots",
-                query => $"/api/projects/{((ListValuationReportSnapshotsForProject)query).ProjectId}/valuation-report-snapshots"));
+        // The valuation as a statement (2026-09-18: the locked claim IS the statement — no
+        // separate snapshot). The PDF download is a plain GET (/api/valuation-claims/{id}/statement/pdf,
+        // linked directly from the UI); the statement itself and the email go through the pipeline.
+        queries.Register<GetValuationStatement, ValuationStatement>(
+            new QueryRoute("/api/valuation-claims/{claimId}/statement",
+                query => $"/api/valuation-claims/{((GetValuationStatement)query).ValuationClaimId}/statement"));
 
-        queries.Register<GetValuationReportSnapshot, ValuationReportSnapshotDetail>(
-            new QueryRoute("/api/valuation-report-snapshots/{snapshotId}",
-                query => $"/api/valuation-report-snapshots/{((GetValuationReportSnapshot)query).ValuationReportSnapshotId}"));
-
-        commands.Register<TakeValuationReportSnapshot, ValuationReportSnapshot>(
-            new CommandRoute("POST", "/api/projects/{projectId}/valuation-report-snapshots",
-                command => $"/api/projects/{((TakeValuationReportSnapshot)command).ProjectId}/valuation-report-snapshots"));
-
-        commands.Register<DeleteValuationReportSnapshot, Acknowledgement>(
-            new CommandRoute("DELETE", "/api/valuation-report-snapshots/{snapshotId}",
-                command => $"/api/valuation-report-snapshots/{((DeleteValuationReportSnapshot)command).ValuationReportSnapshotId}"));
-
-        // The snapshot's PDF download is a plain GET (/api/valuation-report-snapshots/{id}/pdf,
-        // linked directly from the UI); only the email draft goes through the command pipeline.
-        commands.Register<SendValuationReportSnapshotEmail, ValuationReportSnapshotEmailOutcome>(
-            new CommandRoute("POST", "/api/valuation-report-snapshots/{snapshotId}/draft-email",
-                command => $"/api/valuation-report-snapshots/{((SendValuationReportSnapshotEmail)command).ValuationReportSnapshotId}/draft-email"));
+        commands.Register<SendValuationStatementEmail, ValuationStatementEmailOutcome>(
+            new CommandRoute("POST", "/api/valuation-claims/{claimId}/statement-email",
+                command => $"/api/valuation-claims/{((SendValuationStatementEmail)command).ValuationClaimId}/statement-email"));
     }
 
     private static string SupplierAccountPath(GetProjectSupplierAccount query) =>

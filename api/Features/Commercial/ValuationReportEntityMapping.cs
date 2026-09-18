@@ -22,27 +22,17 @@ internal static class ValuationReportEntityMapping
             entity.ContractSum, entity.NetVariations, entity.RevisedContractSum,
             entity.TotalWorksComplete, entity.RetentionHeld, entity.RetentionReleased,
             entity.CertifiedToDate, entity.PaymentDueExVat, entity.Name,
-            entity.DepositPercent, entity.DepositReleased, entity.DepositReleasedOpening);
+            entity.DepositPercent, entity.DepositReleased, entity.DepositReleasedOpening,
+            entity.LockedAt);
 
     public static ClaimLine ToModel(this ClaimLineEntity entity) =>
         new(entity.ClaimLineId, entity.ValuationClaimId, entity.ValuationLineItemId,
             entity.PercentComplete, entity.CumulativeClaimed, entity.PeriodIncrement);
 
-    public static ValuationReportSnapshot ToModel(this ValuationReportSnapshotEntity entity) =>
-        new(entity.ValuationReportSnapshotId, entity.ProjectId,
-            entity.ValuationInvoiceId, entity.ValuationClaimId,
-            entity.Label, entity.TakenAt, entity.IsSuperseded,
-            entity.ContractSum, entity.NetVariations, entity.RevisedContractSum,
-            entity.TotalWorksComplete,
-            entity.RetentionPercent, entity.RetentionHeld,
-            entity.RetentionReleasePercent, entity.RetentionReleased,
-            entity.CertifiedToDate, entity.PaymentDueExVat,
-            entity.DepositPercent, entity.DepositReleased,
-            entity.Number);
-
-    public static ValuationReportSnapshotLine ToModel(this ValuationReportSnapshotLineEntity entity) =>
-        new(entity.ValuationReportSnapshotLineId, entity.ValuationReportSnapshotId,
-            entity.SourceValuationLineItemId,
+    // A locked claim's own row as one line of its statement — the frozen copy of the bill line
+    // beside the money claimed. Only meaningful once the row was frozen (DisplayOrder >= 0).
+    public static ValuationStatementLine ToStatementLine(this ClaimLineEntity entity) =>
+        new(entity.ValuationClaimId, entity.ValuationLineItemId,
             (ValuationElementType)entity.ElementType,
             entity.SectionCode, entity.SectionName,
             entity.VariationRef, entity.VariationTitle,

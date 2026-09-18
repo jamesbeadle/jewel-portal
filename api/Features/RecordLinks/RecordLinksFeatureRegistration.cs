@@ -29,7 +29,7 @@ public static class RecordLinksFeatureRegistration
         services.AddScoped<ILinkableRecordProvider, SubcontractorCommsLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, SupplierCommsLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, InternalCommsLinkProvider>();
-        services.AddScoped<ILinkableRecordProvider, ValuationReportSnapshotLinkProvider>();
+        services.AddScoped<ILinkableRecordProvider, RetiredValuationStatementLinkProvider>(); // retired type — resolves old ids and VRS tags to the claim
         services.AddScoped<ILinkableRecordProvider, ValuationClaimLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, CalendarEventLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, BuildingControlCaseLinkProvider>();

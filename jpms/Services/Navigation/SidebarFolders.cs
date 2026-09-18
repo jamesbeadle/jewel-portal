@@ -89,10 +89,6 @@ public static class SidebarFolders
                 // Awaiting AI is waiting for.
                 new SidebarRow(new NavigationItem("Architect's Instructions", "/projects/{project}/architect-instructions"),
                     DesktopNavigation.DirectorRoles),
-                // Point-in-time captures of issued valuation reports — what the client was
-                // actually sent, frozen.
-                new SidebarRow(new NavigationItem("Valuation Report Snapshots", "/projects/{project}/valuation-snapshots"),
-                    DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Documents", "/projects/{project}/documents"),
                     DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Programme", "/projects/{project}/programme"),
@@ -448,7 +444,9 @@ public static class SidebarFolders
         new SidebarRow(new NavigationItem("Xero Cost Allocation", "/finance/allocation"),
             DesktopNavigation.DirectorRoles),
         // The picked project's live valuation report.
-        new SidebarRow(new NavigationItem("Valuation Reports", "/projects/{project}/valuation"),
+        // /valuation-snapshots is the retired register's address (2026-09-18) — it lands here.
+        new SidebarRow(new NavigationItem("Valuation Reports", "/projects/{project}/valuation",
+                new[] { "/projects/{project}/valuation-snapshots" }),
             DesktopNavigation.DirectorRoles)
     };
 }

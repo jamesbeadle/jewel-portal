@@ -54,7 +54,7 @@ internal static partial class AiRecordTools
             "scheduling" or "programme" => RecordType.Scheduling,
             "subcontractor comms" => RecordType.SubcontractorComms,
             "supplier comms" => RecordType.SupplierComms,
-            "valuation snapshot" or "valuation report snapshot" => RecordType.ValuationReportSnapshot,
+            "valuation snapshot" or "valuation report snapshot" or "valuation statement" => RecordType.ValuationReportSnapshot, // retired type: resolves to the claim
             "valuation claim" or "valuation period" => RecordType.ValuationClaim,
             "lead" or "ld" or "sales lead" => RecordType.Lead,
             _ => null

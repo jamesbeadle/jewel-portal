@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Contracts.Commercial.Export;
 
 /// <summary>Identity strip for an exported valuation report workbook.</summary>
 /// <param name="StatementLabel">e.g. "VI-0004 raise", or "June 2026 — working copy" for a live export.</param>
-/// <param name="PreparedLabel">e.g. "Snapshot taken 04 Aug 2026 11:39", or "Prepared 13 Aug 2026 14:02".</param>
+/// <param name="PreparedLabel">e.g. "Locked 04 Aug 2026 11:39", or "Prepared 13 Aug 2026 14:02".</param>
 /// <param name="IsDraft">True for live (non-snapshot) exports. The Excel band says "working copy"
 /// through its labels alone; the PDF renderer still reads this for its draft stamps.</param>
 public sealed record ValuationExportMeta(string StatementLabel, string PreparedLabel, bool IsDraft);

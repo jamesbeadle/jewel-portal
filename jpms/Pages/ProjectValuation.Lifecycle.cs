@@ -32,9 +32,9 @@ public partial class ProjectValuation
     // ---- Raise the invoice from the claim ----------------------------------
     // The handover point: the project team has valued and locked the claim; accounts pick it
     // up here. One move only — creates the invoice for the claim's payment due (first day of
-    // the claim date's month as its period) as a DRAFT; the raise freezes the report snapshot
-    // that becomes the client-facing statement. Nothing leaves the portal. Sending the claim
-    // to the architect/client happens outside (or via the snapshot's Email draft), and the
+    // the claim date's month as its period) as a DRAFT against the claim's locked statement —
+    // the client-facing form of the report. Nothing leaves the portal. Sending the claim to
+    // the architect/client happens outside (or via the card's Email statement), and the
     // card's next primary button, "Record claim sent", records that it went — so raising and
     // claiming are two clicks that match two real-world moments. (Until 2026-09-07 this was
     // one click that also marked the claim Submitted, worded "Raise & send invoice" — read as
@@ -50,7 +50,6 @@ public partial class ProjectValuation
             var period = new DateTimeOffset(
                 new DateTime(claim.ClaimDate.Year, claim.ClaimDate.Month, 1), TimeSpan.Zero);
             await Invoices.CreateAsync(ProjectId, period, amount, claim.ValuationClaimId);
-            // The raise froze a snapshot, so the register refreshes alongside the invoice list.
             await ReloadInvoicePanelsAsync();
             OnCertifiedChanged();
         }, "Couldn't raise the invoice — the server may be restarting. Please try again.");

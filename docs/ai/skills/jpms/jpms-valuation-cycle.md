@@ -1,6 +1,6 @@
 ---
 name: jpms-valuation-cycle
-description: "The monthly valuation claim and invoice cycle — the money path from % complete to cash, including raising the sales invoice in Xero and reading payments back from it. Load before any valuation, claim or valuation-invoice work: recording progress, preapproving, raising/submitting/issuing invoices, raising in Xero, payments, renaming claims, or presenting a statement to anyone. Encodes the claim stepper, the claim naming form, the frozen-snapshot client rule, cumulative seeding, server-stamped retention, what certified-to-date means, the Xero raise rule (the contact is the one mapped on the project — map it yourself from list_xero_customers with the user's yes; never guess, never create) and the payment rule: Xero is the home of what has been paid — read it with the payment sync, never ask."
+description: "The monthly valuation claim and invoice cycle — the money path from % complete to cash, including raising the sales invoice in Xero and reading payments back from it. Load before any valuation, claim or valuation-invoice work: recording progress, preapproving, raising/submitting/issuing invoices, raising in Xero, payments, renaming claims, or presenting a statement to anyone. Encodes the claim stepper, the claim naming form, the locked-statement client rule (the claim IS the statement since 18/09/2026), cumulative seeding, server-stamped retention, what certified-to-date means, the Xero raise rule (the contact is the one mapped on the project — map it yourself from list_xero_customers with the user's yes; never guess, never create) and the payment rule: Xero is the home of what has been paid — read it with the payment sync, never ask."
 ---
 
 # JPMS — The valuation cycle
@@ -11,11 +11,13 @@ description: "The monthly valuation claim and invoice cycle — the money path f
    record_claim_entries). New claims ALWAYS seed from the latest claim's cumulative position —
    never start a month from zero.
 2. **Lock**: preapprove_valuation_claim freezes the month's figures for claiming.
-3. **Raise the invoice** (create_valuation_invoice): raising freezes a REPORT SNAPSHOT — that
-   frozen statement is what the client is sent, backing this invoice. The stepper itself emails
-   nothing. Since 17/09/2026 the statement goes out from the Valuation Report's "Email snapshot"
-   door — `send_valuation_report_snapshot_email`, which SENDS it to the project's Client and
-   Architect contacts with the PDF attached; `saveAsDraftOnly` leaves it in Drafts instead.
+3. **Raise the invoice** (create_valuation_invoice): the invoice is drawn against the LOCKED
+   claim, and the locked claim IS the statement (18/09/2026 — the lock froze every line onto the
+   claim; there is no separate snapshot). The stepper itself emails nothing. The statement goes
+   out from the claim card's "Email statement" door — `send_valuation_statement_email`
+   (valuationClaimId), which SENDS it to the project's Client and Architect contacts with the
+   PDF attached; `saveAsDraftOnly` leaves it in Drafts instead. A Draft claim is refused — lock
+   first. Preview it with preview_record_email (recordType valuation_claim) before the yes.
 4. **Record claim sent** (submit_valuation_invoice): records that the statement went to the
    architect/client. It changes portal state only.
 5. **Record approval**: record the client's approval (or rejection — a rejected invoice returns to
@@ -37,7 +39,7 @@ an outside event. None sends.
 ## Naming the claims
 
 A claim's name is free text and can be changed at any status (`rename_valuation_claim`,
-valuationClaimId from `get_valuation_context` or `list_valuation_snapshots`). The house form is
+valuationClaimId from `get_valuation_context` or `list_valuations`). The house form is
 **`Valuation NN - Month YYYY`** — "Valuation 05 - September 2026" — the same NN the invoice and
 the Xero reference carry, so the claim picker, the statement and Xero all read the same. When
 the user asks to tidy the names, list the claims with their numbers and current names, propose
@@ -104,10 +106,12 @@ the renamed set, get the yes, then rename each one. Names only — nothing finan
 
 ## Non-negotiables
 
-- **The client sees the FROZEN snapshot, never the live report.** The live report is a working
-  copy; anything presented, emailed or quoted as "the valuation" must come from the snapshot
-  behind the invoice (get_valuation_snapshot). Comparing live vs frozen is how you answer "what
-  moved since we claimed".
+- **The client sees the LOCKED claim's statement, never the live report.** A Draft is a working
+  copy; anything presented, emailed or quoted as "the valuation" must come from a locked claim
+  (get_valuation_statement — its own frozen lines; list_valuations shows each claim's stage).
+  Comparing the statement against get_valuation_context is how you answer "what moved since we
+  claimed". A locked claim's money never moves; to change the figures cancel the invoice,
+  reopen, edit, lock again, raise again.
 - **Retention is stamped server-side** from the project's terms — never compute or pass it.
 - **Certified-to-date = issued + paid invoices (gross of deposit credits).** Quote it from
   list_valuation_invoices' summary, never by adding numbers yourself.
@@ -116,17 +120,14 @@ the renamed set, get the yes, then rename each one. Names only — nothing finan
 
 ## Correspondence
 
-- **One row per period (2026-09-15).** A valuation email files to the period's live frozen
-  statement when one exists (file_email_to_record, type ValuationReportSnapshot, a
-  non-superseded id from list_valuation_snapshots), otherwise to the live claim (type
-  ValuationClaim, recordId = the claim's ValuationClaimId from get_valuation_context). That is
-  what the Control Centre's Client → Valuation reports section offers — never both rows for one
-  period, never a superseded statement. Tags: JPMS/VAL-{project reference}-{claim number} for
-  the claim, JPMS/VRS-{project reference}-{n} for a statement.
-- **Either row reads the whole period.** read_record_emails on a claim (recordType
-  valuation_claim) returns mail filed to the claim AND to every statement frozen from it,
-  superseded ones included; on a statement (valuation_snapshot) it returns the statement's mail
-  and its claim's. The Valuation Report's Correspondence section and the snapshot viewer show
-  the same story, so a filing to the "other" row is never lost.
+- **One row per period — the claim (18/09/2026).** A valuation email files to the claim
+  (file_email_to_record, type ValuationClaim, recordId = the claim's ValuationClaimId from
+  list_valuations or get_valuation_context). That is the one row the Control Centre's Client →
+  Valuation reports section offers. Tag: JPMS/VAL-{project reference}-{claim number}. The
+  sent statement and the client's reply carry the same tag.
+- **The claim reads the whole period.** read_record_emails on a claim (recordType
+  valuation_claim) returns everything filed to it — including mail still tagged to a retired
+  statement (JPMS/VRS-…) frozen from it before the consolidation. The Valuation Report's
+  Correspondence section and the statement viewer show the same story.
 - **Roll-over moves the tag on its own.** Confirm & roll over starts the next claim with the
   next number — new mail files to the new period; nothing is re-tagged.

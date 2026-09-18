@@ -1,0 +1,19 @@
+@page "/projects/{ProjectId}/valuation-snapshots"
+@inject NavigationManager Nav
+
+@*
+    The Valuation Snapshots register was retired on 2026-09-18: a valuation report and its tagged
+    snapshot were two objects for one thing, and the CLAIM is now the one valuation — its
+    statement (View / PDF / Excel / Email) lives on the claim card of the Valuation Report tab.
+    This component keeps the OLD URL alive — bookmarks, emails sent from the portal, to-do notes —
+    by replacing it with the Valuation Report tab.
+*@
+
+<LoadGate IsLoading="true" Prominent="true" Label="Opening the valuation report" />
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    protected override void OnInitialized() =>
+        Nav.NavigateTo($"/projects/{ProjectId}/valuation", replace: true);
+}

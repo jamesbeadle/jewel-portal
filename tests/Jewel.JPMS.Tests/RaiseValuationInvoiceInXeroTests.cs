@@ -257,11 +257,6 @@ public sealed class RaiseValuationInvoiceInXeroTests
                 PeriodMonth = new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero), Amount = 13703.94m,
                 Status = (int)ValuationInvoiceStatus.Approved, RaisedAt = DateTimeOffset.UtcNow
             });
-            context.ValuationReportSnapshots.Add(new ValuationReportSnapshotEntity
-            {
-                ValuationReportSnapshotId = "SNAP-15", ProjectId = ProjectId, ValuationInvoiceId = InvoiceId, ValuationClaimId = ClaimId,
-                Number = 15, Label = "VI-0015 raise", TakenAt = DateTimeOffset.UtcNow
-            });
             context.ProjectContracts.Add(new ProjectContractEntity { ProjectContractId = "CONTRACT-1", ProjectId = ProjectId, FinalDateForPaymentDays = 14 });
             if (withCertificate)
                 context.PaymentCertificates.Add(new PaymentCertificateEntity

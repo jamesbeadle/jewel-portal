@@ -60,19 +60,35 @@ internal static class VariationClaimRespread
             oldTotal);
 
         var entities = priorEntries.ToDictionary(row => (row.ValuationClaimId, row.Entry.ValuationLineItemId), row => row.Entry);
+        var lockedClaimIds = claims.Where(claim => !claim.IsDraft).Select(claim => claim.ValuationClaimId).ToHashSet(StringComparer.Ordinal);
+        var linesById = lines.ToDictionary(line => line.ValuationLineItemId);
+        var clientReferences = lockedClaimIds.Count == 0
+            ? new Dictionary<string, string>()
+            : await ValuationStatementLines.ClientReferencesByCostCodeAsync(context, projectId, cancellationToken);
+        // Added rows on a locked claim join the frozen statement after its last line.
+        var nextOrderByClaim = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var claimId in lockedClaimIds)
+            nextOrderByClaim[claimId] = 1 + (await context.ClaimLines
+                .Where(row => row.ValuationClaimId == claimId)
+                .Select(row => (int?)row.DisplayOrder)
+                .MaxAsync(cancellationToken) ?? -1);
+
         foreach (var entry in plan)
         {
+            var locked = lockedClaimIds.Contains(entry.ValuationClaimId);
             if (!entry.IsNew && entities.TryGetValue((entry.ValuationClaimId, entry.ValuationLineItemId), out var entity))
             {
                 entity.PercentComplete = entry.PercentComplete;
                 entity.CumulativeClaimed = entry.CumulativeClaimed;
                 entity.PeriodIncrement = entry.PeriodIncrement;
+                if (locked && linesById.TryGetValue(entry.ValuationLineItemId, out var repriced))
+                    ValuationStatementLines.CopyBillLine(entity, repriced, clientReferences);
                 continue;
             }
 
             // A line the revision added: the claim carried the variation, so it carries the new
             // line too.
-            context.ClaimLines.Add(new ClaimLineEntity
+            var added = new ClaimLineEntity
             {
                 ClaimLineId = CommercialIdentifierFactory.NextClaimLineId(),
                 ValuationClaimId = entry.ValuationClaimId,
@@ -80,7 +96,13 @@ internal static class VariationClaimRespread
                 PercentComplete = entry.PercentComplete,
                 CumulativeClaimed = entry.CumulativeClaimed,
                 PeriodIncrement = entry.PeriodIncrement
-            });
+            };
+            if (locked && linesById.TryGetValue(entry.ValuationLineItemId, out var addedLine))
+            {
+                ValuationStatementLines.CopyBillLine(added, addedLine, clientReferences);
+                added.DisplayOrder = nextOrderByClaim[entry.ValuationClaimId]++;
+            }
+            context.ClaimLines.Add(added);
         }
     }
 }

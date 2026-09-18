@@ -38,7 +38,7 @@ internal static class ValuationReportBillRows
     private const decimal OneItem = 1m;
 
     public static IReadOnlyList<ValuationReportBillGroup> GroupsFor(
-        IEnumerable<ValuationReportSnapshotLine> lines, ValuationElementType elementType, Func<string, string?> costCentreNameFor)
+        IEnumerable<ValuationStatementLine> lines, ValuationElementType elementType, Func<string, string?> costCentreNameFor)
     {
         var ofType = lines.Where(line => line.ElementType == elementType).ToList();
         if (ofType.Count == 0)
@@ -64,7 +64,7 @@ internal static class ValuationReportBillRows
     // line whose title matches the run above continues it, a blank title continues it too, so
     // the PDF's area headings sit exactly where the other surfaces put theirs.
     private static IReadOnlyList<ValuationReportBillGroup> AreaGroups(
-        IEnumerable<ValuationReportSnapshotLine> linesOfOneType, Func<string, string?> costCentreNameFor)
+        IEnumerable<ValuationStatementLine> linesOfOneType, Func<string, string?> costCentreNameFor)
     {
         var groups = new List<(string Title, List<ValuationReportBillRow> Rows)>();
         var currentArea = "";
@@ -83,14 +83,14 @@ internal static class ValuationReportBillRows
             .ToList();
     }
 
-    private static ValuationReportBillRow FromLine(ValuationReportSnapshotLine line) =>
+    private static ValuationReportBillRow FromLine(ValuationStatementLine line) =>
         new(CodeFor(line), line.ClientReference, TitleFor(line), line.Comments,
             line.CountsTowardTotals ? "" : LineTypeLabel(line.LineType),
             line.Quantity, line.Rate, line.LineAmount, line.PercentComplete,
             line.CumulativeClaimed - line.PeriodIncrement, line.PeriodIncrement, line.CumulativeClaimed,
             line.CountsTowardTotals);
 
-    private static ValuationReportBillRow Consolidated(VariationRollUp<ValuationReportSnapshotLine> rollUp)
+    private static ValuationReportBillRow Consolidated(VariationRollUp<ValuationStatementLine> rollUp)
     {
         var claimed = rollUp.CountingLines.Sum(line => line.CumulativeClaimed);
         var period = rollUp.CountingLines.Sum(line => line.PeriodIncrement);
@@ -103,7 +103,7 @@ internal static class ValuationReportBillRows
     // The client's reference prints on the order's row only when every line under it agrees;
     // an order spread across differently-referenced cost centres shows none rather than one
     // line's reference posing as the order's.
-    private static string SharedClientReference(VariationRollUp<ValuationReportSnapshotLine> rollUp)
+    private static string SharedClientReference(VariationRollUp<ValuationStatementLine> rollUp)
     {
         var distinct = rollUp.Lines
             .Select(line => line.ClientReference.Trim())
@@ -113,13 +113,13 @@ internal static class ValuationReportBillRows
         return distinct.Count == 1 ? distinct[0] : "";
     }
 
-    // Same code/title fallbacks as the on-screen snapshot viewer, so PDF and screen always agree.
-    private static string CodeFor(ValuationReportSnapshotLine line) =>
+    // Same code/title fallbacks as the on-screen statement viewer, so PDF and screen always agree.
+    private static string CodeFor(ValuationStatementLine line) =>
         line.ElementType == ValuationElementType.Variation
             ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : VariationRefs.Padded(line.VariationRef))
             : (string.IsNullOrWhiteSpace(line.CostCode) ? line.SectionCode : line.CostCode);
 
-    private static string TitleFor(ValuationReportSnapshotLine line)
+    private static string TitleFor(ValuationStatementLine line)
     {
         if (line.ElementType == ValuationElementType.Variation)
             return string.IsNullOrWhiteSpace(line.Description) ? line.VariationTitle : line.Description;

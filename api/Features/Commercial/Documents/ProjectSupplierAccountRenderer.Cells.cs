@@ -83,6 +83,6 @@ public static partial class ProjectSupplierAccountRenderer
 
     // U+2212 MINUS SIGN, not the hyphen-minus: MigraDoc breaks a line after a hyphen that is not
     // followed by a digit, so "-£1,000.00" could print as a bare "-" with the figure on the next
-    // line. Same rule as ValuationReportSnapshotRenderer.Money.
+    // line. Same rule as ValuationStatementRenderer.Money.
     private static string Money(decimal value) => value.ToString("£#,##0.00;\u2212£#,##0.00", Uk);
 }

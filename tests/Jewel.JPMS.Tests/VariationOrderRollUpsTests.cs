@@ -81,9 +81,9 @@ public sealed class VariationOrderRollUpsTests
         Assert.Equal("SoW-7", rows[1].ClientReference);
     }
 
-    private static ValuationReportSnapshotLine SnapshotLine(
+    private static ValuationStatementLine SnapshotLine(
         string id, string variationRef, string costCode, decimal amount, decimal claimed, decimal period, string clientReference) =>
-        new(id, "snapshot", id, ValuationElementType.Variation, "", "", variationRef, $"{variationRef} title",
+        new("claim", id, ValuationElementType.Variation, "", "", variationRef, $"{variationRef} title",
             ValuationLineType.Priced, costCode, "", "item", 1m, amount, amount,
             PercentComplete: amount == 0m ? 0m : claimed / amount * 100m, claimed, period, "", DisplayOrder: 0, clientReference);
 }

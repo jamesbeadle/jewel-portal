@@ -12,9 +12,8 @@ public static class RecordLinkVocabulary
     // Cost Centre was removed as a link target 2026-08-04 (it never earned its place as a filing
     // destination; existing CC-tagged mail keeps reading fine). VariationQuote is folded into
     // Variation — one record, one number, per the 2026-07-23 unification. ValuationClaim is the
-    // one "Valuation report" entry (2026-09-15): its list carries each period as its live frozen
-    // statement (a ValuationReportSnapshot row) or, with none, the claim — the snapshot type is
-    // never offered on its own.
+    // one "Valuation report" entry: one row per period — the claim is the valuation, its
+    // statement and its tag (2026-09-18); the retired snapshot type is never offered.
     public static readonly RecordType[] RecordTypeOptions =
     {
         RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Scheduling, RecordType.Lad, RecordType.Variation, RecordType.ValuationClaim, RecordType.Todo, RecordType.CalendarEvent, RecordType.BuildingControlInspection, RecordType.BuildingControlCase, RecordType.Inventory, RecordType.SiteInstruction, RecordType.Lead
@@ -122,7 +121,7 @@ public static class RecordLinkVocabulary
         RecordType.VariationQuote   => "Variation Order Quote",
         RecordType.Lad              => "LADs claim",
         RecordType.ValuationClaim   => "Valuation report",   // the merged list: statement when frozen, else the live period
-        RecordType.ValuationReportSnapshot => "Valuation report snapshot",
+        RecordType.ValuationReportSnapshot => "Valuation report", // retired type — resolves to the claim
         RecordType.Todo             => "To-do item",
         RecordType.CalendarEvent    => "Calendar event",
         RecordType.BuildingControlInspection => "Building Control Inspection",

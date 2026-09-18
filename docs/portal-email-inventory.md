@@ -38,7 +38,7 @@ which sent there and then — grew one like its eight siblings (Nigel's decision
 | 2 | RFI / NOD / EOT in bulk | Requests register → row actions | as above, per request | **none — server composed, never shown** | n/a | `send_request_emails` | |
 | 3 | RFI / NOD / EOT as a reply in its thread | Request page → Email document → append to a chain | as row 1 | **none — server composed, never shown** | n/a | `send_request_reply` | |
 | 4 | Work order purchase order | 5 doors, one handler (below) | PO PDF | **raw HTML textarea** | no | `send_work_order_po_email` | |
-| 5 | Valuation report to client + architect | Valuation Report → Email snapshot | snapshot PDF | **raw HTML textarea** | no | `send_valuation_report_snapshot_email` | |
+| 5 | Valuation report to client + architect | Valuation Report → claim card → Email statement | statement PDF (the locked claim) | **raw HTML textarea** | no | `send_valuation_statement_email` | snapshot folded into the claim 2026-09-18 |
 | 6 | Subcontractor statement of account | Directory record → Statement | statement PDF | **raw HTML textarea** | no | `send_subcontractor_statement_email` | |
 | 7 | Bid package invite (composed) | Bid package → composer | schedule, terms, tender docs, drawings | **raw HTML textarea** | no | `send_bid_package_invite` | |
 | | *(recipients still cross the wire as semicolon-separated strings — the composer task's chips reach the API surface here)* | | | | | | |

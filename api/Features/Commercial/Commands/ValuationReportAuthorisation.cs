@@ -22,12 +22,6 @@ public sealed class ValuationReportAuthorisation
     private static readonly RoleSet RolesThatMayManageClaimLifecycle =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator, JpmsRoles.FinanceDirector);
 
-    // Snapshots are a commercial/finance record (they back invoice submissions), so the
-    // Finance Director can take and delete them too — matching who may manage the
-    // valuation invoices themselves.
-    private static readonly RoleSet RolesThatMayManageSnapshots =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator, JpmsRoles.FinanceDirector);
-
     // Recoding which cost centre a variation's value sits against is a financial correction
     // to records frozen at VO approval: the MD, FD and project manager only (administrators
     // pass every gate — SignedInUserResolver grants them all roles).
@@ -63,6 +57,4 @@ public sealed class ValuationReportAuthorisation
     public bool Allows(SignedInUser user, DeleteValuationClaim command) => MayManageClaimLifecycle(user);
     public bool Allows(SignedInUser user, SetValuationLineCostCentre command) => RolesThatMayRecodeCostCentres.IncludesAny(user.Roles);
     public bool Allows(SignedInUser user, SetClientCostReferences command) => RolesThatMayMapClientReferences.IncludesAny(user.Roles);
-    public bool Allows(SignedInUser user, TakeValuationReportSnapshot command) => RolesThatMayManageSnapshots.IncludesAny(user.Roles);
-    public bool Allows(SignedInUser user, DeleteValuationReportSnapshot command) => RolesThatMayManageSnapshots.IncludesAny(user.Roles);
 }

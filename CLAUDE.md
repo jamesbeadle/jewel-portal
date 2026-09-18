@@ -299,7 +299,7 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
 ## Terminology
 
 - **Programme** is the canonical term for the project's plan of work and the project tab that holds it (the programme itself, its claims documents, and its correspondence). Never call it "Schedule" (or US-spelled "Program") in UI copy, code identifiers, routes, or docs. "Scheduling"/"schedule" survive only in persisted backend identifiers (e.g. `RecordType.Scheduling`, the `JPMS/SCH-` mail tag, API routes), immutable EF migrations, and the distinct retention-release concept `RetentionSchedule`, which is not the programme.
-- **Valuation invoice** is the canonical term for an amount of money Jewel has claimed for the client to pay (raised against the current valuation; lifecycle: Raised — accounts' first move once the project team has valued & locked the claim; files a draft and freezes the report snapshot, sends nothing — → Submitted, i.e. the claim recorded as sent to the architect/client (the portal never emails it; "Record claim sent") → Approved → Issued → Paid; one click per material stage, driven from the claim card on the valuation page, and every button either creates a portal record ("Raise …") or records an outside event ("Record …") — none says "send"; since 2026-09-09 Issue is "Raise in Xero & issue…", which creates the AUTHORISED sales invoice in Xero and issues here in one press). Never introduce "cash call", "payment application", "application for payment", or "client invoice" for this concept in UI copy, code identifiers, or docs. "Cash call" survives only in historical meeting notes and immutable EF migrations. See `docs/00-business-context/glossary.md`.
+- **Valuation invoice** is the canonical term for an amount of money Jewel has claimed for the client to pay (raised against the current valuation; lifecycle: Raised — accounts' first move once the project team has valued & locked the claim; files a draft against the locked claim's statement, sends nothing — → Submitted, i.e. the claim recorded as sent to the architect/client (the portal never emails it; "Record claim sent") → Approved → Issued → Paid; one click per material stage, driven from the claim card on the valuation page, and every button either creates a portal record ("Raise …") or records an outside event ("Record …") — none says "send"; since 2026-09-09 Issue is "Raise in Xero & issue…", which creates the AUTHORISED sales invoice in Xero and issues here in one press). Never introduce "cash call", "payment application", "application for payment", or "client invoice" for this concept in UI copy, code identifiers, or docs. "Cash call" survives only in historical meeting notes and immutable EF migrations. See `docs/00-business-context/glossary.md`.
 - **Variation** is the canonical term for the priced change item, and it is **one document with one number through every stage** — its `VariationOrderStatus` (Quoting → Issued → Awaiting AI → Approved / Rejected) is what says where it has got to. Never present "VOQ" and "VO" as two records or two ladder steps: the 2026-07-23 `UnifyVariationOrders` migration folded them into one row, and the UI followed. The record lineage is **three** stages — Request → RFI → Variation. (Bid packages left the chain on 2026-08-12: a variation order sets the sales side for a cost code, a bid package groups works across cost codes by trade — they are separate records, and tendering runs entirely on the bid package. `SelectedBidPackageId` and the packages' parent `VariationOrderQuoteId` column survive as legacy data only.) A user always reads the number as `V72` (`VariationOrder.DisplayNumber`, and the `VariationRef` minted at approval, which is the same number). Anything that leaves the business — the official VO PDF's header, PDF title and file name — carries the number as `VO72` and never the VOQ reference (Nigel, 2026-09-14; `VariationsIdentifierFactory.DocumentReference`, and `VariationDocumentModel` deliberately does not carry `Reference`). "VOQ" survives only in persisted identifiers and API surface: the `VariationOrderQuotes` table and its `VariationOrderQuoteId` column, the stored `Reference` (`VOQ-0072`), the `JPMS/VOQ-…` mail tags, the `/api/…/voq(s)/…` routes, `RecordType.VariationQuote`, and command names like `CreateVoqFromRfq`. The page route is `/projects/{id}/variations/{id}`; the old `/voq/{id}` route is kept on the same page so links already sent out still land. **A variation added by hand is raised priced and Issued** (Nigel, 2026-09-14): `CreateManualVariationOrder` requires the build-up (`Lines`, one per cost centre, at least one) and lands the record in Issued with `IssuedAt` stamped and the lines staged (`DraftLinesJson`, estimate = their total, exactly as `StageVariationOrderBuildUp` would) — raising it manually means it has already gone to the client, so there is no Quoting pass; approval opens pre-seeded with those lines. The `ManualVariationForm` hosts `VariationApprovePanel` (with `ShowSubmitButton` off, the host's button calling `TryBuildRequest`) so the dialog, the Control Centre's staged Raise Variation Order and the connector's `create_manual_variation_order` all take the lines up front.
 
 - **Sales strategy** and **lead** (Sales folder, 2026-09-06). A *strategy* is a methodology for
@@ -725,31 +725,57 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   with its quantity ("2 nr"), and recodes whole like any line. Pinned by
   `WorkOrderNoChargeLineTests`. Never bring "Every line needs a non-zero amount" back.
 
-## A valuation email files to ONE row per period (api + jpms)
+## A valuation is ONE object — the claim is the statement (api + jpms)
 
-- **Statement when frozen, claim until then** (Nigel, 2026-09-15): the Control Centre's Client
-  pane has one "Valuation reports" section, not a "Valuation claims" drawer and a "Valuation
-  report snapshots" drawer. `ValuationClaimLinkProvider.ForProjectAsync` returns the merged
-  list — each period as its live (non-superseded) `ValuationReportSnapshot` row when one has
-  been frozen, otherwise as the `ValuationClaim` row; superseded statements are never offered;
-  Confirmed periods with no statement trail the list, inactive. The rule is the pure
-  `ValuationReportLinkTargets.Merge` (tests: `ValuationReportLinkTargetsTests`). Snapshot rows
-  keep their own type and id (the Scheduling picker's precedent — bucket + NOD/EOT/LAD rows), so
-  the link goes through the owning provider; `ValuationReportSnapshotLinkProvider.ForProjectAsync`
-  stays the plain register for the connector and the Explorer. `PathwayPaneConfig.Client` lists
-  `ValuationClaim` only; `PathwayPane.SectionOf` counts a snapshot pick under it;
-  `RecordLinkVocabulary` labels the entry "Valuation report" and knows the snapshot type files
-  under Client.
-- **Either row reads the whole period.** `ICompanionRecordProvider` (api/RecordLinks): a claim
-  names every statement frozen from it (superseded included), a statement names its claim, and
-  `RecordEmailReader` reads the record's tag plus its companions', de-duplicated by internet
-  message id. So the Valuation Report's Correspondence section, the snapshot viewer (now one
-  read — its client-side merge is gone) and `read_record_emails` on either type show the same
-  mail. `ListUnfiledReplies` inherits the merge: a reply filed to the statement is not "unfiled"
-  on the claim.
+- **The claim IS the valuation** (2026-09-18, YBT "Consolidate Valuation Reports and Snapshot
+  Tagging into One Object"). A valuation report (`ValuationClaim` + `ClaimLines`) and a tagged
+  valuation snapshot (`ValuationReportSnapshots` + `…Lines`) were two objects for one thing: the
+  state of a project's valuation at a point in time. Now one record is created, tagged, reported
+  on, emailed and invoiced from. **Locking IS the statement:** `PreapproveValuationClaimHandler`
+  (and an early Confirm from Draft) calls `ValuationStatementLines.FreezeAsync`, which copies
+  every bill line by value onto the claim's own `ClaimLines` rows (description, code, qty, rate,
+  amount, client reference, statement order — a 0% row for every line the claim had no entry
+  for), re-states each row's "this period" by the one rule, and stamps `LockedAt`. Nothing is
+  captured at invoice raise, submit or issue any more. `ValuationStatementLines.ReadAsync` is
+  the one reader: a locked claim's own rows, a Draft's working copy (`ComputeAsync`). The
+  contract is `ValuationStatement(Claim, Lines, IsDraft, AsAt)` / `ValuationStatementLine`;
+  `GetValuationStatement(id)` serves it (the viewer, `ValuationStatementPdfBuilder`, the
+  workbook, the email, `get_valuation_statement`), and accepts a RETIRED snapshot id too.
+- **A locked claim's money never moves; its line shape follows the 2026-09-16 rule.** A
+  value-neutral variation re-breakdown re-deals under a locked claim (`VariationClaimRespread`)
+  and now re-copies the bill line onto the rows it touches or adds, so a re-downloaded statement
+  prints the new breakdown with the same money (the emailed PDF in the mailbox is the historical
+  document). Changing the FIGURES is cancel invoice → reopen → edit → re-lock → re-raise, as
+  before. Bill edits (`RemoveValuationLineItem`, `RejectVariationOrder`,
+  `ReturnVariationOrderToQuoting`) remove only DRAFT claims' rows (`DraftClaimRows`) — a locked
+  claim's rows are its statement and survive with `ValuationLineItemId` as provenance.
+  `DeleteValuationClaim` refuses while a live invoice stands (the claim is that invoice's
+  statement). `Reopen` clears `LockedAt`.
+- **One tag per valuation: `JPMS/VAL-{project}-{claim number}`** (`ValuationClaimTags`, the one
+  spelling). The Control Centre's Client pane has one "Valuation reports" section — one row per
+  period, the claim (`ValuationClaimLinkProvider.ForProjectAsync`, newest first, Confirmed
+  inactive). The retired `RecordType.ValuationReportSnapshot` (enum kept, never written) has
+  `RetiredValuationStatementLinkProvider`: lists nothing; `FindAsync(old snapshot id)` returns
+  the CLAIM's record; `FindByTagAsync("VRS-…")` resolves to the claim. The claim's companion
+  stems (`ICompanionRecordProvider`) are the retired `VRS-` stems frozen from it, so
+  `RecordEmailReader` still reads mail tagged before the consolidation. The alias register is
+  `ValuationClaimLegacyStatements` (old id, project, claim, VRS number, label, taken-at,
+  superseded, invoice) — NOT a domain object: nothing lists, tags or renders it.
+- **Old addresses keep working**: `/projects/{id}/valuation-snapshots` →
+  `LegacyValuationSnapshotsRedirect` → `/valuation`; `GET /api/valuation-report-snapshots/{id}`
+  and `/{id}/pdf`, `POST …/{id}/draft-email` resolve the id and serve the claim's statement;
+  connector `list_valuation_snapshots` / `get_valuation_snapshot` answer as `list_valuations` /
+  `get_valuation_statement`; `file_email_to_record` type `ValuationReportSnapshot` files to the
+  claim. `ValuationStages.Of(claim, invoice)` (contracts) is the derived stage — Draft, Locked,
+  Invoiced, Sent, Approved, Rejected, Certified, Paid, Confirmed — never stored.
+- **Migration in two steps** (a person runs each): `consolidate-valuation-statements.sql`
+  (additive: the `ClaimLines` columns, `LockedAt`, the alias register, the backfill from each
+  claim's live snapshot else the live bill, the printed reconciliation) BEFORE the api deploys;
+  `drop-valuation-report-snapshots.sql` AFTER, once checked. Tests: `ValuationClaimStatementTests`,
+  `ValuationStatementTests`, `ValuationStatementExportTests`, `ValuationReportPdfLayoutTests`.
 - **Doctrine lives in three places** and must say the same thing: the connector descriptions
-  (`file_email_to_record` notes, `get_valuation_context`, `list_valuation_snapshots`, the
-  Valuation Report and Control Centre page guides), `docs/ai/skills/jpms/jpms-email-triage.md` +
+  (`file_email_to_record` notes, `get_valuation_context`, `list_valuations`, the Valuation Report
+  and Control Centre page guides), `docs/ai/skills/jpms/jpms-email-triage.md` +
   `jpms-valuation-cycle.md` (re-save to the portal's stored skills with `save_skill` after the
   deploy — the DB copy is what the connector loads), and the jpms-operator skill's references.
 
@@ -1227,7 +1253,7 @@ finds drift.
   `XeroInvoiceNumber` / `XeroRaisedAt` and SAVES, then attaches the register's newest
   certificate for the claim (`IXeroClient.AttachToInvoiceAsync`, best effort — the outcome's
   `AttachmentError` and a `RaisedInXero` audit event say when it did not), then calls the
-  existing `IssueValuationInvoice` handler so the issue rules, snapshot re-freeze and certified
+  existing `IssueValuationInvoice` handler so the issue rules and certified
   totals are the one implementation. An invoice carrying a Xero id OR number is refused a
   second raise; "Issue without raising in Xero" (`IssueValuationInvoice`, now with an optional
   `XeroInvoiceNumber`) stays for one raised by hand — the number is stamped with `XeroRaisedAt`

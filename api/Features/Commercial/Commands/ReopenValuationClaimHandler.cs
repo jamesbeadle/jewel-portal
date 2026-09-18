@@ -36,6 +36,10 @@ public sealed class ReopenValuationClaimHandler : ICommandHandler<ReopenValuatio
 
         entity.Status = (int)ValuationClaimStatus.Draft;
         entity.PreapprovedAt = null;
+        // The frozen statement goes with the lock: back on Draft the statement is a working copy
+        // computed from the live bill; the copied columns stay on the rows, unread, until the
+        // next lock re-copies them. The 0% rows the lock added are ordinary entries now.
+        entity.LockedAt = null;
         // Frozen totals go back to zero, matching a freshly started claim: Draft views
         // compute the summary live from the line entries.
         entity.ContractSum = 0m;

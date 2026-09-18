@@ -5,7 +5,7 @@ using Xunit;
 namespace Jewel.JPMS.Tests;
 
 // Contract-level guarantees for the valuation-invoice approval workflow and the
-// report-snapshot model (docs/Valuation-Invoice-Approval-Snapshot-Spec.md). The
+// statement model (docs/Valuation-Invoice-Approval-Snapshot-Spec.md; the snapshot was folded into the claim 2026-09-18). The
 // handler-side transition rules live in the API; these tests pin down the parts the
 // whole system leans on: stable enum numbering, the pending/editable state groupings,
 // and the certified-to-date arithmetic that manual (historic) invoices feed.

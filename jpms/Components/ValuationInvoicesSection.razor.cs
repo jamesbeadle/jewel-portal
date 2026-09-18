@@ -12,9 +12,9 @@ public partial class ValuationInvoicesSection
     /// time, so the parent should refresh its claims to show them.</summary>
     [Parameter] public EventCallback OnCertifiedChanged { get; set; }
 
-    /// <summary>Opens the read-only report-snapshot viewer for the given snapshot id —
+    /// <summary>Opens the read-only statement viewer for the given claim id —
     /// "show me the valuation report behind this invoice".</summary>
-    [Parameter] public EventCallback<string> OnViewSnapshot { get; set; }
+    [Parameter] public EventCallback<string> OnViewStatement { get; set; }
 
     private bool isOpen;
     private bool busy;
@@ -80,7 +80,7 @@ public partial class ValuationInvoicesSection
     private void Toggle() => isOpen = !isOpen;
 
     /// <summary>Re-pulls the invoice list. Public so the page can nudge it after an
-    /// out-of-band change — e.g. deleting a snapshot clears invoice links server-side.</summary>
+    /// out-of-band change — e.g. deleting a claim clears invoice links server-side.</summary>
     public async Task ReloadAsync()
     {
         openMenuId = null;

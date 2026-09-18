@@ -1,6 +1,12 @@
 # Valuation invoice approval, report snapshots & historic amounts — design spec
 
-**Status:** Draft for sign-off
+**Status:** Shipped July 2026. **§4 (report snapshots) is SUPERSEDED as of 2026-09-18** — the
+snapshot was consolidated into the claim: locking a claim ("We're claiming this") freezes its
+statement lines onto its own `ClaimLines`, and the claim is the one object that is tagged,
+reported on, emailed and invoiced from. `ValuationReportSnapshots` is gone; old ids and
+`JPMS/VRS-…` tags resolve through `ValuationClaimLegacyStatements`. See CLAUDE.md "A valuation
+is ONE object — the claim is the statement" and `api/Migrations/consolidate-valuation-statements.sql`.
+The approval workflow (§3) and manual invoices (§5) stand as written.
 **Author:** Cowork (for Nigel Reilly)
 **Date:** 10 July 2026
 **Builds on:** `Valuation-Report-Tab-Spec.md` (shipped), `Entity-Refactor-Request-VO-Valuation-Plan.md`

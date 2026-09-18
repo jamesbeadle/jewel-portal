@@ -8,8 +8,7 @@ public partial class ValuationInvoicesSection
     {
         await RunAsync(() => Invoices.SubmitAsync(invoice.ValuationInvoiceId),
             "Couldn't submit the invoice. Please try again.");
-        // A snapshot was frozen — nudge the parent to refresh the report store so the
-        // snapshot register shows it.
+        // Nudge the parent to refresh the report store so the claim card's stage moves on.
         if (error is null) await OnCertifiedChanged.InvokeAsync();
     }
 
@@ -34,7 +33,7 @@ public partial class ValuationInvoicesSection
     {
         await RunAsync(() => Invoices.CancelAsync(invoice.ValuationInvoiceId),
             "Couldn't cancel the invoice. Please try again.");
-        // Its snapshots were flagged superseded — refresh the register.
+        // The claim is free to be reopened again — refresh so the card's stage moves back.
         if (error is null) await OnCertifiedChanged.InvokeAsync();
     }
 

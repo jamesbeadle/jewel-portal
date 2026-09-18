@@ -103,11 +103,9 @@ public partial class ProjectCommunications
         (RecordType.Defect,           "Defects"),
         (RecordType.Inventory,        "Inventory"),
         (RecordType.SiteInstruction,  "Site instructions"),
-        // The claim filter reads the merged "Valuation reports" pool (live statements + claims
-        // without one, 2026-09-15); the snapshot filter is the whole snapshot register, superseded
-        // statements included.
-        (RecordType.ValuationClaim,   "Valuation reports"),
-        (RecordType.ValuationReportSnapshot, "Valuation snapshots (all)")
+        // One row per period (2026-09-18): the claim IS the valuation, its statement and its tag;
+        // mail on a retired snapshot tag reads under its claim.
+        (RecordType.ValuationClaim,   "Valuation reports")
     };
 
     protected override async Task OnInitializedAsync()
@@ -346,7 +344,7 @@ public partial class ProjectCommunications
         RecordType.Inventory        => "Inventory item",
         RecordType.SiteInstruction  => "Site instruction",
         RecordType.ValuationClaim   => "Valuation claim",
-        RecordType.ValuationReportSnapshot => "Valuation snapshot",
+        RecordType.ValuationReportSnapshot => "Valuation report", // retired type (2026-09-18) — old links read as the claim
         RecordType.SubcontractorComms => "Subcontractor comms",
         RecordType.SupplierComms    => "Supplier comms",
         RecordType.InternalComms    => "Internal comms",

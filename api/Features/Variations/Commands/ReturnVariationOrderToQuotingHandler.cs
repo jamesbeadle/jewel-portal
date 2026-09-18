@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Contracts.Variations;
 
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
@@ -83,8 +84,9 @@ public sealed class ReturnVariationOrderToQuotingHandler : ICommandHandler<Retur
             .ToListAsync(cancellationToken);
         if (lineClaims.Any(claim => claim.CumulativeClaimed != 0m || claim.PercentComplete != 0m))
             throw new InvalidOperationException("Value has been claimed against this variation — it cannot be returned to quoting.");
-        // Zero rows are bookkeeping only; drop them so the placeholder starts clean.
-        context.ClaimLines.RemoveRange(lineClaims);
+        // Zero rows are bookkeeping only; drop the Draft claim's so the placeholder starts clean.
+        // A locked claim's zero rows stay: they are lines of its frozen statement (2026-09-18).
+        context.ClaimLines.RemoveRange(await DraftClaimRows.ForLinesAsync(context, lineIds, cancellationToken));
 
         // A build-up committed each cost centre its own share, and those shares ARE the line
         // amounts — read them off now, before the collapse, so the budget release below can mirror

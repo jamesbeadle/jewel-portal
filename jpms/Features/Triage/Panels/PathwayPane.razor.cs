@@ -147,7 +147,7 @@ public partial class PathwayPane
         await OnClose.InvokeAsync();
     }
 
-    // The staged chip reads the everyday name: the title for a valuation snapshot or claim (their
+    // The staged chip reads the everyday name: the title for a valuation claim (or a retired snapshot link; their
     // VRS-… / VAL-… stems are minted mail tags, decision 2026-08-20), the reference for everything else.
     private static string ChipLabel(LinkableRecord record) =>
         record.Type is RecordType.ValuationReportSnapshot or RecordType.ValuationClaim ? record.Title : record.Reference;

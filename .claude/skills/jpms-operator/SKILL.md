@@ -47,7 +47,7 @@ picked project. Folders (in rail order):
 
 | Folder | Rows |
 |---|---|
-| **Project** | RFIs (`/projects/{p}/requests`) · Variation Orders (`…/variations`) · Architect's Instructions · Valuation Report Snapshots · Drawings · Programme · To-do · Progress · Site Photos (`/site-photos`, company-wide) · Defects · Communications · Useful Information · Project Settings |
+| **Project** | RFIs (`/projects/{p}/requests`) · Variation Orders (`…/variations`) · Architect's Instructions · Drawings · Programme · To-do · Progress · Site Photos (`/site-photos`, company-wide) · Defects · Communications · Useful Information · Project Settings |
 | **Subcontractor** | Bid Package Invites · Work Orders · Communications (`/subcontractors/communications`) |
 | **Internal** | Todo (`/todos`) · Directory · Registers · Policies |
 | **Time** | Labour overview · Labour (per project) · Workers · Xero mapping |
@@ -79,7 +79,7 @@ specific tab. Full page-by-page detail: `references/site-map.md`.
 | Move a variation through its ladder | Status chip on the register for free stages; **Approve on the variation's own page** (builds priced lines per cost centre, writes to Valuation Report, CVR, budgets) |
 | Record the architect's instruction | Architect's Instructions register — file it, tick the variations it covers |
 | Run the monthly claim | Valuation Report claim card stepper: Value & lock → Claim → Approve → Invoice → Paid → Confirm & roll over |
-| See what the client was sent | Valuation Report Snapshots (frozen; the live report is internal-only) |
+| See what the client was sent | Valuation Report → the locked claim's card → View statement (the live report is internal-only; a Draft is a working copy) |
 | File an email about the month's valuation (site-meeting notes, the QS's working, the architect's queries, the client's reply to a statement) | Control Centre → Client → **Valuation reports** — one row per period: the period's live frozen statement once one has been taken, the claim itself until then (2026-09-15). Whichever row, the mail reads back in the Valuation Report's Correspondence section and on the statement. Confirm & roll over starts the next claim with its own tag |
 | Tender a trade | Bid Package Invites → package detail: Details (lines) → Tender list (invite email, BCC) → Submissions → **Award** (raises the work order) |
 | Raise / approve a work order | Work Orders tab — "Add work order", two-click Approve (mints WO number, emails the PO) |
@@ -101,12 +101,14 @@ Nothing in JPMS silently sends on your behalf, but the pages differ and it
 matters commercially:
 
 - **Outlook-draft only** (a human sends from Outlook): RFI "Prepare email
-  drafts", request-detail Email button, PO covering email, valuation snapshot
-  Email button, statement-of-account draft.
+  drafts", request-detail Email button, PO covering email, statement-of-account
+  draft.
 - **Sends from the projects mailbox on the user's press**: Control Centre
   Apply (staged replies/forwards), Communications-page Reply/Forward,
   Subcontractor Communications Reply/Forward, bid-package Invite composer,
-  work-order Approve (sends the PO).
+  work-order Approve (sends the PO), the claim card's Email statement (the
+  locked valuation's PDF to the client and architect; Save as draft stages it
+  in Outlook instead).
 - The connector (Claude acting through the Jewel_Portal MCP server) sends only
   through confirm-first actions — the mailbox reply/forward, the PO email, the
   tender invite — and only after the user's explicit yes in that conversation.

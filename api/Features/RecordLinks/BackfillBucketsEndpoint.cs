@@ -240,6 +240,7 @@ public sealed class BackfillBucketsEndpoint
         if (stem.StartsWith("SCH-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client;
         if (stem.StartsWith("LAD-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client;
         if (stem.StartsWith("VAL-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client;
+        if (stem.StartsWith("VRS-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client; // retired statement stem (pre 2026-09-18)
         if (stem.StartsWith("BPI-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Subcontractor;
         // A lead's enquiry mail (2026-09-15) — the Sales pathway, before any project exists.
         if (stem.StartsWith("LD-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Sales;

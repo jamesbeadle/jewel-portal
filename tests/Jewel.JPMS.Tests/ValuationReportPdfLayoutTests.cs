@@ -29,11 +29,11 @@ public sealed class ValuationReportPdfLayoutTests
     [Fact]
     public void NegativeMoney_carriesAnUnbreakableMinusSign()
     {
-        var text = ValuationReportSnapshotRenderer.Money(-10_573.80m);
+        var text = ValuationStatementRenderer.Money(-10_573.80m);
 
         Assert.Equal("−£10,573.80", text);
         Assert.DoesNotContain('-', text);
-        Assert.Equal("£10,573.80", ValuationReportSnapshotRenderer.Money(10_573.80m));
+        Assert.Equal("£10,573.80", ValuationStatementRenderer.Money(10_573.80m));
     }
 
     // The figures the accountant's export tripped on, and the widest a statement can plausibly
@@ -47,10 +47,11 @@ public sealed class ValuationReportPdfLayoutTests
             Line(2, ValuationElementType.Variation, ValuationLineType.Omit, "Plumbing & Heating — tender value (omit)", -117_223.37m, 100m, -117_223.37m, -28_525.44m, variationRef: "V17", variationTitle: "Plumbing & Heating"),
             Line(3, ValuationElementType.Variation, ValuationLineType.Priced, "Fluid Glazing — balance paid direct by client", -28_525.44m, 100m, -28_525.44m, 0m, variationRef: "V27", variationTitle: "Fluid Glazing"),
         };
-        var document = new ValuationReportSnapshotDocument(
-            "JBB-2026-004", "Woodhouse", "David Needham", new ValuationReportSnapshotDetail(Snapshot(lines), lines));
+        var document = new ValuationStatementDocument(
+            "JBB-2026-004", "Woodhouse", "David Needham",
+            new ValuationStatement(Snapshot(lines), lines, IsDraft: false, new DateTimeOffset(2026, 9, 2, 10, 0, 0, TimeSpan.Zero)));
 
-        var pdf = ValuationReportSnapshotRenderer.Render(document);
+        var pdf = ValuationStatementRenderer.Render(document);
 
         using var reader = PdfDocument.Open(pdf);
         var words = reader.GetPages().SelectMany(page => page.GetWords()).ToList();
@@ -72,14 +73,13 @@ public sealed class ValuationReportPdfLayoutTests
         Assert.All(money, text => Assert.Matches(@"^−?£\d{1,3}(,\d{3})*\.\d{2}$", text));
     }
 
-    private static ValuationReportSnapshotLine Line(
+    private static ValuationStatementLine Line(
         int order, ValuationElementType element, ValuationLineType type, string description,
         decimal lineAmount, decimal percent, decimal cumulative, decimal period,
         string variationRef = "", string variationTitle = "") =>
         new(
-            ValuationReportSnapshotLineId: $"SL{order}",
-            ValuationReportSnapshotId: "SNAP-1",
-            SourceValuationLineItemId: $"L{order}",
+            ValuationClaimId: "CLAIM-1",
+            ValuationLineItemId: $"L{order}",
             ElementType: element,
             SectionCode: element == ValuationElementType.Variation ? "" : "MAIN",
             SectionName: element == ValuationElementType.Variation ? "" : "Main works",
@@ -98,16 +98,19 @@ public sealed class ValuationReportPdfLayoutTests
             Comments: "",
             DisplayOrder: order);
 
-    private static ValuationReportSnapshot Snapshot(IReadOnlyList<ValuationReportSnapshotLine> lines)
+    private static ValuationClaim Snapshot(IReadOnlyList<ValuationStatementLine> lines)
     {
         var contractSum = lines.Where(l => l.ElementType != ValuationElementType.Variation && l.CountsTowardTotals).Sum(l => l.LineAmount);
         var netVariations = lines.Where(l => l.ElementType == ValuationElementType.Variation && l.CountsTowardTotals).Sum(l => l.LineAmount);
         var worksComplete = lines.Where(l => l.CountsTowardTotals).Sum(l => l.CumulativeClaimed);
         var retention = ValuationCalculations.RetentionHeld(worksComplete, 5m);
-        return new ValuationReportSnapshot(
-            "SNAP-1", "P1", null, null, "August 2026 — working copy", new DateTimeOffset(2026, 9, 2, 10, 0, 0, TimeSpan.Zero), false,
+        var lockedAt = new DateTimeOffset(2026, 9, 2, 10, 0, 0, TimeSpan.Zero);
+        return new ValuationClaim(
+            "CLAIM-1", "P1", 3, new DateTimeOffset(2026, 8, 31, 0, 0, 0, TimeSpan.Zero), ValuationClaimStatus.Preapproved,
+            5m, 0m, lockedAt, null,
             contractSum, netVariations, ValuationCalculations.RevisedContractSum(contractSum, netVariations),
-            worksComplete, 5m, retention, 0m, 0m, 266_679.55m,
-            ValuationCalculations.PaymentDueExVat(worksComplete, retention, 0m, 0m, 266_679.55m));
+            worksComplete, retention, 0m, 266_679.55m,
+            ValuationCalculations.PaymentDueExVat(worksComplete, retention, 0m, 0m, 266_679.55m),
+            Name: "August 2026", LockedAt: lockedAt);
     }
 }

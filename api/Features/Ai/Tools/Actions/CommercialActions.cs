@@ -30,8 +30,7 @@ internal sealed partial class CommercialActions : IAiActionSource
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
 
     // Replica of ValuationReportAuthorisation.RolesThatMayManageClaimLifecycle (identical to
-    // its RolesThatMayManageSnapshots, RolesThatMayRecordClaimEntries and
-    // RolesThatMayMapClientReferences sets).
+    // its RolesThatMayRecordClaimEntries and RolesThatMayMapClientReferences sets).
     private static readonly RoleSet ClaimLifecycleManagers =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator, JpmsRoles.FinanceDirector);
 
@@ -56,8 +55,8 @@ internal sealed partial class CommercialActions : IAiActionSource
     // GrantEotAuthorisation.RolesThatMayGrantEots and UpdateEotAuthorisation.RolesThatMayUpdateEots).
     private static readonly RoleSet DirectorsOnly = RoleSet.Of(JpmsRoles.Director);
 
-    // Replica of SendValuationReportSnapshotEmailAuthorisation.RolesThatMayEmailSnapshots.
-    private static readonly RoleSet SnapshotEmailDrafters =
+    // Replica of SendValuationStatementEmailAuthorisation.RolesThatMayEmailStatements.
+    private static readonly RoleSet StatementEmailSenders =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager);
 
     // Replica of SetXeroLineWorkOrderLinksAuthorisation.RolesThatMayLink.
@@ -87,7 +86,7 @@ internal sealed partial class CommercialActions : IAiActionSource
 
     public IEnumerable<AiAction> Build() =>
         ClaimsAndValuationsActions()
-            .Concat(SnapshotsActions())
+            .Concat(StatementActions())
             .Concat(FinancialsActions())
             .Concat(InputsActions())
             .Concat(CvrActions())

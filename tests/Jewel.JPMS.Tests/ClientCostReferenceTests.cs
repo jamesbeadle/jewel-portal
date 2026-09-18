@@ -13,11 +13,10 @@ public sealed class ClientCostReferenceTests
 {
     private const double TextWidthCentimetres = 17.8;
 
-    private static ValuationReportSnapshotLine Line(string clientReference, int order = 1) =>
+    private static ValuationStatementLine Line(string clientReference, int order = 1) =>
         new(
-            ValuationReportSnapshotLineId: $"SL{order}",
-            ValuationReportSnapshotId: "SNAP-1",
-            SourceValuationLineItemId: $"L{order}",
+            ValuationClaimId: "CLAIM-1",
+            ValuationLineItemId: $"L{order}",
             ElementType: ValuationElementType.ContractWorks,
             SectionCode: "", SectionName: "", VariationRef: "", VariationTitle: "",
             LineType: ValuationLineType.Priced,
@@ -29,7 +28,7 @@ public sealed class ClientCostReferenceTests
             ClientReference: clientReference);
 
     [Fact]
-    public void SnapshotLine_defaultsToNoClientReference_soOlderCallersStillCompile()
+    public void StatementLine_defaultsToNoClientReference_soOlderCallersStillCompile()
     {
         Assert.Equal("", Line("").ClientReference);
     }

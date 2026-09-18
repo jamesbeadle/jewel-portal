@@ -22,10 +22,12 @@ public sealed class CancelValuationInvoiceHandler : ICommandHandler<CancelValuat
         entity.Status = (int)ValuationInvoiceStatus.Cancelled;
         entity.CancelledAt = DateTimeOffset.UtcNow;
 
-        var snapshots = await context.ValuationReportSnapshots
-            .Where(snapshot => snapshot.ValuationInvoiceId == entity.ValuationInvoiceId && !snapshot.IsSuperseded)
+        // The statement stays with the locked claim (2026-09-18); cancelling frees the claim to be
+        // reopened, re-locked and re-raised, and the retired snapshot aliases just note the invoice.
+        var aliases = await context.ValuationClaimLegacyStatements
+            .Where(alias => alias.ValuationInvoiceId == entity.ValuationInvoiceId && !alias.IsSuperseded)
             .ToListAsync(cancellationToken);
-        foreach (var snapshot in snapshots) snapshot.IsSuperseded = true;
+        foreach (var alias in aliases) alias.IsSuperseded = true;
 
         ValuationInvoiceAuditTrail.Append(context, entity.ValuationInvoiceId,
             ValuationInvoiceEventType.Cancelled, command.Note ?? "", amountBefore: entity.Amount);

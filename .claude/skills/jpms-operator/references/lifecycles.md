@@ -56,7 +56,7 @@ ONE document with one number through every stage — `VariationOrderStatus`:
   like `CreateVoqFromRfq`. Page route is `/projects/{p}/variations/{id}`;
   `/voq/{id}` lands on the same page.
 
-## Valuation: claims, invoices, snapshots
+## Valuation: claims (the statement) and invoices
 
 The live Valuation Report runs in monthly claims. Claim card stepper (one
 click per material stage): **Value & lock → Claim → Approve → Invoice → Paid →
@@ -71,19 +71,20 @@ on the same invoice — no versioning); **Cancelled** exists; projects with no
 formal approval loop issue directly ("issue without approval" in the Actions
 menu). Never call it a cash call, payment application or client invoice.
 
-Snapshots freeze automatically when an invoice is raised, and again on
-submit/issue after an amendment. The live report is internal-only; snapshots
-are the client-facing artefact.
+The claim IS the statement (2026-09-18). Locking ("We're claiming this")
+freezes every bill line onto the claim's own rows with its % and money; that
+is what the invoice is raised against, what the claim card's View statement /
+Statement PDF / Excel print, and what "Email statement" sends to the client.
+A Draft prints as a working copy, stamped as such. There is no separate
+snapshot: the old Valuation Snapshots register is gone (its address lands on
+the Valuation Report tab). A locked claim's money never moves; to change the
+figures cancel the invoice, reopen the claim, edit, lock again, raise again.
 
 Correspondence: the Control Centre's Client → **Valuation reports** section
-offers one row per period (2026-09-15) — the period's live frozen statement
-(tag `JPMS/VRS-{project}-{n}`) once one has been taken, the claim itself
-(tag `JPMS/VAL-{project}-{claim number}`) until then; superseded statements
-are not offered. A claim reads its own tag AND every statement frozen from
-it, and a statement reads its claim's, so the Valuation Report's
-Correspondence section and the snapshot viewer show the same mail whichever
-row was picked. Confirm & roll over starts the next claim, whose number
-mints the next tag.
+offers one row per period — the claim (tag `JPMS/VAL-{project}-{claim
+number}`). The sent statement and the client's reply carry that tag; mail
+tagged `JPMS/VRS-…` before the consolidation still reads on its claim.
+Confirm & roll over starts the next claim, whose number mints the next tag.
 
 ## Bid packages and work orders
 

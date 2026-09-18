@@ -6,9 +6,9 @@ namespace Jewel.JPMS.Api.Features.Commercial;
 /// <summary>
 /// Keeps the claim in progress honest when a valuation line is re-priced underneath it.
 ///
-/// A claim entry stores the money as well as the percentage, and that stored money is what the next
-/// report snapshot copies into the document the client is sent (ValuationReportSnapshotCapture) —
-/// so leaving it alone after a re-price would issue a figure nobody chose. The percentage is what a
+/// A claim entry stores the money as well as the percentage, and that stored money is what the lock
+/// freezes into the statement the client is sent (ValuationStatementLines.FreezeAsync) — so
+/// leaving it alone after a re-price would issue a figure nobody chose. The percentage is what a
 /// QS actually enters and the money is derived from it, so the percentage stays put and the money
 /// follows the line, exactly as RecordClaimEntries computes it when the percentage itself is edited.
 ///
@@ -22,7 +22,7 @@ namespace Jewel.JPMS.Api.Features.Commercial;
 internal static class DraftClaimRebase
 {
     /// <summary>
-    /// Refuses the caller when the claim a snapshot would freeze next is preapproved and already
+    /// Refuses the caller when the latest claim is preapproved (its statement frozen) and already
     /// covers one of these lines. A locked claim elsewhere on the project is none of our business —
     /// only a line it actually carries money for would move underneath it.
     /// </summary>

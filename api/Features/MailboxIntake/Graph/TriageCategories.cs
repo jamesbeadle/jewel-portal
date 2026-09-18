@@ -85,8 +85,8 @@ public static class TriageCategories
         RecordType.VariationQuote   => Client,
         RecordType.Scheduling       => Client,   // programme correspondence is client/architect-facing
         RecordType.Lad              => Client,   // LAD claims sit between Jewel and the client
-        RecordType.ValuationReportSnapshot => Client, // the snapshot is the only client-facing form of the valuation report
-        RecordType.ValuationClaim   => Client,   // the period the snapshot is frozen from — the valuation is what Jewel puts to the client
+        RecordType.ValuationReportSnapshot => Client, // RETIRED 2026-09-18 — old ids resolve to their claim; still client-side
+        RecordType.ValuationClaim   => Client,   // the valuation — the one record; its locked statement is what Jewel puts to the client
         RecordType.TenderEnquiry    => Client,   // the architect's invitation to tender — client-side from the first email
         RecordType.BuildingControlCase => Client, // statutory/consultant correspondence travels the client-side pathway
         RecordType.BuildingControlInspection => Client, // the inspector's booking/report thread — same side as the case

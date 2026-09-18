@@ -176,9 +176,11 @@ internal sealed partial class CommercialActions
         new AiAction(
             Name: "preapprove_valuation_claim",
             Area: "Commercial",
-            Description: "Locks a Draft claim's amounts and moves it to Preapproved — the \"we are "
-                + "claiming this\" step that freezes what will be put to the client. Reversible only "
-                + "via reopen_valuation_claim.",
+            Description: "Locks a Draft claim and moves it to Preapproved — the \"we are claiming "
+                + "this\" step. The lock IS the statement (2026-09-18): every bill line is frozen onto "
+                + "the claim's own rows with its % and money, and that is what the invoice is raised "
+                + "against, the PDF/Excel print and send_valuation_statement_email sends. Reversible "
+                + "only via reopen_valuation_claim (refused while an invoice stands).",
             CommandType: typeof(PreapproveValuationClaim),
             ResultType: typeof(ValuationClaim),
             AuthorisationType: typeof(ValuationReportAuthorisation),

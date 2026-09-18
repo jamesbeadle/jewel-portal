@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Contracts.ValuationInvoices;
 
 namespace Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
@@ -7,9 +6,8 @@ namespace Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
 /// Approved -> Issued, or Raised/Submitted -> Issued for projects that skip the formal approval
 /// loop (invoices are claimed — Submitted — at raise now, so the skip path starts there; Raised
 /// survives for drafts and legacy rows). From here the amount counts toward "Certified to date".
-/// A report snapshot is normally frozen at raise; issuing re-freezes only when no live one backs
-/// the invoice (amended since raise, or pre-dating raise-time capture), so even one-click
-/// invoices keep the report behind them. A XeroInvoiceNumber on the command is an invoice raised
+/// The report behind the invoice is the locked claim's statement (2026-09-18) — nothing is
+/// frozen here. A XeroInvoiceNumber on the command is an invoice raised
 /// in Xero BY HAND (2026-09-10): the number and the time it was recorded are stamped, XeroInvoiceId
 /// stays null (the portal did not raise it), and the row reads as raised from then on.
 /// </summary>
@@ -37,19 +35,6 @@ public sealed class IssueValuationInvoiceHandler : ICommandHandler<IssueValuatio
                 throw new InvalidOperationException("This valuation invoice has already been issued.");
             case ValuationInvoiceStatus.Paid:
                 throw new InvalidOperationException("A paid valuation invoice cannot be re-issued.");
-        }
-
-        // Make sure a LIVE report snapshot backs the invoice: raise-time capture normally
-        // guarantees one, but an invoice amended since (snapshot flagged superseded) or raised
-        // before raise-time capture existed needs a fresh freeze of the current ask.
-        var hasLiveSnapshot = await context.ValuationReportSnapshots
-            .AnyAsync(snapshot => snapshot.ValuationInvoiceId == entity.ValuationInvoiceId
-                                  && !snapshot.IsSuperseded, cancellationToken);
-        if (!hasLiveSnapshot)
-        {
-            var snapshot = await ValuationReportSnapshotCapture.CaptureAsync(
-                context, entity.ProjectId, $"{entity.Reference} issue", entity.ValuationInvoiceId, cancellationToken);
-            entity.ValuationReportSnapshotId = snapshot.ValuationReportSnapshotId;
         }
 
         // The audit trail says when the approval loop was skipped — the trail is the only

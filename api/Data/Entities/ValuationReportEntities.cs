@@ -52,8 +52,21 @@ public sealed class ValuationClaimEntity
     public decimal DepositPercent { get; set; }
     public decimal DepositReleased { get; set; }
     public decimal DepositReleasedOpening { get; set; }
+    // When the valuation's statement lines were frozen onto its ClaimLines (the lock — "We're
+    // claiming this"). Null while Draft. Since 2026-09-18 the locked claim IS the statement the
+    // client is sent: there is no separate snapshot object.
+    public DateTimeOffset? LockedAt { get; set; }
 }
 
+// One line of a valuation: the % complete / money entered against a bill line, and — once the
+// valuation is locked — the bill line itself copied by value (description, code, quantity, rate,
+// amount, client reference, display order), so the statement the client was sent survives every
+// later edit or deletion of the live bill. The copied columns are blank on a Draft, whose
+// statement is computed from the live bill on each read; ValuationStatementLines writes them at
+// lock and refreshes them for the lines a value-neutral variation re-breakdown re-deals under a
+// locked claim (a claim locks its money, never the shape beneath it — decision 2026-09-16).
+// ValuationLineItemId stays the working link to the live bill (the next claim seeds from it);
+// on a locked claim it is provenance only and may name a line that no longer exists.
 public sealed class ClaimLineEntity
 {
     [Key, MaxLength(64)] public string ClaimLineId { get; set; } = "";
@@ -62,46 +75,7 @@ public sealed class ClaimLineEntity
     public decimal PercentComplete { get; set; }
     public decimal CumulativeClaimed { get; set; }
     public decimal PeriodIncrement { get; set; }
-}
-
-// Immutable line-level copy of the valuation report frozen at a moment in time (invoice
-// submission or on-demand period end). Values are copied, never referenced — live edits
-// must not disturb what was submitted.
-public sealed class ValuationReportSnapshotEntity
-{
-    [Key, MaxLength(64)] public string ValuationReportSnapshotId { get; set; } = "";
-    [MaxLength(64)]      public string ProjectId { get; set; } = "";
-    [MaxLength(64)]      public string? ValuationInvoiceId { get; set; }
-    [MaxLength(64)]      public string? ValuationClaimId { get; set; }
-    // Per-project sequential number, minted at capture (max + 1). It is the stem of the
-    // snapshot's mailbox tag ("JPMS/VRS-{projectRef}-{Number}") — the association triage
-    // writes — so it is persisted, never derived from register order (a deletion must not
-    // renumber snapshots whose tags are already stamped on emails).
-    public int Number { get; set; }
-    [MaxLength(256)]     public string Label { get; set; } = "";
-    public DateTimeOffset TakenAt { get; set; }
-    public bool IsSuperseded { get; set; }
-    public decimal ContractSum { get; set; }
-    public decimal NetVariations { get; set; }
-    public decimal RevisedContractSum { get; set; }
-    public decimal TotalWorksComplete { get; set; }
-    public decimal RetentionPercent { get; set; }
-    public decimal RetentionHeld { get; set; }
-    public decimal RetentionReleasePercent { get; set; }
-    public decimal RetentionReleased { get; set; }
-    public decimal CertifiedToDate { get; set; }
-    public decimal PaymentDueExVat { get; set; }
-    // Cash-up-front deposit as frozen at capture: the claim's deposit % and the
-    // cumulative amount released back to the client.
-    public decimal DepositPercent { get; set; }
-    public decimal DepositReleased { get; set; }
-}
-
-public sealed class ValuationReportSnapshotLineEntity
-{
-    [Key, MaxLength(64)] public string ValuationReportSnapshotLineId { get; set; } = "";
-    [MaxLength(64)]      public string ValuationReportSnapshotId { get; set; } = "";
-    [MaxLength(64)]      public string SourceValuationLineItemId { get; set; } = "";
+    // Frozen copy of the bill line (written at lock; blank on a Draft):
     public int ElementType { get; set; }
     [MaxLength(16)]      public string SectionCode { get; set; } = "";
     [MaxLength(128)]     public string SectionName { get; set; } = "";
@@ -114,13 +88,27 @@ public sealed class ValuationReportSnapshotLineEntity
     public decimal Quantity { get; set; }
     public decimal Rate { get; set; }
     public decimal LineAmount { get; set; }
-    public decimal PercentComplete { get; set; }
-    public decimal CumulativeClaimed { get; set; }
-    public decimal PeriodIncrement { get; set; }
     [MaxLength(512)]     public string Comments { get; set; } = "";
-    public int DisplayOrder { get; set; }
-    // The client's schedule-of-works reference frozen at capture: the source line's own
-    // reference when it had one, else the project's ClientCostReferences map's entry for the
-    // line's cost centre. Empty when neither was set.
+    // Statement order at lock (bill order — element, variation number, display order); -1 on a
+    // row not yet frozen.
+    public int DisplayOrder { get; set; } = -1;
     [MaxLength(64)]      public string ClientReference { get; set; } = "";
+}
+
+// The alias register for the RETIRED valuation-report-snapshot object (consolidated into the
+// claim 2026-09-18): every snapshot that existed, by its old id and its per-project number, with
+// the claim it was frozen from. Not a domain object — nothing lists, tags or renders it. It is
+// what keeps the old world resolving: a snapshot id in an old link or connector call opens its
+// claim's statement, and a "JPMS/VRS-{project}-{Number}" mailbox tag stamped before the
+// consolidation reads as the claim's correspondence (ValuationClaimLinkProvider companions).
+public sealed class ValuationClaimLegacyStatementEntity
+{
+    [Key, MaxLength(64)] public string ValuationReportSnapshotId { get; set; } = "";
+    [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    [MaxLength(64)]      public string ValuationClaimId { get; set; } = "";
+    public int Number { get; set; }
+    [MaxLength(256)]     public string Label { get; set; } = "";
+    public DateTimeOffset TakenAt { get; set; }
+    public bool IsSuperseded { get; set; }
+    [MaxLength(64)]      public string? ValuationInvoiceId { get; set; }
 }

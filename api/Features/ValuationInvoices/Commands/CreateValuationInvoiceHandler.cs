@@ -1,5 +1,4 @@
 using Jewel.JPMS.Api.Data.Entities;
-using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Contracts.ValuationInvoices;
 
@@ -11,11 +10,10 @@ namespace Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
 /// Manual entries count toward "Certified to date" immediately, so any Preapproved claim's frozen
 /// totals are re-frozen after the save.
 ///
-/// Raising freezes a valuation-report snapshot and attaches it to the invoice (decision
-/// 2026-07-22): the invoice is a claim as at a point in time, and the snapshot is that
-/// point-in-time statement — the only client-facing form of the report (the live report tab is
-/// internal). Manual entries get no snapshot: today's report is not the report as it stood back
-/// then, so freezing it would fabricate history.
+/// The report behind the invoice is the locked claim it is drawn against (2026-09-18): the
+/// lock froze the claim's own statement lines, and that statement — the only client-facing form
+/// of the report — is what the invoice asks to be paid for. Nothing is captured here. Manual
+/// entries name no claim: today's report is not the report as it stood back then.
 ///
 /// A raise is refused unless it is drawn against a locked claim with no live invoice
 /// (<see cref="ClaimReadyToInvoice"/>) — the endpoint turns that refusal into a 400 with the
@@ -24,13 +22,8 @@ namespace Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
 public sealed class CreateValuationInvoiceHandler : ICommandHandler<CreateValuationInvoice, ValuationInvoice>
 {
     private readonly JpmsContext context;
-    private readonly AuditTrail audit;
 
-    public CreateValuationInvoiceHandler(JpmsContext context, AuditTrail audit)
-    {
-        this.context = context;
-        this.audit = audit;
-    }
+    public CreateValuationInvoiceHandler(JpmsContext context) { this.context = context; }
 
     public async Task<ValuationInvoice> HandleAsync(CreateValuationInvoice command, CancellationToken cancellationToken)
     {
@@ -83,15 +76,14 @@ public sealed class CreateValuationInvoiceHandler : ICommandHandler<CreateValuat
         }
         else
         {
-            // Freeze the report as it stands at this moment and attach it — the capture adds to
-            // the change tracker, so snapshot and invoice commit in the one save below.
-            var snapshot = await ValuationReportSnapshotCapture.CaptureAsync(
-                context, entity.ProjectId, $"{entity.Reference} raise", entity.ValuationInvoiceId, cancellationToken);
-            entity.ValuationReportSnapshotId = snapshot.ValuationReportSnapshotId;
-            // Stamp the deposit credit embedded in this invoice's amount (the claim's
-            // outstanding deduction at this moment — the snapshot just computed it). Gross
-            // certificate = Amount + DepositCredited; manual/historic entries stay at 0.
-            entity.DepositCredited = snapshot.DepositReleased;
+            // Stamp the deposit credit embedded in this invoice's amount — the locked claim's
+            // outstanding deduction, frozen with its statement. Gross certificate = Amount +
+            // DepositCredited; manual/historic entries stay at 0.
+            var claim = await context.ValuationClaims.AsNoTracking()
+                .Where(candidate => candidate.ValuationClaimId == command.ValuationClaimId)
+                .Select(candidate => new { candidate.DepositReleased })
+                .FirstAsync(cancellationToken);
+            entity.DepositCredited = claim.DepositReleased;
 
             ValuationInvoiceAuditTrail.Append(context, entity.ValuationInvoiceId,
                 ValuationInvoiceEventType.Created, command.Note ?? "", amountAfter: command.Amount);
@@ -99,17 +91,6 @@ public sealed class CreateValuationInvoiceHandler : ICommandHandler<CreateValuat
 
         context.ValuationInvoices.Add(entity);
         await context.SaveChangesAsync(cancellationToken);
-
-        // Audit (client-facing, after the save so the trail never records a freeze that didn't
-        // commit): the snapshot is the statement a client could be shown.
-        if (!command.IsManual)
-            await audit.WriteAsync(
-                AuditEventType.SnapshotTaken,
-                $"Valuation report snapshot frozen for {entity.Reference}.",
-                pathway: "Client",
-                projectId: entity.ProjectId,
-                recordReference: entity.Reference,
-                cancellationToken: cancellationToken);
 
         // A manual entry is Issued/Paid from the start, so "Certified to date" just moved.
         if (command.IsManual)

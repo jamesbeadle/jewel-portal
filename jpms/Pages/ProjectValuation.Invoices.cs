@@ -16,7 +16,7 @@ public partial class ProjectValuation
 
     // Records that the claim has gone to the architect/client (Raised → Submitted, "Awaiting
     // approval"). A record of an outside event, like Record approval / Record payment — the
-    // portal emails nothing here; the snapshot's Email action drafts the statement if wanted.
+    // portal emails nothing here; the claim card's Email statement sends the statement if wanted.
     private Task RecordClaimSentAsync()
     {
         if (busy || SelectedInvoice is not { } invoice) return Task.CompletedTask;
@@ -24,7 +24,6 @@ public partial class ProjectValuation
         {
             await Invoices.SubmitAsync(invoice.ValuationInvoiceId);
             await ReloadInvoicePanelsAsync();
-            // An amended invoice freezes a fresh snapshot when re-claimed — refresh the register.
             OnCertifiedChanged();
         }, "Couldn't record the claim as sent — the server may be restarting. Please try again.");
     }

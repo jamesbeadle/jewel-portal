@@ -544,13 +544,9 @@ public sealed partial class JpmsContext
         // places clip that: 33.3333% of £850,000 is £283,333.05 against the £283,333.33 the QS
         // worked back from, and the report was out by pennies. 20 decimal places keep every figure
         // a user can type or derive, and 28 digits total is exactly what a .NET decimal round-trips
-        // without loss (8 integer digits comfortably cover the +/-100000 typo rail). The frozen
-        // snapshot copy matches so a submitted report reproduces the live one to the penny.
+        // without loss (8 integer digits comfortably cover the +/-100000 typo rail).
         // Widened by the WidenClaimPercentPrecision migration (2026-09-02).
         modelBuilder.Entity<ClaimLineEntity>()
-            .Property(row => row.PercentComplete)
-            .HasPrecision(28, 20);
-        modelBuilder.Entity<ValuationReportSnapshotLineEntity>()
             .Property(row => row.PercentComplete)
             .HasPrecision(28, 20);
     }

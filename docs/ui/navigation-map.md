@@ -35,7 +35,7 @@ Rows marked **{project}** resolve their template against the picker; the rest ar
 | RFIs | `/projects/{id}/requests` | tabs `/all` `/general` `/rfis`; detail `/requests/view/{requestId}` |
 | Variation Orders | `/projects/{id}/variations` | detail `/variations/{voId}`; legacy `/requests/variations`, `/voq/{id}` |
 | Architect's Instructions | `/projects/{id}/architect-instructions` | |
-| Valuation Report Snapshots | `/projects/{id}/valuation-snapshots` | |
+| ~~Valuation Report Snapshots~~ | `/projects/{id}/valuation-snapshots` | retired 2026-09-18 — redirects to `/valuation`; the statement lives on the claim card |
 | Documents (was Drawings until 2026-09-03; `/drawings` URLs redirect) | `/projects/{id}/documents` | detail `/documents/{drawingId}`; ambiguous `/documents/ambiguous` |
 | Programme | `/projects/{id}/programme` | |
 | Calendar | `/projects/{id}/calendar` | |

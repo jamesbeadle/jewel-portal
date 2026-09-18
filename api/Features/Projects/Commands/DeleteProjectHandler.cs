@@ -117,9 +117,6 @@ public sealed class DeleteProjectHandler : ICommandHandler<DeleteProject, Acknow
             var invoiceIds = context.ValuationInvoices.Where(i => i.ProjectId == projectId).Select(i => i.ValuationInvoiceId);
             await context.ValuationInvoiceEvents.Where(x => invoiceIds.Contains(x.ValuationInvoiceId)).ExecuteDeleteAsync(cancellationToken);
 
-            var snapshotIds = context.ValuationReportSnapshots.Where(s => s.ProjectId == projectId).Select(s => s.ValuationReportSnapshotId);
-            await context.ValuationReportSnapshotLines.Where(x => snapshotIds.Contains(x.ValuationReportSnapshotId)).ExecuteDeleteAsync(cancellationToken);
-
             var instructionIds = context.ArchitectInstructions.Where(i => i.ProjectId == projectId).Select(i => i.ArchitectInstructionId);
             await context.ArchitectInstructionVariations.Where(x => instructionIds.Contains(x.ArchitectInstructionId)).ExecuteDeleteAsync(cancellationToken);
 

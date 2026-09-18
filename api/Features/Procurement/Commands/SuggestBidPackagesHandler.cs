@@ -10,9 +10,9 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 /// <summary>
 /// Feeds the project's LIVE valuation report to Claude and asks for the bid packages worth
 /// tendering for what's left. The report comes from
-/// <see cref="ValuationReportSnapshotCapture.ComputeAsync"/> — the same maths as the working-copy
-/// PDF, so the AI reasons from exactly what the report tab shows: every priced line with its %
-/// complete from the latest claim (no claim yet = everything 0%). Existing packages go into the
+/// <see cref="ValuationStatementLines.ReadAsync"/> for the latest claim — the same lines as the
+/// statement / working-copy PDF, so the AI reasons from exactly what the report tab shows: every
+/// priced line with its % complete (no claim yet = every bill line at 0%). Existing packages go into the
 /// prompt so the AI does not re-propose scope already out to tender.
 ///
 /// Nothing is created here and nothing is saved — the handler returns proposals; the user picks
@@ -64,14 +64,28 @@ public sealed class SuggestBidPackagesHandler
             return new BidPackageSuggestionResult(Array.Empty<BidPackageSuggestion>(), tierName,
                 "The AI isn't connected (no Anthropic key is configured), so no suggestions could be produced.");
 
-        // The read-only half of snapshot capture: the same figures the report tab and the
-        // working-copy PDF show, computed without touching the change tracker.
-        var (snapshot, lines) = await ValuationReportSnapshotCapture.ComputeAsync(
-            context, command.ProjectId, "Bid package suggestion working copy", null, cancellationToken);
+        // The latest claim's statement (its frozen rows when locked, the working copy while
+        // Draft) — the same lines the report tab and the PDF show; nothing is written. A project
+        // with no claim yet reads its bill at 0%.
+        var latestClaim = await context.ValuationClaims.AsNoTracking()
+            .Where(claim => claim.ProjectId == command.ProjectId)
+            .OrderByDescending(claim => claim.ClaimNumber)
+            .FirstOrDefaultAsync(cancellationToken);
+        var lines = latestClaim is null
+            ? (await context.ValuationLineItems.AsNoTracking()
+                    .Where(line => line.ProjectId == command.ProjectId)
+                    .ToListAsync(cancellationToken))
+                .Select(line => new ValuationStatementLine(
+                    "", line.ValuationLineItemId, (ValuationElementType)line.ElementType,
+                    line.SectionCode, line.SectionName, line.VariationRef, line.VariationTitle,
+                    (ValuationLineType)line.LineType, line.CostCode, line.Description, line.Unit,
+                    line.Quantity, line.Rate, line.LineAmount, 0m, 0m, 0m, line.Comments, line.DisplayOrder, line.ClientReference))
+                .ToList()
+            : (await ValuationStatementLines.ReadAsync(context, latestClaim, cancellationToken)).Lines;
 
         // Declined/TBC lines are recorded but not priced — they are not works to procure.
         var pricedLines = lines
-            .Where(line => line.LineType is not ((int)ValuationLineType.Declined or (int)ValuationLineType.Tbc))
+            .Where(line => line.CountsTowardTotals)
             .Where(line => line.LineAmount != 0m)
             .ToList();
 
@@ -84,7 +98,7 @@ public sealed class SuggestBidPackagesHandler
             .Select(package => new { package.Title, package.Trade, package.Status })
             .ToListAsync(cancellationToken);
 
-        var noClaimYet = snapshot.ValuationClaimId is null;
+        var noClaimYet = latestClaim is null;
         var userPrompt = BuildUserPrompt(pricedLines, existingPackages
             .Select(p => (p.Title, p.Trade, (BidPackageStatus)p.Status)).ToList(), noClaimYet);
 
@@ -162,7 +176,7 @@ public sealed class SuggestBidPackagesHandler
         "Order suggestions by remaining value, largest first. If nothing is worth tendering, return {\"suggestions\":[]}.";
 
     private static string BuildUserPrompt(
-        List<ValuationReportSnapshotLineEntity> pricedLines,
+        IReadOnlyList<ValuationStatementLine> pricedLines,
         List<(string Title, string Trade, BidPackageStatus Status)> existingPackages,
         bool noClaimYet)
     {
@@ -178,14 +192,14 @@ public sealed class SuggestBidPackagesHandler
             .OrderByDescending(line => line.LineAmount - line.CumulativeClaimed)
             .Take(MaxReportLines))
         {
-            var element = (ValuationElementType)line.ElementType switch
+            var element = line.ElementType switch
             {
                 ValuationElementType.Variation => $"Variation {line.VariationRef}".Trim(),
                 ValuationElementType.PcSum => "PC sum",
                 ValuationElementType.Contingency => "Contingency",
                 _ => "Contract works"
             };
-            var section = (ValuationElementType)line.ElementType == ValuationElementType.Variation
+            var section = line.ElementType == ValuationElementType.Variation
                 ? line.VariationTitle
                 : string.IsNullOrWhiteSpace(line.SectionName) ? line.SectionCode : line.SectionName;
             var remaining = line.LineAmount - line.CumulativeClaimed;

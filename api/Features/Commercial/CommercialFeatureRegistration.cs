@@ -122,21 +122,16 @@ public static class CommercialFeatureRegistration
         services.AddScoped<ICommandHandler<RenameValuationClaim, ValuationClaim>, RenameValuationClaimHandler>();
         services.AddScoped<ICommandHandler<DeleteValuationClaim, Acknowledgement>, DeleteValuationClaimHandler>();
 
-        // Valuation report snapshots — immutable frozen copies behind invoice submissions
-        // and on-demand period-end records.
-        services.AddScoped<IQueryHandler<ListValuationReportSnapshotsForProject, IReadOnlyList<ValuationReportSnapshot>>, ListValuationReportSnapshotsForProjectHandler>();
-        services.AddScoped<IQueryHandler<GetValuationReportSnapshot, ValuationReportSnapshotDetail>, GetValuationReportSnapshotHandler>();
+        // The valuation as a statement (2026-09-18: the locked claim IS the statement — its own
+        // frozen rows; a Draft reads as the working copy). One query feeds the viewer, the
+        // exports and the connector; it also resolves retired snapshot ids.
+        services.AddScoped<IQueryHandler<GetValuationStatement, ValuationStatement>, GetValuationStatementHandler>();
 
-        services.AddScoped<ICommandHandler<TakeValuationReportSnapshot, ValuationReportSnapshot>, TakeValuationReportSnapshotHandler>();
-        services.AddScoped<TakeValuationReportSnapshotValidation>();
-
-        services.AddScoped<ICommandHandler<DeleteValuationReportSnapshot, Acknowledgement>, DeleteValuationReportSnapshotHandler>();
-
-        // Snapshot exports — the branded PDF (download endpoint and email attachment render
+        // Statement exports — the branded PDF (download endpoint and email attachment render
         // through the one builder, so they never diverge), the spreadsheet the portal's Export
         // button produces rendered server-side for the connector (2026-09-02), and the
-        // client-facing email draft.
-        services.AddScoped<Documents.ValuationReportSnapshotPdfBuilder>();
+        // client-facing email.
+        services.AddScoped<Documents.ValuationStatementPdfBuilder>();
         services.AddScoped<Documents.ValuationReportWorkbookBuilder>();
 
         // Cost-centre reconciliation PDF — the Financials tab's per-line report for the
@@ -144,12 +139,12 @@ public static class CommercialFeatureRegistration
         services.AddScoped<Documents.CostCentreReconciliationPdfBuilder>();
 
         // The message itself, shared by the send and the preview so they cannot say two things.
-        services.AddScoped<ValuationSnapshotEmailComposer>();
+        services.AddScoped<ValuationStatementEmailComposer>();
         services.AddScoped<MailboxIntake.Compose.IComposesRecordEmail>(
-            sp => sp.GetRequiredService<ValuationSnapshotEmailComposer>());
-        services.AddScoped<ICommandHandler<SendValuationReportSnapshotEmail, ValuationReportSnapshotEmailOutcome>, SendValuationReportSnapshotEmailHandler>();
-        services.AddScoped<SendValuationReportSnapshotEmailAuthorisation>();
-        services.AddScoped<SendValuationReportSnapshotEmailValidation>();
+            sp => sp.GetRequiredService<ValuationStatementEmailComposer>());
+        services.AddScoped<ICommandHandler<SendValuationStatementEmail, ValuationStatementEmailOutcome>, SendValuationStatementEmailHandler>();
+        services.AddScoped<SendValuationStatementEmailAuthorisation>();
+        services.AddScoped<SendValuationStatementEmailValidation>();
 
         return services;
     }

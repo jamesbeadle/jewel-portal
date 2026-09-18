@@ -24,8 +24,8 @@
             <Actions>
             @* Working-copy exports of the report AS IT STANDS — available at every claim
                stage, draft included, so the accountant can review the layout before anything
-               is submitted. Both are stamped as a working copy; the client-facing statement
-               remains the frozen snapshot behind the invoice. Disabled (not hidden) until the
+               is submitted. Both are stamped as a working copy; the client-facing statement is
+               the locked claim's, on the claim card below. Disabled (not hidden) until the
                report has loaded — a control is never gated. *@
             <Toolbar>
                 <ToolbarButton Icon="download" Label="Download PDF — working copy of the report as it stands" Target="_blank"
@@ -116,13 +116,33 @@
                         </div>
                         <p class="text-sm text-content-muted mt-1.5">@StageHint(s)</p>
                     </div>
-                    @* Secondary claim actions (rename, reopen, early confirm, delete) live behind one
-                       menu — two clicks away, so nothing destructive sits raw on the title bar — and
-                       only for the roles that run the report, never the client. *@
-                    @if (CanManageClaims)
-                    {
-                        <DropdownMenu Label="Actions" WidthClass="w-72" Items="ClaimMenuItems" Class="shrink-0" />
-                    }
+                    <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                        @* The STATEMENT — the claim as locked is the one client-facing form of the
+                           report (2026-09-18: no separate snapshot). View it, take it as a PDF, or
+                           email it to the client from the shared mailbox. A Draft has no statement
+                           yet; the toolbar's working-copy exports cover it. *@
+                        @if (s.IsLocked)
+                        {
+                            <Toolbar>
+                                <ToolbarButton Icon="document" Label="View statement — the report exactly as it stood when this claim was locked"
+                                               OnClick="@(() => OpenStatement(s.ValuationClaimId))" />
+                                <ToolbarButton Icon="download" Label="Statement PDF — the branded statement the client is sent" Target="_blank"
+                                               Href="@($"/api/valuation-claims/{s.ValuationClaimId}/statement/pdf")" />
+                                @if (CanEmailStatement)
+                                {
+                                    <ToolbarButton Icon="email" Label="Email statement to client — opens the email for review first"
+                                                   OnClick="@(() => OpenStatementEmail(s.ValuationClaimId))" />
+                                }
+                            </Toolbar>
+                        }
+                        @* Secondary claim actions (rename, reopen, early confirm, delete) live behind one
+                           menu — two clicks away, so nothing destructive sits raw on the title bar — and
+                           only for the roles that run the report, never the client. *@
+                        @if (CanManageClaims)
+                        {
+                            <DropdownMenu Label="Actions" WidthClass="w-72" Items="ClaimMenuItems" Class="shrink-0" />
+                        }
+                    </div>
                 </div>
                 <div class="mt-3 flex items-center justify-between gap-4 flex-wrap">
                     <ol class="flex items-center gap-1.5 text-xs flex-wrap">
@@ -151,12 +171,12 @@
                             </button>
                             break;
                         @* The handover: raising is accounts' first move. It files the invoice as a
-                           draft and freezes the report — it never sends anything. Claiming (the
+                           draft against the locked statement — it never sends anything. Claiming (the
                            statement going to the architect/client) is recorded as its own step. *@
                         case ClaimStage.AwaitingInvoice:
                             <button @onclick="RaiseInvoiceAsync" disabled="@(busy || PaymentDueNow <= 0m)"
                                     title="@(PaymentDueNow > 0m
-                                              ? "Files the valuation invoice for the amount due as a draft and freezes the report snapshot behind it. Nothing is sent — recording the claim as sent is the next step."
+                                              ? "Files the valuation invoice for the amount due as a draft, against this claim's locked statement. Nothing is sent — recording the claim as sent is the next step."
                                               : "Nothing is currently due — manage invoices in Valuation Invoices below")"
                                     class="btn-primary shrink-0">
                                 Raise invoice (@Money(PaymentDueNow))
@@ -164,7 +184,7 @@
                             break;
                         case ClaimStage.InvoiceDraft:
                             <button @onclick="RecordClaimSentAsync" disabled="@busy"
-                                    title="Records that the claim (the frozen report) has gone to the architect/client for approval — nothing is emailed from here. Actions has the no-approval-loop issue"
+                                    title="Records that the claim (the locked statement) has gone to the architect/client for approval — nothing is emailed from here; Email statement above does that. Actions has the no-approval-loop issue"
                                     class="btn-primary shrink-0">
                                 Record claim sent
                             </button>
@@ -255,15 +275,10 @@
                                           ValuationClaimId="@Selected?.ValuationClaimId"
                                           OnInvoicedToDateChanged="OnInvoicedToDateChanged"
                                           OnCertifiedChanged="OnCertifiedChanged"
-                                          OnViewSnapshot="OpenSnapshot" />
-                @* Snapshot register: the frozen report behind each invoice submission,
-                   plus on-demand period-end captures. *@
-                <div class="mt-3">
-                    <ValuationSnapshotsSection ProjectId="@ProjectId" OnView="OpenSnapshot" OnDeleted="OnSnapshotDeleted" OnEmail="OpenSnapshotEmail" />
-                </div>
+                                          OnViewStatement="OpenStatement" />
                 @* The selected claim's mail: the period is filed to in the Control Centre
-                   (Client → Valuation reports — the claim while nothing is frozen, its statement
-                   after), and reads back here by tag, statements included. *@
+                   (Client → Valuation reports — one row per period, the claim), and reads back
+                   here by tag, retired statement tags included. *@
                 <div class="mt-3">
                     <ValuationClaimCorrespondenceSection Claim="@Selected" />
                 </div>
@@ -284,17 +299,17 @@
                                        OnCancelled="@(() => showClientReferences = false)" />
         }
 
-        <Modal IsOpen="@(viewingSnapshotId is not null)"
-               Title="Valuation report snapshot"
-               ShowFooter="false" Class="max-w-6xl" OnCancel="CloseSnapshot">
-            @if (viewingSnapshotId is not null)
+        <Modal IsOpen="@(viewingStatementClaimId is not null)"
+               Title="Valuation statement"
+               ShowFooter="false" Class="max-w-6xl" OnCancel="CloseStatement">
+            @if (viewingStatementClaimId is not null)
             {
-                <ValuationSnapshotViewer SnapshotId="@viewingSnapshotId"
-                                         OnEmailRequested="@(CanEmailSnapshot ? EventCallback.Factory.Create<string>(this, OpenSnapshotEmail) : default)" />
+                <ValuationStatementViewer ClaimId="@viewingStatementClaimId"
+                                          OnEmailRequested="@(CanEmailStatement ? EventCallback.Factory.Create<string>(this, OpenStatementEmail) : default)" />
             }
         </Modal>
 
-        <ValuationSnapshotEmailModal Snapshot="@emailingSnapshot" OnClose="@(() => emailingSnapshot = null)" />
+        <ValuationStatementEmailModal Claim="@emailingClaim" OnClose="@(() => emailingClaim = null)" />
 
         <Modal IsOpen="@showStartClaim"
                Title="@($"Start claim {NextClaimNumber}")"

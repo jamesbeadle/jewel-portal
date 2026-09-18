@@ -21,13 +21,13 @@ by machinery, you must enforce by discipline.
 4. **File to records** (file_email_to_record) — every record the email genuinely concerns. An
    email can feed a request AND a cost centre AND the programme at once; multiple filings are
    normal, not a smell.
-   A valuation period is a record too, and it has ONE filing row (2026-09-15): the period's
-   live frozen statement when one has been taken (type ValuationReportSnapshot, a
-   non-superseded id from list_valuation_snapshots), otherwise the live claim (type
-   ValuationClaim; the recordId is the claim's ValuationClaimId from get_valuation_context).
-   Site-meeting notes, the QS's working and the architect's early queries land while the
-   period is still the claim; the client's response arrives once the statement is out. Claim
-   and statement read each other's mail, so a filing to the other row is never lost — but
+   A valuation period is a record too, and it has ONE filing row: the claim (type
+   ValuationClaim; the recordId is the claim's ValuationClaimId from list_valuations or
+   get_valuation_context). Since 18/09/2026 the claim IS the valuation, its statement and its
+   tag (JPMS/VAL-{project}-{claim number}) — there is no separate snapshot to file to. Site-
+   meeting notes, the QS's working, the architect's queries and the client's response to the
+   statement all land on the same row. (Type ValuationReportSnapshot with an old snapshot id
+   still lands on its claim; mail tagged JPMS/VRS-… before then reads on the claim.) — but
    offer the user the one row, not a choice.
    An ESTIMATE ENQUIRY (2026-09-15) — someone asking Jewel to price work, forwarded to the
    projects mailbox — files to the sales LEAD it is about (type lead; list_leads or
@@ -52,7 +52,7 @@ by machinery, you must enforce by discipline.
    JPMS/Replied and it leaves the queue. saveAsDraftOnly true stages the reviewed draft in the
    mailbox's Drafts folder instead, for a person to send from Outlook. Record-anchored emails
    behave the same way and have since 17/09/2026: send_request_email, send_request_emails,
-   send_request_reply, send_work_order_po_email, send_valuation_report_snapshot_email,
+   send_request_reply, send_work_order_po_email, send_valuation_statement_email,
    send_bid_package_invite_to_tender_list, send_bid_package_invite,
    send_subcontractor_statement_email, send_programme_reply and send_defect_to_supplier all SEND
    on the confirmed call and all take saveAsDraftOnly for the review route. Every one of them is

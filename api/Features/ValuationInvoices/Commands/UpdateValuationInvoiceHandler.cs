@@ -66,17 +66,9 @@ public sealed class UpdateValuationInvoiceHandler : ICommandHandler<UpdateValuat
 
         if (wasRejected || hadBeenSubmitted) entity.AmendmentCount += 1;
 
-        // The attached snapshot froze the ask as it stood at raise (or last resubmission) — an
-        // amendment changes the ask, so it no longer describes it. Flag it superseded; the next
-        // submit/issue freezes a fresh one (the raise-time capture guarantees every non-manual
-        // invoice has a snapshot to supersede).
-        if (!entity.IsManual)
-        {
-            var snapshots = await context.ValuationReportSnapshots
-                .Where(snapshot => snapshot.ValuationInvoiceId == entity.ValuationInvoiceId && !snapshot.IsSuperseded)
-                .ToListAsync(cancellationToken);
-            foreach (var snapshot in snapshots) snapshot.IsSuperseded = true;
-        }
+        // The statement behind the invoice is the locked claim, which an amendment of the
+        // invoice's amount does not touch (2026-09-18): the audit row below carries the
+        // before/after. Changing the FIGURES means cancel → reopen the claim → re-lock → re-raise.
 
         ValuationInvoiceAuditTrail.Append(context, entity.ValuationInvoiceId,
             ValuationInvoiceEventType.Amended, command.Note ?? "",

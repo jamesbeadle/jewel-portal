@@ -27,7 +27,7 @@ public enum AuditEventType
     Restored = 5,               // a discarded thread returned to the queue
     WallRejected = 6,           // an action that would cross the client wall was refused
     DraftCreated = 7,           // the portal drafted client correspondence (request doc / reply)
-    SnapshotTaken = 8,          // a valuation report snapshot was frozen (invoice raise)
+    SnapshotTaken = 8,          // a valuation's statement was frozen — the lock ("We're claiming this"); before 2026-09-18, a snapshot at invoice raise
     BackfillStamped = 9,        // the backfill stamped a pathway onto an existing thread
     // Reserved for the wider scope — declared so persisted ints never shift:
     CrossPathwayOverride = 10,  // a deliberate Subcontractor↔Internal dual filing

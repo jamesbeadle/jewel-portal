@@ -8,7 +8,7 @@ namespace Jewel.JPMS.Api.Features.Commercial.Commands;
 /// row per cost centre the project sells against) and always edited as a whole on screen, so a
 /// whole-map write is simpler and safer than per-row upserts: what the user saw is what is
 /// saved. A blank reference removes the row; a cost centre missing from the entries is removed
-/// too. Snapshots already taken keep the reference frozen on their lines — this never rewrites
+/// too. Locked claims keep the reference frozen on their statement lines — this never rewrites
 /// an issued statement, only what the NEXT capture will print.
 /// </summary>
 public sealed class SetClientCostReferencesHandler
