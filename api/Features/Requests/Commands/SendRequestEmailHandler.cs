@@ -129,7 +129,7 @@ public sealed class SendRequestEmailHandler : ICommandHandler<SendRequestEmail, 
             coverNote,
             attachments,
             Bcc: recipients.Bcc.Select(ToDraftRecipient).ToList(),
-            Categories: new[] { TriageCategories.Marker, recordTag },
+            Categories: new[] { TriageCategories.Marker, recordTag, TriageCategories.Client },
             Cc: recipients.Cc.Select(ToDraftRecipient).ToList());
 
         var filing = new OutboundEmailFiling(

@@ -1,4 +1,5 @@
 using System.Text;
+using Jewel.JPMS.Contracts.MailboxCompose;
 
 namespace Jewel.JPMS.Features.Procurement;
 
@@ -23,17 +24,13 @@ public static partial class WorkOrderPoEmail
         System.Net.WebUtility.HtmlEncode(text.Trim()).Replace("\r\n", "\n").Replace("\n", "<br/>");
 
     public static string Subject(WorkOrder order, string projectName) =>
-        $"Work order {order.Reference} — {TitleNamingTheProjectOnce(order.Title, projectName)}";
+        $"Work order {order.Reference} — {SubjectLine.NamingTheProjectOnce(order.Title, projectName)}";
 
-    /// <summary>An order raised from a supplier's quote often carries the site in its own title
-    /// ("Tiling Adhesive Supply, By France"), and appending the project to that read
-    /// "… By France — By France" on every purchase order the supplier received.</summary>
-    private static string TitleNamingTheProjectOnce(string title, string projectName)
-    {
-        if (string.IsNullOrWhiteSpace(projectName)) return title;
-        if (title.Contains(projectName, StringComparison.OrdinalIgnoreCase)) return title;
-        return $"{title} — {projectName}";
-    }
+    /// <summary>The same subject, naming the tender package the order was awarded from, so the
+    /// supplier reads which of their tenders it answers. The award page composed its own line
+    /// until 2026-09-18 and carried neither the order's own reference rule nor the project.</summary>
+    public static string SubjectForTenderAward(WorkOrder order, string projectName, string packageReference) =>
+        $"{Subject(order, projectName)} ({packageReference})";
 
     public static string Body(
         WorkOrder order,

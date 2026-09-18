@@ -30,7 +30,8 @@ public partial class ProjectBidPackageInviteDetail
     private void OpenWorkOrderEmailModal()
     {
         if (busy || package is null || AwardedOrder is not { } awarded) return;
-        woEmailSubject = $"Work order WO-{awarded.Order.Number:0000} — {awarded.Order.Title} ({package.Reference})";
+        var projectName = ProjectList.Find(ProjectId)?.Name ?? ProjectId;
+        woEmailSubject = WorkOrderPoEmail.SubjectForTenderAward(awarded.Order, projectName, package.Reference);
         woEmailBody = DefaultWorkOrderEmailBody(awarded);
         woEmailNote = null;
         showWoEmailModal = true;

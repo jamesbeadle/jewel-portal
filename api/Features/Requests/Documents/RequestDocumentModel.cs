@@ -1,4 +1,4 @@
-
+using Jewel.JPMS.Contracts.MailboxCompose;
 namespace Jewel.JPMS.Api.Features.Requests.Documents;
 
 /// <summary>
@@ -80,10 +80,15 @@ public sealed record RequestDocumentModel(
     /// <summary>The email subject line used when the document is sent, resent or drafted.</summary>
     public string EmailSubject =>
         !string.IsNullOrWhiteSpace(Reference)
-            ? $"{Reference}: {Title} — {ProjectName}"
+            ? $"{Reference}: {TitleNamingTheProjectOnce}"
             : string.IsNullOrEmpty(DisplayNumber)
-                ? $"{TypeShort}: {Title} — {ProjectName}"
-                : $"{DisplayNumber} {TypeShort}: {Title} — {ProjectName}";
+                ? $"{TypeShort}: {TitleNamingTheProjectOnce}"
+                : $"{DisplayNumber} {TypeShort}: {TitleNamingTheProjectOnce}";
+
+    /// <summary>The subject named the project even when the title already did, so an RFI raised
+    /// from a title carrying the site read "… By France — By France". The shared rule is the one
+    /// the purchase order follows.</summary>
+    private string TitleNamingTheProjectOnce => SubjectLine.NamingTheProjectOnce(Title, ProjectName);
 }
 
 /// <summary>One numbered row of the itemised-queries table (Item / Drawing Ref / Member-Area / Query / Response).</summary>
