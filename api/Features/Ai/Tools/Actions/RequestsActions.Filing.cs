@@ -74,7 +74,7 @@ internal sealed partial class RequestsActions
             Name: "delete_mailbox_draft",
             Area: "Correspondence",
             Description: "Deletes ONE unsent draft from the shared projects mailbox's Drafts folder "
-                + "— the undo for the prepare_*_draft actions when a staged draft was superseded or "
+                + "— the undo for a send left as a draft (saveAsDraftOnly) that was superseded or "
                 + "raised in error. The mailbox verifies the message really is an unsent draft "
                 + "before deleting, so sent or received mail can never be removed this way. Graph "
                 + "moves the deleted draft to the mailbox's Deleted Items, where a person can still "
@@ -88,10 +88,11 @@ internal sealed partial class RequestsActions
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
             RequiresConfirmation: true,
-            Notes: "messageId is the draft's mailbox message id — the prepare_*_draft results "
-                + "return it as draftMessageId, and the audit trail's Draft created rows carry it. "
+            Notes: "messageId is the draft's mailbox message id — every send action returns it as "
+                + "draftMessageId, and the audit trail's Draft created rows carry it. "
                 + "Confirm with the user WHICH draft, by subject, before calling — someone may have "
                 + "edited the draft in Outlook since it was staged, and deleting throws their edits "
                 + "away too. Only drafts can be deleted; a draft already sent is refused."),
+
     };
 }

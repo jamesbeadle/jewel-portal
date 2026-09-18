@@ -738,6 +738,49 @@ public sealed class AiConnectorTests
     }
 
     [Fact]
+    public void EveryEmailTheHasPagesSends_reachesTheConnector_withItsSaveAsDraftRoute()
+    {
+        // 2026-09-17 gave nine record doors a Send; 2026-09-18 closed the three the connector
+        // still lacked. The subcontractor statement was skipped because nothing dispatched it —
+        // the command had a handler, gates and a DI registration and NO endpoint, so the page's
+        // own button 404'd; the programme reply because its gate was a private field of its
+        // endpoint; the composer's invite because it had no save-as-draft at all and nobody had
+        // settled whether the assistant should get a door that always sends (Nigel: grow one).
+        foreach (var name in new[]
+        {
+            "send_request_email", "send_request_emails", "send_request_reply",
+            "send_work_order_po_email", "send_valuation_report_snapshot_email",
+            "send_bid_package_invite_to_tender_list", "send_bid_package_invite",
+            "send_subcontractor_statement_email", "send_programme_reply", "send_defect_to_supplier"
+        })
+        {
+            var action = AiActionRegistry.Find(name);
+            Assert.NotNull(action);
+            Assert.Contains("SENDS EMAIL", action!.Description);
+            Assert.True(action.RequiresConfirmation, name + " sends to someone outside Jewel");
+        }
+
+        // The review route, named in the description so the model offers it rather than inventing
+        // one. resend_request_document is the deliberate exception: it only ever stages a draft.
+        foreach (var name in new[]
+        {
+            "send_work_order_po_email", "send_valuation_report_snapshot_email",
+            "send_bid_package_invite_to_tender_list", "send_bid_package_invite",
+            "send_subcontractor_statement_email", "send_programme_reply"
+        })
+            Assert.Contains("saveAsDraftOnly", AiActionRegistry.Find(name)!.Description);
+
+        // Each new door's reach is its page's, not a wider one.
+        var statement = AiActionRegistry.Find("send_subcontractor_statement_email")!;
+        Assert.True(statement.VisibleTo.Includes(Role.FinanceDirector));
+        Assert.False(statement.VisibleTo.Includes(Role.Foreman));
+
+        var programme = AiActionRegistry.Find("send_programme_reply")!;
+        Assert.True(programme.VisibleTo.Includes(JpmsRoles.SiteManager));
+        Assert.False(programme.VisibleTo.Includes(JpmsRoles.Architect));
+    }
+
+    [Fact]
     public void HsAudits_reachTheConnector_behindTheirPagesGates()
     {
         // 2026-09-15: the H&S site audit (Katy-Louise's workbook brought into the portal) and the

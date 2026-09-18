@@ -61,6 +61,38 @@ internal sealed partial class ProcurementActions
                 + "tenderList[].recipientId — never the company name)."),
 
         new AiAction(
+            Name: "send_bid_package_invite",
+            Area: "Procurement",
+            Description: "SENDS EMAIL: sends the tender invite from the shared mailbox to the "
+                + "EXACT envelope given — the Bid package composer's own Send, where a person has "
+                + "written the addresses rather than letting the tender list supply them. Prefer "
+                + "send_bid_package_invite_to_tender_list, which fans out to the rows still in the "
+                + "running and never misses a firm; use this one only when the user has named the "
+                + "recipients themselves. to, cc and bcc are semicolon-separated address strings, "
+                + "exactly what the composer's fields hold; an EMPTY to is addressed to the "
+                + "projects mailbox itself, the house convention for a BCC fan-out, so no "
+                + "subcontractor is ever the visible addressee. It attaches the same set as the "
+                + "tender-list route (pricing schedule, T&Cs, tender documents, linked drawings), "
+                + "and attachedFiles is the truth about what travelled. saveAsDraftOnly true stops "
+                + "after staging, leaving the reviewed draft in Drafts for Outlook instead of "
+                + "sending. A successful send clears the package's saved composer draft.",
+            CommandType: typeof(SendBidPackageInvite),
+            ResultType: typeof(BidPackageInviteSendOutcome),
+            AuthorisationType: typeof(SendBidPackageInviteAuthorisation),
+            ValidationType: typeof(SendBidPackageInviteValidation),
+            VisibleTo: SendBidPackageInviteAuthorisation.RolesThatMayInvite,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
+            Notes: "The invite goes to external firms the moment this succeeds. Read "
+                + "get_bid_package_context and read_record_emails (record_type bid_package) first "
+                + "— if an invite has already gone, say who had it and when, and do not send it "
+                + "again unless the user says so. In the confirm turn show the user every address "
+                + "in to, cc and bcc and what will attach, and get their yes. saveAsDraftOnly true "
+                + "is the review-in-Outlook alternative, and the result's webLink then opens the "
+                + "draft. bidPackageId comes from list_bid_packages."),
+
+        new AiAction(
             Name: "send_bid_package_invite_to_tender_list",
             Area: "Procurement",
             Description: "SENDS EMAIL: sends the tender invite from the shared mailbox to the "

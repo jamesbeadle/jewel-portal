@@ -65,6 +65,8 @@ public static class RecordLinksFeatureRegistration
         services.AddScoped<FileUnfiledRepliesAuthorisation>();
         services.AddScoped<FileUnfiledRepliesValidation>();
         services.AddScoped<ICommandHandler<SendProgrammeReply, ProgrammeReplyOutcome>, SendProgrammeReplyHandler>();
+        services.AddScoped<SendProgrammeReplyAuthorisation>();
+        services.AddScoped<SendProgrammeReplyValidation>();
 
         return services;
     }

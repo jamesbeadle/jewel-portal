@@ -61,7 +61,7 @@ internal sealed partial class SiteAndProgressActions
         new AiAction(
             Name: "send_defect_to_supplier",
             Area: "Closeout & defects",
-            Description: "SENDS the defect to its supplier by email from the projects mailbox — "
+            Description: "SENDS EMAIL: sends the defect to its supplier from the projects mailbox — "
                 + "the defect page's \"Send to supplier\" (or \"Chase supplier\" once it has been "
                 + "sent), performed server-side. The email goes to the supplier's address on the "
                 + "defect, filed under the defect on the supplier's side, so the sent copy and the "
