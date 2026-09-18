@@ -1,4 +1,5 @@
 @inject IJSRuntime Js
+@implements IAsyncDisposable
 
 @* A select whose options can be found by typing: click the control (or press
    ArrowDown) to open the full list, type to filter it — case-insensitive
@@ -11,12 +12,18 @@
    allocation table, the invoice modal, the split editor — scrolls inside an
    overflow container that would clip an absolutely positioned popup. Fixed
    positioning escapes the clipping; the trade-off is the popup doesn't track
-   the container while it scrolls, so it closes on any focus loss.
+   the container while it scrolls, so it closes on any scroll.
+
+   Dismissal is not this control's own. It registers with jpmsDropdownMenu
+   (wwwroot/js/dropdown-menu.js), the one watcher on the site for "a press
+   outside closes it", and asks it for the scroll close as well. Only the
+   watcher is shared: this is a form control, not a DropdownMenu, and must not
+   be built from one.
 
    The popup grows to max-content width (never narrower than the control) so
    full labels — e.g. long cost-centre names — show on one line rather than
    being truncated; it's capped to the viewport so it can't run off the edge. *@
-<div class="relative @WidthClass" @ref="wrapperRef" @onfocusout="Close">
+<div class="relative @WidthClass" @ref="wrapperRef">
     <input @ref="inputRef" type="text" disabled="@Disabled" autocomplete="off"
            class="w-full rounded pr-6 text-sm placeholder:text-content-subtle disabled:opacity-40 @InputClass @(HasValue || isOpen ?"text-content" : "text-content-subtle")"
            style="text-overflow:ellipsis"
@@ -71,6 +78,8 @@
 
     private ElementReference wrapperRef;
     private ElementReference inputRef;
+    private DotNetObjectReference<SearchSelect>? selfRef;
+    private bool watching;
     private readonly string uid = Guid.NewGuid().ToString("N")[..8];
 
     private bool isOpen;
@@ -157,7 +166,6 @@
                 if (isOpen && highlight >= 0 && highlight < Filtered.Count)
                     await SelectAsync(Filtered[highlight].Value);
                 break;
-            case "Escape":
             case "Tab":
                 Close();
                 break;
@@ -178,11 +186,53 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        await KeepDismissalWatcherInStep();
         if (isOpen && revealHighlight)
         {
             revealHighlight = false;
             await Js.InvokeVoidAsync("jpmsSearchSelect.reveal", ItemId(highlight));
         }
+    }
+
+    /// <summary>Keeps the shared watcher in step with the popup: on while it is open, off once
+    /// it closes. Done after render so the watcher only ever sees a wrapper that exists, and so
+    /// every way of closing tears it down the same way.</summary>
+    private async Task KeepDismissalWatcherInStep()
+    {
+        if (isOpen == watching) return;
+        watching = isOpen;
+        if (isOpen)
+        {
+            selfRef ??= DotNetObjectReference.Create(this);
+            await Js.InvokeVoidAsync("jpmsDropdownMenu.watch", wrapperRef, selfRef, true);
+            return;
+        }
+        if (selfRef is not null) await Js.InvokeVoidAsync("jpmsDropdownMenu.unwatch", selfRef);
+    }
+
+    /// <summary>Called from dropdown-menu.js on a press outside the control, on Escape, or on a
+    /// scroll that would leave the fixed popup pointing at nothing.</summary>
+    [JSInvokable]
+    public async Task CloseFromOutside()
+    {
+        if (!isOpen) return;
+        Close();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (selfRef is null) return;
+        // Take the JS listeners down BEFORE the reference is disposed, so a press during
+        // teardown can't call back into a dead object.
+        if (watching)
+        {
+            try { await Js.InvokeVoidAsync("jpmsDropdownMenu.unwatch", selfRef); }
+            catch { /* Tearing down during navigation/unload — the listeners die with the page. */ }
+            watching = false;
+        }
+        selfRef.Dispose();
+        selfRef = null;
     }
 
     private string ItemId(int index) => $"jpms-ss-{uid}-{index}";
