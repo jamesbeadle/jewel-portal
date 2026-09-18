@@ -1,6 +1,6 @@
 ---
 name: jpms-tender-award
-description: "The bid-package tender flow from scope to purchase order — what people call 'the tender'. Load before building bid packages, preparing or re-sending the invite email, handling incoming quotes, judging which tagged emails are tenders and which are not (the Submissions tab's Discard / Restore), awarding, or raising the post-award work order. Encodes read-the-record-before-inviting, who the invite draft really goes to, what it really attaches, extract-never-hand-type for quotes, discard-not-a-tender, the human-sends rule, directory hygiene for tender-only prospects, award-mints-the-WO, and the PO email as a distinct second step."
+description: "The bid-package tender flow from scope to purchase order — what people call 'the tender'. Load before building bid packages, preparing or re-sending the invite email, handling incoming quotes, judging which tagged emails are tenders and which are not (the Submissions tab's Discard / Restore), awarding, or raising the post-award work order. Encodes read-the-record-before-inviting, who the invite really goes to, what it really attaches, extract-never-hand-type for quotes, discard-not-a-tender, send-on-the-user's-yes with save-as-draft as the review route, directory hygiene for tender-only prospects, award-mints-the-WO, and the PO email as a distinct second step."
 ---
 
 # JPMS — Tender and award
@@ -16,7 +16,8 @@ shows it as "On list"); it does not mean an email went out. `Declined` means the
 1. **Build the package**: scope (update_bid_package_scope), line items, documents.
 2. **Add to the tender list** (invite_subcontractors_to_bid_package). Say "added to the tender
    list", never "invited" — nothing emails until the invite is sent.
-3. **The invite email** — see below. A person sends it; the connector prepares it.
+3. **The invite email** — see below. It SENDS from the shared mailbox on the user's yes;
+   `saveAsDraftOnly` leaves it in Drafts for Outlook instead.
 4. **Quotes arrive by email.** NEVER hand-type a quote's figures: run extract_tender_from_message
    on the email, review what it extracted with the user, then save_extracted_quote. A typo in a
    tender figure survives into the award and the work order.
@@ -24,8 +25,9 @@ shows it as "On list"); it does not mean an email went out. `Declined` means the
    an acknowledgement or a question is marked Discarded so it stops being offered for extraction.
 6. **Award** (award_bid_package — confirm-first): awarding mints the work order to the chosen
    subcontractor.
-7. **The PO email is a distinct second step** (prepare_work_order_email_draft): a draft in the
-   shared mailbox for the human to review and send — the tool never sends.
+7. **The PO email is a distinct second step** (send_work_order_po_email): awarding never emails
+   anything. Since 17/09/2026 that step SENDS the purchase order to the supplier's directory
+   email with the PO PDF attached; `saveAsDraftOnly` stages it in Drafts instead.
 
 ## The invite email — read first, then decide the route
 
@@ -49,12 +51,13 @@ Then:
 - **Confirm-first.** The action refuses its first call. In that turn show the user who will be
   BCC'd (company and email) and what will attach, get their yes, then call again with
   `confirm: true` and the same arguments.
-- **Reporting the draft**: the result's `attachedFiles` is the truth about attachments — report
+- **Reporting what went**: the result's `attachedFiles` is the truth about attachments — report
   them from it by name. `linkedFiles` is ONLY the overflow (files too large to attach, which
   became download links) and is usually empty; never read an empty `linkedFiles` as "no
   attachments".
-- The draft sits in the shared mailbox's Drafts, tagged to the package, for a person to send
-  from Outlook. Replies file themselves under the tag.
+- The sent copy carries the package's tag, so it and every reply group under the package. With
+  `saveAsDraftOnly` it sits in the shared mailbox's Drafts instead, tagged the same way, for a
+  person to send from Outlook.
 
 ## The Submissions tab's verdicts — Discard / Restore
 
