@@ -105,12 +105,13 @@ Different sender address, no tag, no audit row, no sent copy in the portal.
    and the sales reply only. Everything on the dispatcher path goes to Graph as the caller typed
    it, and rows 1–3 never pass through a caller at all. Owned by *One way to write an email*;
    worth naming explicitly there, because the dispatcher looks like it closed this and did not.
-3. **The subject still repeats the project on request documents.**
-   `RequestDocumentModel.EmailSubject` is `"{Reference}: {Title} — {ProjectName}"`, appended
-   unconditionally — the exact fault fixed for the PO on 17 Sept, still live on rows 1–3. Fix:
-   reuse `WorkOrderPoEmail.TitleNamingTheProjectOnce`. **Belongs to the parent task, item 2.**
-4. **Three subject builders for work-order mail** — `WorkOrderPoEmail.Subject`, the award's own
-   line, and `RequestDocumentModel`. One rule, three copies.
+3. ~~**The subject still repeats the project on request documents.**~~ **FIXED 2026-09-18.**
+   The rule moved to `contracts/MailboxCompose/SubjectLine.NamingTheProjectOnce` and both the
+   purchase order and the request document read it, so rows 1–3 name the project once.
+   Pinned by `SubjectLineTests`.
+4. ~~**Three subject builders for work-order mail.**~~ **FIXED 2026-09-18.** The award calls
+   `WorkOrderPoEmail.SubjectForTenderAward`, which is `Subject` plus the package reference — so it
+   gained the order's reference rule and its project name, both of which its own line lacked.
 5. **Row 15 sends unaudited.** Add to *Every email … leaves an audit row*.
 6. **Three doors have no connector action** (rows 6, 7, 9). Already on *The connector gains the
    Send doors*.
@@ -120,12 +121,12 @@ Different sender address, no tag, no audit row, no sent copy in the portal.
    and a session note. The skill is loaded from the database, so it must be re-saved with
    `save_skill`, not just edited here. `EveryToolOrActionACatalogueTextNames_exists` does not read
    skill files, which is why the build did not catch it.
-8. **The request document's sent copy is not born on the Client pathway.** Row 1 tags
-   `{Marker, recordTag}`; the worker's version of the same email adds `TriageCategories.Client`.
-   Same class of bug as the valuation snapshot tag already raised.
-9. **Line titles are not HTML-encoded** in the PO lines table
-   (`WorkOrderPoEmail.LinesTable.cs`) — a supplier's quote title containing `&` or `<` breaks the
-   table. The quantity formatting beside it was fixed on 17 Sept.
+8. ~~**The request document's sent copy is not born on the Client pathway.**~~ **FIXED
+   2026-09-18** — `SendRequestEmailHandler` tags `Client` as the reply and the worker already did.
+   The valuation snapshot tag is a different, larger job and stays on its own task.
+9. ~~**Line titles are not HTML-encoded** in the PO lines table.~~ **FIXED 2026-09-18** — the
+   title and the unit are the supplier's own words and are encoded as text. The quantity
+   formatting beside them was fixed on 17 Sept.
 
 ## Faults from the 9 Sept screenshot — where they stand
 
@@ -133,6 +134,6 @@ Different sender address, no tag, no audit row, no sent copy in the portal.
 |---|---|
 | "Nothing sends from here" | **Fixed** for rows 1–11. Rows 12–13 still draft only by design; row 12 is what `resend_request_document` calls. |
 | PO PDF not attached | **Fixed** — attached by the API on both send and draft, all five doors. |
-| Subject repeats the project | **Fixed for the work order. Still live on the request document** (finding 3). |
+| Subject repeats the project | **Fixed** — one rule (`SubjectLine.NamingTheProjectOnce`) on the work order, the tender award and the request document (2026-09-18). |
 | Raw HTML in a textarea | **Open** — five doors (finding 1), plus the sanitising gap (finding 2). |
 | Quantities at four decimals | **Fixed** — `QuantityText` on the shared lines table. |
