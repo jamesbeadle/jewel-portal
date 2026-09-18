@@ -5,7 +5,8 @@
   "description": "Tailwind CSS build for the JPMS Blazor WASM client.",
   "scripts": {
     "build:css": "tailwindcss -i Styles/app.tailwind.css -o wwwroot/css/app.built.css --minify",
-    "watch:css": "tailwindcss -i Styles/app.tailwind.css -o wwwroot/css/app.built.css --watch"
+    "watch:css": "tailwindcss -i Styles/app.tailwind.css -o wwwroot/css/app.built.css --watch",
+    "test:js": "node --test ../tests/js/*.test.js"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.13"
