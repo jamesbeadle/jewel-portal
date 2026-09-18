@@ -29,8 +29,8 @@ alone.
 ## Channel A — the record doors, through the dispatcher
 
 Each is staged → sent → degraded back to a reviewed draft if the mailbox refuses → audited. Eight
-of the nine offer Send with Save-as-draft beside it; **row 7 has no Save-as-draft at all** — the
-composer sends there and then.
+All nine offer Send with Save-as-draft beside it since 2026-09-18, when row 7 — the composer,
+which sent there and then — grew one like its eight siblings (Nigel's decision).
 
 | # | Email | Door(s) in the portal | Doc attached | Editor | Body sanitised | Connector | Director sign-off |
 |---|---|---|---|---|---|---|---|
@@ -39,11 +39,11 @@ composer sends there and then.
 | 3 | RFI / NOD / EOT as a reply in its thread | Request page → Email document → append to a chain | as row 1 | **none — server composed, never shown** | n/a | `send_request_reply` | |
 | 4 | Work order purchase order | 5 doors, one handler (below) | PO PDF | **raw HTML textarea** | no | `send_work_order_po_email` | |
 | 5 | Valuation report to client + architect | Valuation Report → Email snapshot | snapshot PDF | **raw HTML textarea** | no | `send_valuation_report_snapshot_email` | |
-| 6 | Subcontractor statement of account | Directory record → Statement | statement PDF | **raw HTML textarea** | no | **none** | |
-| 7 | Bid package invite (composed) | Bid package → composer | schedule, terms, tender docs, drawings | **raw HTML textarea** | no | **none** | |
-| | *(no Save-as-draft; recipients cross the wire as semicolon-separated strings)* | | | | | | |
+| 6 | Subcontractor statement of account | Directory record → Statement | statement PDF | **raw HTML textarea** | no | `send_subcontractor_statement_email` | |
+| 7 | Bid package invite (composed) | Bid package → composer | schedule, terms, tender docs, drawings | **raw HTML textarea** | no | `send_bid_package_invite` | |
+| | *(recipients still cross the wire as semicolon-separated strings — the composer task's chips reach the API surface here)* | | | | | | |
 | 8 | Bid package invite to the tender list | Bid package → invite tender list | as above | **raw HTML textarea** | no | `send_bid_package_invite_to_tender_list` | |
-| 9 | Programme relevant-events reply | Programme → Communications → Reply | no | plain textarea | **yes** | **none** | |
+| 9 | Programme relevant-events reply | Programme → Communications → Reply | no | plain textarea | **yes** | `send_programme_reply` | |
 
 The five doors behind row 4 — the PO page, the tender award, the Work Orders tab, the manual order
 modal and the Control Centre's staged create — all call one handler and one body builder
@@ -113,10 +113,15 @@ Different sender address, no tag, no audit row, no sent copy in the portal.
    `WorkOrderPoEmail.SubjectForTenderAward`, which is `Subject` plus the package reference — so it
    gained the order's reference rule and its project name, both of which its own line lacked.
 5. **Row 15 sends unaudited.** Add to *Every email … leaves an audit row*.
-6. **Three doors have no connector action** (rows 6, 7, 9). Already on *The connector gains the
-   Send doors*.
-6a. **Row 7 has no Save-as-draft**, and passes recipients as semicolon-separated strings rather
-   than the chips every other door is meant to grow. Both belong to *One way to write an email*.
+6. ~~**Three doors have no connector action** (rows 6, 7, 9).~~ **FIXED 2026-09-18.** All three
+   have one. Row 6 needed an api ENDPOINT first — the command had a handler, gates and a DI
+   registration and no `[HttpTrigger]` function, so the page's own button had never worked. Row 9
+   needed an Authorisation and a Validation class, its gate having been a private field of its
+   endpoint. Every send door is now confirm-first and reads "SENDS EMAIL", which four of them
+   (rows 1–4) were not.
+6a. ~~**Row 7 has no Save-as-draft**~~ — **FIXED 2026-09-18**, it grew one. It still passes
+   recipients as semicolon-separated strings rather than the chips every other door is meant to
+   grow; that half belongs to *One way to write an email*.
 7. **Two docs still name `prepare_work_order_email_draft`** — `docs/ai/skills/jpms/jpms-tender-award.md:27`
    and a session note. The skill is loaded from the database, so it must be re-saved with
    `save_skill`, not just edited here. `EveryToolOrActionACatalogueTextNames_exists` does not read
