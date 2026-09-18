@@ -29,9 +29,13 @@ window.jpmsDropdownMenu = {
     // to pin; this only reports, so the same reading serves a menu and a typeahead popup.
     measure: function (toggle) {
         const r = toggle.getBoundingClientRect();
+        // The LAYOUT viewport, not window.innerWidth: a fixed panel's right/bottom offsets are
+        // measured against the page area inside the scrollbar, so innerWidth puts every
+        // right-anchored panel out by the scrollbar's width.
+        const page = document.documentElement;
         return {
             top: r.top, left: r.left, right: r.right, bottom: r.bottom, width: r.width,
-            viewportWidth: window.innerWidth, viewportHeight: window.innerHeight
+            viewportWidth: page.clientWidth, viewportHeight: page.clientHeight
         };
     },
 
