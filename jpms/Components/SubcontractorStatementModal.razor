@@ -1,4 +1,6 @@
+@using Jewel.JPMS.Contracts.MailboxCompose
 @using Jewel.JPMS.Contracts.Subcontractors
+@using Jewel.JPMS.Models
 @inject IQueryClient Queries
 @inject ICommandSender Commands
 
@@ -95,7 +97,10 @@
         }
         else
         {
-            <FormField Label="Subject">
+            <p class="text-xs text-content-subtle mb-1">This is the email as it will go:</p>
+            <RecordEmailPreviewPanel Preview="preview" Loading="previewing" Error="@previewError" />
+
+            <FormField Label="Subject" Class="mt-3">
             <input class="field mb-3" @bind="subject" />
             </FormField>
 
@@ -145,6 +150,10 @@
     private string subject = "";
     private string htmlBody = "";
 
+    private bool previewing;
+    private string? previewError;
+    private RecordEmailPreview? preview;
+
     private bool CannotSend => busy || drafted || statement is null;
 
     private string OutcomeText =>
@@ -174,13 +183,34 @@
         try
         {
             statement = await Queries.AskAsync(new GetSubcontractorStatement(SubcontractorId), CancellationToken.None);
-            subject = $"Statement of account — Jewel Bespoke Build — {statement.GeneratedAt.LocalDateTime:d MMM yyyy}";
-            htmlBody = BuildDefaultBody(statement);
+            await LoadPreviewAsync();
         }
         catch
         {
             loadError = "Couldn't load the statement. Please try again.";
         }
+    }
+
+    /// <summary>The subject and the covering note are the SERVER'S, read through the preview: this
+    /// page composed its own copy of both until 2026-09-18, so the portal held two spellings of one
+    /// email and only the page's could ever be seen.</summary>
+    private async Task LoadPreviewAsync()
+    {
+        previewError = null;
+        previewing = true;
+        try
+        {
+            preview = await Queries.AskAsync(
+                new PreviewRecordEmail(RecordType.SubcontractorComms, SubcontractorId), CancellationToken.None);
+            subject = preview.Subject;
+            htmlBody = preview.BodyHtml;
+        }
+        catch
+        {
+            preview = null;
+            previewError = "Couldn't read the email yet — check the subcontractor has an email address in the directory.";
+        }
+        finally { previewing = false; }
     }
 
     private async Task EmailStatementAsync(bool saveAsDraftOnly)
@@ -208,32 +238,4 @@
 
     private static string MoneyExact(decimal value) =>
         value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
-
-    // The cover note travels as HTML in the draft; the statement detail itself is the attached
-    // PDF, so the note only summarises the account and invites reconciliation.
-    private static string BuildDefaultBody(SubcontractorStatement statement)
-    {
-        var sb = new System.Text.StringBuilder();
-        var contact = string.IsNullOrWhiteSpace(statement.ContactName) ? statement.CompanyName : statement.ContactName;
-        sb.AppendLine($"<p>Dear {contact},</p>");
-        sb.AppendLine("<p>Please find attached your current statement of account with Jewel Bespoke Build — the work orders we hold with you and the invoices claimed against each of them.</p>");
-        if (statement.Projects.Count > 0)
-        {
-            sb.AppendLine("<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse\">");
-            sb.AppendLine("<tr><th align=\"left\">Project</th><th align=\"right\">Orders</th><th align=\"right\">Ordered</th><th align=\"right\">Invoiced</th><th align=\"right\">Remaining</th></tr>");
-            foreach (var project in statement.Projects)
-            {
-                var name = string.IsNullOrWhiteSpace(project.ProjectReference)
-                    ? project.ProjectName
-                    : $"{project.ProjectReference} — {project.ProjectName}";
-                sb.AppendLine($"<tr><td>{name}</td><td align=\"right\">{project.Orders.Count}</td><td align=\"right\">{project.Ordered:£#,##0.00}</td><td align=\"right\">{project.Invoiced:£#,##0.00}</td><td align=\"right\">{project.Remaining:£#,##0.00}</td></tr>");
-            }
-            sb.AppendLine($"<tr><td><strong>Account total</strong></td><td align=\"right\"><strong>{statement.OrderCount}</strong></td><td align=\"right\"><strong>{statement.TotalOrdered:£#,##0.00}</strong></td><td align=\"right\"><strong>{statement.TotalInvoiced:£#,##0.00}</strong></td><td align=\"right\"><strong>{statement.TotalRemaining:£#,##0.00}</strong></td></tr>");
-            sb.AppendLine("</table>");
-        }
-        sb.AppendLine("<p>All figures are net of VAT; credit notes are shown as deductions. The attached PDF breaks each work order down to the individual invoices claimed against it.</p>");
-        sb.AppendLine("<p>If anything on the statement doesn't match your records, please reply to this email and we'll reconcile it together.</p>");
-        sb.AppendLine("<p>Kind regards,<br/>Jewel Bespoke Build</p>");
-        return sb.ToString();
-    }
 }

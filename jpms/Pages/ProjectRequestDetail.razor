@@ -8,6 +8,7 @@
 @implements IDisposable
 @inject AuthService Auth
 @inject ICommandSender Commands
+@inject IQueryClient Queries
 @inject CostCentersReadModel CostCenters
 @inject SessionService Session
 @inject IRequestRegister RequestRegister
@@ -206,6 +207,9 @@
                                 TaggedEmails="taggedEmails"
                                 TaggedEmailsLoading="taggedEmailsLoading"
                                 @bind-SelectedChainId="selectedChainMailboxId"
+                                Preview="emailPreview"
+                                PreviewLoading="emailPreviewLoading"
+                                PreviewError="@emailPreviewError"
                                 DraftResult="draftResult"
                                 Error="@draftError"
                                 Preparing="preparingDraft"

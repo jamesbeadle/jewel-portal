@@ -1,4 +1,5 @@
 @inject ICommandSender Commands
+@inject IQueryClient Queries
 
 @* The variation order on its way to the client. Send delivers it from the shared projects mailbox
    with the VO PDF attached, addressed to the project's Client and Architect contacts; Save as
@@ -23,8 +24,11 @@
 
             <FormField Label="Send to one address instead" Hint="Leave blank to use the project's client and architect contacts">
                 <input class="field" type="email" placeholder="someone@example.com"
-                       value="@recipientOverride" @oninput="OnOverrideChanged" disabled="@busy" />
+                       value="@recipientOverride" @onchange="OnOverrideChanged" disabled="@busy" />
             </FormField>
+
+            <p class="text-xs text-content-subtle mt-3 mb-1">This is the email as it will go:</p>
+            <RecordEmailPreviewPanel Preview="preview" Loading="previewing" Error="@previewError" />
         }
 
         @if (error is { } message)
