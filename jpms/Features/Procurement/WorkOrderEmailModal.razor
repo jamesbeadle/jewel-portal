@@ -5,7 +5,8 @@
    with the purchase-order PDF attached by the API; "Save as draft" leaves it in Drafts for Outlook
    instead — the same two doors the Control Centre's composer offers, so one email behaves one way
    wherever it is written. The page seeds the subject and body from the order. *@
-<Modal IsOpen="IsOpen" Title="Email work order to winner" OnCancel="OnCancel" Class="max-w-3xl w-full">
+<Modal IsOpen="IsOpen" Title="Email work order to winner" OnCancel="OnCancel"
+       DismissOnOverlayClick="false" Class="max-w-3xl w-full">
     <ChildContent>
         <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
             Sends from the shared projects mailbox to the winning subcontractor, tagged @PackageReference,
