@@ -255,6 +255,10 @@
 
             <DeclineVariationModal Order="order" @bind-IsOpen="decliningOrder" Busy="busy" Error="@error"
                                    OnConfirm="RejectOrder" />
+
+            <VariationOrderEmailModal Order="emailingOrder"
+                                      OnClose="@(() => { emailingOrder = null; })"
+                                      OnSent="@(_ => ReloadAsync())" />
         </ProjectPageShell>
     }
 </Page>

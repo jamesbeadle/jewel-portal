@@ -65,6 +65,15 @@ public partial class ProjectVariationDetail
 
             if (!CanManage) return items;
 
+            // Emailing it is the other thing you do with the document, so it sits beside the
+            // download. Only an issued, awaiting-AI or approved variation is a document to send.
+            if (order.Status.IsEmailable())
+                items.Add(new(Label: "Email to the client…",
+                    OnSelect: EventCallback.Factory.Create(this, () => { emailingOrder = order; }),
+                    Hint: "Sends from the shared projects mailbox to the project's client and "
+                        + "architect contacts, with the PDF attached — or saves it as a draft",
+                    Disabled: busy));
+
             var approved = order.Status == VariationOrderStatus.Approved;
             var preApproval = order.Status.IsPreApproval();
 
