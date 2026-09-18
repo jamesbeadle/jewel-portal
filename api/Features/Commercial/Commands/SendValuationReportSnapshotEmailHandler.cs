@@ -1,5 +1,4 @@
 using Jewel.JPMS.Api.Features.Audit;
-using Jewel.JPMS.Api.Features.Commercial.Documents;
 using Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Contracts.Commercial;
@@ -9,9 +8,12 @@ namespace Jewel.JPMS.Api.Features.Commercial.Commands;
 /// <summary>
 /// Emails the frozen valuation report to the project's client side from the shared projects
 /// mailbox. The snapshot is the only client-facing form of the report, so the thread is born on the
-/// Client pathway and files itself under the snapshot; the PDF comes from the shared builder, so the
-/// attachment is byte-for-byte what the download endpoint streams. Staging, sending, the degrade to
-/// a draft and the audit row are the dispatcher's (OutboundEmailDispatcher).
+/// Client pathway and files itself under the snapshot; the PDF comes from the shared builder, so
+/// the attachment is byte-for-byte what the download endpoint streams.
+///
+/// The message is <see cref="ValuationSnapshotEmailComposer"/>'s, shared with the preview, so what
+/// a person reads before pressing Send is what leaves. Staging, sending, the degrade to a draft and
+/// the audit row are the dispatcher's.
 /// </summary>
 public sealed class SendValuationReportSnapshotEmailHandler
     : ICommandHandler<SendValuationReportSnapshotEmail, ValuationReportSnapshotEmailOutcome>
@@ -20,66 +22,43 @@ public sealed class SendValuationReportSnapshotEmailHandler
         "The valuation email couldn't be staged in the shared mailbox, so nothing was sent. "
         + "Check the mailbox connection and try again.";
 
-    private readonly ValuationReportSnapshotPdfBuilder builder;
-    private readonly JpmsContext context;
+    private readonly ValuationSnapshotEmailComposer composer;
     private readonly OutboundEmailDispatcher dispatcher;
 
     public SendValuationReportSnapshotEmailHandler(
-        ValuationReportSnapshotPdfBuilder builder, JpmsContext context, OutboundEmailDispatcher dispatcher)
+        ValuationSnapshotEmailComposer composer, OutboundEmailDispatcher dispatcher)
     {
-        this.builder = builder; this.context = context; this.dispatcher = dispatcher;
+        this.composer = composer;
+        this.dispatcher = dispatcher;
     }
 
     public async Task<ValuationReportSnapshotEmailOutcome> HandleAsync(
         SendValuationReportSnapshotEmail command, CancellationToken cancellationToken)
     {
-        var pdf = await builder.BuildAsync(command.ValuationReportSnapshotId, cancellationToken);
-        var recipients = await ClientSideRecipientsAsync(pdf.ProjectId, cancellationToken);
-
-        // The statement's own tag, spelt exactly as the register spells it, so the sent copy and
-        // the client's reply to it file under this statement rather than only under Client.
-        var recordTag = await ValuationSnapshotTags.StemAsync(
-            context, pdf.ProjectId, pdf.Snapshot.Number, cancellationToken);
-
-        var message = new MailboxDraftMessage(
-            To: recipients,
-            Subject: command.Subject,
-            HtmlBody: command.HtmlBody,
-            Attachments: new[] { new MailboxDraftAttachment(pdf.FileName, "application/pdf", pdf.Content) },
-            Categories: new List<string>
-            {
-                TriageCategories.Marker,
-                TriageCategories.ForRecord(recordTag),
-                TriageCategories.Client
-            });
+        var composed = await composer.ComposeAsync(
+            new RecordEmailDraft(
+                command.ValuationReportSnapshotId, Subject: command.Subject, BodyHtml: command.HtmlBody),
+            cancellationToken);
 
         var filing = new OutboundEmailFiling(
             AuditTrail.PathwayLabel(TriageCategories.Client),
             StagingRefused,
-            pdf.ProjectId,
+            composed.ProjectId,
             RecordType.ValuationReportSnapshot,
-            pdf.Snapshot.ValuationReportSnapshotId,
-            pdf.Snapshot.Label);
+            command.ValuationReportSnapshotId,
+            composed.Reference);
 
-        var dispatch = await dispatcher.DispatchAsync(message, filing, command.SaveAsDraftOnly, cancellationToken);
+        var dispatch = await dispatcher.DispatchAsync(
+            composed.Message, filing, command.SaveAsDraftOnly, cancellationToken);
+
         return new ValuationReportSnapshotEmailOutcome(
-            pdf.Snapshot.ValuationReportSnapshotId,
-            pdf.Snapshot.Label,
-            command.Subject,
-            recipients.Select(recipient => recipient.Email).ToList(),
+            command.ValuationReportSnapshotId,
+            composed.Reference,
+            composed.Message.Subject,
+            composed.Message.To.Select(recipient => recipient.Email).ToList(),
             dispatch.WebLink,
             dispatch.MessageId,
             dispatch.Sent,
             dispatch.FailureNote);
-    }
-
-    /// <summary>The client side of the correspondence profile, read through the shared rule the
-    /// variation order's email reads too.</summary>
-    private async Task<List<MailboxDraftRecipient>> ClientSideRecipientsAsync(string projectId, CancellationToken cancellationToken)
-    {
-        var recipients = await ClientSideRecipients.ForProjectAsync(context, projectId, cancellationToken);
-        if (recipients.Count > 0) return recipients;
-        throw new InvalidOperationException(
-            "The project has no client or architect contact with an email address — add one to the project's contacts before emailing the valuation.");
     }
 }

@@ -19,9 +19,19 @@ public interface IComposesRecordEmail
     /// email you could not send tells you about correspondence that is not yours.</summary>
     RoleSet RolesThatMaySend { get; }
 
-    Task<ComposedRecordEmail> ComposeAsync(
-        string recordId, string? recipientOverride, CancellationToken cancellationToken);
+    Task<ComposedRecordEmail> ComposeAsync(RecordEmailDraft draft, CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// What the person has settled on so far. Subject and BodyHtml null mean "write them for me" —
+/// the request document and the variation order are always composed that way, and the two
+/// statements default to it until somebody edits the modal.
+/// </summary>
+public sealed record RecordEmailDraft(
+    string RecordId,
+    string? RecipientOverride = null,
+    string? Subject = null,
+    string? BodyHtml = null);
 
 /// <summary>
 /// The staged message plus the two things a caller needs that are not on it: the record's own

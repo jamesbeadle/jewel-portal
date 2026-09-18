@@ -17,10 +17,16 @@ namespace Jewel.JPMS.Contracts.MailboxCompose;
 /// subject twice and took two sessions to find. This returns the message the door would stage.
 ///
 /// RecipientOverride mirrors the send command's, so an ad-hoc address can be previewed before it
-/// is used.
+/// is used. Subject and BodyHtml are what the person has typed so far; null for either means
+/// "compose it", which is what every one of these records did before there was anywhere to read
+/// them — so an unedited preview shows the email that would go if nobody touched a word.
 /// </summary>
-public sealed record PreviewRecordEmail(RecordType Record, string RecordId, string? RecipientOverride = null)
-    : IQuery<RecordEmailPreview>;
+public sealed record PreviewRecordEmail(
+    RecordType Record,
+    string RecordId,
+    string? RecipientOverride = null,
+    string? Subject = null,
+    string? BodyHtml = null) : IQuery<RecordEmailPreview>;
 
 /// <summary>
 /// The email as it will leave: the subject, the body the recipient will read, who it is addressed

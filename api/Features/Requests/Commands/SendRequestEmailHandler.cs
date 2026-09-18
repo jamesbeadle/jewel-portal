@@ -33,7 +33,7 @@ public sealed class SendRequestEmailHandler : ICommandHandler<SendRequestEmail, 
     public async Task<RequestEmailOutcome> HandleAsync(SendRequestEmail command, CancellationToken cancellationToken)
     {
         var composed = await composer.ComposeAsync(
-            command.RequestId, command.RecipientOverride, cancellationToken);
+            new RecordEmailDraft(command.RequestId, command.RecipientOverride), cancellationToken);
 
         var filing = new OutboundEmailFiling(
             "Client", StagingRefused, composed.ProjectId,

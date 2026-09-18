@@ -36,14 +36,15 @@ public sealed partial class RequestEmailComposer : IComposesRecordEmail
 
     public RoleSet RolesThatMaySend => SendRequestEmailAuthorisation.RolesThatMayDraft;
 
-    public async Task<ComposedRecordEmail> ComposeAsync(
-        string recordId, string? recipientOverride, CancellationToken cancellationToken)
+    /// <summary>A request document's subject and cover note are always the portal's own words — the
+    /// document is the message — so a draft's Subject and BodyHtml are not read here.</summary>
+    public async Task<ComposedRecordEmail> ComposeAsync(RecordEmailDraft draft, CancellationToken cancellationToken)
     {
-        var request = await EmailableRequestAsync(recordId, cancellationToken);
-        var recipients = await RecipientsForAsync(request, recipientOverride, cancellationToken);
+        var request = await EmailableRequestAsync(draft.RecordId, cancellationToken);
+        var recipients = await RecipientsForAsync(request, draft.RecipientOverride, cancellationToken);
 
-        var model = await RequestDocumentBuilder.BuildAsync(context, recordId, cancellationToken, recipients)
-            ?? throw new InvalidOperationException($"Request '{recordId}' not found.");
+        var model = await RequestDocumentBuilder.BuildAsync(context, draft.RecordId, cancellationToken, recipients)
+            ?? throw new InvalidOperationException($"Request '{draft.RecordId}' not found.");
 
         return new ComposedRecordEmail(
             model.DisplayNumber,

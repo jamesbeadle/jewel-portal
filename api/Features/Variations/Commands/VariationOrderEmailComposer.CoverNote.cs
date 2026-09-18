@@ -5,7 +5,7 @@ using Jewel.JPMS.Api.Features.Variations.Documents;
 
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
-public sealed partial class SendVariationOrderEmailHandler
+public sealed partial class VariationOrderEmailComposer
 {
     /// <summary>An ad-hoc override addresses the email to that one address instead; otherwise the
     /// project's client side — its Client and Architect contacts — through the shared rule the
