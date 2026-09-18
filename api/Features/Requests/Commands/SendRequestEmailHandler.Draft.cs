@@ -35,7 +35,7 @@ public sealed partial class SendRequestEmailHandler
     /// self-associates with the record — and because this document opens a brand-new conversation,
     /// replies to it inherit the tag through the thread sweep instead of waiting in triage. The
     /// Client pathway rides with it so the thread is born on the right side of the Control Centre.
-    /// Mirrors the worker's outbound send (MailboxActionWorker.SendRequestDocumentAsync).</summary>
+    /// The background worker used to mirror this; since 2026-09-18 this is the only copy.</summary>
     private async Task<string[]> TagsForAsync(RequestEntity request, CancellationToken cancellationToken) =>
         new[]
         {

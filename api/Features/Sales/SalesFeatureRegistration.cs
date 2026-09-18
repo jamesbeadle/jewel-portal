@@ -67,20 +67,22 @@ public static class SalesFeatureRegistration
         var graphOptions = MailboxIntakeOptions.FromConfiguration(configuration);
         if (salesMailbox.Enabled && graphOptions.IsConfigured)
         {
+            services.AddSingleton(sp => SalesMailboxGraph.For(configuration, salesMailbox.Address, sp));
             services.AddSingleton<ISalesMailbox>(sp =>
+                new GraphSalesMailbox(sp.GetRequiredService<SalesMailboxGraph>()));
+            // A reply leaves by the same sequence every other portal email leaves by, on a
+            // dispatcher of its own because the mailbox it stages into is the sales one.
+            services.AddScoped(sp =>
             {
-                var options = MailboxIntakeOptions.FromConfiguration(configuration);
-                options.Mailbox = salesMailbox.Address;
-                var http = new HttpClient();
-                var tokens = new GraphTokenProvider(options);
-                var graph = new MailboxGraphClient(http, tokens, options, sp.GetRequiredService<ILogger<MailboxGraphClient>>());
-                var reader = new GraphIntakeMessageReader(http, tokens, options, sp.GetRequiredService<ILogger<GraphIntakeMessageReader>>());
-                return new GraphSalesMailbox(graph, reader, new InboundEmailBodyBuilder(reader), salesMailbox.Address);
+                var graph = sp.GetRequiredService<SalesMailboxGraph>();
+                return SalesOutboundEmail.Connected(
+                    graph.Client, graph.Address, sp.GetRequiredService<Audit.AuditTrail>());
             });
         }
         else
         {
             services.AddSingleton<ISalesMailbox>(_ => new NullSalesMailbox(salesMailbox.Address));
+            services.AddScoped(_ => SalesOutboundEmail.NotConnected(salesMailbox.Address));
         }
 
         services.AddScoped<IQueryHandler<ListLeads, IReadOnlyList<Lead>>, ListLeadsHandler>();

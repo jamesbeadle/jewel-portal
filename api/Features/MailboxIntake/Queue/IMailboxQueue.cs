@@ -8,7 +8,4 @@ public interface IMailboxQueue
 {
     /// <summary>Enqueue a webhook notification (a Graph message id to fetch + ingest).</summary>
     Task EnqueueIntakeNotificationAsync(string graphMessageId, CancellationToken ct);
-
-    /// <summary>Enqueue a mailbox side-effect (folder move / outbound send).</summary>
-    Task EnqueueMailboxActionAsync(MailboxActionMessage action, CancellationToken ct);
 }

@@ -75,21 +75,23 @@ internal sealed partial class RequestsActions
         new AiAction(
             Name: "resend_request_document",
             Area: "Requests & RFIs",
-            Description: "Queues the request's official document PDF for the background worker, which "
-                + "STAGES IT AS A DRAFT in the projects mailbox for a person to send from Outlook — "
-                + "it does not send, despite the name. Prefer send_request_email, which sends from "
-                + "the portal and reports what happened.",
+            Description: "SENDS EMAIL: re-issues the request's official document PDF from the "
+                + "projects mailbox to the resolved client/architect preference (or one ad-hoc "
+                + "recipientOverride). It is send_request_email under an older name and does the "
+                + "same thing — prefer send_request_email, which also offers saveAsDraftOnly.",
             CommandType: typeof(ResendRequestDocument),
-            ResultType: typeof(Acknowledgement),
+            ResultType: typeof(RequestEmailOutcome),
             AuthorisationType: typeof(ResendRequestDocumentAuthorisation),
             ValidationType: typeof(ResendRequestDocumentValidation),
             VisibleTo: RoleSet.Of(
                 JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.Architect),
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "The work happens in the background, so this returns before the draft exists and "
-                + "reports nothing about it — there is no outcome to read back. Only RFI, NOD and EOT "
-                + "documents are emailable; promote a General request first. requestId via "
-                + "find_by_reference."),
+            RequiresConfirmation: true,
+            Notes: "This reaches the client or architect the moment it succeeds — ALWAYS confirm the "
+                + "request and its recipients with the user before calling. It queued a background "
+                + "draft until 2026-09-18 and reported nothing back; it now returns the same outcome "
+                + "send_request_email does. Only RFI, NOD and EOT documents are emailable; promote a "
+                + "General request first. requestId via find_by_reference."),
     };
 }

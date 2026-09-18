@@ -13,11 +13,4 @@ public sealed class NullMailboxQueue : IMailboxQueue
         _logger.LogWarning("Mailbox intake not configured; dropping intake notification.");
         return Task.CompletedTask;
     }
-
-    public Task EnqueueMailboxActionAsync(MailboxActionMessage action, CancellationToken ct)
-    {
-        _logger.LogDebug("Mailbox actions disabled; dropping {Type} for intake {IntakeId}.",
-            action.Type, action.IntakeId);
-        return Task.CompletedTask;
-    }
 }

@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Contracts.Requests;
 
@@ -15,23 +16,27 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 /// reply sits above the quoted history as the draft's body, and the draft carries the request's
 /// workflow category so the sent copy and its replies group under the request in triage. Unlike
 /// <see cref="SendRequestReplyHandler"/> no document is attached; the pre-filled draft is
-/// reviewed and sent from the mailbox itself — code never sends. If the draft can't be staged, the
-/// just-created request is rolled back (tag removed, request deleted) so the email stays in the
-/// queue rather than being triaged without a reply.
+/// reviewed and sent from the mailbox itself — the dispatcher is asked for a draft and stops there,
+/// code never sends. If the draft can't be staged, the just-created request is rolled back (tag
+/// removed, request deleted) so the email stays in the queue rather than being triaged without a
+/// reply.
 /// </summary>
-public sealed class ReplyInThreadFromMessageHandler : ICommandHandler<ReplyInThreadFromMessage, ReplyInThreadOutcome>
+public sealed partial class ReplyInThreadFromMessageHandler : ICommandHandler<ReplyInThreadFromMessage, ReplyInThreadOutcome>
 {
     private readonly JpmsContext context;
     private readonly IMailboxGraphClient graph;
+    private readonly OutboundEmailDispatcher dispatcher;
     private readonly ICommandHandler<CreateRequestFromMessage, Request> createRequest;
 
     public ReplyInThreadFromMessageHandler(
         JpmsContext context,
         IMailboxGraphClient graph,
+        OutboundEmailDispatcher dispatcher,
         ICommandHandler<CreateRequestFromMessage, Request> createRequest)
     {
         this.context = context;
         this.graph = graph;
+        this.dispatcher = dispatcher;
         this.createRequest = createRequest;
     }
 
@@ -47,83 +52,16 @@ public sealed class ReplyInThreadFromMessageHandler : ICommandHandler<ReplyInThr
         var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken)
             ?? throw new InvalidOperationException("The email could not be read from the mailbox.");
 
-        var subject = string.IsNullOrWhiteSpace(snapshot.Subject) ? "(no subject)" : snapshot.Subject.Trim();
-
-        // The request records HOW it was triaged — the reply written in the portal IS the request's
-        // content, so the request page reads as "this is what we answered".
-        var description = $"Replied to email in thread with:\n\n{reply}";
-
-        // Create the General request exactly as "Create new → Request" would: auto-numbered
-        // REQ-#### (blank reference), email tagged to it first and verified before the request
-        // persists. This is the background half of the action — the paper trail for the reply.
-        var request = await createRequest.HandleAsync(
-            new CreateRequestFromMessage(
-                command.MessageId,
-                command.ProjectId,
-                RequestType.General,
-                Reference: "",
-                Title: subject,
-                Description: description,
-                InternetMessageId: command.InternetMessageId ?? snapshot.InternetMessageId,
-                RaisedByEmail: command.RaisedByEmail),
-            cancellationToken);
-
-        // The same project-qualified workflow tag the create path stamped on the email, re-derived
-        // here for the draft's categories (a General request's minted reference is never blank).
-        var tag = TriageCategories.ForRecord(
-            RequestTags.Stem(
-                await RequestTags.ProjectRefAsync(context, command.ProjectId, cancellationToken),
-                command.ProjectId,
-                request.Reference.Trim()));
-
-        // Stage the reply draft with the written reply as its body, sitting above the quoted
-        // history Graph supplies — the triager reviews and presses Send in Outlook, nothing more.
-        // Plain text from the portal textarea is HTML-encoded line by line so nothing in it can
-        // inject markup into the draft. No attachment; tagged so the sent copy groups under the
-        // new request in triage.
-        var created = await graph.CreateReplyDraftAsync(
-            new MailboxReplyDraftMessage(
-                command.MessageId,
-                HtmlCoverNote: ToHtml(reply),
-                Attachments: Array.Empty<MailboxDraftAttachment>(),
-                Categories: new[] { TriageCategories.Marker, tag, TriageCategories.Client }),
-            cancellationToken);
-
-        if (created is null)
-        {
-            // Roll the background request back (best-effort) so the email returns to the queue —
-            // half-triaged (request created, no reply staged) is worse than not triaged at all.
-            try { await graph.ClearRequestTagsAsync(tag, cancellationToken); } catch { /* best-effort */ }
-            var entity = await context.Requests.FirstOrDefaultAsync(r => r.RequestId == request.RequestId, cancellationToken);
-            if (entity is not null)
-            {
-                context.Requests.Remove(entity);
-                await context.SaveChangesAsync(cancellationToken);
-            }
-            throw new InvalidOperationException(
-                "The reply draft couldn't be created in the projects mailbox, so nothing was triaged — " +
-                "the email is still in the queue. The original email may no longer be there, or the " +
-                "mailbox connection failed — check and try again.");
-        }
-
-        // The reply is staged, so the ball has moved: the request the triage created is a General
-        // container raised at Needs action (an email arriving IS ours to act on), and drafting the
-        // answer is that action being taken. It moves to Open — with the correspondent, awaiting
-        // their response — exactly as the two document-draft paths do. The team sets it back to
-        // Needs action by hand if the draft is never sent. Only Needs action moves, so a re-triage
-        // can never rewind a request that has already moved on.
-        var raised = await context.Requests.FirstOrDefaultAsync(r => r.RequestId == request.RequestId, cancellationToken);
-        if (raised is not null && (RequestStatus)raised.Status == RequestStatus.NeedsAction)
-        {
-            raised.Status = (int)RequestStatus.Open;
-            await context.SaveChangesAsync(cancellationToken);
-            request = request with { Status = RequestStatus.Open };
-        }
+        var request = await RaisedRequestAsync(command, snapshot, reply, cancellationToken);
+        var tag = await WorkflowTagAsync(command, request, cancellationToken);
+        var dispatch = await StagedReplyAsync(command, request, tag, ToHtml(reply), cancellationToken);
+        request = await MovedToOpenAsync(request, cancellationToken);
 
         return new ReplyInThreadOutcome(
             request,
-            new RequestEmailOutcome(request.RequestId, created.Subject, created.To, created.WebLink, Cc: created.Cc,
-                DraftMessageId: created.Id));
+            new RequestEmailOutcome(
+                request.RequestId, dispatch.Subject, dispatch.To ?? Array.Empty<string>(), dispatch.WebLink,
+                Cc: dispatch.Cc, DraftMessageId: dispatch.MessageId));
     }
 
     // Portal textarea (plain text) -> draft HTML: encode each line, join with <br>, and leave a

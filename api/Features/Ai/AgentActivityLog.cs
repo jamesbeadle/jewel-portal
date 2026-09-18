@@ -14,9 +14,8 @@ namespace Jewel.JPMS.Api.Features.Ai;
 /// </summary>
 public sealed class AgentActivityLog
 {
-    /// <summary>The system pseudo-user a scheduled agent runs as. Matches the mailbox worker's
-    /// existing convention (<c>MailboxActionWorker</c> stamps the projects mailbox on its audit
-    /// rows) so autonomous work is attributable to something rather than blank.</summary>
+    /// <summary>The system pseudo-user a scheduled agent runs as, so autonomous work is
+    /// attributable to something rather than blank.</summary>
     public const string SystemActor = "system@jewelbb.co.uk";
 
     private readonly JpmsContext context;

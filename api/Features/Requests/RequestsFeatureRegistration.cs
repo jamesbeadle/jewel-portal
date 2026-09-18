@@ -126,7 +126,7 @@ public static class RequestsFeatureRegistration
         services.AddScoped<ReturnRequestToTriageAuthorisation>();
         services.AddScoped<ReturnRequestToTriageValidation>();
 
-        services.AddScoped<ICommandHandler<ResendRequestDocument, Acknowledgement>, ResendRequestDocumentHandler>();
+        services.AddScoped<ICommandHandler<ResendRequestDocument, RequestEmailOutcome>, ResendRequestDocumentHandler>();
         services.AddScoped<ResendRequestDocumentAuthorisation>();
         services.AddScoped<ResendRequestDocumentValidation>();
 

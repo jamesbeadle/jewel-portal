@@ -4,8 +4,8 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 
 public sealed partial class OutboundEmailDispatcher
 {
-    private const string SendRefusedNote =
-        "The send didn't go through — the email is saved as a draft in the projects mailbox. "
+    private string SendRefusedNote =>
+        $"The send didn't go through — the email is saved as a draft in {mailboxName}. "
         + "Open it in Outlook to send it from there, or try again here.";
 
     private async Task<OutboundEmailDispatch> FinishAsync(

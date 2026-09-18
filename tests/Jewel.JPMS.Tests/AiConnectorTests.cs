@@ -741,8 +741,10 @@ public sealed class AiConnectorTests
     public void EveryEmailTheHasPagesSends_reachesTheConnector_withItsSaveAsDraftRoute()
     {
         // 2026-09-17 gave nine record doors a Send; 2026-09-18 closed the three the connector
-        // still lacked. The subcontractor statement was skipped because nothing dispatched it —
-        // the command had a handler, gates and a DI registration and NO endpoint, so the page's
+        // still lacked, and made resend_request_document do what its name had always said — it
+        // queued a background draft and told the model nothing about it. The subcontractor
+        // statement was skipped because nothing dispatched it — the command had a handler, gates
+        // and a DI registration and NO endpoint, so the page's
         // own button 404'd; the programme reply because its gate was a private field of its
         // endpoint; the composer's invite because it had no save-as-draft at all and nobody had
         // settled whether the assistant should get a door that always sends (Nigel: grow one).
@@ -752,7 +754,7 @@ public sealed class AiConnectorTests
             "send_work_order_po_email", "send_valuation_report_snapshot_email",
             "send_bid_package_invite_to_tender_list", "send_bid_package_invite",
             "send_subcontractor_statement_email", "send_programme_reply", "send_defect_to_supplier",
-            "send_variation_order_email"
+            "send_variation_order_email", "resend_request_document"
         })
         {
             var action = AiActionRegistry.Find(name);
@@ -762,7 +764,8 @@ public sealed class AiConnectorTests
         }
 
         // The review route, named in the description so the model offers it rather than inventing
-        // one. resend_request_document is the deliberate exception: it only ever stages a draft.
+        // one. resend_request_document has none: it is send_request_email under an older name and
+        // that is where a caller who wants a draft is sent.
         foreach (var name in new[]
         {
             "send_work_order_po_email", "send_valuation_report_snapshot_email",
