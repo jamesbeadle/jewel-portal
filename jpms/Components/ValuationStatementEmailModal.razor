@@ -13,6 +13,7 @@
 <Modal IsOpen="@(Claim is not null)"
        Title="@($"Email valuation statement · {Claim?.DisplayName}")"
        OnCancel="Close"
+       DismissOnOverlayClick="false"
        Class="max-w-3xl w-full">
     <ChildContent>
     @if (Claim is { } snapshot)

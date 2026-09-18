@@ -13,6 +13,7 @@
 <Modal IsOpen="IsOpen"
        Title="@($"Statement of account · {statement?.CompanyName ?? SubcontractorName}")"
        OnCancel="Close"
+       DismissOnOverlayClick="false"
        Class="max-w-3xl w-full">
     <ChildContent>
     @if (loadError is not null)
