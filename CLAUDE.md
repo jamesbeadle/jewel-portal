@@ -879,8 +879,11 @@ finds drift.
   `ChildContent` (plus `@ref` and `Close()`) when the panel needs its own markup — a tick list
   that must stay open across several picks, a swatch grid. `ToggleClass` makes the toggle look
   like whatever it is (a pill, a chip, a nav row); `ShowCaret="false"` when the toggle draws its
-  own. Inside a scrolling table, wire `OnOpenChanged` to `RecordsTable HasOpenMenu` (or lift the
-  container's own overflow cap) or the last rows' panels are clipped. `ShouldKeepFocus` is only
+  own. A panel is drawn against the viewport from its toggle's
+  measured rect, so no scrolling ancestor clips it and no container gives up its own scrolling to
+  show one — the workaround that did (`RecordsTable.HasOpenMenu` and its four siblings) is gone,
+  along with the lost scroll position it cost. The price is that a fixed panel cannot travel with
+  its toggle, so every menu closes on a scroll. `ShouldKeepFocus` is only
   for a menu acting on a text selection — it stops the toggle taking focus, at the cost of
   keyboard reach. This rule exists because six menus were left hand-rolled when the component
   was pulled out and drifted into three different dismissal behaviours (2026-09-17 fixed the

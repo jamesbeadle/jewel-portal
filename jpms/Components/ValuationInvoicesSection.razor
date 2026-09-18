@@ -81,7 +81,7 @@
                (History, Delete…) are clipped at the table's edge — on a short table that hid
                Delete entirely. Short lists render identically either way; a long list grows to
                full height for the moment the menu is showing and gets its cap back on close. *@
-            <div class="border-t border-line @(openMenuId is null ?"overflow-x-auto overflow-y-auto max-h-[85vh]" : "")">
+            <div class="border-t border-line overflow-x-auto overflow-y-auto max-h-[85vh]">
                 <table class="data-table data-table-dense">
                     <thead>
                         <tr>
@@ -149,7 +149,6 @@
                                             <DropdownMenu Label="Actions" WidthClass="w-64" Disabled="@busy"
                                                           ToggleClass="inline-flex items-center gap-1 rounded border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
                                                           Class="inline-block text-left"
-                                                          OnOpenChanged="open => openMenuId = open ? invoice.ValuationInvoiceId : (openMenuId == invoice.ValuationInvoiceId ? null : openMenuId)"
                                                           Items="InvoiceMenuItems(invoice)" />
                                         }
                                     </td>

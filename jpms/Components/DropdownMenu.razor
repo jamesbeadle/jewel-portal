@@ -27,6 +27,7 @@
 
 <div class="relative @Class" @ref="root">
     <button type="button"
+            @ref="toggleRef"
             class="@ToggleClass"
             title="@ToggleTitle"
             disabled="@Disabled"
@@ -50,7 +51,8 @@
 
     @if (open)
     {
-        <div class="absolute @AlignClass mt-2 @WidthClass rounded border border-line bg-surface shadow-lg z-30 overflow-hidden"
+        <div class="@PanelClass rounded border border-line bg-surface shadow-lg z-30 overflow-hidden"
+             style="@panelStyle"
              role="menu">
             @if (ChildContent is not null)
             {
@@ -130,6 +132,10 @@
     /// bar doesn't run off the page.</summary>
     [Parameter] public bool AlignLeft { get; set; }
 
+    /// <summary>The panel takes the toggle's width rather than WidthClass — for a toggle that fills
+    /// its column, like the nav's project picker, which used to stretch inside the toggle's box.</summary>
+    [Parameter] public bool MatchesToggleWidth { get; set; }
+
     [Parameter] public bool Disabled { get; set; }
 
     /// <summary>Stops the toggle taking focus, so whatever the user had selected stays selected —
@@ -139,19 +145,20 @@
     /// focus cannot be reached by keyboard.</summary>
     [Parameter] public bool ShouldKeepFocus { get; set; }
 
-    /// <summary>Raised whenever the panel opens (true) or closes (false). A host whose menu sits
-    /// inside an overflow/scroll container listens to this to lift the clipping while the panel
-    /// is showing — an absolutely-positioned panel cannot escape an overflow ancestor on its own,
-    /// so its bottom items are cut off at the container's edge (which is how a row's Delete… went
-    /// missing in the valuation invoices table).</summary>
-    [Parameter] public EventCallback<bool> OnOpenChanged { get; set; }
-
     private bool open;
     private ElementReference root;
+    private ElementReference toggleRef;
+    private string panelStyle = "";
+    private bool isPanelPlaced;
     private DotNetObjectReference<DropdownMenu>? selfRef;
     private bool watching;
 
-    private string AlignClass => AlignLeft ? "left-0" : "right-0";
+    /// <summary>Once the panel is placed it is fixed to the viewport and carries its own position;
+    /// until then — a client whose cached shell has no measure() — it hangs off the toggle exactly
+    /// as it did before, which is wrong only where a scrolling ancestor would clip it.</summary>
+    private string PanelClass => isPanelPlaced
+        ? (MatchesToggleWidth ? "" : WidthClass)
+        : $"absolute {(AlignLeft ? "left-0" : "right-0")} mt-2 {WidthClass}";
 
     /// <summary>Keeps the document-level outside-press watcher in step with the panel: on while
     /// open, off once closed. Done after render so the watcher only ever sees a root that exists,
@@ -164,7 +171,7 @@
         if (open)
         {
             selfRef ??= DotNetObjectReference.Create(this);
-            await Js.InvokeVoidAsync("jpmsDropdownMenu.watch", root, selfRef);
+            await Js.InvokeVoidAsync("jpmsDropdownMenu.watch", root, selfRef, true);
         }
         else if (selfRef is not null)
         {
@@ -178,7 +185,6 @@
     {
         if (!open) return;
         open = false;
-        await OnOpenChanged.InvokeAsync(false);
         await InvokeAsync(StateHasChanged);
     }
 
@@ -200,7 +206,24 @@
     private async Task Toggle()
     {
         open = !open;
-        await OnOpenChanged.InvokeAsync(open);
+        if (open) await PlaceThePanel();
+    }
+
+    private async Task PlaceThePanel()
+    {
+        try
+        {
+            var toggle = await Js.InvokeAsync<TogglePlacement>("jpmsDropdownMenu.measure", toggleRef);
+            panelStyle = DropdownMenuPlacement.StyleFor(toggle, AlignLeft, MatchesToggleWidth);
+            isPanelPlaced = true;
+        }
+        catch
+        {
+            // Cached shell without measure(), or the toggle has gone: hang the panel off the
+            // toggle as before rather than leaving it unplaced in the corner of the page.
+            panelStyle = "";
+            isPanelPlaced = false;
+        }
     }
 
     /// <summary>Closes the menu. Public so a ChildContent menu can dismiss itself.</summary>
@@ -208,7 +231,6 @@
     {
         if (!open) return;
         open = false;
-        _ = OnOpenChanged.InvokeAsync(false);
         StateHasChanged();
     }
 
@@ -216,7 +238,6 @@
     {
         if (item.Disabled) return;
         open = false;
-        await OnOpenChanged.InvokeAsync(false);
         if (item.OnSelect is { } callback) await callback.InvokeAsync();
     }
 }

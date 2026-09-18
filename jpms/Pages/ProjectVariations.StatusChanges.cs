@@ -37,15 +37,9 @@ public partial class ProjectVariations
 
     // The row whose status menu is open. The menu dismisses itself (DropdownMenu); this is only
     // so the table can lift its scroll clip while a panel is showing.
-    private string? variationStatusMenuId;
     private string? variationStatusBusyId;
     private string? variationStatusError;
 
-    private void TrackOpenStatusMenu(string variationOrderId, bool isOpen)
-    {
-        if (isOpen) { variationStatusMenuId = variationOrderId; return; }
-        if (variationStatusMenuId == variationOrderId) variationStatusMenuId = null;
-    }
 
     private List<DropdownMenu.Item> StatusMenuItems(IReadOnlyList<VariationStatusChoice> choices) =>
         choices.Select(StatusMenuItem).ToList();

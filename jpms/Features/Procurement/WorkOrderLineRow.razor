@@ -63,7 +63,6 @@
                           Disabled="@CancelBusy"
                           ToggleClass="inline-flex items-center gap-1 rounded border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
                           Class="inline-block text-left"
-                          OnOpenChanged="OnMenuOpenChanged"
                           Items="MenuItems" />
         }
     </td>
@@ -84,5 +83,4 @@
     [Parameter] public EventCallback OnKeep { get; set; }
     [Parameter, EditorRequired] public IReadOnlyList<DropdownMenu.Item> MenuItems { get; set; } = default!;
     /// <summary>The menu opened or closed — the table lifts its overflow cap while one is open.</summary>
-    [Parameter] public EventCallback<bool> OnMenuOpenChanged { get; set; }
 }
