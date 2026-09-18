@@ -28,6 +28,34 @@ public sealed partial class OutboundEmailDispatcherTests
     }
 
     [Fact]
+    public async Task APastedScreenshot_leavesAsAnAttachment_notAsAThreeMegabyteUrl()
+    {
+        // Every compose surface is a rich editor since 2026-09-18, so a screenshot can be pasted
+        // into a purchase order or a statement. Mail clients strip or refuse data: URLs; cid ones
+        // they render. Only triage compose lifted them before, because only triage compose had an
+        // editor to paste into.
+        var fixture = new Fixture();
+        var message = Draft() with
+        {
+            HtmlBody = $"<p>As discussed:</p><img src=\"data:image/png;base64,{OnePixel}\">"
+        };
+
+        await fixture.Dispatcher.DispatchAsync(message, Filing(), saveAsDraftOnly: true, default);
+
+        var staged = fixture.Mailbox.CreatedDraft!;
+        Assert.DoesNotContain("data:image", staged.HtmlBody, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("cid:", staged.HtmlBody, StringComparison.OrdinalIgnoreCase);
+
+        var pasted = Assert.Single(staged.Attachments);
+        Assert.True(pasted.IsInline);
+        Assert.Equal("image/png", pasted.ContentType);
+        Assert.Contains(pasted.ContentId!, staged.HtmlBody);
+    }
+
+    private const string OnePixel =
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+    [Fact]
     public async Task ARepliedCoverNote_isCleanedTheSameWay()
     {
         var fixture = new Fixture();

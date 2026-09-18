@@ -1,5 +1,6 @@
 @using Jewel.JPMS.Contracts.MailboxCompose
 @using Jewel.JPMS.Models
+@using Jewel.JPMS.Features.Triage
 @inject ICommandSender Commands
 @inject IQueryClient Queries
 
@@ -75,8 +76,8 @@
             <input class="field mb-3" @bind="subject" />
             </FormField>
 
-            <FormField Label="Cover note (HTML) — the report itself travels as the attached PDF">
-            <textarea class="field font-mono text-xs" rows="10" @bind="htmlBody"></textarea>
+            <FormField Label="Cover note — the report itself travels as the attached PDF">
+            <RichTextEditor @bind-Value="htmlBody" MinHeight="220" />
             </FormField>
         }
 

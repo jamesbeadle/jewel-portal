@@ -19,9 +19,12 @@ public sealed partial class SendBidPackageInviteHandler
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    private static List<MailboxDraftRecipient> ParseRecipients(string? raw) =>
-        (raw ?? "")
-            .Split(new[] { ';', ',' }, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+    /// <summary>The command carries addresses now, so this only puts them in the shape Graph wants.
+    /// The "@" check stays because an address can still arrive from the connector, where nothing has
+    /// been through a recipient field.</summary>
+    private static List<MailboxDraftRecipient> ParseRecipients(IReadOnlyList<string>? addresses) =>
+        (addresses ?? Array.Empty<string>())
+            .Select(address => address.Trim())
             .Where(address => address.Contains('@', StringComparison.Ordinal))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(address => new MailboxDraftRecipient(address))

@@ -1,4 +1,5 @@
 @namespace Jewel.JPMS.Features.Procurement
+@using Jewel.JPMS.Features.Triage
 
 @* The work-order email to the winning subcontractor. It sends from the projects mailbox on Send,
    with the purchase-order PDF attached by the API; "Save as draft" leaves it in Drafts for Outlook
@@ -15,8 +16,9 @@
             <input class="field mb-3" value="@Subject" @onchange='e => SubjectChanged.InvokeAsync(e.Value?.ToString() ?? "")' />
         </FormField>
 
-        <FormField Label="Body (HTML)">
-            <textarea class="field font-mono text-xs" rows="14" value="@Body" @onchange='e => BodyChanged.InvokeAsync(e.Value?.ToString() ?? "")'></textarea>
+        <FormField Label="Message">
+            <RichTextEditor Value="@Body" ValueChanged="BodyChanged" MinHeight="260"
+                            Placeholder="What the supplier should read above the order summary" />
         </FormField>
     </ChildContent>
     <FooterContent>

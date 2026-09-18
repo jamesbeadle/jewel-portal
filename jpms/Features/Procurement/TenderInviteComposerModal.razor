@@ -1,5 +1,6 @@
 @using Jewel.JPMS.Contracts.Subcontractors
 @namespace Jewel.JPMS.Features.Procurement
+@using Jewel.JPMS.Features.Triage
 @inject IQueryClient Queries
 @inject ICommandSender Commands
 @inject ISubcontractorStore Subs
@@ -62,16 +63,19 @@
     }
 
     <FormField Label="To">
-    <input class="field mb-1" @bind="to" placeholder="Leave empty — the projects mailbox addresses itself, recipients stay in BCC" />
+    <RecipientInput Value="@to" ValueChanged="value => to = value" Disabled="@sending"
+                    Placeholder="Leave empty — the projects mailbox addresses itself, recipients stay in BCC" />
     </FormField>
     <p class="text-xs text-content-subtle mb-3">Semicolon-separated addresses. Empty means the projects mailbox is the visible addressee — the norm for a BCC'd invite.</p>
 
     <FormField Label="Cc">
-    <input class="field mb-3" @bind="cc" placeholder="Optional — internal people to copy in" />
+    <RecipientInput Value="@cc" ValueChanged="value => cc = value" Disabled="@sending"
+                    Placeholder="Optional — internal people to copy in" />
     </FormField>
 
     <FormField Label="Bcc — the tender list">
-    <textarea class="field mb-3" rows="2" @bind="bcc"></textarea>
+    <RecipientInput Value="@bcc" ValueChanged="value => bcc = value" Disabled="@sending"
+                    Placeholder="The subcontractors the package goes to" />
     </FormField>
 
     <FormField Label="Subject">
@@ -86,8 +90,9 @@
     </div>
     @if (editingBody)
     {
-        <textarea class="field font-mono text-xs" rows="14" @bind="body"></textarea>
-        <p class="text-xs text-content-subtle mt-1">Sent as HTML — the pre-filled message includes the package's line items for pricing, when there are any.</p>
+        <RichTextEditor @bind-Value="body" MinHeight="260"
+                        Placeholder="What the subcontractor should read above the package details" />
+        <p class="text-xs text-content-subtle mt-1">The pre-filled message includes the package's line items for pricing, when there are any.</p>
     }
     else
     {

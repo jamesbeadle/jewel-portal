@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.MailboxCompose;
 using Jewel.JPMS.Contracts.Subcontractors;
 
 namespace Jewel.JPMS.Features.Procurement;
@@ -183,7 +184,8 @@ public partial class TenderInviteComposerModal
             sending = true;
             var outcome = await Commands.SendAsync(
                 new SendBidPackageInvite(BidPackageId, subject.Trim(), body,
-                    to.Trim(), cc.Trim(), bcc.Trim(), saveAsDraftOnly), CancellationToken.None);
+                    RecipientList.Parse(to), RecipientList.Parse(cc), RecipientList.Parse(bcc),
+                    saveAsDraftOnly), CancellationToken.None);
 
             // A deliberate staging closes the composer too — the wording is in the mailbox now.
             // The saved composer draft stays either way until the invite actually goes.
