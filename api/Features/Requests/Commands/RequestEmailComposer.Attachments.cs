@@ -4,7 +4,7 @@ using Jewel.JPMS.Api.Data.Entities;
 
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
-public sealed partial class SendRequestEmailHandler
+public sealed partial class RequestEmailComposer
 {
     /// <summary>
     /// Reads the request's uploaded files back out of blob storage so they can ride on the draft.

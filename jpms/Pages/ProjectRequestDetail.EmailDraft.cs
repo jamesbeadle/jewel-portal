@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.MailboxCompose;
 using Jewel.JPMS.Contracts.Variations;
 using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Features.RecordLinks;
@@ -16,6 +17,7 @@ public partial class ProjectRequestDetail
         draftResult = null;
         selectedChainMailboxId = "";
         emailModalOpen = true;
+        await LoadEmailPreviewAsync();
         await LoadTaggedEmailsAsync();
     }
 
@@ -23,6 +25,8 @@ public partial class ProjectRequestDetail
     {
         if (preparingDraft) return;
         emailModalOpen = false;
+        emailPreview = null;
+        emailPreviewError = null;
     }
 
     // One door for both paths: no chain selected emails the document as a fresh thread (recipients

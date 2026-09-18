@@ -1,4 +1,5 @@
 @namespace Jewel.JPMS.Features.Requests
+@using Jewel.JPMS.Contracts.MailboxCompose
 
 @* Email this record — a pure VIEW over the host's sending state. Two paths behind the buttons: a
    fresh email (To/CC/BCC from the project's correspondence profile) or reply-all into a tagged
@@ -17,6 +18,17 @@
                 Sends from the projects mailbox with the @KindLabel PDF attached.
                 Save as draft to review it in Outlook first.
             </p>
+
+            @* The words nobody used to be able to read. The cover note and subject are composed
+               server-side, so this is the server's own composition rather than a copy built here.
+               A reply keeps the same note; Graph supplies its recipients and quoted history, so
+               the envelope below is the fresh email's. *@
+            <div>
+                <p class="text-xs text-content-subtle mb-1">
+                    @(SelectedChainId == "" ? "This is the email as it will go:" : "The note this reply will carry:")
+                </p>
+                <RecordEmailPreviewPanel Preview="Preview" Loading="PreviewLoading" Error="@PreviewError" />
+            </div>
 
             <div class="space-y-2">
                 <label class="flex items-start gap-2.5 rounded border p-3 cursor-pointer @(SelectedChainId =="" ? "border-accent bg-accent/5" : "border-line hover:border-line-strong")">
@@ -110,6 +122,11 @@
     /// <summary>"" = fresh email; otherwise the chosen chain's mailbox id.</summary>
     [Parameter] public string SelectedChainId { get; set; } = "";
     [Parameter] public EventCallback<string> SelectedChainIdChanged { get; set; }
+
+    /// <summary>The email as the server composes it, loaded by the host when the modal opens.</summary>
+    [Parameter] public RecordEmailPreview? Preview { get; set; }
+    [Parameter] public bool PreviewLoading { get; set; }
+    [Parameter] public string? PreviewError { get; set; }
 
     /// <summary>Set once the email has gone or been staged — swaps the picker for the result card.</summary>
     [Parameter] public RequestEmailOutcome? DraftResult { get; set; }

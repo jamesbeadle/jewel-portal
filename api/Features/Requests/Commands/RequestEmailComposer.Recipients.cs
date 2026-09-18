@@ -4,7 +4,7 @@ using Jewel.JPMS.Api.Data.Entities;
 
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
-public sealed partial class SendRequestEmailHandler
+public sealed partial class RequestEmailComposer
 {
     /// <summary>An ad-hoc override addresses the draft to that one email, nothing copied;
     /// otherwise the shared resolver supplies the full To/CC/BCC set (request party → project

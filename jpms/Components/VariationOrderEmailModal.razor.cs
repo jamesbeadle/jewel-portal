@@ -1,4 +1,6 @@
+using Jewel.JPMS.Contracts.MailboxCompose;
 using Jewel.JPMS.Contracts.Variations;
+using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Components;
 
 namespace Jewel.JPMS.Components;
@@ -18,8 +20,6 @@ public partial class VariationOrderEmailModal
     private bool busy;
     private string? error;
     private VariationOrderEmailOutcome? outcome;
-
-    private void OnOverrideChanged(ChangeEventArgs args) => recipientOverride = args.Value?.ToString() ?? "";
 
     private Task Send() => DispatchAsync(saveAsDraftOnly: false);
 
@@ -50,6 +50,9 @@ public partial class VariationOrderEmailModal
         outcome = null;
         error = null;
         recipientOverride = "";
+        preview = null;
+        previewError = null;
+        previewedOrderId = null;
         await OnClose.InvokeAsync();
     }
 }

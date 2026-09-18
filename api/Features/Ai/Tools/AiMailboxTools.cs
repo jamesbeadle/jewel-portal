@@ -23,7 +23,7 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools;
 /// note: a thin result was read as "a file store that only shows what has been filed"). The tool
 /// descriptions say so, so the model reports the scope instead of inventing one.
 /// </summary>
-internal static class AiMailboxTools
+internal static partial class AiMailboxTools
 {
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
 

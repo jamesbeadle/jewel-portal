@@ -1,0 +1,66 @@
+@using Jewel.JPMS.Contracts.MailboxCompose
+
+@* What the recipient will see, before anybody presses Send.
+
+   Four records have their email written for them by the portal — the request document, the
+   valuation statement, the statement of account and the variation order — so until 2026-09-18 the
+   person sending had never read a word of it, and a director could not sign off content the
+   product did not display. This shows the server's OWN composition, the same message the send door
+   stages, so what is on screen and what leaves cannot disagree.
+
+   The body is rendered as markup because the server has already run it through the outbound
+   sanitising rule (ComposeHtmlPipeline.FromPortalDocument) — it is exactly the HTML that will be
+   staged, scripts and event handlers already gone. *@
+@if (Loading)
+{
+    <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted">
+        Reading the email as it will go…
+    </p>
+}
+else if (Error is not null)
+{
+    <Notice Tone="Tone.Warning">@Error</Notice>
+}
+else if (Preview is { } preview)
+{
+    <div class="rounded border border-line overflow-hidden">
+        <dl class="bg-surface-raised px-3 py-2 text-xs space-y-1">
+            <EnvelopeLine Label="To" Value="@Joined(preview.To)" />
+            @if (preview.Cc.Count > 0)
+            {
+                <EnvelopeLine Label="Cc" Value="@Joined(preview.Cc)" />
+            }
+            @if (preview.Bcc.Count > 0)
+            {
+                <EnvelopeLine Label="Bcc" Value="@Joined(preview.Bcc)" />
+            }
+            <EnvelopeLine Label="Subject" Value="@preview.Subject" />
+            @if (preview.Attachments.Count > 0)
+            {
+                <EnvelopeLine Label="Attached" Value="@AttachmentList(preview)" />
+            }
+        </dl>
+        <div class="px-3 py-3 bg-surface max-h-80 overflow-auto text-sm">@((MarkupString)preview.BodyHtml)</div>
+    </div>
+}
+
+@code {
+    /// <summary>The composed email; null while there is nothing to show.</summary>
+    [Parameter] public RecordEmailPreview? Preview { get; set; }
+
+    [Parameter] public bool Loading { get; set; }
+
+    /// <summary>Why the email couldn't be composed — usually a record with no contact to send to,
+    /// which is the same sentence the send door would have thrown.</summary>
+    [Parameter] public string? Error { get; set; }
+
+    private static string Joined(IReadOnlyList<string> addresses) => string.Join(", ", addresses);
+
+    private static string AttachmentList(RecordEmailPreview preview) =>
+        string.Join(", ", preview.Attachments.Select(file => $"{file.FileName} ({Size(file.Bytes)})"));
+
+    private static string Size(long bytes) =>
+        bytes >= 1_000_000 ? $"{bytes / 1_000_000m:0.#} MB"
+        : bytes >= 1_000 ? $"{bytes / 1_000m:0} KB"
+        : $"{bytes} bytes";
+}

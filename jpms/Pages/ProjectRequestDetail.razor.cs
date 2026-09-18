@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.MailboxCompose;
 using Jewel.JPMS.Contracts.Variations;
 using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Features.RecordLinks;
@@ -60,6 +61,9 @@ public partial class ProjectRequestDetail
 
     // Email draft staging (Outlook draft in the projects mailbox) — all lives in the email modal.
     private bool emailModalOpen;
+    private RecordEmailPreview? emailPreview;
+    private bool emailPreviewLoading;
+    private string? emailPreviewError;
     private bool preparingDraft;
     private string? draftError;
     private RequestEmailOutcome? draftResult;

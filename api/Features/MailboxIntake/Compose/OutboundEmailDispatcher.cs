@@ -13,6 +13,10 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 /// in the mailbox's Drafts folder with a note saying to finish it in Outlook, and the record the
 /// email belongs to is never touched.
 ///
+/// Every body it stages goes through ComposeHtmlPipeline.FromPortalDocument first, so no door
+/// can send a script, an event handler or a javascript: link however carelessly it composed — the
+/// branding survives, because that rule is the one written for mail the portal wrote itself.
+///
 /// Sales replies leave from a second mailbox, so the sequence is not tied to one address: the
 /// dispatcher is told which mailbox it stages into and names it in the sentence a person reads
 /// when a send is refused.
@@ -42,10 +46,11 @@ public sealed partial class OutboundEmailDispatcher
         bool saveAsDraftOnly,
         CancellationToken cancellationToken)
     {
-        var draft = await mailbox.CreateDraftAsync(message, cancellationToken)
+        var cleaned = message with { HtmlBody = ComposeHtmlPipeline.FromPortalDocument(message.HtmlBody) };
+        var draft = await mailbox.CreateDraftAsync(cleaned, cancellationToken)
             ?? throw new InvalidOperationException(filing.StagingRefusal);
         var staged = new StagedEmail(
-            draft.Id, draft.WebLink, message.Subject, Addresses(message.To), Addresses(message.Cc));
+            draft.Id, draft.WebLink, cleaned.Subject, Addresses(cleaned.To), Addresses(cleaned.Cc));
         return await FinishAsync(staged, filing, saveAsDraftOnly, cancellationToken);
     }
 
@@ -55,7 +60,8 @@ public sealed partial class OutboundEmailDispatcher
         bool saveAsDraftOnly,
         CancellationToken cancellationToken)
     {
-        var draft = await mailbox.CreateReplyDraftAsync(reply, cancellationToken)
+        var cleaned = reply with { HtmlCoverNote = ComposeHtmlPipeline.FromPortalDocument(reply.HtmlCoverNote) };
+        var draft = await mailbox.CreateReplyDraftAsync(cleaned, cancellationToken)
             ?? throw new InvalidOperationException(filing.StagingRefusal);
         var staged = new StagedEmail(draft.Id, draft.WebLink, draft.Subject, draft.To, draft.Cc);
         return await FinishAsync(staged, filing, saveAsDraftOnly, cancellationToken);
@@ -73,31 +79,3 @@ public sealed partial class OutboundEmailDispatcher
     private static IReadOnlyList<string> Addresses(IReadOnlyList<MailboxDraftRecipient>? recipients) =>
         (recipients ?? Array.Empty<MailboxDraftRecipient>()).Select(recipient => recipient.Email).ToList();
 }
-
-/// <summary>
-/// Where a dispatched email belongs: the pathway its thread is born on, the record it is filed
-/// under, and the sentence the person reads when the mailbox will not take the draft at all —
-/// written at the door they pressed, because only that door knows what they should do instead.
-/// </summary>
-public sealed record OutboundEmailFiling(
-    string PathwayLabel,
-    string StagingRefusal,
-    string? ProjectId = null,
-    RecordType? RecordType = null,
-    string? RecordId = null,
-    string RecordReference = "");
-
-/// <summary>
-/// What became of it. Sent=false with no FailureNote is a draft left in the mailbox by choice;
-/// Sent=false with one is a send the mailbox refused, and the draft is still there to finish.
-/// Subject, To and Cc are the envelope as it actually went — which for a reply is Graph's, not the
-/// caller's, so a caller reports what the correspondent will see rather than what it asked for.
-/// </summary>
-public sealed record OutboundEmailDispatch(
-    string MessageId,
-    string? WebLink,
-    bool Sent,
-    string? FailureNote,
-    string Subject = "",
-    IReadOnlyList<string>? To = null,
-    IReadOnlyList<string>? Cc = null);

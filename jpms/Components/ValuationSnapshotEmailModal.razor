@@ -1,6 +1,7 @@
-@using Jewel.JPMS.Features.Projects
+@using Jewel.JPMS.Contracts.MailboxCompose
+@using Jewel.JPMS.Models
 @inject ICommandSender Commands
-@inject ProjectListReadModel Projects
+@inject IQueryClient Queries
 
 @* The client-facing valuation statement on its way out: Send delivers it from the shared projects
    mailbox — the frozen report rendered server-side and attached as the branded PDF, addressed to
@@ -67,7 +68,10 @@
         }
         else
         {
-            <FormField Label="Subject">
+            <p class="text-xs text-content-subtle mb-1">This is the email as it will go:</p>
+            <RecordEmailPreviewPanel Preview="preview" Loading="previewing" Error="@previewError" />
+
+            <FormField Label="Subject" Class="mt-3">
             <input class="field mb-3" @bind="subject" />
             </FormField>
 
@@ -112,6 +116,11 @@
     private string subject = "";
     private string htmlBody = "";
 
+    private string? previewedSnapshotId;
+    private bool previewing;
+    private string? previewError;
+    private RecordEmailPreview? preview;
+
     private bool CannotSend => busy || drafted || Snapshot is null;
 
     private string OutcomeText =>
@@ -140,8 +149,34 @@
         sendFailure = null;
         error = null;
         draftLink = null;
-        subject = BuildDefaultSubject(Snapshot);
-        htmlBody = BuildDefaultBody(Snapshot);
+        subject = "";
+        htmlBody = "";
+    }
+
+    /// <summary>The subject and the covering note are the SERVER'S, read through the preview: this
+    /// page composed its own copy of both until 2026-09-18, so the portal held two spellings of one
+    /// email and only the page's could ever be seen.</summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Snapshot is not { } snapshot) { preview = null; return; }
+        if (previewedSnapshotId == snapshot.ValuationReportSnapshotId) return;
+        previewedSnapshotId = snapshot.ValuationReportSnapshotId;
+        previewError = null;
+        previewing = true;
+        try
+        {
+            preview = await Queries.AskAsync(
+                new PreviewRecordEmail(RecordType.ValuationReportSnapshot, snapshot.ValuationReportSnapshotId),
+                CancellationToken.None);
+            subject = preview.Subject;
+            htmlBody = preview.BodyHtml;
+        }
+        catch
+        {
+            preview = null;
+            previewError = "Couldn't read the email yet — check the project has a client or architect contact with an email address.";
+        }
+        finally { previewing = false; }
     }
 
     private async Task EmailSnapshotAsync(bool saveAsDraftOnly)
@@ -167,41 +202,4 @@
     }
 
     private Task Close() => OnClose.InvokeAsync();
-
-    private string? ProjectName => Snapshot is null ? null : Projects.Find(Snapshot.ProjectId)?.Name;
-
-    private string BuildDefaultSubject(ValuationReportSnapshot snapshot)
-    {
-        var project = ProjectName;
-        return string.IsNullOrWhiteSpace(project)
-            ? $"Valuation report — {snapshot.Label}"
-            : $"Valuation report — {project} — {snapshot.Label}";
-    }
-
-    // The cover note travels as HTML in the draft; the report detail itself is the attached PDF,
-    // so the note only summarises the position and invites queries.
-    private string BuildDefaultBody(ValuationReportSnapshot snapshot)
-    {
-        var project = ProjectName;
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine("<p>Dear all,</p>");
-        sb.AppendLine(string.IsNullOrWhiteSpace(project)
-            ? $"<p>Please find attached the valuation report — {snapshot.Label} — as it stood on {snapshot.TakenAt.LocalDateTime:d MMM yyyy}.</p>"
-            : $"<p>Please find attached the valuation report for {project} — {snapshot.Label} — as it stood on {snapshot.TakenAt.LocalDateTime:d MMM yyyy}.</p>");
-        sb.AppendLine("<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse\">");
-        sb.AppendLine($"<tr><td>Original contract sum</td><td align=\"right\">{snapshot.ContractSum:£#,##0.00}</td></tr>");
-        sb.AppendLine($"<tr><td>Net variations</td><td align=\"right\">{snapshot.NetVariations:£#,##0.00}</td></tr>");
-        sb.AppendLine($"<tr><td><strong>Revised contract sum</strong></td><td align=\"right\"><strong>{snapshot.RevisedContractSum:£#,##0.00}</strong></td></tr>");
-        sb.AppendLine($"<tr><td>Total works complete</td><td align=\"right\">{snapshot.TotalWorksComplete:£#,##0.00}</td></tr>");
-        sb.AppendLine($"<tr><td>Retention held</td><td align=\"right\">{snapshot.RetentionHeld:£#,##0.00}</td></tr>");
-        sb.AppendLine($"<tr><td>Retention released</td><td align=\"right\">{snapshot.RetentionReleased:£#,##0.00}</td></tr>");
-        sb.AppendLine($"<tr><td>Certified to date</td><td align=\"right\">{snapshot.CertifiedToDate:£#,##0.00}</td></tr>");
-        sb.AppendLine($"<tr><td><strong>Payment due (ex VAT)</strong></td><td align=\"right\"><strong>{snapshot.PaymentDueExVat:£#,##0.00}</strong></td></tr>");
-        sb.AppendLine("</table>");
-        sb.AppendLine("<p>All figures are net of VAT. The attached PDF breaks the position down line by line — the contract works, provisional and contingency sums, and variations, each with its claimed value to date.</p>");
-        sb.AppendLine("<p>If you have any queries on the figures, please reply to this email and we'll pick them up.</p>");
-        sb.AppendLine("<p>Kind regards,<br/>Jewel Bespoke Build</p>");
-        return sb.ToString();
-    }
-
 }

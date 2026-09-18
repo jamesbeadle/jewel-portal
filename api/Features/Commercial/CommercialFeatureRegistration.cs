@@ -143,6 +143,10 @@ public static class CommercialFeatureRegistration
         // accountant, assembled from the same query handlers the tab itself reads.
         services.AddScoped<Documents.CostCentreReconciliationPdfBuilder>();
 
+        // The message itself, shared by the send and the preview so they cannot say two things.
+        services.AddScoped<ValuationSnapshotEmailComposer>();
+        services.AddScoped<MailboxIntake.Compose.IComposesRecordEmail>(
+            sp => sp.GetRequiredService<ValuationSnapshotEmailComposer>());
         services.AddScoped<ICommandHandler<SendValuationReportSnapshotEmail, ValuationReportSnapshotEmailOutcome>, SendValuationReportSnapshotEmailHandler>();
         services.AddScoped<SendValuationReportSnapshotEmailAuthorisation>();
         services.AddScoped<SendValuationReportSnapshotEmailValidation>();

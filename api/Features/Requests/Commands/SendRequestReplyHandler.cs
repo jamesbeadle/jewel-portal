@@ -51,7 +51,7 @@ public sealed class SendRequestReplyHandler : ICommandHandler<SendRequestReply, 
 
         var reply = new MailboxReplyDraftMessage(
             command.MailboxMessageId,
-            SendRequestEmailHandler.BuildCoverNote(model),
+            RequestEmailComposer.BuildCoverNote(model),
             new[] { new MailboxDraftAttachment(model.FileName, "application/pdf", RequestDocumentRenderer.Render(model)) },
             new[]
             {

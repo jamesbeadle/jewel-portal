@@ -35,6 +35,10 @@ public static class VariationsFeatureRegistration
         services.AddScoped<LinkVoqToRequestAuthorisation>();
         services.AddScoped<LinkVoqToRequestValidation>();
 
+        // The message itself, shared by the send and the preview so they cannot say two things.
+        services.AddScoped<VariationOrderEmailComposer>();
+        services.AddScoped<MailboxIntake.Compose.IComposesRecordEmail>(
+            sp => sp.GetRequiredService<VariationOrderEmailComposer>());
         services.AddScoped<ICommandHandler<SendVariationOrderEmail, VariationOrderEmailOutcome>,
             SendVariationOrderEmailHandler>();
         services.AddScoped<SendVariationOrderEmailAuthorisation>();

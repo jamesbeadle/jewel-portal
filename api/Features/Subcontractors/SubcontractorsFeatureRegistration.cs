@@ -20,6 +20,10 @@ public static class SubcontractorsFeatureRegistration
         services.AddScoped<IQueryHandler<ListCurrentComplianceDocuments, IReadOnlyList<ComplianceDocument>>, ListCurrentComplianceDocumentsHandler>();
         services.AddScoped<IQueryHandler<GetSubcontractorStatement, SubcontractorStatement>, GetSubcontractorStatementHandler>();
 
+        // The message itself, shared by the send and the preview so they cannot say two things.
+        services.AddScoped<SubcontractorStatementEmailComposer>();
+        services.AddScoped<MailboxIntake.Compose.IComposesRecordEmail>(
+            sp => sp.GetRequiredService<SubcontractorStatementEmailComposer>());
         services.AddScoped<ICommandHandler<SendSubcontractorStatementEmail, SubcontractorStatementEmailOutcome>, SendSubcontractorStatementEmailHandler>();
         services.AddScoped<SendSubcontractorStatementEmailAuthorisation>();
         services.AddScoped<SendSubcontractorStatementEmailValidation>();

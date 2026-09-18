@@ -202,6 +202,12 @@ public static class RequestsRouteRegistration
         commands.Register<Jewel.JPMS.Contracts.MailboxCompose.SendMailboxEmail, Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome>(
             new CommandRoute("POST", "/api/mailbox/compose", _ => "/api/mailbox/compose"));
 
+        // Reading a record's email before it goes. One route for all four records whose email the
+        // portal composes itself, registered here beside the compose command rather than in each
+        // feature, because the read belongs to none of them in particular.
+        queries.Register<Jewel.JPMS.Contracts.MailboxCompose.PreviewRecordEmail, Jewel.JPMS.Contracts.MailboxCompose.RecordEmailPreview>(
+            new QueryRoute("/api/record-emails/{record}/{recordId}/preview", RecordEmailPreviewUrl));
+
         // Attachments: drawing revisions linked from the project register, and site photos. The
         // photo UPLOAD is multipart and posted directly by HttpRequestAttachmentStore, so — like
         // drawing revisions — it is deliberately not registered here.
@@ -220,5 +226,16 @@ public static class RequestsRouteRegistration
                     var remove = (RemoveRequestAttachment)command;
                     return $"/api/requests/{remove.RequestId}/attachments/{remove.RequestAttachmentId}";
                 }));
+    }
+
+    /// <summary>The record kind travels as its enum name; an ad-hoc address, when one is being
+    /// tried, rides in the query string because it is short and the body is not.</summary>
+    private static string RecordEmailPreviewUrl(object query)
+    {
+        var preview = (Jewel.JPMS.Contracts.MailboxCompose.PreviewRecordEmail)query;
+        var path = $"/api/record-emails/{preview.Record}/{Uri.EscapeDataString(preview.RecordId)}/preview";
+        return string.IsNullOrWhiteSpace(preview.RecipientOverride)
+            ? path
+            : $"{path}?recipientOverride={Uri.EscapeDataString(preview.RecipientOverride)}";
     }
 }
