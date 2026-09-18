@@ -183,7 +183,8 @@
 
         <Modal IsOpen="showEmailModal" Title="@($"Email work order {Title2} to {Detail.SubcontractorName}")" ShowFooter="true"
                ConfirmLabel="@(emailBusy ? "Sending…" : "Send to supplier")" ConfirmDisabled="@emailBusy" CancelLabel="Cancel"
-               OnCancel="CloseEmailModal" OnConfirm="ConfirmSendEmailAsync" Class="max-w-3xl w-full">
+               OnCancel="CloseEmailModal" OnConfirm="ConfirmSendEmailAsync"
+               DismissOnOverlayClick="false" Class="max-w-3xl w-full">
             <Notice Tone="Tone.Warning" Class="mb-3">
                 This sends now, from the shared projects mailbox to the supplier's directory email, with the
                 purchase order PDF attached. If the send fails the email is left in the mailbox's Drafts folder.
