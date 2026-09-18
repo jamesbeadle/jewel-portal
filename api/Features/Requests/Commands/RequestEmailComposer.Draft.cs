@@ -7,7 +7,7 @@ using Jewel.JPMS.Api.Data.Entities;
 
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
-public sealed partial class SendRequestEmailHandler
+public sealed partial class RequestEmailComposer
 {
     /// <summary>The message the dispatcher will stage: the freshly rendered document, the files
     /// that fit beside it, the cover note, and the tags that make the sent copy file itself.</summary>

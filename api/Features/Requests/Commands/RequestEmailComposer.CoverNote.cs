@@ -2,7 +2,7 @@ using Jewel.JPMS.Api.Features.Requests.Documents;
 
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
-public sealed partial class SendRequestEmailHandler
+public sealed partial class RequestEmailComposer
 {
     /// <summary>The short branded HTML cover note — mirrors the worker's outbound send so a drafted
     /// email reads the same as an auto-issued one. Internal so the reply-draft path

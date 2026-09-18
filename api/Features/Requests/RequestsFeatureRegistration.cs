@@ -81,6 +81,10 @@ public static class RequestsFeatureRegistration
         services.AddScoped<UpdateRequestFormAuthorisation>();
         services.AddScoped<UpdateRequestFormValidation>();
 
+        // The message itself, shared by the send and the preview so they cannot say two things.
+        services.AddScoped<RequestEmailComposer>();
+        services.AddScoped<MailboxIntake.Compose.IComposesRecordEmail>(
+            sp => sp.GetRequiredService<RequestEmailComposer>());
         services.AddScoped<ICommandHandler<SendRequestEmail, RequestEmailOutcome>, SendRequestEmailHandler>();
         services.AddScoped<SendRequestEmailAuthorisation>();
         services.AddScoped<SendRequestEmailValidation>();

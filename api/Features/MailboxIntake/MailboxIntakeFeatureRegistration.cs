@@ -94,6 +94,15 @@ public static class MailboxIntakeFeatureRegistration
             sp.GetRequiredService<Audit.AuditTrail>(),
             "the projects mailbox"));
 
+        // Reading a record's email before it goes. The composers themselves are registered by the
+        // features that own each record, so this covers a new one the moment its composer exists.
+        services.AddScoped<Compose.RecordEmailComposers>();
+        services.AddScoped<
+            Jewel.JPMS.Api.Cqrs.IQueryHandler<
+                Jewel.JPMS.Contracts.MailboxCompose.PreviewRecordEmail,
+                Jewel.JPMS.Contracts.MailboxCompose.RecordEmailPreview>,
+            Compose.PreviewRecordEmailHandler>();
+
         services.AddSingleton<Compose.ComposeHtmlPipeline>();
         services.AddScoped<Compose.SendMailboxEmailHandler>();
         services.AddScoped<
