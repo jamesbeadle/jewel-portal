@@ -886,7 +886,12 @@ finds drift.
   was pulled out and drifted into three different dismissal behaviours (2026-09-17 fixed the
   lot: the variations and requests status pills, the tagged-inbox filter, the role switcher, the
   rich-text colour menu and the SideNav project picker); the typeahead
-  `SearchSelect` is the one deliberate exception, being a form control rather than a menu.
+  `SearchSelect` is the one deliberate exception, being a form control rather than a menu — but
+  it is not an exception to the dismissal rule: since 2026-09-18 it registers with the same
+  watcher in `wwwroot/js/dropdown-menu.js`, so "a press outside closes it" has one definition in
+  the codebase and no component hand-rolls its own. That watcher is the shared thing, not the
+  component; a fixed popup asks it for the scroll close too (`shouldCloseOnScroll`), which an
+  absolutely positioned panel must never do or it would close on its own container scrolling.
 - **`FormField`** wraps every labelled control — label (14/Med white), the control wearing the
   `field` class, `Hint`, `Error`, `Required`. No bare `<label>` over an input, select, textarea
   or picker. **`Checkbox`** for a labelled tick; native checkboxes and radios get the Figma box
