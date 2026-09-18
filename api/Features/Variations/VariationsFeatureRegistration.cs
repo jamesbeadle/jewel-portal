@@ -35,6 +35,10 @@ public static class VariationsFeatureRegistration
         services.AddScoped<LinkVoqToRequestAuthorisation>();
         services.AddScoped<LinkVoqToRequestValidation>();
 
+        services.AddScoped<ICommandHandler<SendVariationOrderEmail, VariationOrderEmailOutcome>,
+            SendVariationOrderEmailHandler>();
+        services.AddScoped<SendVariationOrderEmailAuthorisation>();
+        services.AddScoped<SendVariationOrderEmailValidation>();
         services.AddScoped<ICommandHandler<ApproveVariationOrder, VariationOrder>, ApproveVariationOrderHandler>();
         services.AddScoped<ApproveVariationOrderAuthorisation>();
         services.AddScoped<ApproveVariationOrderValidation>();

@@ -50,6 +50,10 @@ public static class VariationsRouteRegistration
             new CommandRoute("POST", "/api/variation-orders/{voId}/messages",
                 command => $"/api/variation-orders/{((PostVariationOrderMessage)command).VariationOrderId}/messages"));
 
+        commands.Register<SendVariationOrderEmail, VariationOrderEmailOutcome>(
+            new CommandRoute("POST", "/api/variation-orders/{voId}/email",
+                command => $"/api/variation-orders/{((SendVariationOrderEmail)command).VariationOrderId}/email"));
+
         // Subcontractor variation requests (portal-raised; internal review queue).
         queries.Register<ListVariationRequestsForProject, IReadOnlyList<SubcontractorVariationRequest>>(
             new QueryRoute("/api/projects/{projectId}/variation-requests",

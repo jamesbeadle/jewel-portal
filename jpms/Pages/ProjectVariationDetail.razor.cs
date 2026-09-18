@@ -19,6 +19,9 @@ public partial class ProjectVariationDetail
     private bool busy;
     private string? error;
     private VariationOrder? order;
+
+    // The variation being emailed to the client; null keeps the modal closed.
+    private VariationOrder? emailingOrder;
     private Request? request; // originating request, for the lineage bar
 
 

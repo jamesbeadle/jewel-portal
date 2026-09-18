@@ -94,6 +94,17 @@ public static class VariationOrderStatusExtensions
         _ => status.ToString()
     };
 
+    // EMAIL POLICY — which stages may be emailed as the official document. Issued is the point
+    // the variation has gone to the client, so it and everything after it may go, and go again:
+    // a resend, a chase while the Architect's Instruction is awaited, the approved document as
+    // the definitive record. Quoting is a price not yet put and Rejected is terminal — neither is
+    // a document to send. Server handler and UI both consult this single gate. (Same arrangement
+    // as RequestType.IsEmailable.)
+    public static bool IsEmailable(this VariationOrderStatus status) =>
+        status is VariationOrderStatus.Issued
+               or VariationOrderStatus.AwaitingArchitectInstruction
+               or VariationOrderStatus.Approved;
+
     /// <summary>The tooltip/hint wording that accompanies the label wherever a surface shows one.</summary>
     public static string Hint(this VariationOrderStatus status) => status switch
     {

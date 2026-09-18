@@ -1,4 +1,4 @@
-
+using Jewel.JPMS.Contracts.MailboxCompose;
 namespace Jewel.JPMS.Api.Features.Variations.Documents;
 
 /// <summary>
@@ -64,8 +64,11 @@ public sealed record VariationDocumentModel(
         }
     }
 
-    /// <summary>The email subject line used when the document is sent or drafted.</summary>
-    public string EmailSubject => $"{DocumentReference} {DocumentName}: {Title} — {ProjectName}".Trim();
+    /// <summary>The email subject line used when the document is sent or drafted. The project is
+    /// named once — a variation raised from a title that already carries the site read it twice,
+    /// the fault fixed for the purchase order and the request document on 2026-09-18.</summary>
+    public string EmailSubject =>
+        $"{DocumentReference} {DocumentName}: {SubjectLine.NamingTheProjectOnce(Title, ProjectName)}".Trim();
 
     /// <summary>What the document calls itself — its heading, PDF title and file-name fallback.</summary>
     public const string DocumentName = "Variation Order";

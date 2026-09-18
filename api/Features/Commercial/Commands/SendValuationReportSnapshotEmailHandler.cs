@@ -20,9 +20,6 @@ public sealed class SendValuationReportSnapshotEmailHandler
         "The valuation email couldn't be staged in the shared mailbox, so nothing was sent. "
         + "Check the mailbox connection and try again.";
 
-    private static readonly int[] ClientSideRoles =
-        { (int)ProjectContactRole.Client, (int)ProjectContactRole.Architect };
-
     private readonly ValuationReportSnapshotPdfBuilder builder;
     private readonly JpmsContext context;
     private readonly OutboundEmailDispatcher dispatcher;
@@ -76,20 +73,11 @@ public sealed class SendValuationReportSnapshotEmailHandler
             dispatch.FailureNote);
     }
 
-    /// <summary>The client side of the correspondence profile — Client and Architect rows with an
-    /// email, deduped by address in case the same person is on the profile twice.</summary>
+    /// <summary>The client side of the correspondence profile, read through the shared rule the
+    /// variation order's email reads too.</summary>
     private async Task<List<MailboxDraftRecipient>> ClientSideRecipientsAsync(string projectId, CancellationToken cancellationToken)
     {
-        var contacts = await context.ProjectContacts.AsNoTracking()
-            .Where(contact => contact.ProjectId == projectId && ClientSideRoles.Contains(contact.Role) && contact.Email != "")
-            .OrderBy(contact => contact.Role).ThenBy(contact => contact.Name)
-            .ToListAsync(cancellationToken);
-
-        var recipients = contacts
-            .GroupBy(contact => contact.Email.Trim(), StringComparer.OrdinalIgnoreCase)
-            .Select(group => new MailboxDraftRecipient(group.Key, group.First().Name))
-            .ToList();
-
+        var recipients = await ClientSideRecipients.ForProjectAsync(context, projectId, cancellationToken);
         if (recipients.Count > 0) return recipients;
         throw new InvalidOperationException(
             "The project has no client or architect contact with an email address — add one to the project's contacts before emailing the valuation.");

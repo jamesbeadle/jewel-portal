@@ -1,0 +1,67 @@
+@inject ICommandSender Commands
+
+@* The variation order on its way to the client. Send delivers it from the shared projects mailbox
+   with the VO PDF attached, addressed to the project's Client and Architect contacts; Save as
+   draft leaves it in Drafts for Outlook instead. The covering note is composed server-side so it
+   reads the same however the email was triggered — see SendVariationOrderEmailHandler.CoverNote. *@
+<Modal IsOpen="@(Order is not null)"
+       Title="@($"Email variation order · {Order?.DisplayNumber}")"
+       OnCancel="Close"
+       Class="max-w-xl w-full">
+    <ChildContent>
+    @if (Order is { } order)
+    {
+        @if (outcome is null)
+        {
+            <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+                Sends from the shared projects mailbox to the project's client and architect
+                contacts, with the variation order rendered fresh and attached as a PDF. The
+                covering note carries the reference, the title and the value; the scope, commercial
+                basis, programme impact and cost breakdown are in the attachment. The sent copy is
+                tagged to this variation, so replies land here.
+            </p>
+
+            <FormField Label="Send to one address instead" Hint="Leave blank to use the project's client and architect contacts">
+                <input class="field" type="email" placeholder="someone@example.com"
+                       value="@recipientOverride" @oninput="OnOverrideChanged" disabled="@busy" />
+            </FormField>
+        }
+
+        @if (error is { } message)
+        {
+            <Notice Tone="Tone.Negative" Class="mt-3">@message</Notice>
+        }
+
+        @if (outcome is { } result)
+        {
+            <Notice Tone="@(result.Sent ? Tone.Positive : Tone.Info)" Class="mt-3">
+                <p class="font-medium">@(result.Sent ? "Sent" : "Saved as a draft")</p>
+                <p class="mt-1">@result.Subject</p>
+                <p class="mt-1 text-content-muted">@string.Join(", ", result.Recipients)</p>
+                @if (result.FailureNote is { } note)
+                {
+                    <p class="mt-2">@note</p>
+                }
+                @if (result.WebLink is { } link)
+                {
+                    <p class="mt-2"><a class="underline underline-offset-4" href="@link" target="_blank" rel="noopener">Open it in Outlook</a></p>
+                }
+            </Notice>
+        }
+    }
+    </ChildContent>
+    <FooterContent>
+        @if (outcome is null)
+        {
+            <button type="button" class="btn-secondary btn-lg" disabled="@busy" @onclick="SaveAsDraft">Save as draft</button>
+            <button type="button" class="btn-neutral btn-lg" disabled="@busy" @onclick="Close">Cancel</button>
+            <button type="button" class="btn-primary btn-lg" disabled="@busy" @onclick="Send">
+                @(busy ? "Sending…" : "Send to the client")
+            </button>
+        }
+        @if (outcome is not null)
+        {
+            <button type="button" class="btn-primary btn-lg" @onclick="Close">Close</button>
+        }
+    </FooterContent>
+</Modal>
