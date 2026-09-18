@@ -13,6 +13,10 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 /// in the mailbox's Drafts folder with a note saying to finish it in Outlook, and the record the
 /// email belongs to is never touched.
 ///
+/// Sales replies leave from a second mailbox, so the sequence is not tied to one address: the
+/// dispatcher is told which mailbox it stages into and names it in the sentence a person reads
+/// when a send is refused.
+///
 /// A record's document goes out either as a new thread (<see cref="DispatchAsync"/>) or inside an
 /// email conversation it already has (<see cref="DispatchReplyAsync"/>, where Graph supplies the
 /// threading headers, the recipients and the quoted history). Both end the same way, so the door a
@@ -22,11 +26,14 @@ public sealed partial class OutboundEmailDispatcher
 {
     private readonly IMailboxGraphClient mailbox;
     private readonly Audit.AuditTrail audit;
+    private readonly string mailboxName;
 
-    public OutboundEmailDispatcher(IMailboxGraphClient mailbox, Audit.AuditTrail audit)
+    public OutboundEmailDispatcher(
+        IMailboxGraphClient mailbox, Audit.AuditTrail audit, string mailboxName = "the projects mailbox")
     {
         this.mailbox = mailbox;
         this.audit = audit;
+        this.mailboxName = mailboxName;
     }
 
     public async Task<OutboundEmailDispatch> DispatchAsync(
