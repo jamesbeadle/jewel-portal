@@ -40,7 +40,7 @@ public static partial class AiToolCatalogue
 
     private const int MaxConversationChars = 50_000;
 
-    /// <summary>Every tool, before role filtering. (AiEmailTools' draft_outlook_email was retired
+    /// <summary>Every tool, before role filtering. (The old draft_outlook_email was retired
     /// 2026-08-14: assistant-drafted email now goes through the Control Centre's own composer —
     /// open_modal "compose_email" — so the user reviews and sends in the portal, never in Outlook.)</summary>
     public static IReadOnlyList<AiTool> All { get; } =
@@ -50,6 +50,7 @@ public static partial class AiToolCatalogue
             .Concat(AiCommercialTools.Build())
             .Concat(AiValuationInvoiceTools.Build())
             .Concat(AiMailboxTools.Build())
+            .Concat(AiMailboxTools.RecordEmailPreviewTools())
             .Concat(AiFinanceTools.Build())
             .Concat(AiWeeklyCashflowGridTool.Build())
             .Concat(AiLabourMonthEndTools.Build())
