@@ -12,8 +12,10 @@ description: "The monthly valuation claim and invoice cycle — the money path f
    never start a month from zero.
 2. **Lock**: preapprove_valuation_claim freezes the month's figures for claiming.
 3. **Raise the invoice** (create_valuation_invoice): raising freezes a REPORT SNAPSHOT — that
-   frozen statement is what the client is sent, backing this invoice. Nothing is emailed by the
-   portal; a person sends the statement.
+   frozen statement is what the client is sent, backing this invoice. The stepper itself emails
+   nothing. Since 17/09/2026 the statement goes out from the Valuation Report's "Email snapshot"
+   door — `send_valuation_report_snapshot_email`, which SENDS it to the project's Client and
+   Architect contacts with the PDF attached; `saveAsDraftOnly` leaves it in Drafts instead.
 4. **Record claim sent** (submit_valuation_invoice): records that the statement went to the
    architect/client. It changes portal state only.
 5. **Record approval**: record the client's approval (or rejection — a rejected invoice returns to

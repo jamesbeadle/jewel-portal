@@ -713,43 +713,28 @@ public sealed class AiConnectorTests
         // The general lesson of 2026-09-15: a description or note that sends the model to a tool
         // is a promise. When the name resolves to nothing, the model tells the user the portal
         // cannot do the thing — and it is right, from where it sits. So every snake_case name that
-        // reads like a tool or action (a known verb prefix, two or more segments, not an argument
-        // like record_id) in any tool description, action description, action note or input
-        // schema must resolve through the catalogue or the action registry, legacy names included.
-        var verbs = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "list", "get", "find", "read", "view", "search", "add", "create", "update", "set", "link",
-            "unlink", "import", "send", "record", "delete", "approve", "undo", "push", "preview",
-            "export", "load", "save", "run", "post", "complete", "log", "suggest", "rename",
-            "consolidate", "promote", "raise", "issue", "mark", "code", "prepare", "describe",
-            "perform", "reject", "assign", "close", "reopen", "archive", "clear", "move", "cancel",
-            "stage", "remove", "apply", "allocate", "recode", "attach", "register", "schedule",
-            "chase", "extract", "submit", "confirm", "withdraw", "draft", "file", "tag", "invite",
-            "decline", "accept", "award", "revise", "settle", "void", "restore", "upload", "enable", "query", "rebuild",
-            "disable", "pin", "unpin", "flag", "unflag", "request", "plan", "book"
-        };
-        var namePattern = new System.Text.RegularExpressions.Regex(
-            @"(?<![A-Za-z0-9_/.\-])([a-z][a-z0-9]*(?:_[a-z0-9]+)+)(?![A-Za-z0-9_/\-])");
-
+        // reads like a tool or action in any tool description, action description, action note or
+        // input schema must resolve through the catalogue or the action registry, legacy names
+        // included. What counts as a name is ConnectorNameReferences, shared with the guard over
+        // the skills, which name the same doors and drifted the same way on 2026-09-17.
         var texts = AiToolCatalogue.All
-            .SelectMany(tool => new[] { ("tool " + tool.Name, tool.Description), ("tool " + tool.Name + " schema", System.Text.Json.JsonSerializer.Serialize(tool.InputSchema)) })
-            .Concat(AiActionRegistry.All.SelectMany(action => new[] { ("action " + action.Name, action.Description), ("action " + action.Name + " notes", action.Notes ?? "") }))
+            .SelectMany(tool => new[]
+            {
+                (Where: "tool " + tool.Name, Text: tool.Description),
+                (Where: "tool " + tool.Name + " schema", Text: System.Text.Json.JsonSerializer.Serialize(tool.InputSchema))
+            })
+            .Concat(AiActionRegistry.All.SelectMany(action => new[]
+            {
+                (Where: "action " + action.Name, Text: action.Description),
+                (Where: "action " + action.Name + " notes", Text: action.Notes ?? "")
+            }));
+
+        var dangling = texts
+            .SelectMany(entry => ConnectorNameReferences.DanglingIn(entry.Where, entry.Text))
+            .Distinct()
             .ToList();
 
-        var dangling = new List<string>();
-        foreach (var (where, text) in texts)
-        {
-            foreach (System.Text.RegularExpressions.Match match in namePattern.Matches(text))
-            {
-                var name = match.Groups[1].Value;
-                if (!verbs.Contains(name.Split('_')[0])) continue;
-                if (name.EndsWith("_id", StringComparison.Ordinal) || name.EndsWith("_type", StringComparison.Ordinal) || name.EndsWith("_key", StringComparison.Ordinal)) continue;
-                if (AiToolCatalogue.Find(name) is not null || AiActionRegistry.Find(name) is not null) continue;
-                dangling.Add($"{where} names '{name}'");
-            }
-        }
-
-        Assert.True(dangling.Count == 0, "Catalogue text names tools that do not exist:\n" + string.Join("\n", dangling.Distinct()));
+        Assert.True(dangling.Count == 0, "Catalogue text names tools that do not exist:\n" + string.Join("\n", dangling));
     }
 
     [Fact]
