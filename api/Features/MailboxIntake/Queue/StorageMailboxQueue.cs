@@ -28,12 +28,6 @@ public sealed class StorageMailboxQueue : IMailboxQueue
         await queue.SendMessageAsync(graphMessageId, ct);
     }
 
-    public async Task EnqueueMailboxActionAsync(MailboxActionMessage action, CancellationToken ct)
-    {
-        var queue = await GetQueueAsync(MailboxQueues.MailboxActions, ct);
-        await queue.SendMessageAsync(JsonSerializer.Serialize(action), ct);
-    }
-
     private Task<QueueClient> GetQueueAsync(string name, CancellationToken ct)
     {
         var lazy = _queues.GetOrAdd(name, key => new Lazy<Task<QueueClient>>(async () =>

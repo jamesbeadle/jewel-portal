@@ -1,38 +1,26 @@
-using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 using Jewel.JPMS.Contracts.Requests;
 
 namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
-public sealed class ResendRequestDocumentHandler : ICommandHandler<ResendRequestDocument, Acknowledgement>
+/// <summary>
+/// The resend is the send. Until 2026-09-18 it enqueued a mailbox action and a background worker
+/// carried its own copy of the outbound sequence — rendering the document, staging a draft and
+/// stopping there — so the command promised a send it never performed and the assistant had no
+/// outcome to read back. It now hands the same request and the same optional ad-hoc address to
+/// <see cref="SendRequestEmailHandler"/>, which renders, stages, sends, degrades to a reviewed
+/// draft if the mailbox refuses, and writes the audit row.
+/// </summary>
+public sealed class ResendRequestDocumentHandler : ICommandHandler<ResendRequestDocument, RequestEmailOutcome>
 {
-    private readonly JpmsContext context;
-    private readonly IMailboxActionScheduler mailbox;
+    private readonly ICommandHandler<SendRequestEmail, RequestEmailOutcome> send;
 
-    public ResendRequestDocumentHandler(JpmsContext context, IMailboxActionScheduler mailbox)
-    {
-        this.context = context;
-        this.mailbox = mailbox;
-    }
+    public ResendRequestDocumentHandler(ICommandHandler<SendRequestEmail, RequestEmailOutcome> send) =>
+        this.send = send;
 
-    public async Task<Acknowledgement> HandleAsync(ResendRequestDocument command, CancellationToken cancellationToken)
-    {
-        var request = await context.Requests
-            .Where(r => r.RequestId == command.RequestId)
-            .Select(r => new { r.Kind })
-            .FirstOrDefaultAsync(cancellationToken);
-        if (request is null) throw new InvalidOperationException($"Request '{command.RequestId}' not found.");
-
-        var kind = (RequestType)request.Kind;
-        if (!kind.IsEmailable())
-            throw new InvalidOperationException(
-                $"A {kind.DisplayName()} request is never emailed — only RFI, NOD and EOT documents " +
-                "are drafted for sending. Promote the request first if it should go out as an RFI.");
-
-        // The PDF is regenerated from SQL by the worker, so the resend carries only the request id and
-        // the optional ad-hoc recipient. A normalised empty override means "use the project's contacts".
-        var recipientOverride = string.IsNullOrWhiteSpace(command.RecipientOverride) ? null : command.RecipientOverride.Trim();
-        await mailbox.ScheduleRequestDocumentSendAsync(command.RequestId, recipientOverride, cancellationToken);
-
-        return new Acknowledgement(command.RequestId);
-    }
+    public Task<RequestEmailOutcome> HandleAsync(ResendRequestDocument command, CancellationToken cancellationToken) =>
+        send.HandleAsync(
+            new SendRequestEmail(
+                command.RequestId,
+                string.IsNullOrWhiteSpace(command.RecipientOverride) ? null : command.RecipientOverride.Trim()),
+            cancellationToken);
 }

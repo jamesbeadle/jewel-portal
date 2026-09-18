@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.MailboxIntake.Queue;
 using Microsoft.Extensions.Configuration;
@@ -39,9 +38,6 @@ public static class MailboxIntakeFeatureRegistration
         {
             services.AddSingleton<IMailboxQueue, NullMailboxQueue>();
         }
-
-        // Always available so the triage handlers can depend on it; it self-gates on the flags.
-        services.AddSingleton<IMailboxActionScheduler, MailboxActionScheduler>();
 
         // Large-attachment share links: files that would push an email past the ~25 MB Exchange
         // ceiling are copied into a private 'email-shares' container and sent as 7-day SAS download
@@ -93,7 +89,10 @@ public static class MailboxIntakeFeatureRegistration
         // The one outbound door for every record's email — staging, the send, the degrade back to
         // a draft and the audit row (Compose.OutboundEmailDispatcher). Registered here beside the
         // Graph client it wraps, because every feature that emails a record depends on it.
-        services.AddScoped<Compose.OutboundEmailDispatcher>();
+        services.AddScoped(sp => new Compose.OutboundEmailDispatcher(
+            sp.GetRequiredService<Graph.IMailboxGraphClient>(),
+            sp.GetRequiredService<Audit.AuditTrail>(),
+            "the projects mailbox"));
 
         services.AddSingleton<Compose.ComposeHtmlPipeline>();
         services.AddScoped<Compose.SendMailboxEmailHandler>();

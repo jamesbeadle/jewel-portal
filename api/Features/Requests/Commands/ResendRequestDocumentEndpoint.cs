@@ -7,9 +7,9 @@ public sealed class ResendRequestDocumentEndpoint
     private readonly SignedInUserResolver users;
     private readonly ResendRequestDocumentAuthorisation authorisation;
     private readonly ResendRequestDocumentValidation validation;
-    private readonly ICommandHandler<ResendRequestDocument, Acknowledgement> handler;
+    private readonly ICommandHandler<ResendRequestDocument, RequestEmailOutcome> handler;
 
-    public ResendRequestDocumentEndpoint(SignedInUserResolver users, ResendRequestDocumentAuthorisation authorisation, ResendRequestDocumentValidation validation, ICommandHandler<ResendRequestDocument, Acknowledgement> handler)
+    public ResendRequestDocumentEndpoint(SignedInUserResolver users, ResendRequestDocumentAuthorisation authorisation, ResendRequestDocumentValidation validation, ICommandHandler<ResendRequestDocument, RequestEmailOutcome> handler)
     { this.users = users; this.authorisation = authorisation; this.validation = validation; this.handler = handler; }
 
     [Function(nameof(ResendRequestDocument))]

@@ -59,7 +59,6 @@
     <Compile Include="..\api\Features\MailboxIntake\Queue\IMailboxQueue.cs" Link="Shared\IMailboxQueue.cs" />
     <Compile Include="..\api\Features\MailboxIntake\Queue\StorageMailboxQueue.cs" Link="Shared\StorageMailboxQueue.cs" />
     <Compile Include="..\api\Features\MailboxIntake\Queue\NullMailboxQueue.cs" Link="Shared\NullMailboxQueue.cs" />
-    <Compile Include="..\api\Features\MailboxIntake\Actions\IMailboxActionScheduler.cs" Link="Shared\IMailboxActionScheduler.cs" />
     <!-- Shared request-document renderer: built in the api project, compiled into the worker so the
          emailed PDF is byte-for-byte the same as the one downloaded through the platform. -->
     <Compile Include="..\api\Features\Requests\Documents\RequestDocumentModel.cs" Link="Shared\Documents\RequestDocumentModel.cs" />
@@ -70,12 +69,11 @@
     <Compile Include="..\api\Features\Requests\Documents\DocumentFontResolver.cs" Link="Shared\Documents\DocumentFontResolver.cs" />
     <Compile Include="..\api\Features\Requests\Documents\DocumentBranding.cs" Link="Shared\Documents\DocumentBranding.cs" />
     <Compile Include="..\api\Features\Documents\JewelDocumentStyle.cs" Link="Shared\Documents\JewelDocumentStyle.cs" />
-    <!-- Shared recipient resolution: the worker send, the Outlook draft, and the recipients
-         preview all resolve To/CC/BCC through the same code so the paths can never drift. -->
+    <!-- Shared recipient resolution. The worker no longer emails anything (2026-09-18); this and
+         the document sources below ride along until something here needs them again. -->
     <Compile Include="..\api\Features\Requests\Recipients\RequestRecipientResolver.cs" Link="Shared\RequestRecipientResolver.cs" />
     <!-- Project-qualified tag stems (references are only unique per project; tags share one flat
-         mailbox category space). MailboxActionWorker resolves the outbound draft's workflow tag
-         through this helper. -->
+         mailbox category space). -->
     <Compile Include="..\api\Features\Requests\RequestTags.cs" Link="Shared\RequestTags.cs" />
     <!-- Shared Xero source: the nightly timer (Xero/XeroNightlyWorker.cs) runs the SAME sync and
          auto-allocation handlers the API's HTTP endpoints use, compiled from the identical files so
