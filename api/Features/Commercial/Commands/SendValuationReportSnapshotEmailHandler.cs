@@ -39,12 +39,22 @@ public sealed class SendValuationReportSnapshotEmailHandler
         var pdf = await builder.BuildAsync(command.ValuationReportSnapshotId, cancellationToken);
         var recipients = await ClientSideRecipientsAsync(pdf.ProjectId, cancellationToken);
 
+        // The statement's own tag, spelt exactly as the register spells it, so the sent copy and
+        // the client's reply to it file under this statement rather than only under Client.
+        var recordTag = await ValuationSnapshotTags.StemAsync(
+            context, pdf.ProjectId, pdf.Snapshot.Number, cancellationToken);
+
         var message = new MailboxDraftMessage(
             To: recipients,
             Subject: command.Subject,
             HtmlBody: command.HtmlBody,
             Attachments: new[] { new MailboxDraftAttachment(pdf.FileName, "application/pdf", pdf.Content) },
-            Categories: new List<string> { TriageCategories.Marker, TriageCategories.Client });
+            Categories: new List<string>
+            {
+                TriageCategories.Marker,
+                TriageCategories.ForRecord(recordTag),
+                TriageCategories.Client
+            });
 
         var filing = new OutboundEmailFiling(
             AuditTrail.PathwayLabel(TriageCategories.Client),
