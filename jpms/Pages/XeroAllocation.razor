@@ -204,8 +204,7 @@
                                                OnMarkSoleTrader="() => MarkSoleTraderInlineAsync(line)"
                                                OnMarkCover="() => MarkCoverAsync(line)"
                                                OnUnmarkCover="() => UnmarkCoverAsync(line)"
-                                               MenuItems="LabourRowMenuItems(line)"
-                                               OnMenuOpenChanged="open => TrackRowMenu(line.XeroLedgerLineId, open)" />
+                                               MenuItems="LabourRowMenuItems(line)" />
                             }
                             else if (activeTab == XeroAllocationStatus.Unallocated)
                             {
@@ -227,8 +226,7 @@
                                               OnBucket="bucket => BucketAsync(line, bucket)"
                                               CanSetProject="CanSetProject(line)"
                                               OnSetProject="() => SetProjectAsync(line)"
-                                              MenuItems="QueueRowMenuItems(line)"
-                                              OnMenuOpenChanged="open => TrackRowMenu(line.XeroLedgerLineId, open)" />
+                                              MenuItems="QueueRowMenuItems(line)" />
                             }
                             else if (activeTab == XeroAllocationStatus.Disputed)
                             {

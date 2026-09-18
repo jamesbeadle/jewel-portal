@@ -96,7 +96,6 @@ public partial class XeroAllocation
         CloseSendToProject();
         CloseDispute();
         CloseDiscussion();
-        openRowMenuKey = null;
         page = 0;
         // On a project tab every line is already pointed at that project, so
         // pre-arm the bulk bar's project with it.

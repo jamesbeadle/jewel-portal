@@ -145,13 +145,6 @@
     /// focus cannot be reached by keyboard.</summary>
     [Parameter] public bool ShouldKeepFocus { get; set; }
 
-    /// <summary>Raised whenever the panel opens (true) or closes (false). A host whose menu sits
-    /// inside an overflow/scroll container listens to this to lift the clipping while the panel
-    /// is showing — an absolutely-positioned panel cannot escape an overflow ancestor on its own,
-    /// so its bottom items are cut off at the container's edge (which is how a row's Delete… went
-    /// missing in the valuation invoices table).</summary>
-    [Parameter] public EventCallback<bool> OnOpenChanged { get; set; }
-
     private bool open;
     private ElementReference root;
     private ElementReference toggleRef;
@@ -192,7 +185,6 @@
     {
         if (!open) return;
         open = false;
-        await OnOpenChanged.InvokeAsync(false);
         await InvokeAsync(StateHasChanged);
     }
 
@@ -215,7 +207,6 @@
     {
         open = !open;
         if (open) await PlaceThePanel();
-        await OnOpenChanged.InvokeAsync(open);
     }
 
     private async Task PlaceThePanel()
@@ -240,7 +231,6 @@
     {
         if (!open) return;
         open = false;
-        _ = OnOpenChanged.InvokeAsync(false);
         StateHasChanged();
     }
 
@@ -248,7 +238,6 @@
     {
         if (item.Disabled) return;
         open = false;
-        await OnOpenChanged.InvokeAsync(false);
         if (item.OnSelect is { } callback) await callback.InvokeAsync();
     }
 }

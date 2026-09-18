@@ -39,7 +39,6 @@ public partial class ValuationInvoicesSection
     // The invoice whose Actions menu is currently open — while set, the table's overflow cap is
     // lifted so the menu isn't clipped (see the wrapper div). Cleared on reload in case the row
     // disappears under an open menu.
-    private string? openMenuId;
 
     private ValuationInvoice? rejectInvoice;
     private string rejectReason = "";
@@ -83,7 +82,6 @@ public partial class ValuationInvoicesSection
     /// out-of-band change — e.g. deleting a claim clears invoice links server-side.</summary>
     public async Task ReloadAsync()
     {
-        openMenuId = null;
         try
         {
             invoices = await Invoices.ListAsync(ProjectId);

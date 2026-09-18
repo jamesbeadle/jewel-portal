@@ -247,7 +247,7 @@
             {
                 <Notice Tone="Tone.Negative" Class="mb-3">@variationStatusError</Notice>
             }
-            <RecordsTable HasOpenMenu="@(variationStatusMenuId is not null)">
+            <RecordsTable>
                 <thead>
                     <tr>
                         <th>Ref</th>
@@ -311,8 +311,7 @@
                                                   ToggleTitle="Change status"
                                                   ShowCaret="false"
                                                   Disabled="@(variationStatusBusyId == order.VariationOrderId)"
-                                                  Items="@StatusMenuItems(statusChoices)"
-                                                  OnOpenChanged="open => TrackOpenStatusMenu(order.VariationOrderId, open)">
+                                                  Items="@StatusMenuItems(statusChoices)">
                                         <ToggleContent>
                                             @VariationStatusLabel(order)
                                             <span aria-hidden="true" class="leading-none">▾</span>

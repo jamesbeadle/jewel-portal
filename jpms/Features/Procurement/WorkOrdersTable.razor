@@ -37,8 +37,7 @@
                                    CancelPendingFor="CancelPendingFor" CancelBusy="CancelBusy"
                                    OnCancel="OnCancel" OnKeep="OnKeep"
                                    LineMenuItems="LineMenuItems"
-                                   OnOpenSupplierAccount="OnOpenSupplierAccount"
-                                   OnMenuOpenChanged="args => openRowMenuKey = args.Open ? args.LineId : (openRowMenuKey == args.LineId ? null : openRowMenuKey)" />
+                                   OnOpenSupplierAccount="OnOpenSupplierAccount" />
             }
         </tbody>
         <tfoot class="border-t-2 border-line-strong bg-surface-raised">
@@ -85,5 +84,4 @@
     [Parameter] public EventCallback<ProjectWorkOrderDetail> OnOpenSupplierAccount { get; set; }
 
     // The line whose Actions menu is open — while set, the container's overflow cap is lifted.
-    private string? openRowMenuKey;
 }

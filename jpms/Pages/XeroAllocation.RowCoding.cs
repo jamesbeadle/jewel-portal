@@ -64,21 +64,8 @@ public partial class XeroAllocation
         }
     }
 
-    // The queue row whose menu is open — while set, the table container's
-    // overflow cap is lifted so the menu isn't clipped (see the container).
-    private string? openRowMenuKey;
 
-    private void TrackRowMenu(string lineId, bool isOpen)
-    {
-        if (isOpen) { openRowMenuKey = lineId; return; }
-        if (openRowMenuKey == lineId) openRowMenuKey = null;
-    }
 
-    // Only a menu on a row that is still on the page keeps the cap lifted — a
-    // line that left the page mid-menu (allocated elsewhere, filtered out) must
-    // not leave every later table uncapped.
-    private bool IsRowMenuOpen =>
-        openRowMenuKey is not null && Paged.Any(line => line.XeroLedgerLineId == openRowMenuKey);
 
     // The bucket dropdown works like the project/cost-centre ones: pre-selected with
     // the suggestion when one was inferred, blank otherwise, always overridable.

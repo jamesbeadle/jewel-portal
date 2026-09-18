@@ -64,8 +64,7 @@
                                           PaymentKnown="PaymentKnown(entry.Detail)"
                                           CancelPending="CancelPendingFor(entry.Detail)" CancelBusy="CancelBusy"
                                           OnCancel="OnCancel" OnKeep="OnKeep"
-                                          MenuItems="LineMenuItems(entry)"
-                                          OnMenuOpenChanged="open => OnMenuOpenChanged.InvokeAsync((entry.Line.WorkOrderLineId, open))" />
+                                          MenuItems="LineMenuItems(entry)" />
                     }
                 </tbody>
             </table>
@@ -90,7 +89,6 @@
     [Parameter] public EventCallback OnKeep { get; set; }
     [Parameter, EditorRequired] public Func<WorkOrderLineEntry, IReadOnlyList<DropdownMenu.Item>> LineMenuItems { get; set; } = default!;
     /// <summary>A line's menu opened or closed, by line id — the table lifts its overflow cap while one is open.</summary>
-    [Parameter] public EventCallback<(string LineId, bool Open)> OnMenuOpenChanged { get; set; }
     /// <summary>Open the supplier's account on this project (supplier view only); given one of the group's orders, which carries the supplier.</summary>
     [Parameter] public EventCallback<ProjectWorkOrderDetail> OnOpenSupplierAccount { get; set; }
 

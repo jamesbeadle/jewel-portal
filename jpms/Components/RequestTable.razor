@@ -1,6 +1,6 @@
 @inject NavigationManager Nav
 
-<RecordsTable HasOpenMenu="@(statusMenuRequestId is not null)">
+<RecordsTable>
     <thead>
         <tr>
             @if (SelectionEnabled)
@@ -88,8 +88,7 @@
                                       ToggleTitle="Change status"
                                       ShowCaret="false"
                                       Disabled="@(StatusBusyRequestId == record.RequestId)"
-                                      Items="@StatusMenuItems(record)"
-                                      OnOpenChanged="open => TrackOpenStatusMenu(record.RequestId, open)">
+                                      Items="@StatusMenuItems(record)">
                             <ToggleContent>
                                 @StatusLabel(record.Status)
                                 <span aria-hidden="true" class="leading-none">▾</span>
@@ -131,16 +130,6 @@
     [Parameter] public EventCallback<(Request Record, RequestStatus Status)> OnStatusChange { get; set; }
     /// <summary>The request whose status change is in flight — its chip is disabled meanwhile.</summary>
     [Parameter] public string? StatusBusyRequestId { get; set; }
-
-    // The row whose status menu is open. The menu dismisses itself (DropdownMenu); this is only
-    // so the table can lift its scroll clip while a panel is showing.
-    private string? statusMenuRequestId;
-
-    private void TrackOpenStatusMenu(string requestId, bool isOpen)
-    {
-        if (isOpen) { statusMenuRequestId = requestId; return; }
-        if (statusMenuRequestId == requestId) statusMenuRequestId = null;
-    }
 
     // Lifecycle order: the ball starts with us (Needs action), goes to the correspondent (Open),
     // may come back needing a variation order quote (Needs variation), then closes.

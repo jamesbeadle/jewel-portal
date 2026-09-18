@@ -59,8 +59,7 @@
         <DropdownMenu Label="More" WidthClass="w-72" Disabled="@Busy"
                       ToggleClass="inline-flex items-center gap-1 rounded border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:text-content transition"
                       Class="inline-block text-left ml-2 align-middle whitespace-normal"
-                      Items="MenuItems"
-                      OnOpenChanged="open => OnMenuOpenChanged.InvokeAsync(open)" />
+                      Items="MenuItems" />
     </td>
 </tr>
 
@@ -90,5 +89,4 @@
     /// <summary>The row's More menu (buckets, Split, Ignore, Dispute, Unset) — built by the page.</summary>
     [Parameter] public IReadOnlyList<DropdownMenu.Item> MenuItems { get; set; } = Array.Empty<DropdownMenu.Item>();
     /// <summary>The page lifts the table's overflow cap while a row menu is open.</summary>
-    [Parameter] public EventCallback<bool> OnMenuOpenChanged { get; set; }
 }
