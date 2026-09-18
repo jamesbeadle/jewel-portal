@@ -47,14 +47,15 @@ public partial class SalesEstimateDetail
         finally { busy = false; }
     }
 
+    // The narrative save names the three texts and nothing else — it cannot carry a stale scope,
+    // total or note back over the record the way a whole-record write would.
     private async Task SaveNarrativeAsync(EstimateNarrative narrative)
     {
         if (busy || Estimate is not { } estimate) return;
         busy = true; actionError = null; actionNote = null;
         try
         {
-            await Commands.SendAsync(new UpdateEstimateDetails(estimate.EstimateId, estimate.Scope, estimate.ArchitectName,
-                estimate.PriceDueOn, estimate.BudgetMentioned, estimate.Total, estimate.Notes,
+            await Commands.SendAsync(new SetEstimateNarrative(estimate.EstimateId,
                 narrative.ExecutiveSummary.Trim(), narrative.BuildTime.Trim(), narrative.Exclusions.Trim()), CancellationToken.None);
             actionNote = "The document text is saved.";
             await ReloadAsync();

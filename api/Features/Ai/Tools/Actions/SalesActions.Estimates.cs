@@ -18,11 +18,8 @@ internal sealed partial class SalesActions
         + "through, if any), priceDueOn (ISO date the prospect needs the price by, optional), "
         + "budgetMentioned (£ the prospect mentioned, optional), total (£ once priced, optional — "
         + "while the breakdown has lines the total is their sum and a typed total is ignored), "
-        + "notes (internal — never printed), executiveSummary (client-facing: what we understand "
-        + "the project to be, how we would approach it, what is included — it opens the estimate "
-        + "document), buildTime (client-facing: how long on site and when, given the start the "
-        + "prospect wants), exclusions (client-facing: what the figure leaves out — VAT, "
-        + "kitchens, fees, party wall…).";
+        + "notes (internal — never printed). The client-facing narrative is not here: it is "
+        + "set_estimate_narrative.";
 
     private static IEnumerable<AiAction> EstimateActions() => new AiAction[]
     {
@@ -48,10 +45,11 @@ internal sealed partial class SalesActions
             Name: "update_estimate_details",
             Area: Area,
             Description: "Rewrites an estimate's details — scope, architect, price due date, "
-                + "budget mentioned, total, notes, and the client-facing narrative (executive "
-                + "summary, build time, exclusions). Sends the whole record: every field is "
-                + "applied as supplied. Not the status (move_estimate_status) and not the priced "
-                + "lines (set_estimate_breakdown). A Won or Lost estimate is history and is refused.",
+                + "budget mentioned, total, notes. Sends the whole record: every field is applied "
+                + "as supplied. Not the status (move_estimate_status), not the priced lines "
+                + "(set_estimate_breakdown) and not the document's narrative "
+                + "(set_estimate_narrative) — those three are untouched by this action. A Won or "
+                + "Lost estimate is history and is refused.",
             CommandType: typeof(UpdateEstimateDetails),
             ResultType: typeof(LeadEstimate),
             AuthorisationType: typeof(UpdateEstimateDetailsAuthorisation),
@@ -62,6 +60,31 @@ internal sealed partial class SalesActions
             Notes: "estimateId is the estimate's id from get_lead (estimates[].estimateId) or "
                 + "find_by_reference EST-#### — never the reference. Read it first and carry "
                 + "forward every field that should not change. " + EstimateFieldNotes),
+
+        new AiAction(
+            Name: "set_estimate_narrative",
+            Area: Area,
+            Description: "Writes the estimate document's client-facing narrative — the executive "
+                + "summary (what we understand the project to be, how we would approach it, what "
+                + "is included; it opens the document), the build time (how long on site and "
+                + "when, given the start the prospect wants) and the exclusions (what the figure "
+                + "leaves out — VAT, kitchens, fees, party wall…). These print after the project "
+                + "page. Nothing else on the estimate is touched. A Won or Lost estimate is "
+                + "history and is refused.",
+            CommandType: typeof(SetEstimateNarrative),
+            ResultType: typeof(LeadEstimate),
+            AuthorisationType: typeof(SetEstimateNarrativeAuthorisation),
+            ValidationType: typeof(SetEstimateNarrativeValidation),
+            VisibleTo: SalesRoles.SalesTeam,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "estimateId is the estimate's id from get_lead (estimates[].estimateId) or "
+                + "find_by_reference EST-#### — never the reference. THE THREE TEXTS ARE WRITTEN "
+                + "TOGETHER: read the estimate first (get_lead gives executiveSummary, buildTime "
+                + "and exclusions as they stand) and send all three, changing only the one the "
+                + "user asked for — a text left out is CLEARED. Blank lines separate paragraphs "
+                + "and a line starting \"- \" is a bullet; write in Jewel's voice, to the "
+                + "prospect, and show the user the wording before it goes on their document."),
 
         new AiAction(
             Name: "set_estimate_breakdown",

@@ -1,23 +1,36 @@
+@*
+    The estimate document's three texts. Every save from here sends UpdateEstimateDetails, a
+    full-record write of all three — so the boxes must hold the record before Save is offered.
+    Until the page has seeded them (Seeding), empty means "not read", not "the estimate says
+    nothing", and saving would blank what is stored: the panel stays read-only and says so.
+*@
 <Panel Title="What the document says">
     <HeaderActions>
-        @if (Editable)
+        @if (CanEdit)
         {
             <button type="button" class="btn-secondary text-sm" disabled="@(IsBusy || !isDirty)" @onclick="() => OnSave.InvokeAsync(new EstimateNarrative(executiveSummary, buildTime, exclusions))">@(IsBusy ? "Saving…" : "Save")</button>
         }
     </HeaderActions>
     <ChildContent>
+        @if (!seeded)
+        {
+            <Notice Tone="Tone.Warning" Class="mb-3">
+                The estimate's text hasn't loaded, so these boxes are empty — they are not the document.
+                Reload the page before editing; saving now would blank what is stored.
+            </Notice>
+        }
         <p class="text-xs text-content-muted mb-3">These print on the estimate PDF, after the project page. Blank lines separate paragraphs; a line starting "- " is a bullet.</p>
         <div class="space-y-3">
             <FormField Label="Executive summary">
-                <textarea class="field w-full text-sm" rows="8" disabled="@(!Editable)" placeholder="What we understand the project to be, how we would approach it, what is included"
+                <textarea class="field w-full text-sm" rows="8" disabled="@(!CanEdit)" placeholder="What we understand the project to be, how we would approach it, what is included"
                           value="@executiveSummary" @oninput="e => { executiveSummary = e.Value?.ToString() ?? string.Empty; isDirty = true; }"></textarea>
             </FormField>
             <FormField Label="Build time">
-                <textarea class="field w-full text-sm" rows="3" maxlength="1024" disabled="@(!Editable)" placeholder="How long on site, and when, given the start the prospect wants"
+                <textarea class="field w-full text-sm" rows="3" maxlength="1024" disabled="@(!CanEdit)" placeholder="How long on site, and when, given the start the prospect wants"
                           value="@buildTime" @oninput="e => { buildTime = e.Value?.ToString() ?? string.Empty; isDirty = true; }"></textarea>
             </FormField>
             <FormField Label="Exclusions">
-                <textarea class="field w-full text-sm" rows="4" maxlength="4000" disabled="@(!Editable)" placeholder="What the figure leaves out — VAT, kitchens, fees, party wall…"
+                <textarea class="field w-full text-sm" rows="4" maxlength="4000" disabled="@(!CanEdit)" placeholder="What the figure leaves out — VAT, kitchens, fees, party wall…"
                           value="@exclusions" @oninput="e => { exclusions = e.Value?.ToString() ?? string.Empty; isDirty = true; }"></textarea>
             </FormField>
         </div>
@@ -28,20 +41,27 @@
     [Parameter, EditorRequired] public LeadEstimate Estimate { get; set; } = default!;
     [Parameter] public bool Editable { get; set; }
     [Parameter] public bool IsBusy { get; set; }
-    /// <summary>The page's count of seedings — a new one re-seeds the text from the record, a re-render never does.</summary>
+    /// <summary>The page's count of seedings — a new one re-seeds the text from the record, a
+    /// re-render never does. Zero means the record has never been read into the boxes.</summary>
     [Parameter] public int Seeding { get; set; }
     [Parameter] public EventCallback<EstimateNarrative> OnSave { get; set; }
 
-    private int seeded;
+    private int seedCount;
+    private bool seeded;
     private bool isDirty;
     private string executiveSummary = "";
     private string buildTime = "";
     private string exclusions = "";
 
+    /// <summary>Editing needs both the page's leave (role, open estimate) and boxes that hold the
+    /// record — a save sends all three texts, including the two nobody touched.</summary>
+    private bool CanEdit => Editable && seeded;
+
     protected override void OnParametersSet()
     {
-        if (seeded == Seeding) return;
-        seeded = Seeding;
+        if (seedCount == Seeding) return;
+        seedCount = Seeding;
+        seeded = true;
         executiveSummary = Estimate.ExecutiveSummary;
         buildTime = Estimate.BuildTime;
         exclusions = Estimate.Exclusions;

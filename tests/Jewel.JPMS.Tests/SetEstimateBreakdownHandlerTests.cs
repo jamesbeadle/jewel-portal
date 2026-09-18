@@ -112,12 +112,9 @@ public sealed class SetEstimateBreakdownHandlerTests
         await new SetEstimateBreakdownHandler(context).HandleAsync(Breakdown(estimate.EstimateId, ("A", 100m)), CancellationToken.None);
 
         var edited = await new UpdateEstimateDetailsHandler(context).HandleAsync(
-            new UpdateEstimateDetails(estimate.EstimateId, "Scope", "", null, null, 999_999m, "", "Summary", "12 weeks", "VAT"), CancellationToken.None);
+            new UpdateEstimateDetails(estimate.EstimateId, "Scope", "", null, null, 999_999m, ""), CancellationToken.None);
 
         Assert.Equal(100m, edited.Total);
-        Assert.Equal("Summary", edited.ExecutiveSummary);
-        Assert.Equal("12 weeks", edited.BuildTime);
-        Assert.Equal("VAT", edited.Exclusions);
         Assert.Single(edited.Sections);
     }
 

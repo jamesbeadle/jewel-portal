@@ -90,8 +90,7 @@
                 ? await Commands.SendAsync(new CreateEstimate(LeadId, scope.Trim(), architectName.Trim(),
                     ParseDate(priceDueText), ParseMoney(budgetText), ParseMoney(totalText), notes.Trim()), CancellationToken.None)
                 : await Commands.SendAsync(new UpdateEstimateDetails(Existing.EstimateId, scope.Trim(), architectName.Trim(),
-                    ParseDate(priceDueText), ParseMoney(budgetText), ParseMoney(totalText), notes.Trim(),
-                    Existing.ExecutiveSummary, Existing.BuildTime, Existing.Exclusions), CancellationToken.None);
+                    ParseDate(priceDueText), ParseMoney(budgetText), ParseMoney(totalText), notes.Trim()), CancellationToken.None);
             await OnSaved.InvokeAsync(saved);
         }
         catch (CommandFailedException ex) { error = ex.Message; }

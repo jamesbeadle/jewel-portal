@@ -510,22 +510,30 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   unit price computed server-side; when the breakdown has lines `Total` IS their sum.
   `SetEstimateBreakdown` (`set_estimate_breakdown`, confirm-first) is a FULL-RECORD write — every
   section and line as supplied, anything not sent is gone. The narrative is three fields on the
-  record — `ExecutiveSummary`, `BuildTime`, `Exclusions` — written by `UpdateEstimateDetails`.
+  record — `ExecutiveSummary`, `BuildTime`, `Exclusions` — written by `SetEstimateNarrative`
+  (`PUT sales/estimates/{id}/narrative`, `set_estimate_narrative`) and by nothing else: since
+  2026-09-18 the three have their own command, so a details edit cannot blank them and a
+  narrative save cannot revert the details. It is a full-record write OF THE THREE — a text not
+  sent is cleared.
   The document is `GET sales/estimates/{id}/document` (`EstimateDocumentRenderer`): cover, the
   project page, the executive summary with build time and exclusions, the breakdown chart, one
   itemised table per section, the total, the contact page — **client-facing, "Estimate for
   project"**, the internal `Notes` never print; regenerated on every download, nothing stored.
   Nigel's estimating workbook is still the reference for rates and calculations when it arrives
   — the structure is built, the pricing doctrine is not. Commands `CreateEstimate` /
-  `UpdateEstimateDetails` / `SetEstimateBreakdown` / `MoveEstimateStatus`
-  (`SalesRoles.SalesTeam`), `GetEstimate` (`Readers`); `GetLead` carries `Estimates` newest
+  `UpdateEstimateDetails` / `SetEstimateBreakdown` / `SetEstimateNarrative` /
+  `MoveEstimateStatus` (`SalesRoles.SalesTeam`), `GetEstimate` (`Readers`); `GetLead` carries `Estimates` newest
   first. Pages: `LeadEstimatesPanel` on the lead (Add / Edit modal, the status pill is the move,
   Won/Lost through `ConfirmDialog`, Open + Download PDF per row), beside the lead's "Enquiry
   emails" (`RecordCorrespondenceSection`, type Lead); and the estimate's own page
   `/sales/leads/{leadId}/estimates/{estimateId}` (`SalesEstimateDetail`): the breakdown editor
   (a full-record save — what is on the page is what the estimate becomes), "What the document
   says" (the three narrative fields), Details and the status move in their modals, Download PDF.
-  Connector: `create_estimate`, `update_estimate_details` (narrative fields included),
+  **Every editor on that page is a full-record save, so nothing on it is editable until the
+  drafts have been seeded from the record** (2026-09-18): the page seeds when the record arrives,
+  not when its refresh succeeds — arriving from the lead page with the record already cached and
+  the refresh failing rendered blank boxes that saved blanks over the estimate.
+  Connector: `create_estimate`, `update_estimate_details`, `set_estimate_narrative`,
   `set_estimate_breakdown`, `move_estimate_status` (each takes `estimateId`, never the
   reference), and `get_lead` lists `estimates[]` with their ids and `sections[]`. Every write is
   a `LeadActivityKind.Estimate` entry on the lead's timeline. Never call this record a

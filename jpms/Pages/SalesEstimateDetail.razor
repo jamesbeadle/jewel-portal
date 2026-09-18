@@ -16,10 +16,17 @@
     One estimate (2026-09-15, Nigel: the estimate document in the tender's shape). The breakdown
     is a full-record save: what is on the page is what the estimate becomes. Details and the
     status move stay in their modals. Everything here is the sales team's; readers see it read-only.
+
+    Because every save here writes the whole record, nothing is editable until the drafts have been
+    seeded from the estimate (Editable): an editor over an empty draft would save blanks over it.
 *@
 
 <Page>
-    @if (!Detail.LoadedFor(LeadId) && !dataFailed)
+    @*
+        The gate is this page's own load, not the store's: the lead page may have cached the record
+        already, and rendering an editor before the drafts are seeded is what blanked the estimate.
+    *@
+    @if (!loadDone)
     {
         <LoadGate IsLoading="true" Prominent="true" Label="Loading estimate" />
     }
@@ -62,6 +69,13 @@
                 </Actions>
             </PageHeader>
 
+            @if (ShowingStale)
+            {
+                <Notice Tone="Tone.Warning" Class="mb-4">
+                    This estimate couldn't be refreshed — what's on screen is the copy last loaded, and a save
+                    writes it back as it stands. Reload the page before editing.
+                </Notice>
+            }
             @if (actionNote is not null)
             {
                 <Notice Tone="Tone.Positive" Class="mb-4">@actionNote</Notice>

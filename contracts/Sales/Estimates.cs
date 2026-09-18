@@ -19,8 +19,9 @@ public sealed record CreateEstimate(
 
 /// <summary>
 /// Rewrites an estimate's details — scope, architect, due date, budget, total, notes. The whole
-/// record is applied as supplied; the status is NOT here (MoveEstimateStatus). A Won or Lost
-/// estimate is history and is refused.
+/// record is applied as supplied; the status is NOT here (MoveEstimateStatus), the priced lines
+/// are not (SetEstimateBreakdown) and the document's narrative is not (SetEstimateNarrative).
+/// A Won or Lost estimate is history and is refused.
 /// </summary>
 public sealed record UpdateEstimateDetails(
     string EstimateId,
@@ -29,11 +30,20 @@ public sealed record UpdateEstimateDetails(
     DateOnly? PriceDueOn,
     decimal? BudgetMentioned,
     decimal? Total,
-    string Notes,
-    // The client-facing narrative (2026-09-15) — see LeadEstimate.
-    string ExecutiveSummary = "",
-    string BuildTime = "",
-    string Exclusions = "") : ICommand<LeadEstimate>;
+    string Notes) : ICommand<LeadEstimate>;
+
+/// <summary>
+/// Writes the estimate's client-facing narrative — the executive summary, the build time and the
+/// exclusions the document prints after the project page. The three are written together, as the
+/// panel that holds them, and nothing else on the estimate is touched: the details edit cannot
+/// blank the narrative, and a narrative save cannot revert the details. A Won or Lost estimate is
+/// history and is refused.
+/// </summary>
+public sealed record SetEstimateNarrative(
+    string EstimateId,
+    string ExecutiveSummary,
+    string BuildTime,
+    string Exclusions) : ICommand<LeadEstimate>;
 
 /// <summary>
 /// Replaces an estimate's priced breakdown with the sections given, in order (2026-09-15, the

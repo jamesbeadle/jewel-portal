@@ -31,9 +31,6 @@ public sealed class UpdateEstimateDetailsHandler : ICommandHandler<UpdateEstimat
             .Where(line => line.EstimateId == entity.EstimateId).ToListAsync(cancellationToken);
         entity.Total = lines.Count > 0 ? lines.Sum(line => line.Total) : command.Total;
         entity.Notes = command.Notes.Trim();
-        entity.ExecutiveSummary = (command.ExecutiveSummary ?? "").Trim();
-        entity.BuildTime = (command.BuildTime ?? "").Trim();
-        entity.Exclusions = (command.Exclusions ?? "").Trim();
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel(lines);
     }

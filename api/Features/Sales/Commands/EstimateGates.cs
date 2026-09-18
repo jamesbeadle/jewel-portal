@@ -35,9 +35,6 @@ public sealed class UpdateEstimateDetailsValidation
         if (string.IsNullOrWhiteSpace(command.EstimateId)) errors.Add("EstimateId is required.");
         if (string.IsNullOrWhiteSpace(command.Scope)) errors.Add("Say what is to be priced (scope).");
         EstimateFieldLimits.Check(errors, command.Scope, command.ArchitectName, command.Notes, command.BudgetMentioned, command.Total);
-        SalesFieldLimits.Check(errors, command.ExecutiveSummary, 20000, "Executive summary");
-        SalesFieldLimits.Check(errors, command.BuildTime, 1024, "Build time");
-        SalesFieldLimits.Check(errors, command.Exclusions, 4000, "Exclusions");
         return errors.Count == 0 ? ValidationOutcome.Passed : new ValidationOutcome(errors);
     }
 }
