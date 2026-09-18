@@ -48,9 +48,27 @@
 }
 else if (!IsLoading)
 {
-    <CascadingValue Value="Scope">
-        @ChildContent
-    </CascadingValue>
+    @* A gate's Class is the REGION's layout — its margin, its width, how it sits in its parent —
+       and a region keeps that layout whether or not the mark is up. This branch used to render the
+       content bare, so Class applied only WHILE loading and was dropped the instant the content
+       landed: the admin home's stat strip reserved its 32px below itself while the figures were in
+       flight, then sat flush against the panel underneath the moment they arrived, which reads as a
+       rendering fault rather than a divider (2026-09-18). The wrapper appears only when there is
+       something to carry — a gate given no Class adds no element, exactly as before. *@
+    @if (!string.IsNullOrEmpty(Class))
+    {
+        <div class="@Class">
+            <CascadingValue Value="Scope">
+                @ChildContent
+            </CascadingValue>
+        </div>
+    }
+    else
+    {
+        <CascadingValue Value="Scope">
+            @ChildContent
+        </CascadingValue>
+    }
 }
 else if (ShowsMark)
 {
@@ -81,7 +99,9 @@ else
     /// <summary>Override the reserved height when the incoming content has a known size.</summary>
     [Parameter] public string? Height { get; set; }
 
-    /// <summary>Extra classes for the gate's own wrapper (layout, not looks).</summary>
+    /// <summary>Extra classes for the gate's own wrapper (layout, not looks) — the region's margin,
+    /// width or place in its parent. Held in EVERY state, loading and loaded, so the region does not
+    /// move when the mark lifts.</summary>
     [Parameter] public string Class { get; set; } = "";
 
     /// <summary>Extra classes for the veil — a stacking context, where the region has one.</summary>

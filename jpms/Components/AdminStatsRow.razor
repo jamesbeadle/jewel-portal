@@ -11,7 +11,10 @@
 *@
 
 <LoadGate IsLoading="@IsLoading" Label="Loading the figures" Height="min-h-[104px]" Class="mb-8">
-    <div class="grid grid-cols-3 gap-3 md:gap-4">
+    @* Three tiles across from the small breakpoint up (every desktop and tablet); stacked on a
+       phone, where three of them share about 100px each and the labels wrap to three lines. The
+       grid's own gap spaces rows as well as columns, so the strip cannot close up when it stacks. *@
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
         <StatTile Label="Approved users"   Value="@ApprovedUserCount" />
         <StatTile Label="Pending requests" Value="@PendingRequestCount" />
         <StatTile Label="Roles in use"     Value="@DistinctRoleCount" />

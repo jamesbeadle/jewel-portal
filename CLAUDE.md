@@ -1388,6 +1388,11 @@ finds drift.
     being replaced or acted on (a sort, a pager, a filter, a command in flight): the content stays
     put, an opaque veil takes the clicks, and the mark rides in a chip that sticks to the visible
     slab of the region — a 3,000px queue must not centre its spinner 1,500px down.
+- **A gate's `Class` is the REGION's layout, and the region keeps it in both states.** `Class` is
+  where the call site puts the margin, the width, the way the region sits in its parent; the gate
+  carries it whether the jewel is up or the content is. Layout belonging to the content stays on the
+  content. A margin that arrives with the mark and leaves with it is the defect this rule exists to
+  stop — the admin stat strip sat flush against the panel below it for exactly that reason.
 - **One mark per wait — the gate is relational.** A gate showing its mark cascades a claimed
   `LoadScope`; every gate INSIDE it holds its space and says nothing until the claim lifts. So a
   page cover silences the panels beneath it and a workspace-wide busy overlay silences the list
