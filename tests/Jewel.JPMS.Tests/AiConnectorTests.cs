@@ -751,7 +751,8 @@ public sealed class AiConnectorTests
             "send_request_email", "send_request_emails", "send_request_reply",
             "send_work_order_po_email", "send_valuation_report_snapshot_email",
             "send_bid_package_invite_to_tender_list", "send_bid_package_invite",
-            "send_subcontractor_statement_email", "send_programme_reply", "send_defect_to_supplier"
+            "send_subcontractor_statement_email", "send_programme_reply", "send_defect_to_supplier",
+            "send_variation_order_email"
         })
         {
             var action = AiActionRegistry.Find(name);
@@ -766,7 +767,7 @@ public sealed class AiConnectorTests
         {
             "send_work_order_po_email", "send_valuation_report_snapshot_email",
             "send_bid_package_invite_to_tender_list", "send_bid_package_invite",
-            "send_subcontractor_statement_email", "send_programme_reply"
+            "send_subcontractor_statement_email", "send_programme_reply", "send_variation_order_email"
         })
             Assert.Contains("saveAsDraftOnly", AiActionRegistry.Find(name)!.Description);
 
@@ -778,6 +779,12 @@ public sealed class AiConnectorTests
         var programme = AiActionRegistry.Find("send_programme_reply")!;
         Assert.True(programme.VisibleTo.Includes(JpmsRoles.SiteManager));
         Assert.False(programme.VisibleTo.Includes(JpmsRoles.Architect));
+
+        // The variation goes TO the client, so the client is on its approval gate and not on this
+        // one — the circle that manages variations sends it.
+        var variation = AiActionRegistry.Find("send_variation_order_email")!;
+        Assert.True(variation.VisibleTo.Includes(JpmsRoles.Estimator));
+        Assert.False(variation.VisibleTo.Includes(JpmsRoles.Client));
     }
 
     [Fact]

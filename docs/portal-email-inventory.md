@@ -16,7 +16,7 @@ nobody has looked at it.
 **A — the shared projects mailbox**, via Graph. The email is staged as a draft in
 `projects@jewelbb.co.uk`, sent from there, and its sent copy carries the record's tag, so it files
 itself back into the portal and the audit trail records it. Two pipelines inside it:
-`OutboundEmailDispatcher` (nine record doors) and `SendMailboxEmailHandler` (triage compose, which
+`OutboundEmailDispatcher` (ten record doors) and `SendMailboxEmailHandler` (triage compose, which
 is richer — it sanitises, extracts pasted images and files to to-dos).
 
 **B — Azure Communication Services**, a different sender address on a different path
@@ -44,6 +44,7 @@ which sent there and then — grew one like its eight siblings (Nigel's decision
 | | *(recipients still cross the wire as semicolon-separated strings — the composer task's chips reach the API surface here)* | | | | | | |
 | 8 | Bid package invite to the tender list | Bid package → invite tender list | as above | **raw HTML textarea** | no | `send_bid_package_invite_to_tender_list` | |
 | 9 | Programme relevant-events reply | Programme → Communications → Reply | no | plain textarea | **yes** | `send_programme_reply` | |
+| 21 | Variation order document *(added 2026-09-19)* | Variation page → Actions → Email to the client… | VO PDF | **none — server composed** | no | `send_variation_order_email` | |
 
 The five doors behind row 4 — the PO page, the tender award, the Work Orders tab, the manual order
 modal and the Control Centre's staged create — all call one handler and one body builder
@@ -84,9 +85,10 @@ Different sender address, no tag, no audit row, no sent copy in the portal.
 
 ## Named on the task, but no such email exists
 
-- **Variation orders.** There is no door that emails one. `VariationDocumentModel.EmailSubject`
-  exists and nothing calls it — the VO PDF is downloaded and sent by hand. Either that is the
-  decision and it should be written down, or it is the gap the task meant.
+- ~~**Variation orders.** There is no door that emails one.~~ **BUILT 2026-09-19** (Nigel: it was
+  a real gap, not a decision) — row 21 above. `VariationDocumentModel.EmailSubject` had been
+  written and never called; it is now the subject of a real email, and it names the project once
+  like its siblings. Only Issued, Awaiting AI and Approved variations may be sent.
 - **Valuations and invoices.** By decision: the portal never emails a valuation invoice
   (`CLAUDE.md`). The valuation *report* is row 5.
 - **Chasers.** None. The Chaser Agent is a separate backlog task; defect chasing is row 11.

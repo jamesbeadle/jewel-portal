@@ -34,6 +34,7 @@ internal sealed partial class VariationsAndValuationsActions : IAiActionSource
 
     public IEnumerable<AiAction> Build() =>
         VariationsActions()
+            .Concat(VariationEmailActions())
             .Concat(ValuationInvoicesActions())
             .Concat(BoqActions())
             .Concat(RetentionActions())
