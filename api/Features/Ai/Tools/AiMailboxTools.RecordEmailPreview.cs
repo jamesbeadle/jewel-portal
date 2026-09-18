@@ -27,11 +27,7 @@ internal static partial class AiMailboxTools
                 ("recordId", "string",
                     "The record's id — from find_by_reference, or the subcontractorId for a statement.", true),
                 ("recipientOverride", "string",
-                    "Preview it addressed to this one address instead of the resolved contacts.", false),
-                ("subject", "string",
-                    "A subject you are proposing. Leave out to see the one the portal writes.", false),
-                ("bodyHtml", "string",
-                    "A body you are proposing. Leave out to see the one the portal writes.", false)),
+                    "Preview it addressed to this one address instead of the resolved contacts.", false)),
             AiToolKind.Read,
             JpmsRoleSets.InternalAndArchitect,
             async (context, input, ct) =>
@@ -55,11 +51,7 @@ internal static partial class AiMailboxTools
                 var handler = context.Services
                     .GetRequiredService<IQueryHandler<PreviewRecordEmail, RecordEmailPreview>>();
                 var preview = await handler.HandleAsync(
-                    new PreviewRecordEmail(
-                        record, recordId,
-                        AiToolSchema.Text(input, "recipientOverride"),
-                        AiToolSchema.Text(input, "subject"),
-                        AiToolSchema.Text(input, "bodyHtml")),
+                    new PreviewRecordEmail(record, recordId, AiToolSchema.Text(input, "recipientOverride")),
                     ct);
 
                 return Serialise(new { ok = true, preview });

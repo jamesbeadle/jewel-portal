@@ -20,8 +20,7 @@ public sealed class PreviewRecordEmailHandler : IQueryHandler<PreviewRecordEmail
     public async Task<RecordEmailPreview> HandleAsync(PreviewRecordEmail query, CancellationToken cancellationToken)
     {
         var composed = await composers.For(query.Record).ComposeAsync(
-            new RecordEmailDraft(query.RecordId, query.RecipientOverride, query.Subject, query.BodyHtml),
-            cancellationToken);
+            new RecordEmailDraft(query.RecordId, query.RecipientOverride), cancellationToken);
 
         return new RecordEmailPreview(
             query.Record,

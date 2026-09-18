@@ -25,7 +25,7 @@ public sealed class PreviewRecordEmailEndpoint
 
     [Function(nameof(PreviewRecordEmail))]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "record-emails/{record}/{recordId}/preview")]
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "record-emails/{record}/{recordId}/preview")]
         HttpRequest request,
         string record,
         string recordId)
@@ -42,16 +42,9 @@ public sealed class PreviewRecordEmailEndpoint
                 $"The portal doesn't compose an email for a {kind}, so there is nothing to preview.");
         if (!composer.RolesThatMaySend.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
-        // A POST, because the person's half-written subject and body are the input: an empty body
-        // asks for the email as the portal would write it, which is what seeds the modal.
-        var posted = request.ContentLength is > 0
-            ? await request.ReadFromJsonAsync<PreviewRecordEmail>()
-            : null;
+        var recipientOverride = request.Query["recipientOverride"].ToString();
         var query = new PreviewRecordEmail(
-            kind, recordId, Trimmed(posted?.RecipientOverride), Trimmed(posted?.Subject), posted?.BodyHtml);
+            kind, recordId, string.IsNullOrWhiteSpace(recipientOverride) ? null : recipientOverride.Trim());
         return new OkObjectResult(await handler.HandleAsync(query, request.HttpContext.RequestAborted));
     }
-
-    private static string? Trimmed(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

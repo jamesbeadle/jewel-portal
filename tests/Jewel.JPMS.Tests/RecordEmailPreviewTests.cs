@@ -35,18 +35,16 @@ public sealed class RecordEmailPreviewTests
     }
 
     [Fact]
-    public async Task ThePersonsOwnSubjectAndBody_reachTheComposer()
+    public async Task AnAdHocAddress_reachesTheComposer_soItCanBeReadBeforeItIsUsed()
     {
         var composer = new FakeComposer();
         var handler = new PreviewRecordEmailHandler(new RecordEmailComposers(new[] { composer }));
 
         await handler.HandleAsync(
-            new PreviewRecordEmail(RecordType.Request, "REQ-1", "one@example.com", "Mine", "<p>Mine</p>"),
-            default);
+            new PreviewRecordEmail(RecordType.Request, "REQ-1", "one@example.com"), default);
 
         Assert.Equal("one@example.com", composer.Asked!.RecipientOverride);
-        Assert.Equal("Mine", composer.Asked.Subject);
-        Assert.Equal("<p>Mine</p>", composer.Asked.BodyHtml);
+        Assert.Null(composer.Asked.Subject);
     }
 
     [Fact]
