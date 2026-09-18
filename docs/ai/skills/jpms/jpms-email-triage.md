@@ -50,8 +50,12 @@ by machinery, you must enforce by discipline.
    body and get their explicit yes — the action is confirm-first, and the email leaves the
    projects mailbox the moment the confirmed call succeeds. A sent reply tags the thread
    JPMS/Replied and it leaves the queue. saveAsDraftOnly true stages the reviewed draft in the
-   mailbox's Drafts folder instead, for a person to send from Outlook; the prepare_*_draft actions
-   do the same for record-anchored emails (a purchase order, a request's official document).
+   mailbox's Drafts folder instead, for a person to send from Outlook. Record-anchored emails
+   behave the same way and have since 17/09/2026: send_request_email, send_request_emails,
+   send_request_reply, send_work_order_po_email, send_valuation_report_snapshot_email,
+   send_bid_package_invite_to_tender_list and send_defect_to_supplier all SEND on the confirmed
+   call and all take saveAsDraftOnly for the review route. No prepare_*_draft action remains;
+   resend_request_document is the one exception and stages a draft whatever its name suggests.
 
 ## Writing a reply — answer first
 
