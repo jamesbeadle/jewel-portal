@@ -37,22 +37,8 @@ public sealed partial class ComposeHtmlPipeline
     /// <summary>Sanitised HTML plus the inline attachments extracted from it.</summary>
     public sealed record ComposedBody(string Html, IReadOnlyList<MailboxDraftAttachment> InlineImages);
 
-    public ComposedBody FromTypedHtml(string bodyHtml)
-    {
-        var sanitised = TypedBodySanitiser().Sanitize(bodyHtml ?? "");
-
-        var inline = new List<MailboxDraftAttachment>();
-        var index = 0;
-        var rewritten = DataImage.Replace(sanitised, match =>
-        {
-            index++;
-            var attachment = InlineImage(match, index);
-            inline.Add(attachment);
-            return $"src=\"cid:{attachment.ContentId}\"";
-        });
-
-        return new ComposedBody(rewritten, inline);
-    }
+    public ComposedBody FromTypedHtml(string bodyHtml) =>
+        WithPastedImagesLifted(TypedBodySanitiser().Sanitize(bodyHtml ?? ""));
 
     /// <summary>HTML the portal composed itself, cleaned without losing how it looks. Whitespace in
     /// means whitespace out: an empty or blank body is left exactly as it arrived, so a caller that
@@ -60,34 +46,12 @@ public sealed partial class ComposeHtmlPipeline
     public static string FromPortalDocument(string? bodyHtml) =>
         string.IsNullOrWhiteSpace(bodyHtml) ? bodyHtml ?? "" : PortalDocumentSanitiser().Sanitize(bodyHtml);
 
-    /// <summary>Plain textarea text → draft HTML: encode each line, join with &lt;br&gt;, and leave a
-    /// blank line before any quoted history the result is prepended to.</summary>
-    public static string FromPlainText(string body) =>
-        "<div>"
-        + string.Join("<br>", (body ?? "").Replace("\r\n", "\n").Split('\n').Select(System.Net.WebUtility.HtmlEncode))
-        + "</div><br>";
-
-    private static MailboxDraftAttachment InlineImage(Match match, int index)
-    {
-        var contentType = match.Groups[1].Value;
-        byte[] bytes;
-        try { bytes = Convert.FromBase64String(match.Groups[2].Value.Trim()); }
-        catch (FormatException)
-        {
-            throw new InvalidOperationException("A pasted image couldn't be read — remove it and paste it again.");
-        }
-        if (bytes.LongLength > MaxInlineImageBytes)
-            throw new InvalidOperationException(
-                "A pasted image is larger than 4 MB — attach it as a file instead of pasting it into the body.");
-
-        var extension = contentType.Split('/').Last() switch
-        {
-            "jpeg" => "jpg",
-            var suffix when suffix.Length is > 0 and <= 8 => suffix,
-            _ => "png"
-        };
-        return new MailboxDraftAttachment(
-            $"pasted-image-{index}.{extension}", contentType, bytes,
-            IsInline: true, ContentId: $"pasted-{Guid.NewGuid():N}");
-    }
+    /// <summary>What the dispatcher stages: the portal rule, plus the pasted images lifted out of
+    /// the body. Every compose surface is a rich editor since 2026-09-18, so a screenshot pasted
+    /// into a purchase order or a statement arrives as a data: URL — which many mail clients strip
+    /// or refuse. Server-composed bodies carry none, so for them this is the sanitising alone.</summary>
+    public static ComposedBody ForStaging(string? bodyHtml) =>
+        string.IsNullOrWhiteSpace(bodyHtml)
+            ? new ComposedBody(bodyHtml ?? "", Array.Empty<MailboxDraftAttachment>())
+            : WithPastedImagesLifted(FromPortalDocument(bodyHtml));
 }

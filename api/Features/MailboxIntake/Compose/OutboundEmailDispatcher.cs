@@ -13,9 +13,11 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 /// in the mailbox's Drafts folder with a note saying to finish it in Outlook, and the record the
 /// email belongs to is never touched.
 ///
-/// Every body it stages goes through ComposeHtmlPipeline.FromPortalDocument first, so no door
-/// can send a script, an event handler or a javascript: link however carelessly it composed — the
-/// branding survives, because that rule is the one written for mail the portal wrote itself.
+/// Every body it stages goes through ComposeHtmlPipeline.ForStaging first, so no door can send a
+/// script, an event handler or a javascript: link however carelessly it composed — the branding
+/// survives, because that rule is the one written for mail the portal wrote itself — and a
+/// screenshot pasted into any compose surface leaves as a proper inline attachment rather than a
+/// data: URL the recipient's mail client would strip.
 ///
 /// Sales replies leave from a second mailbox, so the sequence is not tied to one address: the
 /// dispatcher is told which mailbox it stages into and names it in the sentence a person reads
@@ -46,7 +48,12 @@ public sealed partial class OutboundEmailDispatcher
         bool saveAsDraftOnly,
         CancellationToken cancellationToken)
     {
-        var cleaned = message with { HtmlBody = ComposeHtmlPipeline.FromPortalDocument(message.HtmlBody) };
+        var body = ComposeHtmlPipeline.ForStaging(message.HtmlBody);
+        var cleaned = message with
+        {
+            HtmlBody = body.Html,
+            Attachments = message.Attachments.Concat(body.InlineImages).ToList()
+        };
         var draft = await mailbox.CreateDraftAsync(cleaned, cancellationToken)
             ?? throw new InvalidOperationException(filing.StagingRefusal);
         var staged = new StagedEmail(
@@ -60,7 +67,12 @@ public sealed partial class OutboundEmailDispatcher
         bool saveAsDraftOnly,
         CancellationToken cancellationToken)
     {
-        var cleaned = reply with { HtmlCoverNote = ComposeHtmlPipeline.FromPortalDocument(reply.HtmlCoverNote) };
+        var body = ComposeHtmlPipeline.ForStaging(reply.HtmlCoverNote);
+        var cleaned = reply with
+        {
+            HtmlCoverNote = body.Html,
+            Attachments = reply.Attachments.Concat(body.InlineImages).ToList()
+        };
         var draft = await mailbox.CreateReplyDraftAsync(cleaned, cancellationToken)
             ?? throw new InvalidOperationException(filing.StagingRefusal);
         var staged = new StagedEmail(draft.Id, draft.WebLink, draft.Subject, draft.To, draft.Cc);

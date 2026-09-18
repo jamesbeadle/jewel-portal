@@ -1,5 +1,6 @@
 @page "/projects/{ProjectId}/work-orders/{WorkOrderId}/po"
 @using Jewel.JPMS.Features.Procurement
+@using Jewel.JPMS.Features.Triage
 @using Jewel.JPMS.Features.Projects
 @using Jewel.JPMS.Features.Subcontractors
 @inject AuthService Auth
@@ -192,8 +193,9 @@
             <input class="field mb-3" @bind="emailSubject" />
             </FormField>
 
-            <FormField Label="Body (HTML)">
-            <textarea class="field font-mono text-xs" rows="14" @bind="emailBody"></textarea>
+            <FormField Label="Message">
+            <RichTextEditor @bind-Value="emailBody" MinHeight="260"
+                            Placeholder="What the supplier should read above the order summary" />
             </FormField>
         </Modal>
     }

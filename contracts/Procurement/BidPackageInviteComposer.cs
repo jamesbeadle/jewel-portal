@@ -13,8 +13,11 @@ namespace Jewel.JPMS.Contracts.Procurement;
 // tender documents and linked drawings, with the 25 MB overflow-to-links rule — is planned
 // server-side by the same assembler as the Outlook-draft path.
 //
-// Recipient lists cross the wire as semicolon-separated address strings — exactly what the
-// composer's fields hold, so what you read is what is sent.
+// Recipient lists cross the wire as ADDRESSES since 2026-09-18. They were semicolon-separated
+// strings — the composer's field contents sent verbatim — which put a text box in the contract and
+// left the splitting rule in the handler where the page could not see it. RecipientList is the one
+// reading of a typed field now, so the chips a person sees and the addresses the mailbox is handed
+// are the same list.
 
 /// <summary>Sends the tender-invite email from the shared projects mailbox. SaveAsDraftOnly stops
 /// after staging, leaving the reviewed draft in the mailbox's Drafts folder for Outlook — the
@@ -25,9 +28,9 @@ public sealed record SendBidPackageInvite(
     string BidPackageId,
     string Subject,
     string HtmlBody,
-    string To = "",
-    string Cc = "",
-    string Bcc = "",
+    IReadOnlyList<string>? To = null,
+    IReadOnlyList<string>? Cc = null,
+    IReadOnlyList<string>? Bcc = null,
     bool SaveAsDraftOnly = false) : ICommand<BidPackageInviteSendOutcome>;
 
 /// <summary>What the in-app send did. <see cref="AttachedFiles"/> is the truth about what travelled
