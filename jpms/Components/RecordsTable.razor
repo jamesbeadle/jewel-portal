@@ -21,7 +21,7 @@
     panel shows whole. Wire it to the menu's OnOpenChanged.
 *@
 
-<div class="panel @(HasOpenMenu ?"" : $"overflow-x-auto overflow-y-auto {MaxHeight}") @Class">
+<div class="panel overflow-x-auto overflow-y-auto @MaxHeight @Class">
     <LoadGate IsLoading="IsLoading" Prominent="true" Label="@LoadingLabel">
         @if (IsEmpty)
         {

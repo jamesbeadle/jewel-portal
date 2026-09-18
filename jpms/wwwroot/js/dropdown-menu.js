@@ -23,6 +23,18 @@ window.jpmsDropdownMenu = {
         return dotnetRef && dotnetRef._id !== undefined ? dotnetRef._id : dotnetRef;
     },
 
+    // Where a panel should be drawn. A panel that hangs inside its toggle's box is clipped by
+    // any scrolling ancestor — a long register, a modal body — so it is drawn against the
+    // viewport instead and positioned from the toggle's own rect. The caller decides which edges
+    // to pin; this only reports, so the same reading serves a menu and a typeahead popup.
+    measure: function (toggle) {
+        const r = toggle.getBoundingClientRect();
+        return {
+            top: r.top, left: r.left, right: r.right, bottom: r.bottom, width: r.width,
+            viewportWidth: window.innerWidth, viewportHeight: window.innerHeight
+        };
+    },
+
     watch: function (root, dotnetRef, shouldCloseOnScroll) {
         window.jpmsDropdownMenu.unwatch(dotnetRef);
         if (!root) return;
