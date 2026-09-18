@@ -3,34 +3,33 @@ using Jewel.JPMS.Contracts.RecordLinks;
 namespace Jewel.JPMS.Api.Features.RecordLinks.Commands;
 
 /// <summary>
-/// POST /api/projects/{projectId}/programme/emails/reply-draft — stage the written reply as an
-/// Outlook draft (in the original conversation thread) on a programme-tagged email. JSON body: the
+/// POST /api/projects/{projectId}/programme/emails/reply-draft — reply, in the original
+/// conversation thread, to a programme-tagged email. JSON body: the
 /// <see cref="SendProgrammeReply"/> command; the route's projectId wins over the body's.
-/// Nothing is sent — the draft waits in the projects mailbox's Drafts folder.
+/// SaveAsDraftOnly leaves the reviewed draft in the projects mailbox's Drafts folder for Outlook
+/// instead of sending; a refused send degrades to exactly that.
 /// </summary>
 public sealed class SendProgrammeReplyEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly SendProgrammeReplyAuthorisation authorisation;
+    private readonly SendProgrammeReplyValidation validation;
     private readonly ICommandHandler<SendProgrammeReply, ProgrammeReplyOutcome> handler;
     private readonly Audit.AuditActor auditActor;
 
     public SendProgrammeReplyEndpoint(
         SignedInUserResolver users,
+        SendProgrammeReplyAuthorisation authorisation,
+        SendProgrammeReplyValidation validation,
         ICommandHandler<SendProgrammeReply, ProgrammeReplyOutcome> handler,
         Audit.AuditActor auditActor)
     {
         this.users = users;
+        this.authorisation = authorisation;
+        this.validation = validation;
         this.handler = handler;
         this.auditActor = auditActor;
     }
-
-    // A reply draft stages an external communication in the shared mailbox — the same act as the
-    // request-reply draft, so the same shape of gate: the roles that speak for the project
-    // (directors, project managers, site managers; admins carry every role server-side). The
-    // architect — present on the request gate for RFIs — has no programme-communications surface,
-    // so is deliberately absent here.
-    private static readonly RoleSet RolesThatMayDraft =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager);
 
     [Function(nameof(SendProgrammeReply))]
     public async Task<IActionResult> Run(
@@ -41,20 +40,21 @@ public sealed class SendProgrammeReplyEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayDraft.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
-        // Attribute the handler's DraftCreated audit row to whoever pressed the button.
+        // Attribute the dispatcher's audit row to whoever pressed the button.
         auditActor.Email = signedInUser.Email;
 
         SendProgrammeReply? body = null;
         try { body = await request.ReadFromJsonAsync<SendProgrammeReply>(); }
-        catch { /* the checks below report what's missing */ }
-        if (body is null || string.IsNullOrWhiteSpace(body.MessageId))
-            return new BadRequestObjectResult("messageId is required.");
-        if (string.IsNullOrWhiteSpace(body.ReplyBody))
-            return new BadRequestObjectResult("Write the reply before creating the draft.");
+        catch { /* the validation below reports what's missing */ }
+        if (body is null) return new BadRequestResult();
 
         var command = body with { ProjectId = projectId };
+
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
+
+        var validationOutcome = validation.Check(command);
+        if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 
         try
         {

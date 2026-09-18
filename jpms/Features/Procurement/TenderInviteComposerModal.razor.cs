@@ -167,7 +167,14 @@ public partial class TenderInviteComposerModal
         return sb.ToString();
     }
 
-    private async Task ConfirmSendAsync()
+    private Task ConfirmSendAsync() => DispatchAsync(saveAsDraftOnly: false);
+
+    /// <summary>The review route its eight sibling send commands have always had: the invite is
+    /// staged in the projects mailbox's Drafts folder, tagged and attached exactly as a send would
+    /// be, for a person to read once more and send from Outlook.</summary>
+    private Task StageInDraftsAsync() => DispatchAsync(saveAsDraftOnly: true);
+
+    private async Task DispatchAsync(bool saveAsDraftOnly)
     {
         if (sending || Package is null || !CanEdit || RecipientCount == 0) return;
         sendError = null;
@@ -176,12 +183,13 @@ public partial class TenderInviteComposerModal
             sending = true;
             var outcome = await Commands.SendAsync(
                 new SendBidPackageInvite(BidPackageId, subject.Trim(), body,
-                    to.Trim(), cc.Trim(), bcc.Trim()), CancellationToken.None);
-            if (outcome.Sent)
-            {
-                isOpen = false;
-                draftSavedAt = null;
-            }
+                    to.Trim(), cc.Trim(), bcc.Trim(), saveAsDraftOnly), CancellationToken.None);
+
+            // A deliberate staging closes the composer too — the wording is in the mailbox now.
+            // The saved composer draft stays either way until the invite actually goes.
+            if (outcome.Sent || saveAsDraftOnly) isOpen = false;
+            if (outcome.Sent) draftSavedAt = null;
+
             // Sent or staged-in-Drafts, the host hears about it either way.
             await OnSent.InvokeAsync(outcome);
         }

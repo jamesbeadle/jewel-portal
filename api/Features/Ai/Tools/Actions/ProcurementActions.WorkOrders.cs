@@ -180,6 +180,7 @@ internal sealed partial class ProcurementActions
             VisibleTo: PoEmailSenders,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "The email goes to an external supplier the moment this succeeds — ALWAYS "
                 + "confirm the order, recipient, subject and body with the user before calling. "
                 + "saveAsDraftOnly true is the review-in-Outlook alternative, and the result's "

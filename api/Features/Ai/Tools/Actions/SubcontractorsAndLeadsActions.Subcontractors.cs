@@ -278,6 +278,31 @@ internal sealed partial class SubcontractorsAndLeadsActions
                 + "uploaded in the portal; use this only to log a document's existence and expiry."),
 
         new AiAction(
+            Name: "send_subcontractor_statement_email",
+            Area: "Subcontractors",
+            Description: "SENDS EMAIL: sends the subcontractor's statement of account to their "
+                + "directory email from the shared projects mailbox, with the given subject and HTML "
+                + "body and the statement rendered fresh from the live register and attached as a "
+                + "PDF — so the figures are the register's at the moment it goes. saveAsDraftOnly "
+                + "true stops after staging, leaving the reviewed draft in Drafts for Outlook "
+                + "instead of sending. A failed send leaves that same draft (outcome sent false "
+                + "plus a webLink). A directory record with no email address is refused outright.",
+            CommandType: typeof(SendSubcontractorStatementEmail),
+            ResultType: typeof(SubcontractorStatementEmailOutcome),
+            AuthorisationType: typeof(SendSubcontractorStatementEmailAuthorisation),
+            ValidationType: typeof(SendSubcontractorStatementEmailValidation),
+            VisibleTo: StatementEmailSenders,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
+            Notes: "The statement goes to an external supplier the moment this succeeds — read the "
+                + "account first (get_project_supplier_account for one project, or the statement "
+                + "itself) and confirm the company, the recipient, the subject and the body with "
+                + "the user before calling. saveAsDraftOnly true is the review-in-Outlook "
+                + "alternative. This is CORRESPONDENCE, not a demand: the statement never shows "
+                + "payment dates or unmatched bills. subcontractorId comes from search_directory."),
+
+        new AiAction(
             Name: "add_trade",
             Area: "Subcontractors",
             Description: "Adds a trade to the curated master trade list. The name is normalised (trimmed, "

@@ -22,6 +22,7 @@ internal sealed partial class RequestsActions
                 JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.Architect),
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "This reaches the client or architect the moment it succeeds — ALWAYS confirm the "
                 + "request and its recipients with the user before calling. The request must be an "
                 + "emailable kind (RFI/NOD/EOT) — promote it first if it is still General. requestId "
@@ -44,6 +45,7 @@ internal sealed partial class RequestsActions
                 JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.Architect),
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Every one of these reaches a client or architect the moment it succeeds — ALWAYS "
                 + "confirm the list with the user before calling. requestIds via find_by_reference or "
                 + "list_requests."),
@@ -63,6 +65,7 @@ internal sealed partial class RequestsActions
                 JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.Architect),
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "This reaches the thread's correspondents the moment it succeeds — ALWAYS confirm "
                 + "with the user before calling. mailboxMessageId is the Graph id of the conversation "
                 + "email to reply to — list_request_correspondence / read_record_emails surface it. "

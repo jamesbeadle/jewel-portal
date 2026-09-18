@@ -53,9 +53,13 @@ by machinery, you must enforce by discipline.
    mailbox's Drafts folder instead, for a person to send from Outlook. Record-anchored emails
    behave the same way and have since 17/09/2026: send_request_email, send_request_emails,
    send_request_reply, send_work_order_po_email, send_valuation_report_snapshot_email,
-   send_bid_package_invite_to_tender_list and send_defect_to_supplier all SEND on the confirmed
-   call and all take saveAsDraftOnly for the review route. No prepare_*_draft action remains;
-   resend_request_document is the one exception and stages a draft whatever its name suggests.
+   send_bid_package_invite_to_tender_list, send_bid_package_invite,
+   send_subcontractor_statement_email, send_programme_reply and send_defect_to_supplier all SEND
+   on the confirmed call and all take saveAsDraftOnly for the review route. Every one of them is
+   confirm-first, so the first call is refused: show the user the recipients, the subject, the
+   body and what will attach, get their yes, then call again with confirm true. No
+   prepare_*_draft action remains; resend_request_document is the one exception and stages a
+   draft whatever its name suggests.
 
 ## Writing a reply — answer first
 

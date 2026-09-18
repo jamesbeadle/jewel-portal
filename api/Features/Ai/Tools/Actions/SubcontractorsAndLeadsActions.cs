@@ -34,6 +34,12 @@ internal sealed partial class SubcontractorsAndLeadsActions : IAiActionSource
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator,
             JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
+    // SendSubcontractorStatementEmailAuthorisation.RolesThatMayEmailStatements — the circle that
+    // may email work orders, plus the finance director who owns the account reconciliations.
+    private static readonly RoleSet StatementEmailSenders =
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager,
+            JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
+
     private static readonly RoleSet PartyContactManagers =
         RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.ProjectManager);
 
@@ -50,9 +56,6 @@ internal sealed partial class SubcontractorsAndLeadsActions : IAiActionSource
 
     // Skipped: InviteSubcontractorPortalUser — no command dispatch: the endpoint calls the
     //          SubcontractorPortalInviter service directly instead of an ICommandHandler.
-    // Skipped: SendSubcontractorStatementEmail — no HTTP endpoint dispatches it: the
-    //          handler/authorisation/validation are registered but no [HttpTrigger] function
-    //          exists for the client's /statement/draft-email route.
     // Skipped: AddComplianceDocumentVersion — constructed server-side by the multipart upload
     //          endpoints after the blob is stored; never sent by clients and has no endpoint of
     //          its own.

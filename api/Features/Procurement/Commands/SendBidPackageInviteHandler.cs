@@ -14,8 +14,9 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 /// shows is exactly what goes on the wire (an empty To is addressed to the mailbox itself, the
 /// house convention for BCC fan-out). Staging, the send, the degrade back to a draft and the audit
 /// row are the dispatcher's, so a failed send leaves the reviewed draft in the mailbox's Drafts
-/// folder and says so, never losing the email. A successful send clears the package's persisted
-/// composer draft: it has served its purpose.
+/// folder and says so, never losing the email. SaveAsDraftOnly asks for that outcome deliberately.
+/// A successful SEND clears the package's persisted composer draft: it has served its purpose —
+/// one left in Drafts does not, because the composer is still where the wording lives.
 /// </summary>
 public sealed partial class SendBidPackageInviteHandler : ICommandHandler<SendBidPackageInvite, BidPackageInviteSendOutcome>
 {
@@ -74,7 +75,7 @@ public sealed partial class SendBidPackageInviteHandler : ICommandHandler<SendBi
             package.BidPackageId,
             package.Reference);
 
-        var dispatch = await dispatcher.DispatchAsync(message, filing, saveAsDraftOnly: false, cancellationToken);
+        var dispatch = await dispatcher.DispatchAsync(message, filing, command.SaveAsDraftOnly, cancellationToken);
         var attachedFiles = plan.Attach.Select(file => file.FileName).ToList();
         var recipientCount = to.Count + cc.Count + bcc.Count;
 

@@ -66,7 +66,8 @@ in Drafts, BCC'd to the eight firms who have not had it" — not "I used the bid
 - **The portal sends, on the person's yes.** Since 17/09/2026 every record's email leaves the
   shared projects mailbox through one dispatcher, and the connector has the same Send doors the
   pages have: the request document (fresh, bulk and as a reply in its thread), the valuation
-  report, the purchase order, the tender invite, the defect email, the sales proposal and a
+  report, the purchase order, the tender invite (to the tender list or to an envelope you wrote),
+  the subcontractor statement, the programme reply, the defect email, the sales proposal and a
   Control Centre reply. Sending is confirm-first — say who it goes to, what it attaches and what
   it says, get the yes in this conversation, then send. `saveAsDraftOnly` is the review route
   when the user would rather read it in Outlook first, and a refused send degrades to exactly

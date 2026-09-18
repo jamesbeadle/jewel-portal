@@ -10,22 +10,25 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 /// </summary>
 public sealed class BidPackageInviteComposerEndpoints
 {
-    private static readonly RoleSet AllowedToInvite = RoleSet.Of(
-        Role.Admin, JpmsRoles.Director, JpmsRoles.ProjectManager,
-        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
+    // One home for the set: the send's own authorisation class, which the connector's action
+    // reads too. The draft's read and save borrow it — seeing the composer and sending from it
+    // are the same permission.
+    private static readonly RoleSet AllowedToInvite = SendBidPackageInviteAuthorisation.RolesThatMayInvite;
 
     private readonly SignedInUserResolver users;
     private readonly IQueryHandler<GetBidPackageInviteComposerDraft, BidPackageInviteComposerDraft?> get;
     private readonly ICommandHandler<SaveBidPackageInviteComposerDraft, Acknowledgement> save;
     private readonly ICommandHandler<SendBidPackageInvite, BidPackageInviteSendOutcome> send;
+    private readonly SendBidPackageInviteValidation validation;
 
     public BidPackageInviteComposerEndpoints(
         SignedInUserResolver users,
         IQueryHandler<GetBidPackageInviteComposerDraft, BidPackageInviteComposerDraft?> get,
         ICommandHandler<SaveBidPackageInviteComposerDraft, Acknowledgement> save,
-        ICommandHandler<SendBidPackageInvite, BidPackageInviteSendOutcome> send)
+        ICommandHandler<SendBidPackageInvite, BidPackageInviteSendOutcome> send,
+        SendBidPackageInviteValidation validation)
     {
-        this.users = users; this.get = get; this.save = save; this.send = send;
+        this.users = users; this.get = get; this.save = save; this.send = send; this.validation = validation;
     }
 
     [Function(nameof(GetBidPackageInviteComposerDraft))]
@@ -71,8 +74,9 @@ public sealed class BidPackageInviteComposerEndpoints
         var command = await request.ReadFromJsonAsync<SendBidPackageInvite>();
         if (command is null) return new BadRequestResult();
         if (command.BidPackageId != bidPackageId) return new BadRequestObjectResult("Route bidPackageId does not match body.");
-        if (string.IsNullOrWhiteSpace(command.Subject)) return new BadRequestObjectResult(new[] { "Subject is required." });
-        if (string.IsNullOrWhiteSpace(command.HtmlBody)) return new BadRequestObjectResult(new[] { "The message body is required." });
+
+        var validationOutcome = validation.Check(command);
+        if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 
         return new OkObjectResult(await send.HandleAsync(command, cancellationToken));
     }

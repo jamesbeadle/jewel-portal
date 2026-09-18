@@ -16,8 +16,10 @@ namespace Jewel.JPMS.Contracts.Procurement;
 // Recipient lists cross the wire as semicolon-separated address strings — exactly what the
 // composer's fields hold, so what you read is what is sent.
 
-/// <summary>Sends the tender-invite email from the shared projects mailbox, there and then. On a
-/// send failure the staged draft survives in the mailbox's Drafts folder (Sent=false, FailureNote
+/// <summary>Sends the tender-invite email from the shared projects mailbox. SaveAsDraftOnly stops
+/// after staging, leaving the reviewed draft in the mailbox's Drafts folder for Outlook — the
+/// review route its eight sibling send commands have always had, and this one lacked until
+/// 2026-09-18. On a send failure the staged draft survives there anyway (Sent=false, FailureNote
 /// says so) — an invite can never be lost between the portal and the mailbox.</summary>
 public sealed record SendBidPackageInvite(
     string BidPackageId,
@@ -25,7 +27,8 @@ public sealed record SendBidPackageInvite(
     string HtmlBody,
     string To = "",
     string Cc = "",
-    string Bcc = "") : ICommand<BidPackageInviteSendOutcome>;
+    string Bcc = "",
+    bool SaveAsDraftOnly = false) : ICommand<BidPackageInviteSendOutcome>;
 
 /// <summary>What the in-app send did. <see cref="AttachedFiles"/> is the truth about what travelled
 /// ON the email; <see cref="LinkedFiles"/> is ONLY the overflow — an empty LinkedFiles never means

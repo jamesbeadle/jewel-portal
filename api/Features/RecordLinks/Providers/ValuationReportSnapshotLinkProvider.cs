@@ -106,9 +106,10 @@ public sealed class ValuationReportSnapshotLinkProvider : ILinkableRecordProvide
         return string.IsNullOrWhiteSpace(reference) ? projectId : reference.Trim();
     }
 
-    // "VRS-{projectRef}-{number}" — the one place the stem is spelt; the claim provider mints its
-    // companions' stems from here.
-    internal static string Stem(string projectRef, int number) => $"VRS-{projectRef}-{number}";
+    // The stem is spelt in ValuationSnapshotTags, which the outgoing statement's email reads too;
+    // the claim provider mints its companions' stems from here.
+    internal static string Stem(string projectRef, int number) =>
+        Commercial.ValuationSnapshotTags.Stem(projectRef, number);
 
     // Shared with ValuationClaimLinkProvider, whose merged picker list carries snapshot rows.
     internal static LinkableRecord ToLinkable(string projectRef, ValuationReportSnapshotEntity snapshot, string? claimName)
