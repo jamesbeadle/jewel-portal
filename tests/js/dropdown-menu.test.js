@@ -27,9 +27,21 @@ function listenerBox() {
     };
 }
 
+// The page area inside the scrollbar is narrower than the window: a fixed panel's right and
+// bottom offsets are measured against the former, so the fake keeps them apart on purpose.
+const ScrollbarWidth = 15;
+const WindowWidth = 1000;
+const WindowHeight = 800;
+
 function loadWatcher() {
     const documentBox = listenerBox();
     const windowBox = listenerBox();
+    documentBox.documentElement = {
+        clientWidth: WindowWidth - ScrollbarWidth,
+        clientHeight: WindowHeight
+    };
+    windowBox.innerWidth = WindowWidth;
+    windowBox.innerHeight = WindowHeight;
     new Function('window', 'document', source)(windowBox, documentBox);
     return { watcher: windowBox.jpmsDropdownMenu, documentBox, windowBox };
 }
@@ -137,4 +149,24 @@ test('each popup is keyed by its reference id, not the proxy object', () => {
     documentBox.fire('pointerdown', pressOutside);
     assert.deepStrictEqual(first.closes, []);
     assert.deepStrictEqual(second.closes, ['CloseFromOutside']);
+});
+
+test('a toggle is measured against the page area, not the window, so a right-anchored panel lands on it', () => {
+    const { watcher } = loadWatcher();
+    const toggle = { getBoundingClientRect: () => ({ top: 100, left: 300, right: 420, bottom: 130, width: 120 }) };
+    const reading = watcher.measure(toggle);
+    assert.strictEqual(reading.viewportWidth, WindowWidth - ScrollbarWidth);
+    assert.strictEqual(reading.viewportHeight, WindowHeight);
+    // What the caller pins the right edge at. Measured against the window it would be out by the
+    // scrollbar, which is how every right-aligned menu came to sit beside its toggle.
+    assert.strictEqual(reading.viewportWidth - reading.right, 565);
+});
+
+test('a toggle reading carries the edges a panel is placed from', () => {
+    const { watcher } = loadWatcher();
+    const toggle = { getBoundingClientRect: () => ({ top: 10, left: 20, right: 140, bottom: 44, width: 120 }) };
+    const reading = watcher.measure(toggle);
+    assert.deepStrictEqual(
+        { top: reading.top, left: reading.left, right: reading.right, bottom: reading.bottom, width: reading.width },
+        { top: 10, left: 20, right: 140, bottom: 44, width: 120 });
 });
