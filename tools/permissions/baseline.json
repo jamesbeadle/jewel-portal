@@ -1,7 +1,7 @@
 {
  "summaries": {
   "every endpoint is gated": 2,
-  "an external write is scoped to its own rows": 24,
+  "an external write is scoped to its own rows": 19,
   "correspondence reaches only the declared roles": 43,
   "Client reaches only what the policy declares": 0,
   "Subcontractor reaches only what the policy declares": 0,
