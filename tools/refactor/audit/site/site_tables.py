@@ -16,6 +16,21 @@ def inCell(definition: str) -> str:
     return "`" + definition.replace("|", "\\|") + "`"
 
 
+def designTable(widgetDesigns: dict) -> str:
+    rows = widgetDesigns.get("widgets", [])
+    if not rows:
+        return ""
+    lines = ["| Widget | Design | Last checked |", "| --- | --- | --- |"]
+    lines += [f"| `{row['widget']}` | {designCell(row)} | {row['checkedAt'] or '—'} |" for row in rows]
+    return "\n".join(lines)
+
+
+def designCell(row: dict) -> str:
+    if not row["sheet"]:
+        return "brand only"
+    return f"`{row['sheet']}`"
+
+
 def shortFiles(files: list[str]) -> str:
     extra = f" +{len(files) - SHOWN_FILES}" if len(files) > SHOWN_FILES else ""
     return ", ".join(f"`{file}`" for file in files[:SHOWN_FILES]) + extra

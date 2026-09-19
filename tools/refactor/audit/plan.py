@@ -29,8 +29,8 @@ def buildPlan(repositoryRoot: Path, audit: dict) -> dict:
     others = [target for target in targets if not target["isView"]]
     designPatterns = design_patterns.check(sourceFiles, rules)
     steps = [
-        *breakoutSteps(views),
         *adoptionSteps(audit),
+        *breakoutSteps(views),
         *utilitySteps(views, usage.repeatedBodies(), audit),
         *patternSteps(others, designPatterns),
         *sweepSteps(audit["score"]),

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 
-BREAKOUT, UTILITIES, PATTERNS = "Pass 1 — Component breakout", "Pass 3 — Utility function identification", "Pass 4 — Design pattern identification"
+BREAKOUT, UTILITIES, PATTERNS = "Pass 2 — Component breakout", "Pass 3 — Utility function identification", "Pass 4 — Design pattern identification"
 SHOWN_BLOCKS = 4
 SHOWN_FILES = 4
 SHOWN_REPEATS = 15

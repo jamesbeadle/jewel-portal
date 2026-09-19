@@ -1,6 +1,6 @@
 # Refactor audit
 
-Generated 2026-09-19 08:51 UTC.
+Generated 2026-09-19 09:24 UTC.
 
 ## Headline
 
@@ -67,7 +67,7 @@ Each element scores 100% with no offenders and falls in a straight line to 0% wh
 | orphans | orphanFunctions: 21, functionsExamined: 8190 |
 | designPatterns | roleFamilies: 160, predictedFiles: 2350, predictedFilesMissing: 188, entities: 0, entitiesOutOfRange: 0, measurementIsHeuristic: True |
 | inventory | pages: 104, components: 146, orphanComponents: 6, averagePageLines: 191 |
-| siteDefinition | routes: 116, views: 555, siteComponents: 525, catalogue: 34, widgetUsages: 1669, handRolledElements: 669, widgetSlots: 2338, viewsWithHandRolled: 293 |
+| siteDefinition | routes: 116, views: 555, siteComponents: 525, catalogue: 34, widgetUsages: 1669, handRolledElements: 669, widgetSlots: 2338, viewsWithHandRolled: 293, designSheets: 0, designsLastChecked: never, brandCheckedAt: never |
 | fileAreas | totalFiles: 5039, api: 2178, frontend: 1224, contracts: 629, database: 273, connector: 215, docs: 188, tooling: 156, tests: 128, infrastructure: 40, worker: 8 |
 
 ## Against the baseline

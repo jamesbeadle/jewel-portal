@@ -161,12 +161,14 @@ Each folder has its own README.
 
 <table><tr><td align="center">
 <strong>Code quality score</strong><h2>74.0%</h2>
-<sub>measured 2026-09-19 · project-process kit 1.4.1</sub>
+<sub>measured 2026-09-19 · project-process kit 1.5.1</sub>
 </td></tr></table>
 
 5,039 files · api 2,178 · frontend 1,224 · contracts 629 · database 273 · connector 215 · docs 188 · tooling 156 · tests 128 · infrastructure 40 · worker 8
 
 The site by route: 116 routes, 525 components, 669 pieces of markup written by hand where a widget should be — [`tools/refactor/site-definition.md`](tools/refactor/site-definition.md).
+
+Brand and widget designs: brand checked never, 0 widget sheets checked never — say *"Check the site against the brand"* or *"Check the widgets against their designs"* (the `widget-design` skill; every widget's standing is in [`tools/refactor/site-definition.md`](tools/refactor/site-definition.md)).
 
 <details>
 <summary><strong>How the 74.0% is made up</strong></summary>
@@ -219,22 +221,22 @@ Each element scores 100% with no offenders and falls in a straight line to 0% wh
 </details>
 
 <details>
-<summary><strong>The refactoring plan: 826 steps, in order</strong></summary>
+<summary><strong>The refactoring plan: 932 steps, in order</strong></summary>
 
-**Pass 1 — Component breakout**
+**Pass 1 — Widget adoption**
 
-1. Break `jpms/Components/ProjectDetailsEditor.razor` (440 lines) into components. Component-sized blocks: lines 41–65 (25 lines, taking OnPartyChanged); lines 67–80 (14 lines, taking OnOnBehalfOfClientChanged); lines 82–103 (22 lines, taking OnOrganisationChanged); lines 134–157 (24 lines, taking OnXeroContactChanged).
-2. Break `jpms/Pages/XeroAllocation.razor` (433 lines) into components. Component-sized blocks: lines 66–103 (38 lines); lines 162–177 (16 lines); lines 185–263 (79 lines); lines 280–301 (22 lines).
-3. Break `jpms/Pages/AdminKpis.razor` (429 lines) into components. Component-sized blocks: lines 88–101 (14 lines); lines 102–167 (66 lines, taking OpenInControlCentre, StartEdit, StartRemove, ConfirmRemoveAsync); lines 178–204 (27 lines, taking SaveEditAsync); lines 206–229 (24 lines, taking AddPersonAsync).
-4. Break `jpms/Pages/ProjectValuation.razor` (420 lines) into components. Component-sized blocks: lines 23–74 (52 lines); lines 110–146 (37 lines); lines 148–162 (15 lines); lines 165–244 (80 lines).
-5. Break `jpms/Pages/SubcontractorDetail.razor` (419 lines) into components. Component-sized blocks: lines 41–84 (44 lines); lines 101–150 (50 lines); lines 154–198 (45 lines); lines 203–279 (77 lines).
-6. Break `jpms/Pages/CostCodes.razor` (415 lines) into components. Component-sized blocks: lines 18–49 (32 lines); lines 103–139 (37 lines); lines 177–196 (20 lines); lines 219–275 (57 lines).
-7. Break `jpms/Pages/TriageQueue.razor` (401 lines) into components. Component-sized blocks: lines 53–75 (23 lines); lines 78–90 (13 lines); lines 93–121 (29 lines); lines 125–142 (18 lines).
-8. Break `jpms/Pages/ProjectVariations.razor` (400 lines) into components. Component-sized blocks: lines 27–47 (21 lines); lines 51–76 (26 lines); lines 82–94 (13 lines); lines 96–113 (18 lines).
-9. Break `jpms/Features/Triage/AttachmentPicker.razor` (396 lines) into components. Component-sized blocks: lines 19–33 (15 lines); lines 35–51 (17 lines); lines 56–69 (14 lines); lines 90–134 (45 lines, taking DrawingRow).
-10. Break `jpms/Components/ValuationReportTable.razor` (395 lines) into components. Component-sized blocks: lines 48–73 (26 lines); lines 86–100 (15 lines); lines 111–151 (41 lines); lines 176–187 (12 lines).
+1. Build, from the best of these, then adopt `Button` in 4 file(s) that write its markup by hand. 26 place(s): `jpms/Components/ProjectTodoList.razor` (7), `jpms/Features/Triage/AttachmentPicker.razor` (7), `jpms/Features/Triage/Panels/PathwayPane.razor` (6), `jpms/Features/Xero/Allocation/InvoiceViewerActions.razor` (6). Each is listed with its line in audit.json under details.siteDefinition.offenders.handRolled; the route it reaches is in tools/refactor/site-definition.md.
+2. Adopt `Button` in 4 file(s) that write its markup by hand. 21 place(s): `jpms/Pages/ProjectCommunications.razor` (6), `jpms/Components/PackageReconciliationSection.razor` (5), `jpms/Features/Triage/Queue/TriageMessageDetail.razor` (5), `jpms/Features/Xero/Allocation/AllocationTabBar.razor` (5). Each is listed with its line in audit.json under details.siteDefinition.offenders.handRolled; the route it reaches is in tools/refactor/site-definition.md.
+3. Adopt `SectionHeader` in 4 file(s) that write its markup by hand. 21 place(s): `jpms/Features/Sales/ImagineProposal.razor` (6), `jpms/Pages/PortalHome.razor` (5), `jpms/Pages/ProjectBuildingControl.razor` (5), `jpms/Pages/SubcontractorDetail.razor` (5). Each is listed with its line in audit.json under details.siteDefinition.offenders.handRolled; the route it reaches is in tools/refactor/site-definition.md.
+4. Adopt `FormField` in 4 file(s) that write its markup by hand. 19 place(s): `jpms/Pages/AiSkillsAdmin.razor` (7), `jpms/Pages/ProjectLabour.razor` (5), `jpms/Features/Procurement/SubcontractorInvitePickerModal.razor` (4), `jpms/Components/WorkOrderForm.razor` (3). Each is listed with its line in audit.json under details.siteDefinition.offenders.handRolled; the route it reaches is in tools/refactor/site-definition.md.
+5. Adopt `Button` in 4 file(s) that write its markup by hand. 18 place(s): `jpms/Pages/ProjectCalendar.razor` (5), `jpms/Pages/ProjectVariations.razor` (5), `jpms/Components/RequestConversation.razor` (4), `jpms/Features/Procurement/TenderSubmissionsSection.razor` (4). Each is listed with its line in audit.json under details.siteDefinition.offenders.handRolled; the route it reaches is in tools/refactor/site-definition.md.
+6. Adopt `Button` in 4 file(s) that write its markup by hand. 16 place(s): `jpms/Features/Triage/Panels/Actions/StageTodosAction.razor` (4), `jpms/Features/Triage/Panels/KpiTagSection.razor` (4), `jpms/Features/Triage/Queue/TaggedInboxBrowser.razor` (4), `jpms/Features/Triage/TodosModal.razor` (4). Each is listed with its line in audit.json under details.siteDefinition.offenders.handRolled; the route it reaches is in tools/refactor/site-definition.md.
+7. Adopt `Button` in 4 file(s) that write its markup by hand. 16 place(s): `jpms/Features/WeeklyCashflow/CashflowEntryRow.razor` (4), `jpms/Pages/ProjectBuildingControl.razor` (4), `jpms/Pages/ProjectBuildingControlInspection.razor` (4), `jpms/Pages/ProjectWorkOrderAllocation.razor` (4). Each is listed with its line in audit.json under details.siteDefinition.offenders.handRolled; the route it reaches is in tools/refactor/site-definition.md.
+8. Adopt `Button` in 4 file(s) that write its markup by hand. 13 place(s): `jpms/Pages/Todos.razor` (4), `jpms/Components/DrawingUploadForm.razor` (3), `jpms/Features/Site/Programme/ProgrammeWorkbench.razor` (3), `jpms/Features/Triage/Panels/Actions/StagedRecordActionEditor.razor` (3). Each is listed with its line in audit.json under details.siteDefinition.offenders.handRolled; the route it reaches is in tools/refactor/site-definition.md.
+9. Adopt `SectionHeader` in 4 file(s) that write its markup by hand. 13 place(s): `jpms/Pages/ProjectBuildingControlInspection.razor` (4), `jpms/Components/CostCentreReconciliationModal.razor` (3), `jpms/Components/MyDayWorkspace.razor` (3), `jpms/Components/ProjectTodoList.razor` (3). Each is listed with its line in audit.json under details.siteDefinition.offenders.handRolled; the route it reaches is in tools/refactor/site-definition.md.
+10. Adopt `Button` in 4 file(s) that write its markup by hand. 12 place(s): `jpms/Features/Triage/Panels/OutboxPane.razor` (3), `jpms/Features/Triage/Panels/PathwayActionsSection.razor` (3), `jpms/Features/WeeklyCashflow/CashflowGroupRow.razor` (3), `jpms/Features/Xero/Allocation/AllocatedSummaryRow.razor` (3). Each is listed with its line in audit.json under details.siteDefinition.offenders.handRolled; the route it reaches is in tools/refactor/site-definition.md.
 
-… and 816 more steps. The whole plan, with the measured detail, is in [`tools/refactor/refactor-plan.md`](tools/refactor/refactor-plan.md).
+… and 922 more steps. The whole plan, with the measured detail, is in [`tools/refactor/refactor-plan.md`](tools/refactor/refactor-plan.md).
 
 </details>
 

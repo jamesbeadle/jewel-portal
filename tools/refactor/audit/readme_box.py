@@ -51,6 +51,18 @@ def siteLine(audit: dict) -> list[str]:
     ]
 
 
+def designsLine(audit: dict) -> list[str]:
+    site = audit["summaries"].get("siteDefinition", {})
+    if "designSheets" not in site:
+        return []
+    return [
+        f"Brand and widget designs: brand checked {site['brandCheckedAt']}, {site['designSheets']} widget sheets checked "
+        f"{site['designsLastChecked']} — say *\"Check the site against the brand\"* or *\"Check the widgets against their designs\"* "
+        f"(the `widget-design` skill; every widget's standing is in [`{SITE_PATH}`]({SITE_PATH})).",
+        "",
+    ]
+
+
 def renderBox(audit: dict, steps: list[dict]) -> str:
     score = audit["score"]
     fileAreas = audit["details"]["fileAreas"]
@@ -63,6 +75,7 @@ def renderBox(audit: dict, steps: list[dict]) -> str:
         areasLine(fileAreas),
         "",
         *siteLine(audit),
+        *designsLine(audit),
         *expandable(f"How the {percentage(score['overall'])} is made up", [breakdownTable(score), "", derivation()]),
         *expandable(f"The repository by area: {totalFiles:,} files", [areasTable(fileAreas)]),
         *expandable(f"The refactoring plan: {len(steps)} steps, in order", planSection(steps)),

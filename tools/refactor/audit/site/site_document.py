@@ -10,7 +10,8 @@ from pathlib import Path
 
 from ..source_files import loadRules
 from .site_definition import NAME
-from .site_tables import componentTable, handRolledTable
+from .site_designs import NEVER_CHECKED
+from .site_tables import componentTable, designTable, handRolledTable
 
 REFACTOR_DIRECTORY = Path("tools") / "refactor"
 DOCUMENT_WHEN_UNSET = "tools/refactor/site-definition.md"
@@ -43,11 +44,35 @@ def renderDocument(site: dict, generatedAt: str) -> str:
         f"**Notation.** {KEY}",
         "## Written by hand where a widget should be",
         handRolledTable(site["offenders"]["byWidget"]),
+        "## The widgets' designs",
+        designsStanding(site.get("designs", {})),
+        designTable(site.get("designs", {})),
         "## Routes",
         *[routeSection(row) for row in site["routes"]],
         "## Components of the site",
         componentTable(site["components"]),
     ]) + "\n"
+
+
+def designsStanding(widgetDesigns: dict) -> str:
+    if not widgetDesigns.get("isSetUp"):
+        return (
+            f"No design index yet (`{widgetDesigns.get('index', '')}`). Say *\"Set up the widget designs\"* to create it, "
+            "*\"Extract the brand from <references>\"* for the brand sheet, then *\"Extract the design for <Widget> from <images>\"* per widget "
+            "(the `widget-design` skill)."
+        )
+    return (
+        f"Brand sheet: `{widgetDesigns.get('brand') or '—'}`, the site last checked against it {whenChecked(widgetDesigns['brandCheckedAt'])}. "
+        f"{widgetDesigns['sheets']} of {len(widgetDesigns['widgets'])} catalogue widgets have a design sheet; the widgets were last checked "
+        f"against them {whenChecked(widgetDesigns['lastChecked'])}. Say *\"Check the site against the brand\"* and "
+        "*\"Check the widgets against their designs\"* to run the checks, *\"Extract the brand from <references>\"* and "
+        "*\"Extract the design for <Widget> from <images>\"* to bring the sheets up to date (the `widget-design` skill) — each a "
+        "judgement, so run on request, never by the audit."
+    )
+
+
+def whenChecked(checked: str) -> str:
+    return "never" if checked == NEVER_CHECKED else f"on {checked}"
 
 
 def documentPath(repositoryRoot: Path) -> Path:
