@@ -231,8 +231,10 @@ public partial class ProjectDrawings
         // Refresh on entry: cached drawings render immediately, then update when the
         // background reload lands — so navigating back to this tab never shows stale data.
         DrawingStore.Refresh(ProjectId);
-        // Fetched once per session; the Extract all button only appears once it reports connected.
-        _ = Bluebeam.EnsureLoadedAsync();
+        // Fetched once per session, and only for the roles that can act on it: the status exists to
+        // enable the Extract all button, which only CanManage sees, and reading it is internal-only
+        // (2026-09-19) — an architect or subcontractor reading the register would meet a 403.
+        if (CanManage) _ = Bluebeam.EnsureLoadedAsync();
     }
 
     private async Task ExtractAllAsync()

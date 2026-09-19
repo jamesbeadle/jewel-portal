@@ -74,13 +74,14 @@
   "externalRouteExceptions": {
     "Architect": [
       {
-        "why": "P08 in the permissions matrix: the architect issues drawings and reads revisions.",
+        "why": "P08 in the permissions matrix: the architect issues drawings and reads revisions. The extraction is the same drawing read as data, gated to DrawingReaders since 2026-09-19.",
         "routes": [
           "drawings/{drawingId}",
           "drawings/{drawingId}/revisions",
           "drawings/revisions/{revisionId}/file",
           "projects/{projectId}/drawings",
-          "projects/{projectId}/drawing-folders"
+          "projects/{projectId}/drawing-folders",
+          "drawings/revisions/{revisionId}/extraction"
         ]
       },
       {
@@ -128,13 +129,14 @@
     ],
     "Subcontractor": [
       {
-        "why": "P10: a subcontractor reads drawing revisions for their assigned work.",
+        "why": "P10: a subcontractor reads drawing revisions for their assigned work. The extraction is the same drawing read as data, gated to DrawingReaders since 2026-09-19.",
         "routes": [
           "drawings/{drawingId}",
           "drawings/{drawingId}/revisions",
           "drawings/revisions/{revisionId}/file",
           "projects/{projectId}/drawings",
-          "projects/{projectId}/drawing-folders"
+          "projects/{projectId}/drawing-folders",
+          "drawings/revisions/{revisionId}/extraction"
         ]
       },
       {
