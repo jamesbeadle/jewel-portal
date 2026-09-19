@@ -4,8 +4,7 @@ from __future__ import annotations
 import re
 
 WRITE_VERBS = {"post", "put", "patch", "delete"}
-SCOPE_HELPERS = re.compile(
-    r"ClientScope|SubcontractorScope|ProjectScope|OwnClientId|OwnSubcontractorId|ClientProjects")
+CONSULTS_A_SCOPE = re.compile(r"\w*Scope\.|Owns\w+Async|ClientProjects|OwnClientId|OwnSubcontractorId")
 
 EVERY_ENDPOINT_IS_GATED = "every endpoint is gated"
 EXTERNAL_WRITES_ARE_SCOPED = "an external write is scoped to its own rows"
@@ -43,7 +42,7 @@ def unscopedExternalWrites(inventory: dict, policy: dict, bodies: dict):
                  if not startsWithAny(route, surfaces[role])}
         if not roles or route in openRoutes or not set(endpoint["verbs"]) & WRITE_VERBS:
             continue
-        if SCOPE_HELPERS.search(bodies.get(endpoint["file"], "")):
+        if CONSULTS_A_SCOPE.search(bodies.get(endpoint["file"], "")):
             continue
         yield finding(EXTERNAL_WRITES_ARE_SCOPED, route, endpoint["verbs"],
                       f"{', '.join(sorted(roles))} may write any row, by id", endpoint["file"])
@@ -63,13 +62,18 @@ def correspondence(inventory: dict, policy: dict):
 
 
 def externalReach(inventory: dict, policy: dict):
+    """An external role reaches its own surface, plus the routes the policy names for it. The
+    named routes are the declaration of what is deliberately shared — the rule exists so that a
+    NEW one cannot appear without someone writing it down and saying why."""
+    declared = policy["externalRouteExceptions"]
     for role, prefixes in policy["externalSurfaces"].items():
+        allowed = {route for group in declared.get(role, []) for route in group["routes"]}
         for endpoint in inventory["endpoints"]:
             route = endpoint["route"] or ""
-            if role not in endpoint["roles"] or startsWithAny(route, prefixes):
+            if role not in endpoint["roles"] or startsWithAny(route, prefixes) or route in allowed:
                 continue
-            yield finding(f"{role} stays on its own surface", route, endpoint["verbs"],
-                          f"admits {role}", endpoint["file"])
+            yield finding(f"{role} reaches only what the policy declares", route, endpoint["verbs"],
+                          f"admits {role}, undeclared", endpoint["file"])
 
 
 def connectorDrift(actions: list[dict]):

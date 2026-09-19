@@ -34,6 +34,13 @@ which are scoped by the caller's own identity, and which gates are resolved at r
 `correspondence.mayReach` is deliberately **ahead of the code**: it records the rule as stated
 (2026-09-19), so the check reports the distance still to travel rather than blessing what is there.
 
+`externalRouteExceptions` is where an external role's reach beyond its own portal is written down,
+with the reason — the permissions matrix row that allows it. It is the answer to "which of this is
+purposely shared?". Routes left OUT of it keep failing on purpose: the architect's seven
+mailbox and outbound-email routes are an open question for the directors, not a settled rule, and
+the check should go on saying so until somebody decides. Adding a route here is the deliberate act
+that new external exposure has to pass through.
+
 ## The ratchet
 
 `baseline.json` holds the count of places each rule is broken today. The gate fails when any count
