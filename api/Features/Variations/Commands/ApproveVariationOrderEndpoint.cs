@@ -9,17 +9,20 @@ namespace Jewel.JPMS.Api.Features.Variations.Commands;
 public sealed class ApproveVariationOrderEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly JpmsContext context;
     private readonly ApproveVariationOrderAuthorisation authorisation;
     private readonly ApproveVariationOrderValidation validation;
     private readonly ICommandHandler<ApproveVariationOrder, VariationOrder> handler;
 
     public ApproveVariationOrderEndpoint(
         SignedInUserResolver users,
+        JpmsContext context,
         ApproveVariationOrderAuthorisation authorisation,
         ApproveVariationOrderValidation validation,
         ICommandHandler<ApproveVariationOrder, VariationOrder> handler)
     {
         this.users = users;
+        this.context = context;
         this.authorisation = authorisation;
         this.validation = validation;
         this.handler = handler;
@@ -41,6 +44,8 @@ public sealed class ApproveVariationOrderEndpoint
         var command = body with { VariationOrderId = voId, ApprovedByEmail = signedInUser.Email };
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
+        if (!await VariationOrderScope.IsTheirsToActOnAsync(context, signedInUser, voId, cancellationToken))
+            return new StatusCodeResult(403);
 
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
