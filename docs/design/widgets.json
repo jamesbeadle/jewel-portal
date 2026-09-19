@@ -1,0 +1,6 @@
+{
+  "brand": "docs/design/brand.md",
+  "brandSources": ["docs/ui/open-book-design-rules.md", "jpms/tailwind.config.js", "jpms/DESIGN-SYSTEM.md"],
+  "brandCheckedAt": null,
+  "widgets": {}
+}

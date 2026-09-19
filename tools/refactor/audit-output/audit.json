@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-19T08:51:32+00:00",
-  "kitVersion": "1.4.1",
+  "generatedAt": "2026-09-19T09:24:05+00:00",
+  "kitVersion": "1.5.1",
   "score": {
     "overall": 74.0,
     "groups": [
@@ -315,7 +315,10 @@
       "widgetUsages": 1669,
       "handRolledElements": 669,
       "widgetSlots": 2338,
-      "viewsWithHandRolled": 293
+      "viewsWithHandRolled": 293,
+      "designSheets": 0,
+      "designsLastChecked": "never",
+      "brandCheckedAt": "never"
     },
     "fileAreas": {
       "totalFiles": 5039,
@@ -8535,7 +8538,292 @@
         "widgetUsages": 1669,
         "handRolledElements": 669,
         "widgetSlots": 2338,
-        "viewsWithHandRolled": 293
+        "viewsWithHandRolled": 293,
+        "designSheets": 0,
+        "designsLastChecked": "never",
+        "brandCheckedAt": "never"
+      },
+      "designs": {
+        "index": "docs/design/widgets.json",
+        "isSetUp": true,
+        "brand": "docs/design/brand.md",
+        "brandCheckedAt": "never",
+        "widgets": [
+          {
+            "widget": "Checkbox",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "ConfirmDialog",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "DateText",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "DateTimeText",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "DropdownMenu",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "EmptyState",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "ErrorToast",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "ExportToExcelButton",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "FilterChips",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "FormField",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "InlineConfirm",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "LoadGate",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "MetricStat",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "Modal",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "Money",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "Notice",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "Page",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "PageHeader",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "PageHeading",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "Panel",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "Pill",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "RecordTabBar",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "RecordsTable",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "RichTextEditor",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "SearchInput",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "SearchSelect",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "SectionHeader",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "SortableColumnHeader",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "StatTile",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "TabRow",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "Toolbar",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "ToolbarButton",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "ToolbarDivider",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          },
+          {
+            "widget": "WholeMoney",
+            "design": [],
+            "sheet": "",
+            "standing": "brand only",
+            "checkedAt": "",
+            "checkedAgainst": ""
+          }
+        ],
+        "sheets": 0,
+        "lastChecked": "never"
       },
       "offenders": {
         "handRolled": [

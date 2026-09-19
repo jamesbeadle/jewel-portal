@@ -17,6 +17,47 @@ Written by the code quality check on 2026-09-19 from the views themselves — ne
 | `KeyValueList` | 17 in 17 files | `jpms/Components/DrawingExtractionPanel.razor`, `jpms/Components/ProjectContractPanel.razor`, `jpms/Components/PurchaseOrderSheet.razor`, `jpms/Components/RecordEmailPreviewPanel.razor`, `jpms/Components/RequestAccessView.razor`, `jpms/Components/ValuationStatementViewer.razor` +11 |
 | `PageHeader` | 13 in 10 files | `jpms/App.razor`, `jpms/Components/ProjectDetailView.razor`, `jpms/Components/PurchaseOrderSheet.razor`, `jpms/Components/RequestAccessView.razor`, `jpms/Features/Xero/Allocation/AllocationPageHeader.razor`, `jpms/Pages/ConnectAuthorize.razor` +4 |
 
+## The widgets' designs
+
+Brand sheet: `docs/design/brand.md`, the site last checked against it never. 0 of 34 catalogue widgets have a design sheet; the widgets were last checked against them never. Say *"Check the site against the brand"* and *"Check the widgets against their designs"* to run the checks, *"Extract the brand from <references>"* and *"Extract the design for <Widget> from <images>"* to bring the sheets up to date (the `widget-design` skill) — each a judgement, so run on request, never by the audit.
+
+| Widget | Design | Last checked |
+| --- | --- | --- |
+| `Checkbox` | brand only | — |
+| `ConfirmDialog` | brand only | — |
+| `DateText` | brand only | — |
+| `DateTimeText` | brand only | — |
+| `DropdownMenu` | brand only | — |
+| `EmptyState` | brand only | — |
+| `ErrorToast` | brand only | — |
+| `ExportToExcelButton` | brand only | — |
+| `FilterChips` | brand only | — |
+| `FormField` | brand only | — |
+| `InlineConfirm` | brand only | — |
+| `LoadGate` | brand only | — |
+| `MetricStat` | brand only | — |
+| `Modal` | brand only | — |
+| `Money` | brand only | — |
+| `Notice` | brand only | — |
+| `Page` | brand only | — |
+| `PageHeader` | brand only | — |
+| `PageHeading` | brand only | — |
+| `Panel` | brand only | — |
+| `Pill` | brand only | — |
+| `RecordTabBar` | brand only | — |
+| `RecordsTable` | brand only | — |
+| `RichTextEditor` | brand only | — |
+| `SearchInput` | brand only | — |
+| `SearchSelect` | brand only | — |
+| `SectionHeader` | brand only | — |
+| `SortableColumnHeader` | brand only | — |
+| `StatTile` | brand only | — |
+| `TabRow` | brand only | — |
+| `Toolbar` | brand only | — |
+| `ToolbarButton` | brand only | — |
+| `ToolbarDivider` | brand only | — |
+| `WholeMoney` | brand only | — |
+
 ## Routes
 
 ### `/`

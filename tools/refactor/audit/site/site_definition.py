@@ -8,6 +8,7 @@ from ..source_files import SourceFile, matchesAny
 from .definition import reduceView
 from .definition_kinds import FINDING, WIDGET, Definition, flatten
 from .markup_tree import buildTree
+from .site_designs import designs
 from .site_rows import componentRows, routeRows
 from .vocabulary import vocabularyFor
 
@@ -40,6 +41,11 @@ def definitionOf(view: SourceFile, vocabulary) -> list[Definition]:
     return reduceView(buildTree("\n".join(view.lines)), vocabulary, isCatalogueWidget)
 
 
+def repositoryRootOf(view: SourceFile) -> Path:
+    depth = len(Path(view.relative).parts)
+    return Path(*view.path.parts[: len(view.path.parts) - depth])
+
+
 def check(sourceFiles: list[SourceFile], rules: dict) -> dict:
     settings = rules.get("siteDefinition", {})
     views = [file for file in sourceFiles if matchesAny(file.relative, settings.get("viewGlobs", []))]
@@ -51,13 +57,17 @@ def check(sourceFiles: list[SourceFile], rules: dict) -> dict:
     findings = [row for view in views for row in findingRows(view, definitionsByFile[view.relative])]
     routes = routeRows(views, definitionsByFile, parts, settings)
     usages = sum(widgetUsages(definitions) for definitions in definitionsByFile.values())
+    widgetDesigns = designs(repositoryRootOf(views[0]), settings, sorted(vocabulary.catalogue))
     return {
         "name": NAME,
         "summary": {
             "routes": len(routes), "views": len(views), "siteComponents": len(parts), "catalogue": len(vocabulary.catalogue),
             "widgetUsages": usages, "handRolledElements": len(findings), "widgetSlots": usages + len(findings),
             "viewsWithHandRolled": len({row["file"] for row in findings}),
+            "designSheets": widgetDesigns["sheets"], "designsLastChecked": widgetDesigns["lastChecked"],
+            "brandCheckedAt": widgetDesigns["brandCheckedAt"],
         },
+        "designs": widgetDesigns,
         "offenders": {"handRolled": findings, "byWidget": byWidget(findings)},
         "catalogueNames": sorted(vocabulary.catalogue),
         "routes": routes,
