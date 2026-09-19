@@ -1,4 +1,7 @@
-"""Cuts a view down to the markup the reader walks: no razor comments, no directive lines, nothing after the code section."""
+"""Cuts a view down to the markup the reader walks: no razor comments, no directive lines, nothing after the code section.
+
+Every cut keeps its line breaks, so a position in the markup still says which line of the file it is on.
+"""
 from __future__ import annotations
 
 import re
@@ -11,8 +14,12 @@ DIRECTIVE_LINE = re.compile(
 )
 
 
+def onlyLineBreaksOf(match: re.Match) -> str:
+    return "\n" * match.group(0).count("\n")
+
+
 def markupPortion(text: str) -> str:
-    withoutComments = RAZOR_COMMENT.sub("", text)
+    withoutComments = RAZOR_COMMENT.sub(onlyLineBreaksOf, text)
     codeSection = CODE_SECTION.search(withoutComments)
     markup = withoutComments[: codeSection.start()] if codeSection else withoutComments
     return DIRECTIVE_LINE.sub("", markup)

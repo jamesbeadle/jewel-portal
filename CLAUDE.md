@@ -1,5 +1,5 @@
 <!-- project-process:begin -->
-<!-- project-process kit v1.4.0 — refreshed by bootstrap.sh; edit the kit, not this block -->
+<!-- project-process kit v1.4.1 — refreshed by bootstrap.sh; edit the kit, not this block -->
 
 # How We Work
 

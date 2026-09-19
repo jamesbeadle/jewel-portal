@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-19T08:29:12+00:00",
-  "kitVersion": "1.4.0",
+  "generatedAt": "2026-09-19T08:51:32+00:00",
+  "kitVersion": "1.4.1",
   "score": {
     "overall": 74.0,
     "groups": [
@@ -318,14 +318,14 @@
       "viewsWithHandRolled": 293
     },
     "fileAreas": {
-      "totalFiles": 5021,
+      "totalFiles": 5039,
       "api": 2178,
       "frontend": 1224,
       "contracts": 629,
       "database": 273,
       "connector": 215,
-      "docs": 187,
-      "tooling": 139,
+      "docs": 188,
+      "tooling": 156,
       "tests": 128,
       "infrastructure": 40,
       "worker": 8
@@ -8541,37 +8541,37 @@
         "handRolled": [
           {
             "file": "jpms/App.razor",
-            "line": 14,
+            "line": 18,
             "element": "h1",
             "ownedBy": "PageHeader"
           },
           {
             "file": "jpms/Components/AdminKpiPanel.razor",
-            "line": 10,
+            "line": 14,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/ApprovedUserRow.razor",
-            "line": 25,
+            "line": 38,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ApprovedUserRow.razor",
-            "line": 41,
+            "line": 54,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ApprovedUserRow.razor",
-            "line": 59,
+            "line": 72,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/ApprovedUserRow.razor",
-            "line": 104,
+            "line": 120,
             "element": "input",
             "ownedBy": "FormField"
           },
@@ -8589,19 +8589,19 @@
           },
           {
             "file": "jpms/Components/ClaimProgressDialog.razor",
-            "line": 47,
+            "line": 51,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/ClaimProgressDialog.razor",
-            "line": 49,
+            "line": 53,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ClientCostReferencesModal.razor",
-            "line": 25,
+            "line": 30,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
@@ -8613,163 +8613,163 @@
           },
           {
             "file": "jpms/Components/ConversationComposer.razor",
-            "line": 12,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Components/ConversationComposer.razor",
-            "line": 15,
-            "element": "textarea",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Components/ConversationMessageCard.razor",
-            "line": 24,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Components/CostCentreCostOfSalesModal.razor",
-            "line": 24,
-            "element": "table",
-            "ownedBy": "RecordsTable"
-          },
-          {
-            "file": "jpms/Components/CostCentreCostOfSalesModal.razor",
-            "line": 167,
-            "element": "table",
-            "ownedBy": "RecordsTable"
-          },
-          {
-            "file": "jpms/Components/CostCentreReconciliationModal.razor",
-            "line": 26,
-            "element": "h3",
-            "ownedBy": "SectionHeader"
-          },
-          {
-            "file": "jpms/Components/CostCentreReconciliationModal.razor",
-            "line": 61,
-            "element": "h3",
-            "ownedBy": "SectionHeader"
-          },
-          {
-            "file": "jpms/Components/CostCentreReconciliationModal.razor",
-            "line": 92,
-            "element": "h3",
-            "ownedBy": "SectionHeader"
-          },
-          {
-            "file": "jpms/Components/CostCentreReconciliationModal.razor",
-            "line": 141,
-            "element": "table",
-            "ownedBy": "RecordsTable"
-          },
-          {
-            "file": "jpms/Components/CostCentreSalesLinesModal.razor",
-            "line": 23,
-            "element": "table",
-            "ownedBy": "RecordsTable"
-          },
-          {
-            "file": "jpms/Components/CostCentreSalesLinesModal.razor",
-            "line": 83,
-            "element": "table",
-            "ownedBy": "RecordsTable"
-          },
-          {
-            "file": "jpms/Components/CostCentreWorkOrdersModal.razor",
-            "line": 16,
-            "element": "table",
-            "ownedBy": "RecordsTable"
-          },
-          {
-            "file": "jpms/Components/DirectoryContactForm.razor",
-            "line": 36,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Components/DirectoryContactForm.razor",
-            "line": 41,
-            "element": "select",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Components/DirectoryContactForm.razor",
-            "line": 53,
-            "element": "input",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Components/DrawingDetailsEditor.razor",
-            "line": 9,
-            "element": "h2",
-            "ownedBy": "SectionHeader"
-          },
-          {
-            "file": "jpms/Components/DrawingDetailsEditor.razor",
             "line": 17,
             "element": "button",
             "ownedBy": "Button"
           },
           {
+            "file": "jpms/Components/ConversationComposer.razor",
+            "line": 20,
+            "element": "textarea",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Components/ConversationMessageCard.razor",
+            "line": 29,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Components/CostCentreCostOfSalesModal.razor",
+            "line": 29,
+            "element": "table",
+            "ownedBy": "RecordsTable"
+          },
+          {
+            "file": "jpms/Components/CostCentreCostOfSalesModal.razor",
+            "line": 180,
+            "element": "table",
+            "ownedBy": "RecordsTable"
+          },
+          {
+            "file": "jpms/Components/CostCentreReconciliationModal.razor",
+            "line": 33,
+            "element": "h3",
+            "ownedBy": "SectionHeader"
+          },
+          {
+            "file": "jpms/Components/CostCentreReconciliationModal.razor",
+            "line": 68,
+            "element": "h3",
+            "ownedBy": "SectionHeader"
+          },
+          {
+            "file": "jpms/Components/CostCentreReconciliationModal.razor",
+            "line": 99,
+            "element": "h3",
+            "ownedBy": "SectionHeader"
+          },
+          {
+            "file": "jpms/Components/CostCentreReconciliationModal.razor",
+            "line": 148,
+            "element": "table",
+            "ownedBy": "RecordsTable"
+          },
+          {
+            "file": "jpms/Components/CostCentreSalesLinesModal.razor",
+            "line": 33,
+            "element": "table",
+            "ownedBy": "RecordsTable"
+          },
+          {
+            "file": "jpms/Components/CostCentreSalesLinesModal.razor",
+            "line": 93,
+            "element": "table",
+            "ownedBy": "RecordsTable"
+          },
+          {
+            "file": "jpms/Components/CostCentreWorkOrdersModal.razor",
+            "line": 19,
+            "element": "table",
+            "ownedBy": "RecordsTable"
+          },
+          {
+            "file": "jpms/Components/DirectoryContactForm.razor",
+            "line": 42,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Components/DirectoryContactForm.razor",
+            "line": 47,
+            "element": "select",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Components/DirectoryContactForm.razor",
+            "line": 59,
+            "element": "input",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Components/DrawingDetailsEditor.razor",
+            "line": 10,
+            "element": "h2",
+            "ownedBy": "SectionHeader"
+          },
+          {
+            "file": "jpms/Components/DrawingDetailsEditor.razor",
+            "line": 18,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
             "file": "jpms/Components/DrawingExtractionPanel.razor",
-            "line": 94,
+            "line": 101,
             "element": "dl",
             "ownedBy": "KeyValueList"
           },
           {
             "file": "jpms/Components/DrawingExtractionPanel.razor",
-            "line": 113,
+            "line": 120,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Components/DrawingExtractionPanel.razor",
-            "line": 162,
+            "line": 169,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Components/DrawingExtractionPanel.razor",
-            "line": 205,
+            "line": 212,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Components/DrawingExtractionPanel.razor",
-            "line": 252,
+            "line": 259,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Components/DrawingFolderPicker.razor",
-            "line": 27,
+            "line": 35,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/DrawingFolderPicker.razor",
-            "line": 28,
+            "line": 36,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/DrawingRevisionLabelEditor.razor",
-            "line": 9,
+            "line": 11,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/DrawingRevisionLabelEditor.razor",
-            "line": 18,
+            "line": 20,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/DrawingRevisionLabelEditor.razor",
-            "line": 24,
+            "line": 26,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -8781,49 +8781,49 @@
           },
           {
             "file": "jpms/Components/DrawingRevisionList.razor",
-            "line": 115,
+            "line": 118,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/DrawingUploadForm.razor",
-            "line": 9,
+            "line": 25,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/DrawingUploadForm.razor",
-            "line": 84,
+            "line": 107,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/DrawingUploadForm.razor",
-            "line": 95,
+            "line": 118,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/DrawingUploadForm.razor",
-            "line": 106,
+            "line": 129,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/DrawingsTable.razor",
-            "line": 56,
+            "line": 60,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ExpiringDocumentsPanel.razor",
-            "line": 10,
+            "line": 15,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/ExpiringDocumentsPanel.razor",
-            "line": 31,
+            "line": 36,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
@@ -8835,19 +8835,19 @@
           },
           {
             "file": "jpms/Components/FinancialsTable.razor",
-            "line": 40,
+            "line": 44,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Components/InlineValueEditor.razor",
-            "line": 4,
+            "line": 11,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/InlineValueEditor.razor",
-            "line": 19,
+            "line": 26,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -8865,145 +8865,145 @@
           },
           {
             "file": "jpms/Components/KpiPersonPicker.razor",
-            "line": 12,
+            "line": 19,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/KpiPersonPicker.razor",
-            "line": 21,
+            "line": 28,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/ManualVariationForm.razor",
-            "line": 41,
+            "line": 53,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/ManualWorkOrderModal.razor",
-            "line": 48,
+            "line": 54,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ManualWorkOrderModal.razor",
-            "line": 63,
+            "line": 69,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ManualWorkOrderModal.razor",
-            "line": 115,
+            "line": 124,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/MyDayWorkspace.razor",
-            "line": 31,
+            "line": 37,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/MyDayWorkspace.razor",
-            "line": 105,
+            "line": 111,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/MyDayWorkspace.razor",
-            "line": 119,
+            "line": 125,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/MyDayWorkspace.razor",
-            "line": 126,
+            "line": 132,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/MyTodosPanel.razor",
-            "line": 15,
+            "line": 27,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/MyTodosPanel.razor",
-            "line": 27,
+            "line": 40,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/MyTodosPanel.razor",
-            "line": 49,
+            "line": 63,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/MyTodosPanel.razor",
-            "line": 83,
+            "line": 100,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/NextValuationDateEditor.razor",
-            "line": 113,
+            "line": 120,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/NextValuationsPanel.razor",
-            "line": 9,
+            "line": 17,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/NextValuationsPanel.razor",
-            "line": 26,
+            "line": 34,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Components/OpenRequestsPanel.razor",
-            "line": 10,
+            "line": 18,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/PackageReconciliationSection.razor",
-            "line": 99,
+            "line": 103,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/PackageReconciliationSection.razor",
-            "line": 106,
+            "line": 110,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/PackageReconciliationSection.razor",
-            "line": 111,
+            "line": 115,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/PackageReconciliationSection.razor",
-            "line": 117,
+            "line": 121,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/PackageReconciliationSection.razor",
-            "line": 131,
+            "line": 135,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/PartyContactsEditor.razor",
-            "line": 25,
+            "line": 31,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
@@ -9021,37 +9021,37 @@
           },
           {
             "file": "jpms/Components/ProjectContractPanel.razor",
-            "line": 148,
+            "line": 166,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ProjectContractPanel.razor",
-            "line": 226,
+            "line": 244,
             "element": "dl",
             "ownedBy": "KeyValueList"
           },
           {
             "file": "jpms/Components/ProjectCorrespondencePanel.razor",
-            "line": 13,
+            "line": 22,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/ProjectCorrespondencePanel.razor",
-            "line": 46,
+            "line": 55,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Components/ProjectCorrespondencePanel.razor",
-            "line": 101,
+            "line": 110,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Components/ProjectCorrespondencePanel.razor",
-            "line": 180,
+            "line": 189,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -9069,103 +9069,103 @@
           },
           {
             "file": "jpms/Components/ProjectDetailsEditor.razor",
-            "line": 174,
+            "line": 189,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ProjectMultiSelect.razor",
-            "line": 20,
+            "line": 32,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ProjectPageShell.razor",
-            "line": 34,
+            "line": 37,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ProjectPageShell.razor",
-            "line": 47,
+            "line": 51,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ProjectRetentionPanel.razor",
-            "line": 13,
+            "line": 21,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/ProjectSelect.razor",
-            "line": 16,
+            "line": 22,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ProjectTodoList.razor",
-            "line": 18,
+            "line": 36,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/ProjectTodoList.razor",
-            "line": 30,
+            "line": 49,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ProjectTodoList.razor",
-            "line": 57,
+            "line": 77,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ProjectTodoList.razor",
-            "line": 63,
+            "line": 85,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/ProjectTodoList.razor",
-            "line": 112,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Components/ProjectTodoList.razor",
             "line": 136,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Components/ProjectTodoList.razor",
+            "line": 160,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/ProjectTodoList.razor",
-            "line": 140,
+            "line": 164,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ProjectTodoList.razor",
-            "line": 171,
+            "line": 195,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/ProjectTodoList.razor",
-            "line": 187,
+            "line": 211,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ProjectTodoList.razor",
-            "line": 215,
+            "line": 239,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ProjectTodoList.razor",
-            "line": 235,
+            "line": 259,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -9177,61 +9177,61 @@
           },
           {
             "file": "jpms/Components/PurchaseOrderSheet.razor",
-            "line": 14,
+            "line": 22,
             "element": "h1",
             "ownedBy": "PageHeader"
           },
           {
             "file": "jpms/Components/PurchaseOrderSheet.razor",
-            "line": 15,
+            "line": 23,
             "element": "dl",
             "ownedBy": "KeyValueList"
           },
           {
             "file": "jpms/Components/PurchaseOrderSheet.razor",
-            "line": 57,
+            "line": 69,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Components/PurchaseOrderSheet.razor",
-            "line": 140,
+            "line": 154,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Components/RecipientInput.razor",
-            "line": 21,
+            "line": 34,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/RecipientInput.razor",
-            "line": 26,
+            "line": 39,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/RecipientInput.razor",
-            "line": 42,
+            "line": 56,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ReconciliationPackageBuilderModal.razor",
-            "line": 72,
+            "line": 76,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/ReconciliationPackageBuilderModal.razor",
-            "line": 126,
+            "line": 132,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/RecordEmailPreviewPanel.razor",
-            "line": 17,
+            "line": 27,
             "element": "dl",
             "ownedBy": "KeyValueList"
           },
@@ -9249,13 +9249,7 @@
           },
           {
             "file": "jpms/Components/RequestAttachmentsPanel.razor",
-            "line": 66,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Components/RequestConversation.razor",
-            "line": 140,
+            "line": 76,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -9267,37 +9261,43 @@
           },
           {
             "file": "jpms/Components/RequestConversation.razor",
-            "line": 171,
+            "line": 176,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/RequestConversation.razor",
-            "line": 220,
+            "line": 189,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/RequestConversation.razor",
-            "line": 223,
+            "line": 240,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Components/RequestConversation.razor",
+            "line": 243,
             "element": "textarea",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/RequestForm.razor",
-            "line": 30,
+            "line": 39,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/RequestForm.razor",
-            "line": 104,
+            "line": 115,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/RevokedUserRow.razor",
-            "line": 26,
+            "line": 34,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -9315,19 +9315,19 @@
           },
           {
             "file": "jpms/Components/RoleHome.razor",
-            "line": 72,
+            "line": 94,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/RoleHome.razor",
-            "line": 92,
+            "line": 114,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/RoleSwitcher.razor",
-            "line": 20,
+            "line": 21,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -9339,111 +9339,105 @@
           },
           {
             "file": "jpms/Components/TodoBoard.razor",
-            "line": 20,
+            "line": 55,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/TodoBoard.razor",
-            "line": 34,
+            "line": 69,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/UnpaidXeroInvoicesModal.razor",
-            "line": 33,
+            "line": 39,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Components/UnpaidXeroInvoicesModal.razor",
-            "line": 96,
+            "line": 104,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Components/UsefulInformationPanel.razor",
-            "line": 8,
+            "line": 19,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/UsefulInformationPanel.razor",
-            "line": 37,
+            "line": 48,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/UsefulInformationPanel.razor",
-            "line": 55,
+            "line": 66,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ValuationClaimCorrespondenceSection.razor",
-            "line": 6,
+            "line": 11,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ValuationInvoicesSection.razor",
-            "line": 9,
+            "line": 20,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/ValuationInvoicesSection.razor",
-            "line": 70,
+            "line": 85,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Components/ValuationReportTable.razor",
-            "line": 46,
+            "line": 47,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Components/ValuationStatementViewer.razor",
-            "line": 84,
+            "line": 90,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Components/ValuationStatementViewer.razor",
-            "line": 178,
+            "line": 187,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/ValuationStatementViewer.razor",
-            "line": 179,
+            "line": 188,
             "element": "dl",
             "ownedBy": "KeyValueList"
           },
           {
             "file": "jpms/Components/ValuationStatementViewer.razor",
-            "line": 198,
+            "line": 211,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/VariationApprovePanel.razor",
-            "line": 10,
+            "line": 15,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Components/VariationApprovePanel.razor",
-            "line": 55,
+            "line": 61,
             "element": "input",
             "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Components/VariationApprovePanel.razor",
-            "line": 60,
-            "element": "button",
-            "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/VariationApprovePanel.razor",
@@ -9452,140 +9446,146 @@
             "ownedBy": "Button"
           },
           {
+            "file": "jpms/Components/VariationApprovePanel.razor",
+            "line": 72,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
             "file": "jpms/Components/WorkOrderAttachmentsPanel.razor",
-            "line": 60,
+            "line": 65,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/WorkOrderForm.razor",
-            "line": 100,
+            "line": 114,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/WorkOrderForm.razor",
-            "line": 120,
+            "line": 134,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/WorkOrderForm.razor",
-            "line": 130,
+            "line": 144,
             "element": "textarea",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/WorkOrderForm.razor",
-            "line": 139,
+            "line": 153,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/WorkOrderForm.razor",
-            "line": 157,
+            "line": 171,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/WorkOrderLineRecodeModal.razor",
-            "line": 30,
+            "line": 37,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Components/WorkOrderLineRecodeModal.razor",
-            "line": 34,
+            "line": 41,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/WorkOrderLineRecodeModal.razor",
+            "line": 51,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Components/WorkOrderLinkSplitModal.razor",
+            "line": 29,
+            "element": "select",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Components/WorkOrderLinkSplitModal.razor",
+            "line": 40,
+            "element": "input",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Components/WorkOrderLinkSplitModal.razor",
             "line": 44,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Components/WorkOrderLinkSplitModal.razor",
-            "line": 24,
-            "element": "select",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Components/WorkOrderLinkSplitModal.razor",
-            "line": 35,
-            "element": "input",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Components/WorkOrderLinkSplitModal.razor",
-            "line": 39,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Components/WorkOrderLinkSplitModal.razor",
-            "line": 49,
+            "line": 54,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Cashflow/ForecastCategoryRow.razor",
-            "line": 8,
+            "line": 9,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Cashflow/ForecastProjectLine.razor",
-            "line": 21,
+            "line": 25,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Cashflow/OverheadsRow.razor",
-            "line": 9,
+            "line": 11,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Cashflow/OverheadsRow.razor",
-            "line": 20,
+            "line": 22,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Commercial/ValuationSectionHeader.razor",
-            "line": 5,
+            "line": 6,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Commercial/ValuationSummaryPanel.razor",
-            "line": 7,
+            "line": 9,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Commercial/ValuationSummaryPanel.razor",
-            "line": 8,
+            "line": 10,
             "element": "dl",
             "ownedBy": "KeyValueList"
           },
           {
             "file": "jpms/Features/Cvr/RunningProfitPanel.razor",
-            "line": 42,
+            "line": 66,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Cvr/RunningProfitTable.razor",
-            "line": 6,
+            "line": 13,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Features/Directory/CisVerificationPanel.razor",
-            "line": 21,
+            "line": 27,
             "element": "dl",
             "ownedBy": "KeyValueList"
           },
@@ -9603,43 +9603,43 @@
           },
           {
             "file": "jpms/Features/Directory/XeroImportModal.razor",
-            "line": 57,
+            "line": 64,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Features/Directory/XeroLinkModal.razor",
-            "line": 58,
+            "line": 62,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Features/DocumentControl/DocumentListItem.razor",
-            "line": 5,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/DocumentControl/SourceEmailCard.razor",
             "line": 8,
             "element": "button",
             "ownedBy": "Button"
           },
           {
+            "file": "jpms/Features/DocumentControl/SourceEmailCard.razor",
+            "line": 9,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
             "file": "jpms/Features/Hs/Audits/HsAuditSectionPanel.razor",
-            "line": 17,
+            "line": 22,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Features/Labour/ChaseListPanel.razor",
-            "line": 6,
+            "line": 8,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Features/Labour/ChaseListPanel.razor",
-            "line": 54,
+            "line": 56,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -9657,13 +9657,13 @@
           },
           {
             "file": "jpms/Features/Labour/SettlementScheduleDetail.razor",
-            "line": 7,
+            "line": 9,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Features/Labour/SettlementSchedulesPanel.razor",
-            "line": 51,
+            "line": 57,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
@@ -9687,7 +9687,7 @@
           },
           {
             "file": "jpms/Features/Labour/SiteVisitsDetail.razor",
-            "line": 11,
+            "line": 12,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
@@ -9699,301 +9699,301 @@
           },
           {
             "file": "jpms/Features/Labour/WeekEntryModal.razor",
-            "line": 34,
+            "line": 37,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Features/Labour/WeeklySignOffTable.razor",
-            "line": 12,
-            "element": "table",
-            "ownedBy": "RecordsTable"
-          },
-          {
-            "file": "jpms/Features/Labour/WorkerDetailPanel.razor",
-            "line": 15,
-            "element": "table",
-            "ownedBy": "RecordsTable"
-          },
-          {
-            "file": "jpms/Features/Labour/WorkerPlacementTable.razor",
             "line": 17,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
+            "file": "jpms/Features/Labour/WorkerDetailPanel.razor",
+            "line": 17,
+            "element": "table",
+            "ownedBy": "RecordsTable"
+          },
+          {
+            "file": "jpms/Features/Labour/WorkerPlacementTable.razor",
+            "line": 18,
+            "element": "table",
+            "ownedBy": "RecordsTable"
+          },
+          {
             "file": "jpms/Features/Procurement/DeleteWorkOrderModal.razor",
-            "line": 42,
+            "line": 45,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Procurement/DraftWorkOrdersPanel.razor",
-            "line": 5,
+            "line": 11,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Procurement/DraftWorkOrdersPanel.razor",
-            "line": 46,
+            "line": 52,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Procurement/InvitedSubcontractorsSection.razor",
-            "line": 8,
+            "line": 10,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Procurement/InvitedSubcontractorsSection.razor",
-            "line": 14,
+            "line": 16,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Procurement/InvitedSubcontractorsSection.razor",
-            "line": 19,
+            "line": 21,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Procurement/LineCoverageModal.razor",
-            "line": 23,
+            "line": 25,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Procurement/LineCoverageModal.razor",
-            "line": 40,
+            "line": 42,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Procurement/LocalSubcontractorFinderModal.razor",
-            "line": 35,
+            "line": 43,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Procurement/PackageDetailsEditorModal.razor",
-            "line": 24,
+            "line": 30,
             "element": "textarea",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Procurement/PackageDetailsEditorModal.razor",
-            "line": 46,
+            "line": 52,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Procurement/PackageDetailsEditorModal.razor",
-            "line": 50,
-            "element": "select",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Procurement/PackageDetailsSections.razor",
-            "line": 33,
-            "element": "h3",
-            "ownedBy": "SectionHeader"
-          },
-          {
-            "file": "jpms/Features/Procurement/PackageDetailsSections.razor",
-            "line": 101,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Procurement/PackageDocumentsSection.razor",
-            "line": 8,
-            "element": "h3",
-            "ownedBy": "SectionHeader"
-          },
-          {
-            "file": "jpms/Features/Procurement/PackageDocumentsSection.razor",
-            "line": 16,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Procurement/PackageDocumentsSection.razor",
-            "line": 35,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Procurement/SubcontractorInvitePickerModal.razor",
-            "line": 11,
-            "element": "input",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Procurement/SubcontractorInvitePickerModal.razor",
-            "line": 16,
-            "element": "select",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Procurement/SubcontractorInvitePickerModal.razor",
-            "line": 55,
-            "element": "input",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Procurement/SubcontractorInvitePickerModal.razor",
             "line": 56,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
+            "file": "jpms/Features/Procurement/PackageDetailsSections.razor",
+            "line": 37,
+            "element": "h3",
+            "ownedBy": "SectionHeader"
+          },
+          {
+            "file": "jpms/Features/Procurement/PackageDetailsSections.razor",
+            "line": 105,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Procurement/PackageDocumentsSection.razor",
+            "line": 9,
+            "element": "h3",
+            "ownedBy": "SectionHeader"
+          },
+          {
+            "file": "jpms/Features/Procurement/PackageDocumentsSection.razor",
+            "line": 17,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Procurement/PackageDocumentsSection.razor",
+            "line": 36,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Procurement/SubcontractorInvitePickerModal.razor",
+            "line": 16,
+            "element": "input",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Procurement/SubcontractorInvitePickerModal.razor",
+            "line": 21,
+            "element": "select",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Procurement/SubcontractorInvitePickerModal.razor",
+            "line": 61,
+            "element": "input",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Procurement/SubcontractorInvitePickerModal.razor",
+            "line": 62,
+            "element": "select",
+            "ownedBy": "FormField"
+          },
+          {
             "file": "jpms/Features/Procurement/TenderInviteComposerModal.razor",
-            "line": 82,
+            "line": 87,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Procurement/TenderQuoteComparisonTable.razor",
-            "line": 81,
+            "line": 85,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Procurement/TenderSubmissionModal.razor",
-            "line": 67,
+            "line": 72,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Features/Procurement/TenderSubmissionsSection.razor",
-            "line": 7,
+            "line": 19,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Procurement/TenderSubmissionsSection.razor",
-            "line": 10,
+            "line": 22,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Procurement/TenderSubmissionsSection.razor",
-            "line": 55,
+            "line": 67,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Procurement/TenderSubmissionsSection.razor",
-            "line": 96,
+            "line": 108,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Procurement/TenderSubmissionsSection.razor",
-            "line": 128,
+            "line": 140,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Procurement/UnpricedWorkOrdersList.razor",
-            "line": 4,
+            "line": 6,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Procurement/UnpricedWorkOrdersList.razor",
-            "line": 26,
+            "line": 28,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Procurement/ValuationLinePickerModal.razor",
-            "line": 33,
+            "line": 39,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Procurement/WorkOrderGroupRow.razor",
-            "line": 12,
+            "line": 13,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Procurement/WorkOrderGroupRow.razor",
-            "line": 45,
-            "element": "table",
-            "ownedBy": "RecordsTable"
-          },
-          {
-            "file": "jpms/Features/Procurement/WorkOrderLineRow.razor",
-            "line": 45,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Procurement/WorkOrdersTable.razor",
-            "line": 6,
-            "element": "table",
-            "ownedBy": "RecordsTable"
-          },
-          {
-            "file": "jpms/Features/Progress/ContractorsReports/ContractorsReportAttendanceTable.razor",
-            "line": 28,
-            "element": "input",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Progress/ContractorsReports/ContractorsReportLookAheadEditor.razor",
-            "line": 9,
-            "element": "input",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Progress/ContractorsReports/ContractorsReportLookAheadEditor.razor",
-            "line": 19,
-            "element": "input",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Progress/ContractorsReports/ContractorsReportPreview.razor",
-            "line": 23,
-            "element": "h3",
-            "ownedBy": "SectionHeader"
-          },
-          {
-            "file": "jpms/Features/Progress/SitePhotos/SitePhotoCard.razor",
-            "line": 7,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Requests/RequestHeaderBar.razor",
-            "line": 42,
-            "element": "h2",
-            "ownedBy": "SectionHeader"
-          },
-          {
-            "file": "jpms/Features/Requests/RequestOfficialFormPanel.razor",
-            "line": 8,
-            "element": "h3",
-            "ownedBy": "SectionHeader"
-          },
-          {
-            "file": "jpms/Features/Requests/RequestOfficialFormPanel.razor",
             "line": 46,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
+            "file": "jpms/Features/Procurement/WorkOrderLineRow.razor",
+            "line": 49,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Procurement/WorkOrdersTable.razor",
+            "line": 10,
+            "element": "table",
+            "ownedBy": "RecordsTable"
+          },
+          {
+            "file": "jpms/Features/Progress/ContractorsReports/ContractorsReportAttendanceTable.razor",
+            "line": 29,
+            "element": "input",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Progress/ContractorsReports/ContractorsReportLookAheadEditor.razor",
+            "line": 10,
+            "element": "input",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Progress/ContractorsReports/ContractorsReportLookAheadEditor.razor",
+            "line": 20,
+            "element": "input",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Progress/ContractorsReports/ContractorsReportPreview.razor",
+            "line": 25,
+            "element": "h3",
+            "ownedBy": "SectionHeader"
+          },
+          {
+            "file": "jpms/Features/Progress/SitePhotos/SitePhotoCard.razor",
+            "line": 11,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Requests/RequestHeaderBar.razor",
+            "line": 49,
+            "element": "h2",
+            "ownedBy": "SectionHeader"
+          },
+          {
             "file": "jpms/Features/Requests/RequestOfficialFormPanel.razor",
-            "line": 112,
+            "line": 11,
+            "element": "h3",
+            "ownedBy": "SectionHeader"
+          },
+          {
+            "file": "jpms/Features/Requests/RequestOfficialFormPanel.razor",
+            "line": 49,
+            "element": "table",
+            "ownedBy": "RecordsTable"
+          },
+          {
+            "file": "jpms/Features/Requests/RequestOfficialFormPanel.razor",
+            "line": 115,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Requests/RequestPartyPanel.razor",
-            "line": 5,
+            "line": 7,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
@@ -10005,13 +10005,13 @@
           },
           {
             "file": "jpms/Features/Requests/RequestVariationCard.razor",
-            "line": 5,
+            "line": 7,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Requests/VariationDraftModal.razor",
-            "line": 55,
+            "line": 58,
             "element": "select",
             "ownedBy": "FormField"
           },
@@ -10047,14 +10047,8 @@
           },
           {
             "file": "jpms/Features/Sales/ImagineProposal.razor",
-            "line": 14,
+            "line": 20,
             "element": "h2",
-            "ownedBy": "SectionHeader"
-          },
-          {
-            "file": "jpms/Features/Sales/ImagineProposal.razor",
-            "line": 32,
-            "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
@@ -10065,31 +10059,37 @@
           },
           {
             "file": "jpms/Features/Sales/ImagineProposal.razor",
-            "line": 77,
+            "line": 44,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Sales/ImagineProposal.razor",
-            "line": 98,
+            "line": 83,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Sales/ImagineProposal.razor",
-            "line": 106,
+            "line": 104,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Sales/ImagineProposal.razor",
-            "line": 116,
+            "line": 112,
+            "element": "h3",
+            "ownedBy": "SectionHeader"
+          },
+          {
+            "file": "jpms/Features/Sales/ImagineProposal.razor",
+            "line": 122,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Sales/ImagineProposal.razor",
-            "line": 135,
+            "line": 141,
             "element": "input",
             "ownedBy": "FormField"
           },
@@ -10155,7 +10155,7 @@
           },
           {
             "file": "jpms/Features/Sales/LeadFormModal.razor",
-            "line": 100,
+            "line": 107,
             "element": "input",
             "ownedBy": "FormField"
           },
@@ -10167,25 +10167,25 @@
           },
           {
             "file": "jpms/Features/Sales/ProposalFormModal.razor",
-            "line": 50,
+            "line": 56,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Sales/ProposalFormModal.razor",
-            "line": 74,
+            "line": 80,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Sales/ProposalFormModal.razor",
-            "line": 93,
+            "line": 99,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Sales/ProposalFormModal.razor",
-            "line": 97,
+            "line": 103,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -10245,367 +10245,361 @@
           },
           {
             "file": "jpms/Features/Site/Programme/ProgrammeClaimsWorkbench.razor",
-            "line": 134,
+            "line": 140,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Site/Programme/ProgrammeClaimsWorkbench.razor",
-            "line": 166,
+            "line": 172,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Site/Programme/ProgrammeClaimsWorkbench.razor",
-            "line": 206,
+            "line": 212,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Site/Programme/ProgrammeDraftReview.razor",
-            "line": 78,
+            "line": 83,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Site/Programme/ProgrammeDraftReview.razor",
-            "line": 86,
+            "line": 91,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Site/Programme/ProgrammeExtensionRows.razor",
+            "line": 30,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Site/Programme/ProgrammeGanttChart.razor",
             "line": 27,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Site/Programme/ProgrammeGanttChart.razor",
-            "line": 23,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Site/Programme/ProgrammeGanttChart.razor",
-            "line": 40,
+            "line": 44,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Site/Programme/ProgrammeVariationEffectEditor.razor",
-            "line": 40,
+            "line": 43,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Site/Programme/ProgrammeVariationRows.razor",
-            "line": 27,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Site/Programme/ProgrammeWorkbench.razor",
             "line": 30,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Site/Programme/ProgrammeWorkbench.razor",
-            "line": 177,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Site/Programme/ProgrammeWorkbench.razor",
-            "line": 181,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Site/Programme/RelevantEventsList.razor",
-            "line": 79,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Site/Programme/RelevantEventsList.razor",
-            "line": 86,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Site/Programme/RelevantEventsList.razor",
-            "line": 100,
-            "element": "textarea",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Todos/Detail/TodoEmailCard.razor",
-            "line": 61,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Todos/Detail/TodoEmailCard.razor",
-            "line": 69,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Todos/Detail/TodoFactsPanel.razor",
-            "line": 12,
-            "element": "dl",
-            "ownedBy": "KeyValueList"
-          },
-          {
-            "file": "jpms/Features/Todos/Detail/TodoProgressForm.razor",
-            "line": 18,
-            "element": "textarea",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/AttachmentPicker.razor",
-            "line": 21,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/AttachmentPicker.razor",
-            "line": 34,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/AttachmentPicker.razor",
-            "line": 38,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/AttachmentPicker.razor",
-            "line": 80,
-            "element": "input",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/AttachmentPicker.razor",
-            "line": 109,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/AttachmentPicker.razor",
-            "line": 137,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/AttachmentPicker.razor",
-            "line": 176,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/AttachmentPicker.razor",
-            "line": 206,
-            "element": "input",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/AttachmentPicker.razor",
-            "line": 228,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/MailReplyComposer.razor",
-            "line": 9,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/MailReplyComposer.razor",
-            "line": 28,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/Actions/StageKpiAction.razor",
-            "line": 24,
-            "element": "textarea",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/Actions/StageKpiAction.razor",
             "line": 36,
             "element": "button",
             "ownedBy": "Button"
           },
           {
-            "file": "jpms/Features/Triage/Panels/Actions/StageRequestTransitionAction.razor",
-            "line": 27,
-            "element": "input",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/Actions/StageTodoCompleteAction.razor",
-            "line": 13,
-            "element": "select",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/Actions/StageTodosAction.razor",
-            "line": 10,
+            "file": "jpms/Features/Site/Programme/ProgrammeWorkbench.razor",
+            "line": 184,
             "element": "button",
             "ownedBy": "Button"
           },
           {
-            "file": "jpms/Features/Triage/Panels/Actions/StageTodosAction.razor",
-            "line": 25,
+            "file": "jpms/Features/Site/Programme/ProgrammeWorkbench.razor",
+            "line": 188,
             "element": "button",
             "ownedBy": "Button"
           },
           {
-            "file": "jpms/Features/Triage/Panels/Actions/StageTodosAction.razor",
-            "line": 53,
+            "file": "jpms/Features/Site/Programme/RelevantEventsList.razor",
+            "line": 83,
             "element": "button",
             "ownedBy": "Button"
           },
           {
-            "file": "jpms/Features/Triage/Panels/Actions/StageTodosAction.razor",
-            "line": 75,
+            "file": "jpms/Features/Site/Programme/RelevantEventsList.razor",
+            "line": 90,
             "element": "button",
             "ownedBy": "Button"
           },
           {
-            "file": "jpms/Features/Triage/Panels/Actions/StageVariationDecisionAction.razor",
-            "line": 15,
-            "element": "select",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/Actions/StageVariationDecisionAction.razor",
-            "line": 25,
-            "element": "select",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/Actions/StagedRecordActionEditor.razor",
-            "line": 125,
-            "element": "input",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/Actions/StagedRecordActionEditor.razor",
-            "line": 129,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/Actions/StagedRecordActionEditor.razor",
-            "line": 136,
+            "file": "jpms/Features/Site/Programme/RelevantEventsList.razor",
+            "line": 104,
             "element": "textarea",
             "ownedBy": "FormField"
           },
           {
-            "file": "jpms/Features/Triage/Panels/Actions/StagedRecordActionEditor.razor",
+            "file": "jpms/Features/Todos/Detail/TodoEmailCard.razor",
+            "line": 64,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Todos/Detail/TodoEmailCard.razor",
+            "line": 72,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Todos/Detail/TodoFactsPanel.razor",
+            "line": 14,
+            "element": "dl",
+            "ownedBy": "KeyValueList"
+          },
+          {
+            "file": "jpms/Features/Todos/Detail/TodoProgressForm.razor",
+            "line": 22,
+            "element": "textarea",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Triage/AttachmentPicker.razor",
+            "line": 28,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/AttachmentPicker.razor",
+            "line": 41,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/AttachmentPicker.razor",
+            "line": 45,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/AttachmentPicker.razor",
+            "line": 87,
+            "element": "input",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Triage/AttachmentPicker.razor",
+            "line": 116,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/AttachmentPicker.razor",
             "line": 144,
             "element": "button",
             "ownedBy": "Button"
           },
           {
+            "file": "jpms/Features/Triage/AttachmentPicker.razor",
+            "line": 183,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/AttachmentPicker.razor",
+            "line": 213,
+            "element": "input",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Triage/AttachmentPicker.razor",
+            "line": 235,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/MailReplyComposer.razor",
+            "line": 20,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/MailReplyComposer.razor",
+            "line": 39,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/Actions/StageKpiAction.razor",
+            "line": 31,
+            "element": "textarea",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/Actions/StageKpiAction.razor",
+            "line": 43,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/Actions/StageRequestTransitionAction.razor",
+            "line": 32,
+            "element": "input",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/Actions/StageTodoCompleteAction.razor",
+            "line": 16,
+            "element": "select",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/Actions/StageTodosAction.razor",
+            "line": 14,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/Actions/StageTodosAction.razor",
+            "line": 29,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/Actions/StageTodosAction.razor",
+            "line": 59,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/Actions/StageTodosAction.razor",
+            "line": 81,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/Actions/StageVariationDecisionAction.razor",
+            "line": 19,
+            "element": "select",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/Actions/StageVariationDecisionAction.razor",
+            "line": 29,
+            "element": "select",
+            "ownedBy": "FormField"
+          },
+          {
             "file": "jpms/Features/Triage/Panels/Actions/StagedRecordActionEditor.razor",
-            "line": 163,
+            "line": 130,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Triage/Panels/Actions/StagedRecordActionEditor.razor",
-            "line": 218,
+            "line": 134,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/Actions/StagedRecordActionEditor.razor",
+            "line": 141,
+            "element": "textarea",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/Actions/StagedRecordActionEditor.razor",
+            "line": 149,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/Actions/StagedRecordActionEditor.razor",
+            "line": 168,
+            "element": "input",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/Actions/StagedRecordActionEditor.razor",
+            "line": 225,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Triage/Panels/CategoryRegisterSection.razor",
-            "line": 19,
+            "line": 27,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Triage/Panels/EmailFinder.razor",
-            "line": 7,
+            "line": 17,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Triage/Panels/EmailFinder.razor",
-            "line": 14,
+            "line": 24,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Triage/Panels/KpiTagSection.razor",
-            "line": 12,
+            "line": 20,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Triage/Panels/KpiTagSection.razor",
-            "line": 50,
+            "line": 58,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Triage/Panels/KpiTagSection.razor",
-            "line": 61,
+            "line": 69,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Triage/Panels/KpiTagSection.razor",
-            "line": 67,
+            "line": 75,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Triage/Panels/NewEmailComposerPane.razor",
-            "line": 7,
+            "line": 12,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Triage/Panels/NewEmailComposerPane.razor",
-            "line": 64,
+            "line": 69,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Triage/Panels/OutboxPane.razor",
-            "line": 10,
+            "line": 19,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Triage/Panels/OutboxPane.razor",
-            "line": 40,
+            "line": 49,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Triage/Panels/OutboxPane.razor",
-            "line": 60,
+            "line": 69,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Triage/Panels/OutboxPane.razor",
-            "line": 63,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/PathwayActionsSection.razor",
-            "line": 27,
+            "line": 72,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -10617,301 +10611,307 @@
           },
           {
             "file": "jpms/Features/Triage/Panels/PathwayActionsSection.razor",
-            "line": 57,
+            "line": 64,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Triage/Panels/PathwayActionsSection.razor",
-            "line": 66,
-            "element": "select",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/PathwayPane.razor",
-            "line": 10,
-            "element": "h2",
-            "ownedBy": "SectionHeader"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/PathwayPane.razor",
-            "line": 31,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/PathwayPane.razor",
-            "line": 47,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/PathwayPane.razor",
-            "line": 74,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/PathwayPane.razor",
-            "line": 127,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/PathwayPane.razor",
-            "line": 137,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/PathwayPane.razor",
-            "line": 143,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/PreviewPane.razor",
-            "line": 20,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/RecordAttachmentList.razor",
-            "line": 21,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/RecordCorrespondencePanel.razor",
-            "line": 8,
-            "element": "h3",
-            "ownedBy": "SectionHeader"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/RecordCorrespondencePanel.razor",
-            "line": 31,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/RecordDocumentView.razor",
-            "line": 9,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/RecordDocumentView.razor",
-            "line": 20,
-            "element": "h2",
-            "ownedBy": "SectionHeader"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/RecordExplorerPane.razor",
-            "line": 23,
-            "element": "select",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/RecordExplorerPane.razor",
-            "line": 58,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/RecordLinkSection.razor",
-            "line": 7,
-            "element": "input",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/XeroExplorerPane.razor",
-            "line": 37,
-            "element": "select",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/XeroExplorerPane.razor",
-            "line": 54,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/XeroTransactionView.razor",
-            "line": 8,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/XeroTransactionView.razor",
-            "line": 14,
-            "element": "h2",
-            "ownedBy": "SectionHeader"
-          },
-          {
-            "file": "jpms/Features/Triage/Panels/XeroTransactionView.razor",
-            "line": 55,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Queue/InboxPaneHeader.razor",
-            "line": 15,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Queue/QueueInboxList.razor",
-            "line": 31,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Queue/RecentTriageFold.razor",
-            "line": 10,
-            "element": "h2",
-            "ownedBy": "SectionHeader"
-          },
-          {
-            "file": "jpms/Features/Triage/Queue/ReplyComposerForm.razor",
-            "line": 8,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Queue/ReplyComposerForm.razor",
-            "line": 21,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Queue/TaggedEmailManagePanel.razor",
-            "line": 48,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Queue/TaggedEmailManagePanel.razor",
-            "line": 59,
-            "element": "select",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/Queue/TaggedEmailManagePanel.razor",
-            "line": 69,
-            "element": "select",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/Queue/TaggedEmailManagePanel.razor",
-            "line": 86,
-            "element": "select",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Features/Triage/Queue/TaggedInboxBrowser.razor",
-            "line": 12,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Queue/TaggedInboxBrowser.razor",
-            "line": 22,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Queue/TaggedInboxBrowser.razor",
-            "line": 46,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Queue/TaggedInboxBrowser.razor",
-            "line": 66,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Queue/TriageBar.razor",
             "line": 77,
             "element": "button",
             "ownedBy": "Button"
           },
           {
-            "file": "jpms/Features/Triage/Queue/TriageDecisionRow.razor",
-            "line": 15,
-            "element": "button",
-            "ownedBy": "Button"
+            "file": "jpms/Features/Triage/Panels/PathwayActionsSection.razor",
+            "line": 86,
+            "element": "select",
+            "ownedBy": "FormField"
           },
           {
-            "file": "jpms/Features/Triage/Queue/TriageEmailRow.razor",
-            "line": 5,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Triage/Queue/TriageMessageDetail.razor",
-            "line": 7,
+            "file": "jpms/Features/Triage/Panels/PathwayPane.razor",
+            "line": 31,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
-            "file": "jpms/Features/Triage/Queue/TriageMessageDetail.razor",
-            "line": 47,
+            "file": "jpms/Features/Triage/Panels/PathwayPane.razor",
+            "line": 52,
             "element": "button",
             "ownedBy": "Button"
           },
           {
-            "file": "jpms/Features/Triage/Queue/TriageMessageDetail.razor",
+            "file": "jpms/Features/Triage/Panels/PathwayPane.razor",
             "line": 69,
             "element": "button",
             "ownedBy": "Button"
           },
           {
-            "file": "jpms/Features/Triage/Queue/TriageMessageDetail.razor",
-            "line": 124,
+            "file": "jpms/Features/Triage/Panels/PathwayPane.razor",
+            "line": 96,
             "element": "button",
             "ownedBy": "Button"
           },
           {
-            "file": "jpms/Features/Triage/Queue/TriageMessageDetail.razor",
-            "line": 144,
+            "file": "jpms/Features/Triage/Panels/PathwayPane.razor",
+            "line": 154,
             "element": "button",
             "ownedBy": "Button"
           },
           {
-            "file": "jpms/Features/Triage/Queue/TriageMessageDetail.razor",
-            "line": 160,
+            "file": "jpms/Features/Triage/Panels/PathwayPane.razor",
+            "line": 164,
             "element": "button",
             "ownedBy": "Button"
           },
           {
-            "file": "jpms/Features/Triage/Queue/UnassignedRequestsPanel.razor",
-            "line": 7,
+            "file": "jpms/Features/Triage/Panels/PathwayPane.razor",
+            "line": 170,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/PreviewPane.razor",
+            "line": 24,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/RecordAttachmentList.razor",
+            "line": 25,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/RecordCorrespondencePanel.razor",
+            "line": 13,
+            "element": "h3",
+            "ownedBy": "SectionHeader"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/RecordCorrespondencePanel.razor",
+            "line": 37,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/RecordDocumentView.razor",
+            "line": 14,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/RecordDocumentView.razor",
+            "line": 25,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
-            "file": "jpms/Features/Triage/TodosModal.razor",
-            "line": 11,
+            "file": "jpms/Features/Triage/Panels/RecordExplorerPane.razor",
+            "line": 29,
+            "element": "select",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/RecordExplorerPane.razor",
+            "line": 64,
             "element": "button",
             "ownedBy": "Button"
           },
           {
-            "file": "jpms/Features/Triage/TodosModal.razor",
+            "file": "jpms/Features/Triage/Panels/RecordLinkSection.razor",
+            "line": 13,
+            "element": "input",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/XeroExplorerPane.razor",
+            "line": 41,
+            "element": "select",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/XeroExplorerPane.razor",
+            "line": 58,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/XeroTransactionView.razor",
+            "line": 12,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/XeroTransactionView.razor",
+            "line": 18,
+            "element": "h2",
+            "ownedBy": "SectionHeader"
+          },
+          {
+            "file": "jpms/Features/Triage/Panels/XeroTransactionView.razor",
+            "line": 60,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/InboxPaneHeader.razor",
+            "line": 17,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/QueueInboxList.razor",
+            "line": 36,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/RecentTriageFold.razor",
+            "line": 14,
+            "element": "h2",
+            "ownedBy": "SectionHeader"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/ReplyComposerForm.razor",
+            "line": 13,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/ReplyComposerForm.razor",
             "line": 26,
             "element": "button",
             "ownedBy": "Button"
           },
           {
+            "file": "jpms/Features/Triage/Queue/TaggedEmailManagePanel.razor",
+            "line": 52,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TaggedEmailManagePanel.razor",
+            "line": 67,
+            "element": "select",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TaggedEmailManagePanel.razor",
+            "line": 77,
+            "element": "select",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TaggedEmailManagePanel.razor",
+            "line": 94,
+            "element": "select",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TaggedInboxBrowser.razor",
+            "line": 20,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TaggedInboxBrowser.razor",
+            "line": 33,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TaggedInboxBrowser.razor",
+            "line": 60,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TaggedInboxBrowser.razor",
+            "line": 80,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TriageBar.razor",
+            "line": 104,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TriageDecisionRow.razor",
+            "line": 21,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TriageEmailRow.razor",
+            "line": 7,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TriageMessageDetail.razor",
+            "line": 10,
+            "element": "h2",
+            "ownedBy": "SectionHeader"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TriageMessageDetail.razor",
+            "line": 52,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TriageMessageDetail.razor",
+            "line": 74,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TriageMessageDetail.razor",
+            "line": 130,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TriageMessageDetail.razor",
+            "line": 152,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/TriageMessageDetail.razor",
+            "line": 169,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/Queue/UnassignedRequestsPanel.razor",
+            "line": 9,
+            "element": "h2",
+            "ownedBy": "SectionHeader"
+          },
+          {
             "file": "jpms/Features/Triage/TodosModal.razor",
-            "line": 54,
+            "line": 14,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Triage/TodosModal.razor",
-            "line": 76,
+            "line": 29,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/TodosModal.razor",
+            "line": 57,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Triage/TodosModal.razor",
+            "line": 79,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -10923,103 +10923,103 @@
           },
           {
             "file": "jpms/Features/Variations/ApprovedFiguresPanel.razor",
-            "line": 5,
+            "line": 9,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Variations/StagedBuildUpPanel.razor",
-            "line": 6,
+            "line": 11,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Variations/VariationDocumentPanel.razor",
-            "line": 7,
+            "line": 12,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Variations/VariationHeaderBar.razor",
-            "line": 33,
+            "line": 41,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Variations/VariationLinesTable.razor",
-            "line": 6,
+            "line": 7,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Features/Variations/VariationLinesTable.razor",
-            "line": 10,
+            "line": 11,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Features/WeeklyCashflow/CashflowAddItemRow.razor",
-            "line": 6,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/WeeklyCashflow/CashflowBandSection.razor",
-            "line": 13,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/WeeklyCashflow/CashflowBandSection.razor",
-            "line": 76,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/WeeklyCashflow/CashflowEntryRow.razor",
             "line": 10,
             "element": "button",
             "ownedBy": "Button"
           },
           {
-            "file": "jpms/Features/WeeklyCashflow/CashflowEntryRow.razor",
-            "line": 16,
+            "file": "jpms/Features/WeeklyCashflow/CashflowBandSection.razor",
+            "line": 17,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/WeeklyCashflow/CashflowBandSection.razor",
+            "line": 80,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/WeeklyCashflow/CashflowEntryRow.razor",
-            "line": 34,
+            "line": 12,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/WeeklyCashflow/CashflowEntryRow.razor",
-            "line": 43,
+            "line": 18,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/WeeklyCashflow/CashflowEntryRow.razor",
+            "line": 36,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/WeeklyCashflow/CashflowEntryRow.razor",
+            "line": 45,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/WeeklyCashflow/CashflowGroupRow.razor",
-            "line": 8,
+            "line": 12,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/WeeklyCashflow/CashflowGroupRow.razor",
-            "line": 26,
+            "line": 30,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/WeeklyCashflow/CashflowGroupRow.razor",
-            "line": 34,
+            "line": 38,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/WeeklyCashflow/CashflowItemModal.razor",
-            "line": 57,
+            "line": 59,
             "element": "input",
             "ownedBy": "FormField"
           },
@@ -11031,19 +11031,19 @@
           },
           {
             "file": "jpms/Features/Xero/Allocation/AllocatedSummaryRow.razor",
-            "line": 76,
+            "line": 79,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/AllocatedSummaryRow.razor",
-            "line": 80,
+            "line": 83,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/AllocatedSummaryRow.razor",
-            "line": 85,
+            "line": 88,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -11061,31 +11061,31 @@
           },
           {
             "file": "jpms/Features/Xero/Allocation/AllocationTabBar.razor",
-            "line": 5,
+            "line": 8,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/AllocationTabBar.razor",
-            "line": 11,
+            "line": 14,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/AllocationTabBar.razor",
-            "line": 18,
+            "line": 24,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/AllocationTabBar.razor",
-            "line": 25,
+            "line": 33,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/AllocationTabBar.razor",
-            "line": 32,
+            "line": 40,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -11103,61 +11103,61 @@
           },
           {
             "file": "jpms/Features/Xero/Allocation/DisputeLineModal.razor",
-            "line": 22,
+            "line": 24,
             "element": "textarea",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Xero/Allocation/DisputedLineRow.razor",
-            "line": 27,
+            "line": 33,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/InvoiceViewerActions.razor",
-            "line": 10,
+            "line": 15,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/InvoiceViewerActions.razor",
-            "line": 28,
+            "line": 33,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/InvoiceViewerActions.razor",
-            "line": 40,
+            "line": 45,
             "element": "textarea",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Xero/Allocation/InvoiceViewerActions.razor",
-            "line": 60,
+            "line": 67,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/InvoiceViewerActions.razor",
-            "line": 68,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Features/Xero/Allocation/InvoiceViewerActions.razor",
-            "line": 78,
+            "line": 75,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/InvoiceViewerActions.razor",
             "line": 85,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Xero/Allocation/InvoiceViewerActions.razor",
+            "line": 93,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Xero/Allocation/InvoiceViewerActions.razor",
-            "line": 99,
+            "line": 107,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -11169,31 +11169,31 @@
           },
           {
             "file": "jpms/Features/Xero/Allocation/LabourLineRow.razor",
-            "line": 57,
+            "line": 66,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/LabourSectionStrip.razor",
-            "line": 15,
+            "line": 16,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/LedgerLineIdentityCell.razor",
-            "line": 21,
+            "line": 23,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/MatchedLinesBanner.razor",
-            "line": 11,
+            "line": 13,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/MatchedLinesBanner.razor",
-            "line": 22,
+            "line": 24,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -11211,229 +11211,229 @@
           },
           {
             "file": "jpms/Features/Xero/Allocation/QueueLineRow.razor",
-            "line": 29,
+            "line": 32,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/QueueLineRow.razor",
-            "line": 36,
+            "line": 39,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/Allocation/WorkOrderBillLinesTable.razor",
-            "line": 6,
+            "line": 8,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Features/Xero/Allocation/WorkOrderBillOrderSlices.razor",
-            "line": 5,
+            "line": 9,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Features/Xero/DisputeDiscussionModal.razor",
-            "line": 39,
+            "line": 43,
             "element": "textarea",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Xero/DisputeDiscussionModal.razor",
-            "line": 42,
+            "line": 46,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/InvoiceBillLines.razor",
-            "line": 19,
+            "line": 26,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Features/Xero/InvoiceDocumentPreview.razor",
-            "line": 20,
+            "line": 24,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/SplitEditorForm.razor",
-            "line": 26,
+            "line": 30,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Features/Xero/SplitEditorForm.razor",
-            "line": 30,
+            "line": 34,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Features/Xero/SplitEditorForm.razor",
-            "line": 39,
+            "line": 44,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Layout/SideNav.razor",
-            "line": 20,
+            "line": 31,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Layout/SideNav.razor",
-            "line": 150,
+            "line": 172,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/AdminIntegrations.razor",
-            "line": 96,
+            "line": 101,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/AdminKpis.razor",
-            "line": 85,
+            "line": 94,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/AdminKpis.razor",
-            "line": 191,
+            "line": 200,
             "element": "textarea",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/AdminTrades.razor",
-            "line": 50,
+            "line": 56,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/AdminTrades.razor",
-            "line": 87,
+            "line": 93,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/AgedPayables.razor",
-            "line": 76,
+            "line": 83,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/AgedPayables.razor",
-            "line": 81,
+            "line": 89,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/AgedReceivables.razor",
-            "line": 76,
+            "line": 82,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/AgedReceivables.razor",
-            "line": 81,
+            "line": 88,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/AgentActivityLog.razor",
-            "line": 21,
+            "line": 30,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/AgentActivityLog.razor",
-            "line": 47,
+            "line": 56,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Pages/AiActionsAdmin.razor",
-            "line": 38,
+            "line": 46,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/AiActionsAdmin.razor",
-            "line": 55,
+            "line": 63,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/AiActionsAdmin.razor",
-            "line": 76,
+            "line": 84,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/AiActionsAdmin.razor",
-            "line": 125,
+            "line": 133,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/AiSkillsAdmin.razor",
-            "line": 51,
+            "line": 60,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Pages/AiSkillsAdmin.razor",
-            "line": 127,
+            "line": 136,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/AiSkillsAdmin.razor",
-            "line": 135,
+            "line": 144,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/AiSkillsAdmin.razor",
-            "line": 149,
+            "line": 158,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/AiSkillsAdmin.razor",
-            "line": 176,
+            "line": 185,
             "element": "textarea",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/AiSkillsAdmin.razor",
-            "line": 184,
+            "line": 193,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/AiSkillsAdmin.razor",
-            "line": 196,
+            "line": 205,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/AiSkillsAdmin.razor",
-            "line": 221,
+            "line": 230,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/AiSkillsAdmin.razor",
-            "line": 226,
+            "line": 235,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/AiSkillsAdmin.razor",
-            "line": 231,
+            "line": 240,
             "element": "textarea",
             "ownedBy": "FormField"
           },
@@ -11445,43 +11445,43 @@
           },
           {
             "file": "jpms/Pages/AuditTrail.razor",
-            "line": 24,
+            "line": 34,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/AuditTrail.razor",
-            "line": 28,
+            "line": 38,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/AuditTrail.razor",
-            "line": 41,
-            "element": "select",
-            "ownedBy": "FormField"
-          },
-          {
-            "file": "jpms/Pages/CashForecast.razor",
-            "line": 66,
+            "line": 54,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/CashForecast.razor",
             "line": 103,
+            "element": "select",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Pages/CashForecast.razor",
+            "line": 143,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ClientPortalHome.razor",
-            "line": 47,
+            "line": 49,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ClientPortalHome.razor",
-            "line": 52,
+            "line": 54,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
@@ -11493,7 +11493,7 @@
           },
           {
             "file": "jpms/Pages/ConnectAuthorize.razor",
-            "line": 33,
+            "line": 40,
             "element": "h1",
             "ownedBy": "PageHeader"
           },
@@ -11505,91 +11505,91 @@
           },
           {
             "file": "jpms/Pages/CostCodes.razor",
-            "line": 131,
+            "line": 132,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/CostCodes.razor",
-            "line": 366,
+            "line": 371,
             "element": "textarea",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/CostCodes.razor",
-            "line": 368,
+            "line": 373,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Pages/DocumentControl.razor",
-            "line": 44,
+            "line": 57,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/DocumentControl.razor",
-            "line": 111,
+            "line": 125,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/DocumentControl.razor",
-            "line": 144,
+            "line": 158,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ForgotPassword.razor",
-            "line": 29,
+            "line": 33,
             "element": "h1",
             "ownedBy": "PageHeader"
           },
           {
             "file": "jpms/Pages/ForgotPassword.razor",
-            "line": 35,
+            "line": 39,
             "element": "h1",
             "ownedBy": "PageHeader"
           },
           {
             "file": "jpms/Pages/ForgotPassword.razor",
-            "line": 43,
+            "line": 47,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/Imagine.razor",
-            "line": 25,
+            "line": 34,
             "element": "h1",
             "ownedBy": "PageHeader"
           },
           {
             "file": "jpms/Pages/Imagine.razor",
-            "line": 36,
+            "line": 45,
             "element": "h1",
             "ownedBy": "PageHeader"
           },
           {
             "file": "jpms/Pages/Imagine.razor",
-            "line": 67,
+            "line": 76,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/LabourOverview.razor",
-            "line": 70,
+            "line": 76,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/LabourXeroMapping.razor",
-            "line": 80,
+            "line": 88,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Pages/LabourXeroMapping.razor",
-            "line": 144,
+            "line": 152,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
@@ -11607,79 +11607,79 @@
           },
           {
             "file": "jpms/Pages/PaymentCertificates.razor",
-            "line": 62,
+            "line": 68,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Pages/Policies.razor",
-            "line": 101,
+            "line": 107,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Pages/PortalHome.razor",
-            "line": 67,
+            "line": 70,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/PortalHome.razor",
-            "line": 136,
+            "line": 139,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/PortalHome.razor",
-            "line": 188,
+            "line": 191,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/PortalHome.razor",
-            "line": 252,
+            "line": 255,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/PortalHome.razor",
-            "line": 284,
+            "line": 287,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/PortalHome.razor",
-            "line": 299,
+            "line": 303,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 41,
+            "line": 104,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 94,
+            "line": 161,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectArchitectInstructions.razor",
-            "line": 17,
+            "line": 26,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectArchitectInstructions.razor",
-            "line": 53,
+            "line": 63,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Pages/ProjectArchitectInstructions.razor",
-            "line": 243,
+            "line": 254,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -11691,7 +11691,7 @@
           },
           {
             "file": "jpms/Pages/ProjectBidPackageInviteDetail.razor",
-            "line": 88,
+            "line": 93,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -11703,163 +11703,163 @@
           },
           {
             "file": "jpms/Pages/ProjectBuildingControl.razor",
-            "line": 18,
+            "line": 25,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControl.razor",
-            "line": 37,
+            "line": 45,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControl.razor",
-            "line": 57,
+            "line": 65,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControl.razor",
-            "line": 70,
+            "line": 78,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControl.razor",
-            "line": 77,
+            "line": 85,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControl.razor",
-            "line": 81,
+            "line": 89,
             "element": "dl",
             "ownedBy": "KeyValueList"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControl.razor",
-            "line": 119,
+            "line": 127,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControl.razor",
-            "line": 141,
+            "line": 149,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControl.razor",
-            "line": 155,
+            "line": 163,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControl.razor",
-            "line": 235,
+            "line": 243,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControl.razor",
-            "line": 246,
+            "line": 254,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControl.razor",
-            "line": 312,
+            "line": 320,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControlInspection.razor",
-            "line": 39,
+            "line": 46,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControlInspection.razor",
-            "line": 41,
+            "line": 48,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControlInspection.razor",
-            "line": 105,
+            "line": 112,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControlInspection.razor",
-            "line": 125,
+            "line": 132,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControlInspection.razor",
-            "line": 137,
+            "line": 144,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControlInspection.razor",
-            "line": 162,
+            "line": 169,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControlInspection.razor",
-            "line": 173,
+            "line": 180,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControlInspection.razor",
-            "line": 188,
+            "line": 195,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectBuildingControlInspection.razor",
-            "line": 221,
+            "line": 228,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectCalendar.razor",
-            "line": 73,
+            "line": 81,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectCalendar.razor",
-            "line": 91,
+            "line": 99,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectCalendar.razor",
-            "line": 98,
+            "line": 106,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectCalendar.razor",
-            "line": 111,
+            "line": 119,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectCalendar.razor",
-            "line": 128,
+            "line": 136,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectCalendar.razor",
-            "line": 234,
+            "line": 242,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -11871,97 +11871,97 @@
           },
           {
             "file": "jpms/Pages/ProjectCashflow.razor",
-            "line": 120,
+            "line": 121,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectCashflow.razor",
-            "line": 224,
+            "line": 231,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectCommunications.razor",
-            "line": 20,
+            "line": 35,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectCommunications.razor",
-            "line": 24,
+            "line": 39,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectCommunications.razor",
-            "line": 34,
+            "line": 50,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectCommunications.razor",
-            "line": 40,
+            "line": 56,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectCommunications.razor",
-            "line": 87,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Pages/ProjectCommunications.razor",
-            "line": 154,
-            "element": "button",
-            "ownedBy": "Button"
-          },
-          {
-            "file": "jpms/Pages/ProjectCommunications.razor",
-            "line": 158,
+            "line": 105,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectCommunications.razor",
             "line": 174,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Pages/ProjectCommunications.razor",
+            "line": 178,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Pages/ProjectCommunications.razor",
+            "line": 197,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectCommunications.razor",
-            "line": 190,
+            "line": 213,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectDefectDetail.razor",
-            "line": 49,
+            "line": 58,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectDefectDetail.razor",
-            "line": 90,
+            "line": 99,
             "element": "dl",
             "ownedBy": "KeyValueList"
           },
           {
             "file": "jpms/Pages/ProjectDefects.razor",
-            "line": 35,
+            "line": 43,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectDefects.razor",
-            "line": 144,
+            "line": 152,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectDrawingDetail.razor",
-            "line": 74,
+            "line": 76,
             "element": "select",
             "ownedBy": "FormField"
           },
@@ -11973,7 +11973,7 @@
           },
           {
             "file": "jpms/Pages/ProjectDrawings.razor",
-            "line": 42,
+            "line": 45,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -11997,223 +11997,223 @@
           },
           {
             "file": "jpms/Pages/ProjectFinancials.razor",
-            "line": 163,
+            "line": 164,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectHs.razor",
-            "line": 106,
+            "line": 113,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectInventory.razor",
-            "line": 35,
+            "line": 41,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectInventory.razor",
-            "line": 118,
+            "line": 124,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectLabour.razor",
-            "line": 89,
+            "line": 100,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Pages/ProjectLabour.razor",
-            "line": 137,
+            "line": 148,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectLabour.razor",
-            "line": 263,
+            "line": 275,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectLabour.razor",
-            "line": 290,
+            "line": 303,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectLabour.razor",
-            "line": 323,
+            "line": 337,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectLabour.razor",
-            "line": 358,
+            "line": 372,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectProgramme.razor",
-            "line": 20,
+            "line": 29,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectProgramme.razor",
-            "line": 26,
+            "line": 35,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectProgress.razor",
-            "line": 19,
+            "line": 21,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectProgress.razor",
-            "line": 69,
+            "line": 71,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectProgress.razor",
-            "line": 83,
+            "line": 85,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectProgress.razor",
-            "line": 140,
+            "line": 143,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectProgress.razor",
-            "line": 168,
+            "line": 171,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectReconciliationAudit.razor",
-            "line": 23,
+            "line": 32,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectRequestDetail.razor",
-            "line": 212,
+            "line": 231,
             "element": "textarea",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectRequests.razor",
-            "line": 19,
+            "line": 27,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectRequests.razor",
-            "line": 89,
+            "line": 102,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectRequests.razor",
-            "line": 99,
+            "line": 117,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectRequests.razor",
-            "line": 113,
+            "line": 131,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectSettings.razor",
-            "line": 20,
+            "line": 26,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectSiteInstructions.razor",
-            "line": 35,
+            "line": 43,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectSiteInstructions.razor",
-            "line": 108,
+            "line": 116,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectValuation.razor",
-            "line": 46,
+            "line": 54,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectValuation.razor",
-            "line": 53,
+            "line": 61,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectValuation.razor",
-            "line": 72,
+            "line": 80,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectVariations.razor",
-            "line": 22,
+            "line": 29,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectVariations.razor",
-            "line": 77,
+            "line": 89,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectVariations.razor",
-            "line": 95,
+            "line": 107,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectVariations.razor",
-            "line": 124,
+            "line": 138,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/ProjectVariations.razor",
-            "line": 169,
+            "line": 183,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectVariations.razor",
-            "line": 175,
+            "line": 189,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectVariations.razor",
-            "line": 218,
+            "line": 232,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectVariations.razor",
-            "line": 318,
+            "line": 341,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -12249,55 +12249,55 @@
           },
           {
             "file": "jpms/Pages/ProjectWorkOrderAllocation.razor",
-            "line": 239,
+            "line": 240,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectWorkOrderAllocation.razor",
-            "line": 248,
+            "line": 250,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/ProjectWorkOrderAllocation.razor",
-            "line": 268,
+            "line": 270,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/ProjectWorkOrders.razor",
-            "line": 57,
+            "line": 58,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/Registers.razor",
-            "line": 41,
+            "line": 46,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/Registers.razor",
-            "line": 63,
+            "line": 68,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Pages/Registers.razor",
-            "line": 107,
+            "line": 112,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/Registers.razor",
-            "line": 128,
+            "line": 133,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/Registers.razor",
-            "line": 134,
+            "line": 139,
             "element": "input",
             "ownedBy": "FormField"
           },
@@ -12309,247 +12309,247 @@
           },
           {
             "file": "jpms/Pages/SalesLeads.razor",
-            "line": 56,
+            "line": 67,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/SalesLeads.razor",
-            "line": 63,
+            "line": 74,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/SalesLeads.razor",
-            "line": 83,
+            "line": 94,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Pages/SalesStrategies.razor",
-            "line": 62,
+            "line": 70,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/SetPassword.razor",
-            "line": 31,
+            "line": 35,
             "element": "h1",
             "ownedBy": "PageHeader"
           },
           {
             "file": "jpms/Pages/SetPassword.razor",
-            "line": 45,
+            "line": 49,
             "element": "h1",
             "ownedBy": "PageHeader"
           },
           {
             "file": "jpms/Pages/SetPassword.razor",
-            "line": 75,
+            "line": 79,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/SubcontractorCommunications.razor",
-            "line": 36,
+            "line": 53,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/SubcontractorCommunications.razor",
-            "line": 41,
+            "line": 58,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/SubcontractorCommunications.razor",
-            "line": 71,
+            "line": 89,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/SubcontractorDetail.razor",
-            "line": 100,
+            "line": 103,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/SubcontractorDetail.razor",
-            "line": 103,
+            "line": 106,
             "element": "dl",
             "ownedBy": "KeyValueList"
           },
           {
             "file": "jpms/Pages/SubcontractorDetail.razor",
-            "line": 151,
+            "line": 156,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/SubcontractorDetail.razor",
-            "line": 170,
+            "line": 175,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/SubcontractorDetail.razor",
-            "line": 177,
+            "line": 185,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/SubcontractorDetail.razor",
-            "line": 185,
+            "line": 193,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/SubcontractorDetail.razor",
-            "line": 195,
+            "line": 205,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/SubcontractorDetail.razor",
-            "line": 216,
+            "line": 226,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Pages/SubcontractorDetail.razor",
-            "line": 274,
+            "line": 285,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/SubcontractorDetail.razor",
-            "line": 302,
+            "line": 315,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/Subcontractors.razor",
-            "line": 54,
+            "line": 64,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/Todos.razor",
-            "line": 50,
+            "line": 84,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/Todos.razor",
-            "line": 59,
+            "line": 95,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/Todos.razor",
-            "line": 73,
+            "line": 113,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/Todos.razor",
-            "line": 94,
+            "line": 142,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/Todos.razor",
-            "line": 110,
+            "line": 162,
             "element": "select",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/Todos.razor",
-            "line": 151,
+            "line": 205,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/Todos.razor",
-            "line": 186,
+            "line": 242,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/WeeklyCashflow.razor",
-            "line": 61,
+            "line": 92,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/Workers.razor",
-            "line": 16,
+            "line": 21,
             "element": "h2",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/Workers.razor",
-            "line": 52,
+            "line": 63,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Pages/Workers.razor",
-            "line": 104,
+            "line": 119,
             "element": "h3",
             "ownedBy": "SectionHeader"
           },
           {
             "file": "jpms/Pages/Workers.razor",
-            "line": 121,
+            "line": 136,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Pages/Workers.razor",
-            "line": 187,
+            "line": 205,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/Workers.razor",
-            "line": 214,
+            "line": 240,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/XeroAllocation.razor",
-            "line": 84,
+            "line": 97,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/XeroAllocation.razor",
-            "line": 158,
+            "line": 181,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
           {
             "file": "jpms/Pages/XeroAllocation.razor",
-            "line": 270,
+            "line": 297,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/XeroTransactions.razor",
-            "line": 70,
+            "line": 72,
             "element": "button",
             "ownedBy": "Button"
           },
           {
             "file": "jpms/Pages/XeroTransactions.razor",
-            "line": 87,
+            "line": 89,
             "element": "input",
             "ownedBy": "FormField"
           },
           {
             "file": "jpms/Pages/XeroTransactions.razor",
-            "line": 92,
+            "line": 94,
             "element": "button",
             "ownedBy": "Button"
           }
@@ -16920,14 +16920,14 @@
     "fileAreas": {
       "name": "fileAreas",
       "summary": {
-        "totalFiles": 5021,
+        "totalFiles": 5039,
         "api": 2178,
         "frontend": 1224,
         "contracts": 629,
         "database": 273,
         "connector": 215,
-        "docs": 187,
-        "tooling": 139,
+        "docs": 188,
+        "tooling": 156,
         "tests": 128,
         "infrastructure": 40,
         "worker": 8
@@ -16965,13 +16965,13 @@
         },
         {
           "area": "docs",
-          "files": 187,
+          "files": 188,
           "sourceFiles": 0,
           "sourceLines": 0
         },
         {
           "area": "tooling",
-          "files": 139,
+          "files": 156,
           "sourceFiles": 0,
           "sourceLines": 0
         },

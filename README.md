@@ -161,10 +161,10 @@ Each folder has its own README.
 
 <table><tr><td align="center">
 <strong>Code quality score</strong><h2>74.0%</h2>
-<sub>measured 2026-09-19 · project-process kit 1.4.0</sub>
+<sub>measured 2026-09-19 · project-process kit 1.4.1</sub>
 </td></tr></table>
 
-5,021 files · api 2,178 · frontend 1,224 · contracts 629 · database 273 · connector 215 · docs 187 · tooling 139 · tests 128 · infrastructure 40 · worker 8
+5,039 files · api 2,178 · frontend 1,224 · contracts 629 · database 273 · connector 215 · docs 188 · tooling 156 · tests 128 · infrastructure 40 · worker 8
 
 The site by route: 116 routes, 525 components, 669 pieces of markup written by hand where a widget should be — [`tools/refactor/site-definition.md`](tools/refactor/site-definition.md).
 
@@ -200,7 +200,7 @@ Each element scores 100% with no offenders and falls in a straight line to 0% wh
 </details>
 
 <details>
-<summary><strong>The repository by area: 5,021 files</strong></summary>
+<summary><strong>The repository by area: 5,039 files</strong></summary>
 
 | Area | Files | Of which audited source | Source lines |
 | --- | --- | --- | --- |
@@ -209,12 +209,12 @@ Each element scores 100% with no offenders and falls in a straight line to 0% wh
 | contracts | 629 | 629 | 22,490 |
 | database | 273 | 0 | 0 |
 | connector | 215 | 215 | 24,361 |
-| docs | 187 | 0 | 0 |
-| tooling | 139 | 0 | 0 |
+| docs | 188 | 0 | 0 |
+| tooling | 156 | 0 | 0 |
 | tests | 128 | 0 | 0 |
 | infrastructure | 40 | 0 | 0 |
 | worker | 8 | 8 | 606 |
-| **whole repository** | **5,021** | **4,140** | **276,132** |
+| **whole repository** | **5,039** | **4,140** | **276,132** |
 
 </details>
 

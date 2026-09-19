@@ -1,6 +1,6 @@
 # Refactor audit
 
-Generated 2026-09-19 08:29 UTC.
+Generated 2026-09-19 08:51 UTC.
 
 ## Headline
 
@@ -43,12 +43,12 @@ Each element scores 100% with no offenders and falls in a straight line to 0% wh
 | contracts | 629 | 629 | 22,490 |
 | database | 273 | 0 | 0 |
 | connector | 215 | 215 | 24,361 |
-| docs | 187 | 0 | 0 |
-| tooling | 139 | 0 | 0 |
+| docs | 188 | 0 | 0 |
+| tooling | 156 | 0 | 0 |
 | tests | 128 | 0 | 0 |
 | infrastructure | 40 | 0 | 0 |
 | worker | 8 | 8 | 606 |
-| **whole repository** | **5,021** | **4,140** | **276,132** |
+| **whole repository** | **5,039** | **4,140** | **276,132** |
 
 ## Summary
 
@@ -68,7 +68,7 @@ Each element scores 100% with no offenders and falls in a straight line to 0% wh
 | designPatterns | roleFamilies: 160, predictedFiles: 2350, predictedFilesMissing: 188, entities: 0, entitiesOutOfRange: 0, measurementIsHeuristic: True |
 | inventory | pages: 104, components: 146, orphanComponents: 6, averagePageLines: 191 |
 | siteDefinition | routes: 116, views: 555, siteComponents: 525, catalogue: 34, widgetUsages: 1669, handRolledElements: 669, widgetSlots: 2338, viewsWithHandRolled: 293 |
-| fileAreas | totalFiles: 5021, api: 2178, frontend: 1224, contracts: 629, database: 273, connector: 215, docs: 187, tooling: 139, tests: 128, infrastructure: 40, worker: 8 |
+| fileAreas | totalFiles: 5039, api: 2178, frontend: 1224, contracts: 629, database: 273, connector: 215, docs: 188, tooling: 156, tests: 128, infrastructure: 40, worker: 8 |
 
 ## Against the baseline
 
