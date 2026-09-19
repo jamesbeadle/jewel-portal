@@ -46,7 +46,7 @@ def siteLine(audit: dict) -> list[str]:
         return []
     return [
         f"The site by route: {site['routes']} routes, {site['siteComponents']} components, {site['handRolledElements']:,} pieces of "
-        f"markup written by hand where a widget should be — [`{SITE_PATH}`]({SITE_PATH}).",
+        f"markup written by hand where a widget should be — [`{SITE_PATH}`]({SITE_PATH}), refreshed alone by *\"Run the widget identification\"*.",
         "",
     ]
 

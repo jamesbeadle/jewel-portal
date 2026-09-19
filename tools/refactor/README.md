@@ -1,6 +1,6 @@
 # Refactor pipeline
 
-Measurable, staged refactoring for any repository. Two sentences run it — **"Run the code quality check"** (`.claude/skills/code-quality-check`) and **"Refactor the repo"** (`.claude/skills/refactor-round`) — and everything below is what those skills run. `playbook.md` is the process; `rules.json` is the standard; `audit/` measures compliance; `audit/gate.py` stops regression. This folder is installed and refreshed by the project-process kit (`kit-version` says which version); `rules.json`, `baseline.json`, `baseline-report.md` and `refactor-plan.md` belong to this repository: the kit never overwrites them, and adds to `rules.json` only the blocks a newer kit expects and it lacks.
+Measurable, staged refactoring for any repository. Three sentences run it — **"Run the code quality check"** (`.claude/skills/code-quality-check`), **"Run the widget identification"** (`.claude/skills/widget-identification`, the read-only one) and **"Refactor the repo"** (`.claude/skills/refactor-round`) — and everything below is what those skills run. `playbook.md` is the process; `rules.json` is the standard; `audit/` measures compliance; `audit/gate.py` stops regression. This folder is installed and refreshed by the project-process kit (`kit-version` says which version); `rules.json`, `baseline.json`, `baseline-report.md` and `refactor-plan.md` belong to this repository: the kit never overwrites them, and adds to `rules.json` only the blocks a newer kit expects and it lacks.
 
 ## Run the code quality check
 
@@ -14,9 +14,10 @@ Runs the full audit, scores it, and writes three things: the box at the bottom o
 
 ## The site definition
 
-The quality check also writes `tools/refactor/site-definition.md` — what a user sees at each route, read from the views themselves so it is never stale, in one notation: `a, b` stacked top to bottom · `[ a b ]` side by side · `(3) a` three of them, `(n) a` one per item · `?when: a` shown on a condition · `( a | b )` one or the other · `Widget{ … }` a catalogue widget with its content · `Part=( … )` one of the site's own components opened out · `⚠table→RecordsTable` markup written by hand where the named widget should be. Every component of the site is defined the same way, with how many views use it, and the document opens with the table of what is written by hand, widget by widget. To rewrite it from the last audit alone:
+**"Run the widget identification"** writes `tools/refactor/site-definition.md` and nothing else — no branch, no pull request, no score — and the quality check refreshes the same file on its way. It is what a user sees at each route, read from the views themselves so it is never stale, in one notation: `a, b` stacked top to bottom · `[ a b ]` side by side · `(3) a` three of them, `(n) a` one per item · `?when: a` shown on a condition · `( a | b )` one or the other · `Widget{ … }` a catalogue widget with its content · `Part=( … )` one of the site's own components opened out · `⚠table→RecordsTable` markup written by hand where the named widget should be. Every component of the site is defined the same way, with how many views use it, and the document opens with the table of what is written by hand, widget by widget. The identification is two lines, the fast reading then the document:
 
 ```
+python3 -m tools.refactor.audit.run_audit . --output tools/refactor/audit-output --fast
 python3 -m tools.refactor.audit.site.site_document .
 ```
 

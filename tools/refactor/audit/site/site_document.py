@@ -15,6 +15,7 @@ from .site_tables import componentTable, designTable, handRolledTable
 
 REFACTOR_DIRECTORY = Path("tools") / "refactor"
 DOCUMENT_WHEN_UNSET = "tools/refactor/site-definition.md"
+NOT_MEASURED = "The site definition is not measured: name the shared widgets in rules.json under siteDefinition.catalogue, then read again."
 KEY = (
     "`a, b` stacked top to bottom · `[ a b ]` side by side · `(3) a` three of them, `(n) a` one per item · "
     "`?when: a` shown on a condition · `( a | b )` one or the other · `Widget{ … }` a catalogue widget with its content · "
@@ -38,7 +39,7 @@ def routeSection(row: dict) -> str:
 def renderDocument(site: dict, generatedAt: str) -> str:
     return "\n\n".join([
         "# Site definition",
-        f"Written by the code quality check on {generatedAt[:10]} from the views themselves — never by hand, so it is never stale. "
+        f"Written on {generatedAt[:10]} from the views themselves — by the widget identification or the code quality check, never by hand, so it is never stale. "
         "Each route is what a user sees there, in the widget notation; each component of the site is defined the same way.",
         summaryLine(site["summary"]),
         f"**Notation.** {KEY}",
@@ -94,7 +95,7 @@ def main() -> int:
     repositoryRoot = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
     audit = json.loads((repositoryRoot / REFACTOR_DIRECTORY / "audit-output" / "audit.json").read_text())
     path = writeDocument(repositoryRoot, audit)
-    print(f"Wrote {path.relative_to(repositoryRoot)}." if path else "The site definition is not measured: fill siteDefinition.catalogue in rules.json.")
+    print(f"Wrote {path.relative_to(repositoryRoot)}." if path else NOT_MEASURED)
     return 0
 
 
