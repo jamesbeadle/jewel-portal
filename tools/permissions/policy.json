@@ -1,0 +1,163 @@
+{
+  "correspondence": {
+    "routePattern": "mailbox|/emails|email-draft|email-detail|email-attachment|communications|correspondence|record-emails|compose",
+    "mayReach": [
+      "Admin",
+      "ManagingDirector",
+      "FinanceDirector"
+    ],
+    "why": "Nigel, 2026-09-19: email communications are the managing director's, the finance director's and the administrator's. Declared ahead of the code \u2014 the gates do not yet match, and every route this rule names is a decision still to take."
+  },
+  "externalSurfaces": {
+    "Client": [
+      "client-portal/",
+      "auth/"
+    ],
+    "Subcontractor": [
+      "portal/",
+      "auth/"
+    ],
+    "SiteOperative": [
+      "my/labour/",
+      "auth/"
+    ],
+    "Architect": [
+      "auth/"
+    ]
+  },
+  "openRoutes": [
+    "ping",
+    "version",
+    "auth/login",
+    "auth/logout",
+    "auth/forgot-password",
+    "auth/set-password",
+    "auth/invite/{token}",
+    "oauth/authorize",
+    "oauth/token",
+    "oauth/register",
+    "well-known/oauth-protected-resource/{*rest}",
+    "well-known/oauth-authorization-server/{*rest}",
+    ".well-known/oauth-protected-resource/{*rest}",
+    ".well-known/oauth-authorization-server/{*rest}",
+    "mcp",
+    "api/mcp",
+    "imagine/{token}",
+    "imagine/{token}/images/{imageId}",
+    "imagine/{token}/react",
+    "imagine/{token}/revise",
+    "imagine/{token}/submit",
+    "imagine/{token}/proposal/accept",
+    "imagine/{token}/proposal/decline"
+  ],
+  "callerIsTheScope": [
+    "auth/me",
+    "client-errors",
+    "access-requests",
+    "oauth/approve",
+    "oauth/client-info",
+    "my/policy-sign-offs",
+    "client-portal/",
+    "portal/my/"
+  ],
+  "dynamicGates": [
+    "record-emails/{record}/{recordId}/preview"
+  ],
+  "pagesWithoutARoleCheck": [
+    "/",
+    "/dashboard",
+    "/login",
+    "/set-password",
+    "/forgot-password",
+    "/connect/authorize"
+  ],
+  "externalRouteExceptions": {
+    "Architect": [
+      {
+        "why": "P08 in the permissions matrix: the architect issues drawings and reads revisions.",
+        "routes": [
+          "drawings/{drawingId}",
+          "drawings/{drawingId}/revisions",
+          "drawings/revisions/{revisionId}/file",
+          "projects/{projectId}/drawings",
+          "projects/{projectId}/drawing-folders"
+        ]
+      },
+      {
+        "why": "P08: the architect's instruction is their own instrument, and they sign off RFIs, submittals and variations.",
+        "routes": [
+          "architect-instructions/{instructionId}",
+          "architect-instructions/{instructionId}/file",
+          "architect-instructions/{instructionId}/variations/{variationOrderId}",
+          "projects/{projectId}/architect-instructions",
+          "projects/{projectId}/architect-instructions/import-from-message",
+          "projects/{projectId}/requests",
+          "projects/{projectId}/variation-orders",
+          "projects/{projectId}/variation-requests",
+          "requests/{requestId}",
+          "requests/{requestId}/form",
+          "requests/{requestId}/document",
+          "requests/{requestId}/messages",
+          "requests/{requestId}/recipients",
+          "requests/{requestId}/voq",
+          "requests/{requestId}/attachments",
+          "requests/{requestId}/attachments/drawings",
+          "requests/{requestId}/attachments/{attachmentId}",
+          "requests/{requestId}/attachments/{attachmentId}/file",
+          "variation-orders/{voId}",
+          "variation-orders/{voId}/document",
+          "variation-orders/{voId}/messages"
+        ]
+      },
+      {
+        "why": "P09 defects sign-off is the client's; the architect raises alongside them on close-out.",
+        "routes": [
+          "projects/{projectId}/defects"
+        ]
+      }
+    ],
+    "Client": [
+      {
+        "why": "P09: a variation is ultimately the client's instruction to spend, and defects sign-off is theirs. Scoped to their own projects by VariationOrderScope since 2026-09-19; the defect route is not yet.",
+        "routes": [
+          "variation-orders/{voId}/approve",
+          "variation-orders/{voId}/reject",
+          "projects/{projectId}/defects"
+        ]
+      }
+    ],
+    "Subcontractor": [
+      {
+        "why": "P10: a subcontractor reads drawing revisions for their assigned work.",
+        "routes": [
+          "drawings/{drawingId}",
+          "drawings/{drawingId}/revisions",
+          "drawings/revisions/{revisionId}/file",
+          "projects/{projectId}/drawings",
+          "projects/{projectId}/drawing-folders"
+        ]
+      },
+      {
+        "why": "P10: the tender response is the subcontractor's own, and they raise and answer questions on the work.",
+        "routes": [
+          "bid-packages/{bidPackageId}/quotes",
+          "quotes/{quoteId}",
+          "projects/{projectId}/requests",
+          "requests/{requestId}/messages"
+        ]
+      }
+    ],
+    "_undeclaredOnPurpose": {
+      "why": "Left OUT of the lists above so the check keeps reporting them: an external role staging, sending or reading mail from the shared projects mailbox is an open question for the directors (permission check, 2026-09-19), not a settled rule.",
+      "routes": [
+        "mailbox/drafts/delete",
+        "requests/email-drafts",
+        "requests/{requestId}/email-draft",
+        "requests/{requestId}/email-draft/reply",
+        "requests/{requestId}/document/send",
+        "requests/{requestId}/messages/email-attachment",
+        "requests/{requestId}/messages/email-detail"
+      ]
+    }
+  }
+}
