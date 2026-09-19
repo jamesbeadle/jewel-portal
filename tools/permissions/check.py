@@ -26,8 +26,12 @@ RULES_IN_REPORT_ORDER = [
 FINDINGS_SHOWN_PER_RULE = 12
 
 
-def readPolicy(repositoryRoot: Path) -> dict:
-    return json.loads((repositoryRoot / "tools/permissions/policy.json").read_text())
+def readPolicy(repositoryRoot: Path, stated: str | None) -> dict:
+    """The policy travels with the tool, not with the tree being read — `--policy` lets one
+    checkout measure another, which is how a branch that predates the tool is measured at all."""
+    here = Path(__file__).parent / "policy.json"
+    chosen = Path(stated) if stated else (repositoryRoot / "tools/permissions/policy.json")
+    return json.loads((chosen if chosen.exists() else here).read_text())
 
 
 def findingsFor(model: dict, policy: dict, repositoryRoot: Path) -> list[dict]:
@@ -84,15 +88,20 @@ def writeBaseline(destination: Path, model: dict, findings: list[dict]) -> None:
     }, indent=1) + "\n")
 
 
+def argumentAfter(flag: str) -> str | None:
+    return sys.argv[sys.argv.index(flag) + 1] if flag in sys.argv else None
+
+
 def main() -> int:
     repositoryRoot = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
     model = inventory.build(repositoryRoot)
-    findings = findingsFor(model, readPolicy(repositoryRoot), repositoryRoot)
+    findings = findingsFor(model, readPolicy(repositoryRoot, argumentAfter("--policy")),
+                           repositoryRoot)
     report(model, findings)
-    if "--json" in sys.argv:
-        writeJson(Path(sys.argv[sys.argv.index("--json") + 1]), model, findings)
-    if "--baseline" in sys.argv:
-        writeBaseline(Path(sys.argv[sys.argv.index("--baseline") + 1]), model, findings)
+    if argumentAfter("--json"):
+        writeJson(Path(argumentAfter("--json")), model, findings)
+    if argumentAfter("--baseline"):
+        writeBaseline(Path(argumentAfter("--baseline")), model, findings)
     return 0
 
 
