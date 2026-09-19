@@ -93,3 +93,6 @@ nuget-cache.tgz*
 
 # The plan's machine copy is 27 MB and is rewritten by every audit; the readable plan is refactor-plan.md
 tools/refactor/audit-output/refactor-plan.json
+
+# The permission check's working reading — the committed artefact is baseline.json alone.
+tools/permissions/permission-check.json

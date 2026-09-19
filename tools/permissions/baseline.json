@@ -1,0 +1,31 @@
+{
+ "summaries": {
+  "every endpoint is gated": 2,
+  "an external write is scoped to its own rows": 24,
+  "correspondence reaches only the declared roles": 43,
+  "Client stays on its own surface": 3,
+  "Subcontractor stays on its own surface": 9,
+  "SiteOperative stays on its own surface": 0,
+  "Architect stays on its own surface": 43,
+  "the connector offers no more than the gate allows": 0,
+  "a page states who may open it": 84
+ },
+ "reachByRole": {
+  "Admin": 623,
+  "ManagingDirector": 595,
+  "FinanceDirector": 446,
+  "ProjectManager": 519,
+  "QuantitySurveyor": 331,
+  "SiteManager": 249,
+  "HealthSafetyOfficer": 175,
+  "OfficeComplianceCoordinator": 248,
+  "Architect": 45,
+  "Client": 5,
+  "Subcontractor": 11,
+  "Foreman": 172,
+  "SiteOperative": 6,
+  "Accounts": 158,
+  "OfficeAdmin": 243,
+  "SalesMarketing": 263
+ }
+}

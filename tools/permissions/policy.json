@@ -1,0 +1,34 @@
+{
+  "correspondence": {
+    "routePattern": "mailbox|/emails|email-draft|email-detail|email-attachment|communications|correspondence|record-emails|compose",
+    "mayReach": ["Admin", "ManagingDirector", "FinanceDirector"],
+    "why": "Nigel, 2026-09-19: email communications are the managing director's, the finance director's and the administrator's. Declared ahead of the code — the gates do not yet match, and every route this rule names is a decision still to take."
+  },
+  "externalSurfaces": {
+    "Client": ["client-portal/", "auth/"],
+    "Subcontractor": ["portal/", "auth/"],
+    "SiteOperative": ["my/labour/", "auth/"],
+    "Architect": ["auth/"]
+  },
+  "openRoutes": [
+    "ping", "version",
+    "auth/login", "auth/logout", "auth/forgot-password", "auth/set-password", "auth/invite/{token}",
+    "oauth/authorize", "oauth/token", "oauth/register",
+    "well-known/oauth-protected-resource/{*rest}", "well-known/oauth-authorization-server/{*rest}",
+    ".well-known/oauth-protected-resource/{*rest}", ".well-known/oauth-authorization-server/{*rest}",
+    "mcp", "api/mcp",
+    "imagine/{token}", "imagine/{token}/images/{imageId}", "imagine/{token}/react",
+    "imagine/{token}/revise", "imagine/{token}/submit",
+    "imagine/{token}/proposal/accept", "imagine/{token}/proposal/decline"
+  ],
+  "callerIsTheScope": [
+    "auth/me", "client-errors", "access-requests", "oauth/approve", "oauth/client-info",
+    "my/policy-sign-offs", "client-portal/", "portal/my/"
+  ],
+  "dynamicGates": [
+    "record-emails/{record}/{recordId}/preview"
+  ],
+  "pagesWithoutARoleCheck": [
+    "/", "/dashboard", "/login", "/set-password", "/forgot-password", "/connect/authorize"
+  ]
+}

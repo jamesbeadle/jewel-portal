@@ -1,0 +1,54 @@
+# The system-wide permission check
+
+Three doors reach the same data — the **API**, the **Blazor UI** and the **MCP connector** — and
+each declares permissions in its own vocabulary. This check resolves all three to `Role` names and
+reports every place they disagree with `policy.json`.
+
+    python3 -m tools.permissions.check .                      # the reading
+    python3 -m tools.permissions.check . --json tools/permissions/permission-check.json
+    python3 -m tools.permissions.check . --baseline tools/permissions/baseline.json
+    python3 -m tools.permissions.gate tools/permissions/baseline.json tools/permissions/permission-check.json
+
+It is read-only. It writes no source file, needs no database and no .NET SDK.
+
+## What it reads
+
+| Surface | Read from | Resolved to |
+|---|---|---|
+| API | every `[HttpTrigger]` in `api/**` | route + verbs → the roles its gate admits |
+| UI | every `@page` in `jpms/**` | route → its `Page CanAccess` check, if it has one |
+| Connector | `AiTool` and `AiAction` in `api/Features/Ai/Tools/**` | `VisibleTo` versus the roles its `AuthorisationType` admits |
+
+A gate is followed through all four shapes the codebase uses: an inline
+`SomeRoles.Set.IncludesAny(user.Roles)`, `AdminGate.Allows(user)`, an injected `*Authorisation`
+field, and one gate delegating to another. Resolution follows private helper methods, partial
+classes split across files, and expression-bodied members — an endpoint whose gate sits in a
+private `Gate(request)` helper is not a hole, and must not be reported as one.
+
+## policy.json is the declared truth
+
+The policy is written in the business's words and reviewed like a document. It says who may reach
+correspondence, which route prefixes each external role is confined to, which routes may be open,
+which are scoped by the caller's own identity, and which gates are resolved at run time.
+
+`correspondence.mayReach` is deliberately **ahead of the code**: it records the rule as stated
+(2026-09-19), so the check reports the distance still to travel rather than blessing what is there.
+
+## The ratchet
+
+`baseline.json` holds the count of places each rule is broken today. The gate fails when any count
+goes up, so the numbers can only come down. A new endpoint without a gate fails before it merges
+rather than at the next audit.
+
+## Before trusting a change to this tool
+
+It has been wrong, confidently, in ways that are easy to repeat:
+
+- **Mask comments and string literals before reading structure.** `"…the audit record of why."`
+  inside a validation message parsed as a type declaration named `of`, whose body then carried one
+  file's gates into another file's answer — and reported that a Client could move timesheets.
+- **Never shadow a parameter with a loop variable.** One such shadow silently disabled type-local
+  role-set lookups for a whole class of gates.
+
+After changing the resolver, draw a sample of endpoints at random and read their gates by hand. A
+checker that is quietly wrong is worse than no checker, because its findings are believed.
