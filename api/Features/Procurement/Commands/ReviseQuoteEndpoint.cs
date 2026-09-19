@@ -5,13 +5,14 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 public sealed class ReviseQuoteEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly JpmsContext context;
     private readonly ReviseQuoteAuthorisation authorisation;
     private readonly ReviseQuoteValidation validation;
     private readonly ICommandHandler<ReviseQuote, Quote> handler;
 
-    public ReviseQuoteEndpoint(SignedInUserResolver users, ReviseQuoteAuthorisation authorisation, ReviseQuoteValidation validation, ICommandHandler<ReviseQuote, Quote> handler)
+    public ReviseQuoteEndpoint(SignedInUserResolver users, JpmsContext context, ReviseQuoteAuthorisation authorisation, ReviseQuoteValidation validation, ICommandHandler<ReviseQuote, Quote> handler)
     {
-        this.users = users; this.authorisation = authorisation; this.validation = validation; this.handler = handler;
+        this.users = users; this.context = context; this.authorisation = authorisation; this.validation = validation; this.handler = handler;
     }
 
     [Function(nameof(ReviseQuote))]
@@ -27,6 +28,9 @@ public sealed class ReviseQuoteEndpoint
         if (command.QuoteId != quoteId) return new BadRequestObjectResult("Route quoteId does not match body.");
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
+        if (!await QuoteScope.MayReviseQuoteAsync(context, signedInUser, quoteId,
+                request.HttpContext.RequestAborted))
+            return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 
