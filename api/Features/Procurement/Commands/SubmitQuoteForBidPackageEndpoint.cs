@@ -5,13 +5,14 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 public sealed class SubmitQuoteForBidPackageEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly JpmsContext context;
     private readonly SubmitQuoteForBidPackageAuthorisation authorisation;
     private readonly SubmitQuoteForBidPackageValidation validation;
     private readonly ICommandHandler<SubmitQuoteForBidPackage, Quote> handler;
 
-    public SubmitQuoteForBidPackageEndpoint(SignedInUserResolver users, SubmitQuoteForBidPackageAuthorisation authorisation, SubmitQuoteForBidPackageValidation validation, ICommandHandler<SubmitQuoteForBidPackage, Quote> handler)
+    public SubmitQuoteForBidPackageEndpoint(SignedInUserResolver users, JpmsContext context, SubmitQuoteForBidPackageAuthorisation authorisation, SubmitQuoteForBidPackageValidation validation, ICommandHandler<SubmitQuoteForBidPackage, Quote> handler)
     {
-        this.users = users; this.authorisation = authorisation; this.validation = validation; this.handler = handler;
+        this.users = users; this.context = context; this.authorisation = authorisation; this.validation = validation; this.handler = handler;
     }
 
     [Function(nameof(SubmitQuoteForBidPackage))]
@@ -27,6 +28,9 @@ public sealed class SubmitQuoteForBidPackageEndpoint
         if (command.BidPackageId != bidPackageId) return new BadRequestObjectResult("Route bidPackageId does not match body.");
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
+        if (!await QuoteScope.MayPriceBidPackageAsync(context, signedInUser, bidPackageId,
+                command.SubcontractorId, request.HttpContext.RequestAborted))
+            return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 

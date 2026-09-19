@@ -26,6 +26,11 @@ internal static class ClientProjects
             .AsNoTracking()
             .Where(order => order.Status != (int)VariationOrderStatus.Quoting);
 
+    public static async Task<bool> OwnsProjectAsync(
+        JpmsContext context, string clientId, string projectId, CancellationToken cancellationToken) =>
+        await For(context, clientId)
+            .AnyAsync(project => project.ProjectId == projectId, cancellationToken);
+
     // A merged-away request is gone from the client's view everywhere, not just the list —
     // its surviving twin carries the conversation on.
     public static async Task<bool> OwnsRequestAsync(
