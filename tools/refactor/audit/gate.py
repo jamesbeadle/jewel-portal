@@ -26,6 +26,7 @@ RATCHETED_FIGURES = [
     ("conditions", "tangledConditionLines"),
     ("conditions", "literalComparisonLines"),
     ("designPatterns", "predictedFilesMissing"),
+    ("siteDefinition", "handRolledElements"),
 ]
 
 

@@ -18,12 +18,13 @@ from .checks import (
     function_names, function_shape, magic_values, naming, orphans, prose,
 )
 from .inventory import file_areas, pages_and_widgets
+from .site import site_definition
 from .score.calculate import calculate
 from .source_files import loadRules, resolveSourceFiles
 
 FILE_CHECKS = [
     file_length, function_shape, function_names, accessor_names, naming, comments, magic_values,
-    prose, conditions, orphans, design_patterns, pages_and_widgets,
+    prose, conditions, orphans, design_patterns, pages_and_widgets, site_definition,
 ]
 NOT_MEASURED = {"name": "duplication", "summary": {"skipped": "--fast reading with no baseline to carry from"}, "offenders": []}
 

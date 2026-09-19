@@ -33,10 +33,10 @@ def blockTable(target: dict) -> str:
 
 
 def functionTable(target: dict) -> str:
-    rows = ["| Function | Line | Lines | Used by other files | Also declared in |", "| --- | --- | --- | --- | --- |"]
+    rows = ["| Function | Line | Lines | Imported by | Same body also in |", "| --- | --- | --- | --- | --- |"]
     rows += [
         f"| {function['name']} | {function['line']} | {function['lines']} | "
-        f"{shortList(function['usedByOtherFiles'])} | {shortList(function['alsoDeclaredIn'])} |"
+        f"{shortList(function['importedBy'])} | {shortList(function['sameBodyIn'])} |"
         for function in target["functions"]
     ]
     return "\n".join(rows)

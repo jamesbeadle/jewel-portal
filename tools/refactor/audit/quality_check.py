@@ -11,6 +11,7 @@ from pathlib import Path
 from .plan import writePlan
 from .readme_box import writeBox
 from .run_audit import audit
+from .site.site_document import writeDocument
 
 OUTPUT_DIRECTORY = Path("tools") / "refactor" / "audit-output"
 
@@ -22,7 +23,10 @@ def main() -> int:
     auditPayload = json.loads((outputDirectory / "audit.json").read_text())
     plan = writePlan(repositoryRoot, auditPayload)
     writeBox(repositoryRoot / "README.md", auditPayload, plan["steps"])
+    sitePath = writeDocument(repositoryRoot, auditPayload)
     print(f"The score box is at the bottom of README.md; the {len(plan['steps'])}-step plan is in tools/refactor/refactor-plan.md.")
+    if sitePath:
+        print(f"The site definition is in {sitePath.relative_to(repositoryRoot)}.")
     return 0
 
 

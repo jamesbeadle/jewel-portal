@@ -14,6 +14,7 @@ from .worklist.render import orderedSteps
 BOX_START, BOX_END = "<!-- code-quality:start -->", "<!-- code-quality:end -->"
 STEPS_IN_THE_BOX = 10
 PLAN_PATH = "tools/refactor/refactor-plan.md"
+SITE_PATH = "tools/refactor/site-definition.md"
 EXISTING_BOX = re.compile(re.escape(BOX_START) + r".*?" + re.escape(BOX_END) + r"\n?", re.DOTALL)
 
 
@@ -39,6 +40,17 @@ def scoreBox(audit: dict) -> list[str]:
     ]
 
 
+def siteLine(audit: dict) -> list[str]:
+    site = audit["summaries"].get("siteDefinition", {})
+    if "routes" not in site:
+        return []
+    return [
+        f"The site by route: {site['routes']} routes, {site['siteComponents']} components, {site['handRolledElements']:,} pieces of "
+        f"markup written by hand where a widget should be — [`{SITE_PATH}`]({SITE_PATH}).",
+        "",
+    ]
+
+
 def renderBox(audit: dict, steps: list[dict]) -> str:
     score = audit["score"]
     fileAreas = audit["details"]["fileAreas"]
@@ -50,6 +62,7 @@ def renderBox(audit: dict, steps: list[dict]) -> str:
         *scoreBox(audit),
         areasLine(fileAreas),
         "",
+        *siteLine(audit),
         *expandable(f"How the {percentage(score['overall'])} is made up", [breakdownTable(score), "", derivation()]),
         *expandable(f"The repository by area: {totalFiles:,} files", [areasTable(fileAreas)]),
         *expandable(f"The refactoring plan: {len(steps)} steps, in order", planSection(steps)),

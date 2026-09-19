@@ -11,7 +11,7 @@ from .score.breakdown import breakdownTable, derivation, percentage
 
 SUMMARY_ORDER = [
     "fileLength", "functionShape", "functionNames", "accessorNames", "duplication", "naming", "comments",
-    "magicValues", "prose", "conditions", "orphans", "designPatterns", "inventory", "fileAreas",
+    "magicValues", "prose", "conditions", "orphans", "designPatterns", "inventory", "siteDefinition", "fileAreas",
 ]
 KIT_VERSION_FILE = Path("tools") / "refactor" / "kit-version"
 

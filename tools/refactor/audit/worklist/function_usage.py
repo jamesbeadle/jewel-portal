@@ -1,4 +1,10 @@
-"""Where each function is declared and which files use it: the facts behind 'is this the right home?'."""
+"""Where each function is declared and which files import it: the facts behind 'is this the right home?'.
+
+Two functions are the same function when their bodies are the same, not when their names are: sixteen
+components each with their own onSubmit are sixteen functions, and only a body repeated word for word in
+several files is one function waiting for a home. Likewise a file uses a function only when it imports it
+from the file that declares it; another file merely containing the same word is not a caller.
+"""
 from __future__ import annotations
 
 import re
@@ -8,35 +14,53 @@ from ..declarations import DeclaredFunction, declaredFunctions
 from ..source_files import SourceFile
 
 IDENTIFIER = re.compile(r"[A-Za-z_]\w*")
+IMPORT = re.compile(r"import\s+(?:type\s+)?([^;]*?)\s+from\s+['\"]([^'\"]+)['\"]", re.DOTALL)
+SOURCE_EXTENSION = re.compile(r"\.(?:svelte|tsx?|jsx?|mjs)$")
+
+
+def moduleName(path: str) -> str:
+    return SOURCE_EXTENSION.sub("", path.rsplit("/", 1)[-1])
+
+
+def importedNames(sourceFile: SourceFile) -> dict[str, set[str]]:
+    imported: dict[str, set[str]] = defaultdict(set)
+    for names, modulePath in IMPORT.findall("\n".join(sourceFile.lines)):
+        imported[moduleName(modulePath)].update(IDENTIFIER.findall(names))
+    return imported
 
 
 class FunctionUsage:
     def __init__(self, sourceFiles: list[SourceFile]):
         self.functionsByFile = {sourceFile.relative: declaredFunctions(sourceFile) for sourceFile in sourceFiles}
-        declaredNames = {function.name for functions in self.functionsByFile.values() for function in functions if function.name}
-        self.filesDeclaring: dict[str, set[str]] = defaultdict(set)
-        self.filesMentioning: dict[str, set[str]] = defaultdict(set)
+        self.functionsByBody: dict[str, list[DeclaredFunction]] = defaultdict(list)
+        self.importsByFile = {sourceFile.relative: importedNames(sourceFile) for sourceFile in sourceFiles}
         for file, functions in self.functionsByFile.items():
             for function in functions:
-                self.filesDeclaring[function.name].add(file)
-        for sourceFile in sourceFiles:
-            mentioned = set(IDENTIFIER.findall("\n".join(sourceFile.lines))) & declaredNames
-            for name in mentioned:
-                self.filesMentioning[name].add(sourceFile.relative)
+                if function.bodyFingerprint:
+                    self.functionsByBody[function.bodyFingerprint].append(function)
 
-    def usedByOtherFiles(self, function: DeclaredFunction) -> list[str]:
-        return sorted(self.filesMentioning[function.name] - self.filesDeclaring[function.name])
+    def importedBy(self, function: DeclaredFunction) -> list[str]:
+        module = moduleName(function.file)
+        return sorted(
+            file for file, imported in self.importsByFile.items()
+            if file != function.file and function.name in imported.get(module, set())
+        )
 
-    def alsoDeclaredIn(self, function: DeclaredFunction) -> list[str]:
-        return sorted(self.filesDeclaring[function.name] - {function.file})
+    def sameBodyIn(self, function: DeclaredFunction) -> list[str]:
+        twins = self.functionsByBody.get(function.bodyFingerprint, [])
+        return sorted({twin.file for twin in twins} - {function.file})
 
-    def declaredMoreThanOnce(self) -> list[dict]:
+    def repeatedBodies(self) -> list[dict]:
         repeated = [
-            {"name": name, "declaredIn": sorted(files)}
-            for name, files in self.filesDeclaring.items()
-            if name and len(files) > 1
+            {
+                "name": " / ".join(sorted({function.name for function in functions})),
+                "lines": functions[0].lines,
+                "declaredIn": sorted({function.file for function in functions}),
+            }
+            for functions in self.functionsByBody.values()
+            if len({function.file for function in functions}) > 1
         ]
-        return sorted(repeated, key=lambda row: len(row["declaredIn"]), reverse=True)
+        return sorted(repeated, key=lambda row: len(row["declaredIn"]) * row["lines"], reverse=True)
 
 
 def mentionsName(lines: list[str], name: str) -> bool:

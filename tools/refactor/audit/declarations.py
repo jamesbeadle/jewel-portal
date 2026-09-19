@@ -1,6 +1,7 @@
 """The functions and types a source file declares: the shared reading every name-based check starts from."""
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
 
@@ -15,6 +16,7 @@ TYPE_DECLARATION = re.compile(
 NAME_BEFORE_PARENTHESIS = re.compile(r"(\w+)\s*(?:<[^>()]*>)?\s*\(")
 NAME_BEFORE_ARROW = re.compile(r"\b(?:const|let)\s+(\w+)")
 ATTRIBUTE_LINE = re.compile(r"^\s*(?:\[[\w\.]+.*\]|@\w[\w\.]*(?:\(.*\))?)\s*$")
+SMALLEST_COMPARABLE_BODY = 3
 KEYWORDS_MISTAKEN_FOR_NAMES = {"if", "for", "foreach", "while", "switch", "catch", "using", "lock", "return", "function"}
 
 
@@ -25,6 +27,7 @@ class DeclaredFunction:
     line: int
     lines: int
     isAttributed: bool
+    bodyFingerprint: str
 
 
 def nameOnSignature(line: str) -> str:
@@ -38,6 +41,13 @@ def nameOnSignature(line: str) -> str:
 def previousLineIsAttribute(lines: list[str], lineNumber: int) -> bool:
     earlierLines = [line for line in lines[:lineNumber] if line.strip()]
     return bool(earlierLines) and bool(ATTRIBUTE_LINE.match(earlierLines[-1]))
+
+
+def fingerprintOf(bodyLines: list[str]) -> str:
+    statements = ["".join(line.split()) for line in bodyLines if line.strip()]
+    if len(statements) < SMALLEST_COMPARABLE_BODY:
+        return ""
+    return hashlib.sha1("\n".join(statements).encode()).hexdigest()
 
 
 def declaredFunctions(sourceFile: SourceFile) -> list[DeclaredFunction]:
@@ -59,6 +69,7 @@ def declaredFunctions(sourceFile: SourceFile) -> list[DeclaredFunction]:
             line=startLine + 1,
             lines=lineNumber - startLine + 1,
             isAttributed=previousLineIsAttribute(sourceFile.lines, startLine),
+            bodyFingerprint=fingerprintOf(sourceFile.lines[startLine + 1:lineNumber]),
         ))
         depthAtFunctionStart = None
     return functions

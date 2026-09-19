@@ -5,7 +5,7 @@ zeroAt. rules.json may override any weight or zeroAt under score.elements.<key>.
 """
 from __future__ import annotations
 
-BASELINE, PATTERNS, PROSE = "Standard baseline checks", "Design pattern file count", "Prose"
+BASELINE, PATTERNS, PROSE, WIDGETS = "Standard baseline checks", "Design pattern file count", "Prose", "Widget adoption"
 ONE = [("constant", "one")]
 FILES = [("fileLength", "totalFiles")]
 FUNCTIONS = [("functionShape", "totalFunctions")]
@@ -39,6 +39,8 @@ ELEMENTS = [
     element("tangledConditions", "Conditions with calls tangled inside calls", PROSE, [("conditions", "tangledConditionLines")], BRANCHES, "branches", 0.25, 8),
     element("literalComparisons", "Conditions compared to a raw literal", PROSE, [("conditions", "literalComparisonLines")], BRANCHES, "branches", 0.25, 6),
     element("gluedAccessors", "Accessor names that want to be a property", PROSE, [("accessorNames", "gluedAccessorNames")], FUNCTIONS, "functions", 0.1, 6),
+    element("handRolledWidgets", "Markup written by hand where a widget should be", WIDGETS,
+            [("siteDefinition", "handRolledElements")], [("siteDefinition", "widgetSlots")], "widget slots", 0.5, 8),
 ]
 
 

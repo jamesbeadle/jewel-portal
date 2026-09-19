@@ -186,5 +186,29 @@
   },
   "score": {
     "elements": {}
+  },
+  "siteDefinition": {
+    "viewGlobs": ["jpms/**/*.razor"],
+    "ignoredTags": ["PageTitle", "HeadContent"],
+    "catalogue": [
+      "Page", "PageHeader", "PageHeading", "SectionHeader", "Panel", "Notice", "Pill", "DropdownMenu", "FormField", "Checkbox",
+      "RecordsTable", "SortableColumnHeader", "TabRow", "FilterChips", "SearchInput", "SearchSelect", "StatTile", "MetricStat",
+      "EmptyState", "ConfirmDialog", "InlineConfirm", "Modal", "Toolbar", "ToolbarButton", "ToolbarDivider", "LoadGate",
+      "DateText", "DateTimeText", "Money", "WholeMoney", "RecordTabBar", "ExportToExcelButton", "RichTextEditor", "ErrorToast"
+    ],
+    "handRolled": [
+      {"element": "table", "ownedBy": "RecordsTable"},
+      {"element": "input", "ownedBy": "FormField", "unlessAttributes": ["type=\"checkbox\"", "type=\"radio\"", "type=\"file\"", "type=\"hidden\""]},
+      {"element": "select", "ownedBy": "FormField"},
+      {"element": "textarea", "ownedBy": "FormField"},
+      {"element": "h1", "ownedBy": "PageHeader"},
+      {"element": "h2", "ownedBy": "SectionHeader"},
+      {"element": "h3", "ownedBy": "SectionHeader"},
+      {"element": "dl", "ownedBy": "KeyValueList"},
+      {"element": "button", "ownedBy": "Button", "unlessClassPrefixes": ["btn-", "chip", "tab"]}
+    ],
+    "horizontalClasses": ["flex", "inline-flex"],
+    "verticalClasses": ["flex-col"],
+    "document": "tools/refactor/site-definition.md"
   }
 }

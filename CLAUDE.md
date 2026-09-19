@@ -1,5 +1,5 @@
 <!-- project-process:begin -->
-<!-- project-process kit v1.3.1 — refreshed by bootstrap.sh; edit the kit, not this block -->
+<!-- project-process kit v1.4.0 — refreshed by bootstrap.sh; edit the kit, not this block -->
 
 # How We Work
 
@@ -33,8 +33,8 @@ A refactor round follows the same shape on a `refactor/round-N` branch, and a co
 
 When the person says either of these, in these words or close to them, do what the named skill in `.claude/skills/` says — read its `SKILL.md` and follow it; do not improvise the process:
 
-- **"Run the code quality check"** → `code-quality-check`. Measures the repository, and on a `quality/check-<date>` branch writes a box at the bottom of `README.md` holding the code quality score (one percentage), with three things expandable beneath it: how the score is made up, the count of every file in the repository split by area, and the refactoring plan. It also writes `tools/refactor/refactor-plan.md` — the steps a refactor of this repository follows, in order. It changes no source code. One command does the measuring: `python3 -m tools.refactor.audit.quality_check .`
-- **"Refactor the repo"** → `refactor-round`. One measured round on a `refactor/round-N` branch that takes the next steps from the top of `tools/refactor/refactor-plan.md`, in order: component breakout, then utility function identification, then design pattern identification and modification, then the sweep to zero. Behaviour never changes. It ends by running the code quality check, so the pull request carries the new score and the plan for the round after.
+- **"Run the code quality check"** → `code-quality-check`. Measures the repository, and on a `quality/check-<date>` branch writes a box at the bottom of `README.md` holding the code quality score (one percentage), with three things expandable beneath it: how the score is made up, the count of every file in the repository split by area, and the refactoring plan. It also writes `tools/refactor/refactor-plan.md` — the steps a refactor of this repository follows, in order — and `tools/refactor/site-definition.md`, the site definition: what a user sees at each route, written in the widget notation from the views themselves, with every place a view writes by hand the markup a catalogue widget should own. It changes no source code. One command does the measuring: `python3 -m tools.refactor.audit.quality_check .`
+- **"Refactor the repo"** → `refactor-round`. One measured round on a `refactor/round-N` branch that takes the next steps from the top of `tools/refactor/refactor-plan.md`, in order: component breakout, then widget adoption, then utility function identification, then design pattern identification and modification, then the sweep to zero. Behaviour never changes. It ends by running the code quality check, so the pull request carries the new score and the plan for the round after.
 
 Both end as a pull request for the person to merge, never as a commit on the default branch.
 
@@ -180,7 +180,7 @@ A long frontend file is several components that have not been separated yet. Fin
 
 Ask two questions of every function, when writing it and when reading it:
 
-**Is this the right home for it?** If another component or file within the same design pattern could use the function, it is a utility, and it lives in a named, focused module — abstracted as far as that module's purpose requires and no further — where it can be reused. The same function declared in two files is one utility that has not been given its home yet. This is not premature abstraction: "just in case" is speculation about a user nobody can name; a utility is justified when the design pattern itself names who else will use it.
+**Is this the right home for it?** If another component or file within the same design pattern could use the function, it is a utility, and it lives in a named, focused module — abstracted as far as that module's purpose requires and no further — where it can be reused. The same function declared in two files is one utility that has not been given its home yet. Same means the same body or the same concept, never just the same name: every form having its own `onSubmit` is each component doing its own job, and folding those together would be abstraction for its own sake. This is not premature abstraction: "just in case" is speculation about a user nobody can name; a utility is justified when the design pattern itself names who else will use it.
 
 **Should it exist at all?** A function's existence has to be justified. Would a reader expect this function in the standard implementation of this kind of view, handler or module? If not, it is usually masking a bad implementation of something the framework should be handling — hand-rolled loading flags, binding, routing, validation, formatting, state synchronisation. Remove it by doing the thing the framework's way, not by tidying the workaround.
 
@@ -261,7 +261,7 @@ Things I never want to see in code you write for me:
 - Accessor functions that glue a type to its property (`getAppleColour()` instead of `apple.colour`), and function names over five words or forty characters.
 - Components that leave their functions behind in the parent, or reach back into it.
 - Functions that mask something the framework should be doing, and functions or components nothing calls.
-- The same function declared in more than one file.
+- The same function — the same body, not merely the same name — declared in more than one file.
 - A subject missing a file its design pattern predicts, or an empty file created to satisfy one.
 - Premature abstraction — extracting "just in case" before the second use exists or the design pattern names it.
 - Catch-all utility files (`utils.js`, `helpers.js`) — utilities go in named, focused modules.

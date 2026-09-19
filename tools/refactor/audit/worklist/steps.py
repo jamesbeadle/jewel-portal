@@ -1,10 +1,8 @@
 """Orders the refactor for this repository: component breakout, then utility functions, then design patterns."""
 from __future__ import annotations
 
-from ..checks.orphans import ENTRY_POINTS_WHEN_UNSET
-from ..checks.pattern_roles import subjectAndRole
 
-BREAKOUT, UTILITIES, PATTERNS = "Pass 1 — Component breakout", "Pass 2 — Utility function identification", "Pass 3 — Design pattern identification"
+BREAKOUT, UTILITIES, PATTERNS = "Pass 1 — Component breakout", "Pass 3 — Utility function identification", "Pass 4 — Design pattern identification"
 SHOWN_BLOCKS = 4
 SHOWN_FILES = 4
 SHOWN_REPEATS = 15
@@ -32,28 +30,18 @@ def breakoutSteps(targets: list[dict]) -> list[dict]:
 def sharedFromViewSteps(targets: list[dict]) -> list[dict]:
     return [
         step(UTILITIES, f"Give `{function['name']}` a home of its own, out of `{target['file']}`",
-             f"{len(function['usedByOtherFiles'])} other files use it: {', '.join(function['usedByOtherFiles'][:SHOWN_FILES])}.")
+             f"{len(function['importedBy'])} other files import it from there: {', '.join(function['importedBy'][:SHOWN_FILES])}.")
         for target in targets
         for function in target["functions"]
-        if function["usedByOtherFiles"]
+        if function["importedBy"]
     ]
 
 
-def isTheRolesOwnMethod(row: dict) -> bool:
-    roles = {(subjectAndRole(file) or ("", ""))[1] for file in row["declaredIn"]}
-    stem = row["name"].lower()[:-1]
-    return len(roles) == 1 and bool(stem) and next(iter(roles)).startswith(stem)
-
-
-def isUtilityCandidate(row: dict) -> bool:
-    return row["name"] not in ENTRY_POINTS_WHEN_UNSET and not isTheRolesOwnMethod(row)
-
-
-def utilitySteps(views: list[dict], repeatedDeclarations: list[dict], audit: dict) -> list[dict]:
-    repeats = [row for row in repeatedDeclarations if isUtilityCandidate(row)][:SHOWN_REPEATS]
+def utilitySteps(views: list[dict], repeatedBodies: list[dict], audit: dict) -> list[dict]:
     steps = [
-        step(UTILITIES, f"Give `{row['name']}` one home", f"Declared in {len(row['declaredIn'])} files: {', '.join(row['declaredIn'][:SHOWN_FILES])}.")
-        for row in repeats
+        step(UTILITIES, f"Give `{row['name']}` one home",
+             f"The same {row['lines']}-line function, word for word, is in {len(row['declaredIn'])} files: {', '.join(row['declaredIn'][:SHOWN_FILES])}.")
+        for row in repeatedBodies[:SHOWN_REPEATS]
     ]
     steps += sharedFromViewSteps(views)
     orphanCount = audit["summaries"].get("orphans", {}).get("orphanFunctions", 0) + audit["summaries"].get("inventory", {}).get("orphanComponents", 0)
