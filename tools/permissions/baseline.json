@@ -1,6 +1,6 @@
 {
  "summaries": {
-  "every endpoint is gated": 2,
+  "every endpoint is gated": 0,
   "an external write is scoped to its own rows": 19,
   "correspondence reaches only the declared roles": 43,
   "Client reaches only what the policy declares": 0,
@@ -11,21 +11,21 @@
   "a page states who may open it": 84
  },
  "reachByRole": {
-  "Admin": 623,
-  "ManagingDirector": 595,
-  "FinanceDirector": 462,
-  "ProjectManager": 519,
-  "QuantitySurveyor": 331,
-  "SiteManager": 249,
-  "HealthSafetyOfficer": 175,
-  "OfficeComplianceCoordinator": 248,
-  "Architect": 45,
+  "Admin": 625,
+  "ManagingDirector": 597,
+  "FinanceDirector": 464,
+  "ProjectManager": 521,
+  "QuantitySurveyor": 333,
+  "SiteManager": 251,
+  "HealthSafetyOfficer": 177,
+  "OfficeComplianceCoordinator": 250,
+  "Architect": 46,
   "Client": 5,
-  "Subcontractor": 11,
-  "Foreman": 172,
+  "Subcontractor": 12,
+  "Foreman": 174,
   "SiteOperative": 6,
-  "Accounts": 158,
-  "OfficeAdmin": 243,
-  "SalesMarketing": 263
+  "Accounts": 159,
+  "OfficeAdmin": 245,
+  "SalesMarketing": 265
  }
 }

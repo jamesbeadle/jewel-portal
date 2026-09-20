@@ -89,6 +89,8 @@ public sealed class DrawingExtractionEndpoints
         var cancellationToken = request.HttpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!DrawingExtractionRoles.AllowedToReadExtractions.IncludesAny(signedInUser.Roles))
+            return new StatusCodeResult(403);
 
         var view = await viewHandler.HandleAsync(new GetDrawingExtraction(revisionId), cancellationToken);
         return new OkObjectResult(view);
