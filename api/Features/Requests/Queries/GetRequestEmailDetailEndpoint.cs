@@ -9,7 +9,11 @@ public sealed class GetRequestEmailDetailEndpoint
     public GetRequestEmailDetailEndpoint(SignedInUserResolver users, IQueryHandler<GetRequestEmailDetail, MailboxMessageDetail> handler) { this.users = users; this.handler = handler; }
 
     // Request reads are internal plus the architect, who reads/approves RFIs per the permissions matrix.
-    private static readonly RoleSet RolesThatMayReadRequests = JpmsRoleSets.InternalAndArchitect;
+    // The request's own mail, not the request: read by the internal team alone (Nigel, 2026-09-19).
+    // The rest of a request is JpmsRoleSets.InternalAndArchitect because the architect answers the
+    // RFI — but the correspondence behind it is the business's, and an architect account reached it
+    // on every project, not only their own.
+    private static readonly RoleSet RolesThatMayReadRequestMail = JpmsRoleSets.AllInternal;
 
     // The message id travels in the query string, not the path (Graph ids contain path-unsafe chars).
     // Same gate as reading the conversation; the handler enforces that the message is
@@ -19,7 +23,7 @@ public sealed class GetRequestEmailDetailEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadRequests.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!RolesThatMayReadRequestMail.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         var id = request.Query["id"].ToString();
         if (string.IsNullOrWhiteSpace(id)) return new BadRequestObjectResult("id is required.");
         var imid = request.Query["imid"].ToString();

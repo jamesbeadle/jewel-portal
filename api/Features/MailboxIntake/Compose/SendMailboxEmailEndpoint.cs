@@ -9,10 +9,10 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 ///   • multipart/form-data — a "command" part carrying the same JSON, plus one file part per
 ///     Source=Upload attachment, matched by part name to <see cref="ComposeAttachmentRef.Id"/>
 ///     (the same transport shape as the progress-photo upload).
-/// Gated to every internal role (decision 2026-08-10, widened from the triage roles): a to-do's
-/// assignee — a site manager, accounts, office admin — replies to the item's linked mail from the
-/// item's own page, and sending from the projects mailbox is what "reply" means there. Externals
-/// never pass. SenderEmail is stamped from the signed-in user — the client cannot spoof it.
+/// Gated to the directors (MailboxComposeRoles, Nigel 2026-09-19) — writing as the business is
+/// theirs. It was every internal role from 2026-08-10, so that a to-do's assignee could reply to the
+/// item's linked mail from its own page; that is the cost of the narrowing and it is known.
+/// Externals never pass. SenderEmail is stamped from the signed-in user — the client cannot spoof it.
 /// Handler-refused sends (validation, wall, mailbox unavailable) surface verbatim as 400s so the
 /// composer shows them inline rather than as a toast.
 /// </summary>
@@ -42,7 +42,7 @@ public sealed class SendMailboxEmailEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!JpmsRoleSets.AllInternal.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!MailboxComposeRoles.AllowedToSend.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         auditActor.Email = signedInUser.Email;
 
         SendMailboxEmail? command;

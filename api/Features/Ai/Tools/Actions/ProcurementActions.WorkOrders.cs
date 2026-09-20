@@ -201,7 +201,7 @@ internal sealed partial class ProcurementActions
             ResultType: typeof(WorkOrderReplyDraft),
             AuthorisationType: typeof(PrepareWorkOrderReplyDraftAuthorisation),
             ValidationType: typeof(PrepareWorkOrderReplyDraftValidation),
-            VisibleTo: PackageAdministrators, // mirrors PrepareWorkOrderReplyDraftAuthorisation (same set as the fresh draft)
+            VisibleTo: WorkOrderReplyDraftSenders, // mirrors PrepareWorkOrderReplyDraftAuthorisation
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
             Notes: "mailboxMessageId is the Graph id of the conversation email to reply to — "

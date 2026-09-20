@@ -7,7 +7,8 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 public sealed class ResendRequestDocumentAuthorisation
 {
     private static readonly RoleSet RolesThatMayResend =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.Architect);
+        RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector,
+            JpmsRoles.ProjectManager);
 
     public bool Allows(SignedInUser user, ResendRequestDocument command) => RolesThatMayResend.IncludesAny(user.Roles);
 }

@@ -8,7 +8,8 @@ CONSULTS_A_SCOPE = re.compile(r"\w*Scope\.|Owns\w+Async|ClientProjects|OwnClient
 
 EVERY_ENDPOINT_IS_GATED = "every endpoint is gated"
 EXTERNAL_WRITES_ARE_SCOPED = "an external write is scoped to its own rows"
-CORRESPONDENCE_IS_DECLARED = "correspondence reaches only the declared roles"
+CORRESPONDENCE_IS_READ_BY = "correspondence is read by the internal team"
+CORRESPONDENCE_IS_SENT_BY = "correspondence is sent by the directors"
 CONNECTOR_MATCHES_THE_GATE = "the connector offers no more than the gate allows"
 A_PAGE_STATES_WHO_MAY_OPEN_IT = "a page states who may open it"
 
@@ -48,17 +49,26 @@ def unscopedExternalWrites(inventory: dict, policy: dict, bodies: dict):
                       f"{', '.join(sorted(roles))} may write any row, by id", endpoint["file"])
 
 
+CORRESPONDENCE_RULES = {"read": CORRESPONDENCE_IS_READ_BY, "send": CORRESPONDENCE_IS_SENT_BY}
+
+
 def correspondence(inventory: dict, policy: dict):
-    declared = set(policy["correspondence"]["mayReach"])
-    pattern = re.compile(policy["correspondence"]["routePattern"], re.I)
-    for endpoint in inventory["endpoints"]:
-        route = endpoint["route"] or ""
-        if not pattern.search(route) or not endpoint["roles"]:
-            continue
-        beyond = sorted(set(endpoint["roles"]) - declared)
-        if beyond:
-            yield finding(CORRESPONDENCE_IS_DECLARED, route, endpoint["verbs"],
-                          "also reachable by " + ", ".join(beyond), endpoint["file"])
+    """Reading correspondence and sending it are two different permissions, so they are two rules.
+    A route that both reads and sends is judged as a send, which is the stricter of the two."""
+    for kind in ("send", "read"):
+        declared = set(policy["correspondence"][kind]["mayReach"])
+        pattern = re.compile(policy["correspondence"][kind]["routePattern"], re.I)
+        sending = re.compile(policy["correspondence"]["send"]["routePattern"], re.I)
+        for endpoint in inventory["endpoints"]:
+            route = endpoint["route"] or ""
+            if not pattern.search(route) or not endpoint["roles"]:
+                continue
+            if kind == "read" and sending.search(route):
+                continue
+            beyond = sorted(set(endpoint["roles"]) - declared)
+            if beyond:
+                yield finding(CORRESPONDENCE_RULES[kind], route, endpoint["verbs"],
+                              "also reachable by " + ", ".join(beyond), endpoint["file"])
 
 
 def externalReach(inventory: dict, policy: dict):

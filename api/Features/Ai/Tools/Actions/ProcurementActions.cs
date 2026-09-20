@@ -28,6 +28,12 @@ internal sealed partial class ProcurementActions : IAiActionSource
         JpmsRoles.Director, JpmsRoles.ProjectManager,
         JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
+    // PrepareWorkOrderReplyDraftAuthorisation.RolesThatMayEmailWorkOrders — narrower than the
+    // administrators since 2026-09-19: running an order is the office circle's, writing to the
+    // supplier as the business is not.
+    private static readonly RoleSet WorkOrderReplyDraftSenders = RoleSet.Of(
+        Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager);
+
     // Mirrors CloseBidPackageAuthorisation / ReopenBidPackageAuthorisation.
     private static readonly RoleSet PackageClosers =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager);

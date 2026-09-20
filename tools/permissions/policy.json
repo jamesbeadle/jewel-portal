@@ -1,12 +1,33 @@
 {
   "correspondence": {
-    "routePattern": "mailbox|/emails|email-draft|email-detail|email-attachment|communications|correspondence|record-emails|compose",
-    "mayReach": [
-      "Admin",
-      "ManagingDirector",
-      "FinanceDirector"
-    ],
-    "why": "Nigel, 2026-09-19: email communications are the managing director's, the finance director's and the administrator's. Declared ahead of the code \u2014 the gates do not yet match, and every route this rule names is a decision still to take."
+    "read": {
+      "routePattern": "mailbox/(inbox|tagged|discarded|search|conversation|message/(detail|attachment)|tags/resolve)|/emails|email-detail|email-attachment|communications|correspondence|record-emails",
+      "mayReach": [
+        "Admin",
+        "ManagingDirector",
+        "FinanceDirector",
+        "ProjectManager",
+        "QuantitySurveyor",
+        "SiteManager",
+        "HealthSafetyOfficer",
+        "OfficeComplianceCoordinator",
+        "OfficeAdmin",
+        "SalesMarketing",
+        "Foreman",
+        "Accounts"
+      ],
+      "why": "Reading correspondence, and filing it at triage, stays with the internal team (Nigel, 2026-09-19). Externals never pass: the architect was removed from request email reads on the same day."
+    },
+    "send": {
+      "routePattern": "mailbox/compose|email-draft|draft-email|reply-draft|reply-in-thread|drafts/delete|document/send|statement-email",
+      "mayReach": [
+        "Admin",
+        "ManagingDirector",
+        "FinanceDirector",
+        "ProjectManager"
+      ],
+      "why": "Writing as the business is the directors' and the project manager's (Nigel, 2026-09-19). Free-form compose is tighter still \u2014 Admin, MD and FD alone (MailboxComposeRoles) \u2014 and this rule only says nothing may be WIDER than the four."
+    }
   },
   "externalSurfaces": {
     "Client": [
