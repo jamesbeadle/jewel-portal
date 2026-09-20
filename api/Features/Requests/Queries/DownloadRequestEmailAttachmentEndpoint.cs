@@ -28,7 +28,11 @@ public sealed class DownloadRequestEmailAttachmentEndpoint
     }
 
     // Request reads are internal plus the architect, who reads/approves RFIs per the permissions matrix.
-    private static readonly RoleSet RolesThatMayReadRequests = JpmsRoleSets.InternalAndArchitect;
+    // The request's own mail, not the request: read by the internal team alone (Nigel, 2026-09-19).
+    // The rest of a request is JpmsRoleSets.InternalAndArchitect because the architect answers the
+    // RFI — but the correspondence behind it is the business's, and an architect account reached it
+    // on every project, not only their own.
+    private static readonly RoleSet RolesThatMayReadRequestMail = JpmsRoleSets.AllInternal;
 
     [Function(nameof(DownloadRequestEmailAttachmentEndpoint))]
     public async Task<IActionResult> Run(
@@ -39,7 +43,7 @@ public sealed class DownloadRequestEmailAttachmentEndpoint
 
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RolesThatMayReadRequests.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!RolesThatMayReadRequestMail.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var messageId = request.Query["id"].ToString();
         var attachmentId = request.Query["aid"].ToString();

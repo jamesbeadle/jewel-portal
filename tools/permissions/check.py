@@ -15,7 +15,8 @@ from . import connector, inventory, rules
 RULES_IN_REPORT_ORDER = [
     rules.EVERY_ENDPOINT_IS_GATED,
     rules.EXTERNAL_WRITES_ARE_SCOPED,
-    rules.CORRESPONDENCE_IS_DECLARED,
+    rules.CORRESPONDENCE_IS_READ_BY,
+    rules.CORRESPONDENCE_IS_SENT_BY,
     "Client reaches only what the policy declares",
     "Subcontractor reaches only what the policy declares",
     "SiteOperative reaches only what the policy declares",

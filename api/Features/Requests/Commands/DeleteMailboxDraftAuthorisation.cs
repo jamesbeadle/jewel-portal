@@ -9,7 +9,8 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 public sealed class DeleteMailboxDraftAuthorisation
 {
     private static readonly RoleSet RolesThatMayDraft =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.Architect);
+        RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector,
+            JpmsRoles.ProjectManager);
 
     public bool Allows(SignedInUser user, DeleteMailboxDraft command) => RolesThatMayDraft.IncludesAny(user.Roles);
 }

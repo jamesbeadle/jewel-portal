@@ -34,11 +34,11 @@ internal sealed partial class SubcontractorsAndLeadsActions : IAiActionSource
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator,
             JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
-    // SendSubcontractorStatementEmailAuthorisation.RolesThatMayEmailStatements — the circle that
-    // may email work orders, plus the finance director who owns the account reconciliations.
+    // SendSubcontractorStatementEmailAuthorisation.RolesThatMayEmailStatements — writing to the
+    // supply chain as the business, which is the directors' and the project manager's.
     private static readonly RoleSet StatementEmailSenders =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager,
-            JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
+        RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector,
+            JpmsRoles.ProjectManager);
 
     private static readonly RoleSet PartyContactManagers =
         RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.ProjectManager);
