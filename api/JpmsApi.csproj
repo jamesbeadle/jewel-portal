@@ -84,7 +84,7 @@
       attach to the assistant chat (AiAttachmentReader): the boss's tracker workbook goes in, text
       the model can populate a create form from comes out. Read-only use; nothing writes xlsx here.
     -->
-    <PackageReference Include="ClosedXML" Version="0.104.2" />
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
     <!--
       The Word half of the Contractor's Report (ContractorsReportWordRenderer) writes .docx
       directly with the Open XML SDK. Pinned at the version ClosedXML already carries, so the
