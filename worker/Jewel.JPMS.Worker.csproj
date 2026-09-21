@@ -35,7 +35,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
     <!-- Azure.Communication.Email: the imagine render worker emails the prospect when their
          concepts are ready — same package + version as the api, whose notifier is linked below. -->
-    <PackageReference Include="Azure.Communication.Email" Version="1.0.1" />
+    <PackageReference Include="Azure.Communication.Email" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup>
