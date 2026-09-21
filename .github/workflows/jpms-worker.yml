@@ -46,7 +46,7 @@ jobs:
     name: Build and deploy worker
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up .NET 8
         uses: actions/setup-dotnet@v4
