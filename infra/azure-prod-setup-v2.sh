@@ -117,7 +117,7 @@ echo "Entra app:         ${ENTRA_APP_NAME}"
 echo "App Insights:      ${APP_INSIGHTS_NAME}"
 echo "Budget alert:      £${BUDGET_AMOUNT}/month -> ${BUDGET_ALERT_EMAIL}"
 echo "SQL admin user:    ${SQL_ADMIN_USER}"
-echo "SQL admin password (save this): ${SQL_ADMIN_PASSWORD}"
+echo "SQL admin password:  written to ${OUTPUT_ENV} (not echoed)"
 echo "Client IP:         ${CLIENT_IP}"
 echo
 echo "Active subscription:"

@@ -1,22 +1,29 @@
 using Jewel.JPMS.Api.Auth;
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Connect;
 using Jewel.JPMS.Contracts.Auth;
 
 namespace Jewel.JPMS.Api.Features.Auth;
 
 /// <summary>
 /// POST /api/auth/set-password — completes an invite (or reset). Validates the single-use token,
-/// applies the password policy, stores the hash, marks the account active and signs the user in.
+/// applies the password policy, stores the hash, marks the account active, ends every other
+/// session and connected tool the person had (a reset is the answer to "someone else has my
+/// password", so nothing opened before it survives) and signs the user in.
 /// </summary>
 public sealed class SetPasswordEndpoint
 {
     private readonly JpmsContext context;
     private readonly SessionManager sessions;
+    private readonly OAuthTokenManager tokens;
+    private readonly SignedInUserCache userCache;
 
-    public SetPasswordEndpoint(JpmsContext context, SessionManager sessions)
+    public SetPasswordEndpoint(JpmsContext context, SessionManager sessions, OAuthTokenManager tokens, SignedInUserCache userCache)
     {
         this.context = context;
         this.sessions = sessions;
+        this.tokens = tokens;
+        this.userCache = userCache;
     }
 
     [Function("AuthSetPassword")]
@@ -60,6 +67,7 @@ public sealed class SetPasswordEndpoint
 
         token.ConsumedAt = now;
         await context.SaveChangesAsync(cancellationToken);
+        await EndEverythingOpenedBeforeAsync(email, now, cancellationToken);
 
         var secret = await sessions.CreateAsync(email, cancellationToken);
         SessionCookie.Set(request.HttpContext.Response, secret);
@@ -72,5 +80,16 @@ public sealed class SetPasswordEndpoint
         return new OkObjectResult(new AuthenticatedUserResponse(email, displayName, roles, directoryUser?.SubcontractorId,
             HomeRoleSelection.From(directoryRoles), directoryUser?.RevertToOwnRole ?? false, directoryUser?.ClientId,
             directoryUser?.ArchitectId));
+    }
+
+    private async Task EndEverythingOpenedBeforeAsync(string email, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var liveSessions = await context.UserSessions
+            .Where(row => row.Email == email && row.RevokedAt == null)
+            .ToListAsync(cancellationToken);
+        foreach (var session in liveSessions) session.RevokedAt = now;
+        await context.SaveChangesAsync(cancellationToken);
+        await tokens.RevokeAllForUserAsync(email, cancellationToken);
+        userCache.InvalidateEmail(email);
     }
 }

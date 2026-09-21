@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Storage;
 using Jewel.JPMS.Contracts.BuildingControl;
 
 namespace Jewel.JPMS.Api.Features.BuildingControl.Attachments;
@@ -52,10 +53,13 @@ public sealed class BuildingControlAttachmentEndpoints
         string caseId)
     {
         var cancellationToken = request.HttpContext.RequestAborted;
+        var signedInUser = await users.ResolveAsync(request, cancellationToken);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!BuildingControlRoles.Managers.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         var buildingControlCase = await context.BuildingControlCases.AsNoTracking()
             .FirstOrDefaultAsync(row => row.BuildingControlCaseId == caseId, cancellationToken);
         if (buildingControlCase is null) return new NotFoundObjectResult($"Building control case {caseId} not found.");
-        return await UploadAsync(request, buildingControlCase.ProjectId, caseId, inspectionId: null, cancellationToken);
+        return await UploadAsync(request, signedInUser, buildingControlCase.ProjectId, caseId, inspectionId: null, cancellationToken);
     }
 
     [Function(nameof(UploadBuildingControlInspectionAttachments))]
@@ -64,19 +68,18 @@ public sealed class BuildingControlAttachmentEndpoints
         string inspectionId)
     {
         var cancellationToken = request.HttpContext.RequestAborted;
-        var inspection = await context.BuildingControlInspections.AsNoTracking()
-            .FirstOrDefaultAsync(row => row.BuildingControlInspectionId == inspectionId, cancellationToken);
-        if (inspection is null) return new NotFoundObjectResult($"Inspection {inspectionId} not found.");
-        return await UploadAsync(request, inspection.ProjectId, caseId: null, inspectionId, cancellationToken);
-    }
-
-    private async Task<IActionResult> UploadAsync(
-        HttpRequest request, string projectId, string? caseId, string? inspectionId, CancellationToken cancellationToken)
-    {
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!BuildingControlRoles.Managers.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        var inspection = await context.BuildingControlInspections.AsNoTracking()
+            .FirstOrDefaultAsync(row => row.BuildingControlInspectionId == inspectionId, cancellationToken);
+        if (inspection is null) return new NotFoundObjectResult($"Inspection {inspectionId} not found.");
+        return await UploadAsync(request, signedInUser, inspection.ProjectId, caseId: null, inspectionId, cancellationToken);
+    }
 
+    private async Task<IActionResult> UploadAsync(
+        HttpRequest request, SignedInUser signedInUser, string projectId, string? caseId, string? inspectionId, CancellationToken cancellationToken)
+    {
         if (!request.HasFormContentType) return new BadRequestObjectResult("Expected multipart/form-data.");
         var form = await request.ReadFormAsync(cancellationToken);
         var files = form.Files.Where(file => file.Length > 0).ToList();
@@ -137,12 +140,11 @@ public sealed class BuildingControlAttachmentEndpoints
 
         var blob = await blobStore.OpenAsync(entity.BlobRef, cancellationToken);
         if (blob is null) return new NotFoundObjectResult("The stored file could not be found.");
-
-        var isInline = request.Query.TryGetValue("inline", out var inlineValue)
-            && (inlineValue == "1" || string.Equals(inlineValue, "true", StringComparison.OrdinalIgnoreCase));
+        var isInline = InlineRendering.IsAskedFor(request);
+        InlineRendering.ForbidSniffing(request.HttpContext.Response);
         var contentType = string.IsNullOrWhiteSpace(entity.ContentType) ? blob.ContentType : entity.ContentType;
         var result = new FileStreamResult(blob.Content, contentType) { EnableRangeProcessing = true };
-        if (!isInline) result.FileDownloadName = string.IsNullOrWhiteSpace(entity.FileName) ? attachmentId : entity.FileName;
+        if (!InlineRendering.IsInlineView(isInline, result.ContentType)) result.FileDownloadName = string.IsNullOrWhiteSpace(entity.FileName) ? attachmentId : entity.FileName;
         return result;
     }
 

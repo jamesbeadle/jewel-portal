@@ -40,6 +40,12 @@ public sealed partial class ComposeHtmlPipeline
     public ComposedBody FromTypedHtml(string bodyHtml) =>
         WithPastedImagesLifted(TypedBodySanitiser().Sanitize(bodyHtml ?? ""));
 
+    /// <summary>A typed body kept as a DRAFT: the typed rule, with pasted images left in place so
+    /// the composer can show them again. A draft is rendered back to whoever opens the composer
+    /// next, so it is cleaned on the way in, not only on the way out (2026-09-21).</summary>
+    public static string AsDraft(string? bodyHtml) =>
+        string.IsNullOrWhiteSpace(bodyHtml) ? bodyHtml ?? "" : TypedBodySanitiser().Sanitize(bodyHtml);
+
     /// <summary>HTML the portal composed itself, cleaned without losing how it looks. Whitespace in
     /// means whitespace out: an empty or blank body is left exactly as it arrived, so a caller that
     /// meant "no cover note" still sends none.</summary>

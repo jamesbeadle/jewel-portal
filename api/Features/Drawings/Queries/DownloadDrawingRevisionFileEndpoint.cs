@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Storage;
 using Jewel.JPMS.Api.Features.Drawings.Storage;
 
 namespace Jewel.JPMS.Api.Features.Drawings.Queries;
@@ -47,8 +48,8 @@ public sealed class DownloadDrawingRevisionFileEndpoint
 
         // Inline requests (?inline=1) are for the in-app viewer, which re-requests the
         // file whenever the page re-renders — so they must not inflate the view count.
-        var inline = request.Query.TryGetValue("inline", out var inlineValue)
-            && (inlineValue == "1" || string.Equals(inlineValue, "true", StringComparison.OrdinalIgnoreCase));
+        var inline = InlineRendering.IsAskedFor(request);
+        InlineRendering.ForbidSniffing(request.HttpContext.Response);
 
         if (!inline)
         {
@@ -63,7 +64,7 @@ public sealed class DownloadDrawingRevisionFileEndpoint
         {
             EnableRangeProcessing = true
         };
-        if (!inline)
+        if (!InlineRendering.IsInlineView(inline, result.ContentType))
             result.FileDownloadName = string.IsNullOrWhiteSpace(revision.FileName) ? $"{revisionId}" : revision.FileName;
         return result;
     }

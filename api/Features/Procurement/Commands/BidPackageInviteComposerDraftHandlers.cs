@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 using Jewel.JPMS.Contracts.Procurement;
 
 namespace Jewel.JPMS.Api.Features.Procurement.Commands;
@@ -42,7 +43,7 @@ public sealed class SaveBidPackageInviteComposerDraftHandler
             ?? throw new InvalidOperationException($"Bid package {command.BidPackageId} not found.");
 
         package.InviteDraftSubject = command.Subject;
-        package.InviteDraftBody = command.Body;
+        package.InviteDraftBody = ComposeHtmlPipeline.AsDraft(command.Body);
         package.InviteDraftTo = command.To;
         package.InviteDraftCc = command.Cc;
         package.InviteDraftBcc = command.Bcc;

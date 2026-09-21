@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Storage;
 using System.Globalization;
 using Jewel.JPMS.Api.Features.ArchitectInstructions.Storage;
 using Jewel.JPMS.Contracts.ArchitectInstructions;
@@ -310,14 +311,14 @@ public sealed class ArchitectInstructionEndpoints
         if (blob is null) return new NotFoundObjectResult("The stored document could not be found.");
 
         // ?inline=1 renders in the in-app viewer; anything else downloads with its filename.
-        var inline = request.Query.TryGetValue("inline", out var inlineValue)
-            && (inlineValue == "1" || string.Equals(inlineValue, "true", StringComparison.OrdinalIgnoreCase));
+        var inline = InlineRendering.IsAskedFor(request);
+        InlineRendering.ForbidSniffing(request.HttpContext.Response);
 
         var result = new FileStreamResult(blob.Content, entity.ContentType ?? blob.ContentType)
         {
             EnableRangeProcessing = true
         };
-        if (!inline)
+        if (!InlineRendering.IsInlineView(inline, result.ContentType))
             result.FileDownloadName = string.IsNullOrWhiteSpace(entity.FileName) ? $"{entity.Reference}" : entity.FileName;
         return result;
     }

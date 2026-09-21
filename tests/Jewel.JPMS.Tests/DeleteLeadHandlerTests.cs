@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Sales.Commands;
+using Jewel.JPMS.Api.Features.Sales.Imagine;
 using Jewel.JPMS.Contracts.Sales;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +31,7 @@ public sealed class DeleteLeadHandlerTests
         await context.SaveChangesAsync();
         var keptActivities = await context.LeadActivities.CountAsync(row => row.LeadId == kept.LeadId);
 
-        var outcome = await new DeleteLeadHandler(context).HandleAsync(new DeleteLead(doomed.LeadId, "nigel@jewelbb.co.uk"), CancellationToken.None);
+        var outcome = await new DeleteLeadHandler(context, new NullImagineImageStore()).HandleAsync(new DeleteLead(doomed.LeadId, "nigel@jewelbb.co.uk"), CancellationToken.None);
 
         Assert.Equal(doomed.LeadId, outcome.EntityId);
         Assert.False(await context.Leads.AnyAsync(row => row.LeadId == doomed.LeadId));
@@ -57,7 +58,7 @@ public sealed class DeleteLeadHandlerTests
         await context.SaveChangesAsync();
 
         var refusal = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            new DeleteLeadHandler(context).HandleAsync(new DeleteLead(lead.LeadId, "nigel@jewelbb.co.uk"), CancellationToken.None));
+            new DeleteLeadHandler(context, new NullImagineImageStore()).HandleAsync(new DeleteLead(lead.LeadId, "nigel@jewelbb.co.uk"), CancellationToken.None));
 
         Assert.Contains("Won", refusal.Message);
         Assert.True(await context.Leads.AnyAsync(row => row.LeadId == lead.LeadId));
@@ -68,7 +69,7 @@ public sealed class DeleteLeadHandlerTests
     {
         await using var context = NewContext();
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            new DeleteLeadHandler(context).HandleAsync(new DeleteLead("nope", "nigel@jewelbb.co.uk"), CancellationToken.None));
+            new DeleteLeadHandler(context, new NullImagineImageStore()).HandleAsync(new DeleteLead("nope", "nigel@jewelbb.co.uk"), CancellationToken.None));
     }
 
     [Fact]
@@ -77,7 +78,7 @@ public sealed class DeleteLeadHandlerTests
         await using var context = NewContext();
         await new CaptureLeadHandler(context).HandleAsync(Capture("One"), CancellationToken.None);
         var two = await new CaptureLeadHandler(context).HandleAsync(Capture("Two"), CancellationToken.None);
-        await new DeleteLeadHandler(context).HandleAsync(new DeleteLead(two.LeadId, "nigel@jewelbb.co.uk"), CancellationToken.None);
+        await new DeleteLeadHandler(context, new NullImagineImageStore()).HandleAsync(new DeleteLead(two.LeadId, "nigel@jewelbb.co.uk"), CancellationToken.None);
 
         var three = await new CaptureLeadHandler(context).HandleAsync(Capture("Three"), CancellationToken.None);
 
@@ -87,11 +88,11 @@ public sealed class DeleteLeadHandlerTests
         // the new LD-0002 — not a surprise.
         Assert.Equal("LD-0002", three.Reference);
 
-        await new DeleteLeadHandler(context).HandleAsync(new DeleteLead(three.LeadId, "nigel@jewelbb.co.uk"), CancellationToken.None);
+        await new DeleteLeadHandler(context, new NullImagineImageStore()).HandleAsync(new DeleteLead(three.LeadId, "nigel@jewelbb.co.uk"), CancellationToken.None);
         var one = await context.Leads.SingleAsync();
         await new CaptureLeadHandler(context).HandleAsync(Capture("Four"), CancellationToken.None);
         var four = await context.Leads.SingleAsync(row => row.LeadId != one.LeadId);
-        await new DeleteLeadHandler(context).HandleAsync(new DeleteLead(one.LeadId, "nigel@jewelbb.co.uk"), CancellationToken.None);
+        await new DeleteLeadHandler(context, new NullImagineImageStore()).HandleAsync(new DeleteLead(one.LeadId, "nigel@jewelbb.co.uk"), CancellationToken.None);
 
         var five = await new CaptureLeadHandler(context).HandleAsync(Capture("Five"), CancellationToken.None);
         Assert.Equal("LD-0002", four.Reference);

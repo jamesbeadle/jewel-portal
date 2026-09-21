@@ -64,6 +64,8 @@ var host = new HostBuilder()
         // Every HTTP response carries the deploy's build number, so an open tab built by an
         // earlier deploy finds out from its next data fetch — see VersionStampMiddleware.
         worker.UseMiddleware<VersionStampMiddleware>();
+        // The sign-in doors answer 429 to an address that knocks too often — see AuthRateLimit.
+        worker.UseMiddleware<AuthRateLimitMiddleware>();
     })
     .ConfigureServices((context, services) =>
     {
@@ -83,6 +85,7 @@ var host = new HostBuilder()
         // Singleton on purpose: the resolved-caller cache has to outlive the request scope or it
         // caches nothing. Short TTL plus explicit invalidation on permission change — see the type.
         services.AddSingleton<SignedInUserCache>();
+        services.AddSingleton<AuthRateLimit>();
         services.AddScoped<SessionManager>();
         services.AddScoped<SignedInUserResolver>();
         services.AddScoped<InviteDirectoryWriter>();

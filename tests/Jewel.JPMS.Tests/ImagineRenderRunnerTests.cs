@@ -84,6 +84,7 @@ public sealed class ImagineRenderRunnerTests
         public bool IsConfigured => true;
         public Task<string> SaveAsync(string leadId, string roundId, string imageId, string contentType, byte[] bytes, CancellationToken ct) => throw new NotSupportedException();
         public Task<StoredBlob?> OpenAsync(string blobRef, CancellationToken ct) => throw new NotSupportedException();
+        public Task DeleteAsync(string blobRef, CancellationToken ct) => throw new NotSupportedException();
         public Task<byte[]?> ReadAllAsync(string blobRef, CancellationToken ct)
         {
             Reads++;

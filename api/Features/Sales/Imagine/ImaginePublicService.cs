@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Auth;
 using System.Security.Cryptography;
 using System.Text;
 using Jewel.JPMS.Api.Data.Entities;
@@ -43,13 +44,7 @@ public sealed partial class ImaginePublicService
     /// <summary>SHA-256 of the caller's address — the per-connection throttle key.</summary>
     public static string ClientHash(HttpRequest request)
     {
-        var forwarded = request.Headers["X-Forwarded-For"].ToString();
-        var address = string.IsNullOrWhiteSpace(forwarded)
-            ? request.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"
-            : forwarded.Split(',')[0].Trim();
-        // The SWA edge appends the port to the forwarded address.
-        var colon = address.LastIndexOf(':');
-        if (colon > 0 && address.Count(c => c == ':') == 1) address = address[..colon];
+        var address = ClientKey.Of(request);
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(address))).ToLowerInvariant();
     }
 

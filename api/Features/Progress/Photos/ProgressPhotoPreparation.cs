@@ -13,6 +13,13 @@ internal static class ProgressPhotoPreparation
 {
     private static readonly MagickGeometry ShrinkOnly = new($"{ProgressPhotoLimits.MaxEdgePixels}x{ProgressPhotoLimits.MaxEdgePixels}>");
 
+    static ProgressPhotoPreparation()
+    {
+        ResourceLimits.Width = ProgressPhotoLimits.MaxDecodedEdgePixels;
+        ResourceLimits.Height = ProgressPhotoLimits.MaxDecodedEdgePixels;
+        ResourceLimits.Memory = ProgressPhotoLimits.MaxDecoderMemoryBytes;
+    }
+
     public static PreparedProgressPhoto Prepare(IncomingProgressPhoto incoming)
     {
         if (incoming.Bytes.Length == 0)

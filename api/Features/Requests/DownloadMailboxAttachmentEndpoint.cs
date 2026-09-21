@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Storage;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 
 namespace Jewel.JPMS.Api.Features.Requests;
@@ -44,8 +45,8 @@ public sealed class DownloadMailboxAttachmentEndpoint
         // Same inline/download split as the drawing file endpoint: inline requests (?inline=1) come
         // from the in-app preview iframe, so Content-Disposition stays unset and the browser renders
         // the file in place; explicit downloads get a filename to force the attachment behaviour.
-        var inline = request.Query.TryGetValue("inline", out var inlineValue)
-            && (inlineValue == "1" || string.Equals(inlineValue, "true", StringComparison.OrdinalIgnoreCase));
+        var inline = InlineRendering.IsAskedFor(request);
+        InlineRendering.ForbidSniffing(request.HttpContext.Response);
 
         // Senders' systems often label a real PDF or image "application/octet-stream". Served as
         // that, an inline request downloads instead of rendering — so a generic type is replaced
@@ -56,7 +57,7 @@ public sealed class DownloadMailboxAttachmentEndpoint
         {
             EnableRangeProcessing = true
         };
-        if (!inline)
+        if (!InlineRendering.IsInlineView(inline, contentType))
             result.FileDownloadName = string.IsNullOrWhiteSpace(attachment.Name) ? "attachment" : attachment.Name;
         return result;
     }
@@ -77,7 +78,6 @@ public sealed class DownloadMailboxAttachmentEndpoint
             ".gif" => "image/gif",
             ".webp" => "image/webp",
             ".bmp" => "image/bmp",
-            ".svg" => "image/svg+xml",
             _ => declared ?? "application/octet-stream"
         };
     }

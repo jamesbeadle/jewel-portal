@@ -164,8 +164,9 @@ internal static partial class AiMailboxTools
                         subject = detail.Subject,
                         tags = detail.Categories,
                         bucket = detail.Bucket,
-                        body = clipped ? body[..MaxBodyChars] : body,
+                        body = AiUntrustedContent.Fenced(clipped ? body[..MaxBodyChars] : body),
                         bodyClipped = clipped,
+                        bodyNote = AiUntrustedContent.DataNotInstructions,
                         attachments = detail.Attachments,
                         replyAll = new { to = replyAll.To, cc = replyAll.Cc, subject = replyAll.Subject },
                         note = "Attachments open with read_email_attachment(messageId, attachmentId). "

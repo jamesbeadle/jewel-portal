@@ -85,6 +85,7 @@ public sealed class AzureBlobEmailFileShareStore : IEmailFileShareStore
             BlobContainerName = container.Name,
             BlobName = blobRef,
             Resource = "b",
+            Protocol = SasProtocol.Https,
             // Download with the real file name rather than rendering in the browser tab.
             ContentDisposition = $"attachment; filename=\"{safeName}\"",
         };
