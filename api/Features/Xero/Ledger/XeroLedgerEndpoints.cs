@@ -2,17 +2,6 @@ using Jewel.JPMS.Contracts.Xero;
 
 namespace Jewel.JPMS.Api.Features.Xero.Ledger;
 
-/// <summary>
-/// Who may work the allocation queue: financially sensitive, so the same
-/// finance-facing audience as the Xero ledger view and the cost-code master.
-/// Admins pass because Role.Admin is included explicitly.
-/// </summary>
-internal static class XeroLedgerRoles
-{
-    public static readonly RoleSet AllowedToAllocate = RoleSet.Of(
-        Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
-}
-
 public sealed class ListXeroLedgerLinesEndpoint
 {
     private readonly SignedInUserResolver users;

@@ -1,10 +1,10 @@
 
-namespace Jewel.JPMS.Api.Features.Todos;
+namespace Jewel.JPMS.Models;
 
 // Project to-dos are a back-office project-management surface. Directors (managing and finance),
 // project managers, site managers and accounts may manage them; administrators pass via Role.Admin
 // (they are granted every role server-side anyway, mirroring TriageRoles' belt-and-braces inclusion).
-internal static class TodoRoles
+public static class TodoRoles
 {
     public static readonly RoleSet AllowedToManageTodos =
         RoleSet.Of(

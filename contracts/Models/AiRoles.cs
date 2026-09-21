@@ -1,7 +1,7 @@
 
-namespace Jewel.JPMS.Api.Features.Ai;
+namespace Jewel.JPMS.Models;
 
-internal static class AiRoles
+public static class AiRoles
 {
     /// <summary>
     /// Who may talk to the assistant. Mirrors the client's <c>DesktopNavigation.CanUseAssistant</c> —

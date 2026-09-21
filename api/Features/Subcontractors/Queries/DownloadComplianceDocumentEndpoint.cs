@@ -22,10 +22,6 @@ public sealed class DownloadComplianceDocumentEndpoint
         this.blobStore = blobStore;
     }
 
-    private static readonly RoleSet InternalRolesThatMayReadCompliance = RoleSet.Of(
-        JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator,
-        JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
-
     [Function("DownloadComplianceDocument")]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "subcontractors/{subcontractorId}/compliance/{documentId}/content")] HttpRequest request,
@@ -36,7 +32,7 @@ public sealed class DownloadComplianceDocumentEndpoint
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        if (!InternalRolesThatMayReadCompliance.IncludesAny(signedInUser.Roles))
+        if (!DirectoryRoles.AllowedToReadCompliance.IncludesAny(signedInUser.Roles))
         {
             var ownSubcontractorId = SubcontractorScope.OwnSubcontractorId(signedInUser);
             if (ownSubcontractorId is null

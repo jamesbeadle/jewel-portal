@@ -12,6 +12,13 @@ def apiFiles(repositoryRoot: Path):
             yield path
 
 
+def roleVocabularyFiles(repositoryRoot: Path):
+    """Where role sets are declared: the shared vocabulary in contracts (read by the API's gates
+    and by the pages' OpenTo alike) and the API's own feature-local sets."""
+    yield from sorted((repositoryRoot / "contracts/Models").glob("*.cs"))
+    yield from apiFiles(repositoryRoot)
+
+
 def connectorFiles(repositoryRoot: Path):
     return sorted((repositoryRoot / "api/Features/Ai/Tools").rglob("*.cs"))
 

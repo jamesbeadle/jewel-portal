@@ -1,5 +1,5 @@
 
-namespace Jewel.JPMS.Api.Features.Labour;
+namespace Jewel.JPMS.Models;
 
 /// <summary>Role gates for the labour tracking surfaces (scope §6: worker registry and rates
 /// are managed by the FD and PM; rates and £ are commercial-team-only reads).
@@ -12,7 +12,7 @@ namespace Jewel.JPMS.Api.Features.Labour;
 /// Admin role the whole enum, but the convention of naming Role.Admin explicitly stands.) A gate
 /// the navigation does not mirror is a gate the user only meets after they have filled the form
 /// in.</summary>
-internal static class LabourRoleSets
+public static class LabourRoleSets
 {
     /// <summary>May create/edit workers, rates, project assignments, and rotate site tokens.</summary>
     public static readonly RoleSet ManageWorkers =

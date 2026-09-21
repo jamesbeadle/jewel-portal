@@ -1,5 +1,5 @@
 
-namespace Jewel.JPMS.Api.Features.Progress;
+namespace Jewel.JPMS.Models;
 
 /// <summary>
 /// Role sets for the progress feature. Site Managers, Project Managers and the Managing Director
@@ -8,7 +8,7 @@ namespace Jewel.JPMS.Api.Features.Progress;
 /// authors — but never to external roles, because reports are assembled for clients deliberately,
 /// not exposed raw.
 /// </summary>
-internal static class ProgressRoles
+public static class ProgressRoles
 {
     public static readonly RoleSet Contributors = RoleSet.Of(
         Role.Admin,

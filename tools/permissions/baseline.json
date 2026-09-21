@@ -10,7 +10,7 @@
   "Architect reaches only what the policy declares": 0,
   "the connector offers no more than the gate allows": 0,
   "a scoped command is scoped on the connector too": 0,
-  "a page states who may open it": 84
+  "a page states who may open it": 0
  },
  "reachByRole": {
   "Admin": 625,

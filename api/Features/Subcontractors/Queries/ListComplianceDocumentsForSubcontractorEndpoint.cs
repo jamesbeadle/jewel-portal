@@ -13,12 +13,6 @@ public sealed class ListComplianceDocumentsForSubcontractorEndpoint
         this.handler = handler;
     }
 
-    // Internal roles may read any record's documents; a portal-scoped subcontractor login may
-    // only read its own (the route param is never trusted for external sessions).
-    private static readonly RoleSet InternalRolesThatMayReadCompliance = RoleSet.Of(
-        JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator,
-        JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
-
     [Function(nameof(ListComplianceDocumentsForSubcontractor))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "subcontractors/{subcontractorId}/compliance")] HttpRequest request,
@@ -27,7 +21,7 @@ public sealed class ListComplianceDocumentsForSubcontractorEndpoint
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        if (!InternalRolesThatMayReadCompliance.IncludesAny(signedInUser.Roles))
+        if (!DirectoryRoles.AllowedToReadCompliance.IncludesAny(signedInUser.Roles))
         {
             var ownSubcontractorId = SubcontractorScope.OwnSubcontractorId(signedInUser);
             if (ownSubcontractorId is null

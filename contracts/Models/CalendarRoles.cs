@@ -1,5 +1,5 @@
 
-namespace Jewel.JPMS.Api.Features.Calendar;
+namespace Jewel.JPMS.Models;
 
 /// <summary>
 /// Who does what with the project calendar. The whole internal team reads it — what's coming up
@@ -11,7 +11,7 @@ namespace Jewel.JPMS.Api.Features.Calendar;
 /// reach any calendar surface yet, and when that access is built it gets its own scoped gate —
 /// external roles are never added to internal sets by default (JpmsRoleSets).
 /// </summary>
-internal static class CalendarRoles
+public static class CalendarRoles
 {
     public static readonly RoleSet Readers = JpmsRoleSets.AllInternal;
 

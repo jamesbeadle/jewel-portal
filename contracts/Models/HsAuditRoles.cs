@@ -1,4 +1,4 @@
-namespace Jewel.JPMS.Api.Features.Hs.Audits;
+namespace Jewel.JPMS.Models;
 
 /// <summary>
 /// Who does what with a site audit. The whole internal team reads it — where the site stands on
@@ -7,7 +7,7 @@ namespace Jewel.JPMS.Api.Features.Hs.Audits;
 /// answer for the site beside her, and the compliance coordinator who files the paperwork. The
 /// same people as LogHsRecordAuthorisation, plus Admin and the compliance coordinator.
 /// </summary>
-internal static class HsAuditRoles
+public static class HsAuditRoles
 {
     public static readonly RoleSet Readers = JpmsRoleSets.AllInternal;
 

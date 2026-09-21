@@ -13,7 +13,7 @@
     days and confirms; Cancel leaves the project exactly as it was.
 *@
 
-<Page CanAccess="@CanContribute" AccessDeniedMessage="Recording progress is for the site and project team.">
+<Page OpenTo="ProgressRoles.Contributors" CanAccess="@CanContribute" AccessDeniedMessage="Recording progress is for the site and project team.">
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="progress">
         <SectionHeader Title="Import WhatsApp week">
             <Actions>

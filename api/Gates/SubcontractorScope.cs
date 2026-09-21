@@ -17,7 +17,7 @@ public static class SubcontractorScope
     /// </summary>
     public static string? OwnSubcontractorId(SignedInUser user)
     {
-        if (!user.Roles.Contains(Role.Subcontractor)) return null;
+        if (!JpmsRoleSets.SubcontractorPortal.IncludesAny(user.Roles)) return null;
         return string.IsNullOrWhiteSpace(user.SubcontractorId) ? null : user.SubcontractorId;
     }
 }

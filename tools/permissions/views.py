@@ -7,12 +7,13 @@ from pathlib import Path
 from . import source
 
 PAGE_ROUTE = re.compile(r'@page\s+"([^"]+)"')
+OPEN_TO = re.compile(r'OpenTo\s*=\s*"@?\(?([^"]+?)\)?"')
 CAN_ACCESS = re.compile(r'CanAccess\s*=\s*"@?\(?([^"]+?)\)?"')
 NAMED_ROLE = re.compile(r"Role\.(\w+)")
 
 
-def accessCheck(text: str) -> str | None:
-    match = CAN_ACCESS.search(text)
+def attribute(pattern: re.Pattern, text: str) -> str | None:
+    match = pattern.search(text)
     return " ".join(match.group(1).split()) if match else None
 
 
@@ -28,7 +29,8 @@ def collect(repositoryRoot: Path) -> list[dict]:
         pages.append({
             "routes": routes,
             "file": path.relative_to(repositoryRoot).as_posix(),
-            "canAccess": accessCheck(text),
+            "openTo": attribute(OPEN_TO, text),
+            "canAccess": attribute(CAN_ACCESS, text),
             "rolesNamed": sorted(set(NAMED_ROLE.findall(text + behind))),
         })
     return pages

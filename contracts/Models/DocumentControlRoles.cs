@@ -1,5 +1,5 @@
 
-namespace Jewel.JPMS.Api.Features.DocumentControl;
+namespace Jewel.JPMS.Models;
 
 /// <summary>
 /// Who may work the Document Control queue — sending attachments in from the Control Centre,
@@ -7,7 +7,7 @@ namespace Jewel.JPMS.Api.Features.DocumentControl;
 /// import (ImportDrawingFromMessageAuthorisation's set) plus the Finance Director, who sits in the
 /// triage circle and files payment certificates. Administrators pass via role expansion.
 /// </summary>
-internal static class DocumentControlRoles
+public static class DocumentControlRoles
 {
     public static readonly RoleSet AllowedToManage = RoleSet.Of(
         JpmsRoles.Director,

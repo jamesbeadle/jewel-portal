@@ -14,7 +14,7 @@
     from last week's; the editor is the row's own page.
 *@
 
-<Page CanAccess="@CanRead" AccessDeniedMessage="Contractor's Reports are for the internal team.">
+<Page OpenTo="ProgressRoles.Readers" CanAccess="@CanRead" AccessDeniedMessage="Contractor's Reports are for the internal team.">
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="progress">
         <SectionHeader Title="Contractor's Reports"
                        Subtitle="The weekly nine-section report to the client's side, built from the register on every download">

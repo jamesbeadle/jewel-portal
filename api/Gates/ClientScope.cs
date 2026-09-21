@@ -17,7 +17,7 @@ public static class ClientScope
     /// </summary>
     public static string? OwnClientId(SignedInUser user)
     {
-        if (!user.Roles.Contains(Role.Client)) return null;
+        if (!JpmsRoleSets.ClientPortal.IncludesAny(user.Roles)) return null;
         return string.IsNullOrWhiteSpace(user.ClientId) ? null : user.ClientId;
     }
 }

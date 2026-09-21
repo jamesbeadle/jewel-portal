@@ -1,5 +1,5 @@
 
-namespace Jewel.JPMS.Api.Features.BuildingControl;
+namespace Jewel.JPMS.Models;
 
 /// <summary>
 /// Who does what with building control. The whole internal team reads it — where the sign-offs
@@ -13,7 +13,7 @@ namespace Jewel.JPMS.Api.Features.BuildingControl;
 /// control status is an open directors' decision (spec §8), and when that lands it gets its own
 /// scoped gate — external roles are never added to internal sets by default (JpmsRoleSets).
 /// </summary>
-internal static class BuildingControlRoles
+public static class BuildingControlRoles
 {
     public static readonly RoleSet Readers = JpmsRoleSets.AllInternal;
 

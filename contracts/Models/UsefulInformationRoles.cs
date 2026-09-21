@@ -1,5 +1,5 @@
 
-namespace Jewel.JPMS.Api.Features.UsefulInformation;
+namespace Jewel.JPMS.Models;
 
 // Useful Information notes are internal reference material — door codes, key safe locations, site
 // access notes — written by office administrators and read by anyone on staff. Every internal role
@@ -8,7 +8,7 @@ namespace Jewel.JPMS.Api.Features.UsefulInformation;
 // External roles (Architect, Client, Subcontractor) are deliberately outside both gates — this is
 // exactly the kind of content that must never leak to a portal login. Administrators pass every
 // gate (SignedInUserResolver grants them all roles).
-internal static class UsefulInformationRoles
+public static class UsefulInformationRoles
 {
     public static readonly RoleSet AllowedToRead = JpmsRoleSets.AllInternal;
 

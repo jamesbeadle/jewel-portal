@@ -19,7 +19,7 @@
     they are done, and the register has to agree before it is accepted.
 *@
 
-<Page>
+<Page OpenTo="HsAuditRoles.Readers">
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="hs">
         <LoadGate IsLoading="@(!Audits.ViewLoadedFor(HsAuditId) && !dataFailed)" Prominent="true" Label="Loading the audit">
         @if (dataFailed && !Audits.ViewLoadedFor(HsAuditId))

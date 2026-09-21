@@ -278,7 +278,7 @@ internal static class AiWriteTools
                     ("pinned", "boolean", "true keeps it always in force for its discipline; false loads on demand. Default false.", false),
                     ("active", "boolean", "false retires it without deleting. Default true.", false)),
                 AiToolKind.Write,
-                Skills.SkillRoles.ManageSkills,
+                SkillRoles.ManageSkills,
                 async (context, input, ct) =>
                 {
                     var command = new SaveAiSkill(
@@ -318,7 +318,7 @@ internal static class AiWriteTools
                     ("description", "string", "One or two clauses on when this reference is worth loading.", true),
                     ("body", "string", "The reference's full text, markdown.", true)),
                 AiToolKind.Write,
-                Skills.SkillRoles.ManageSkills,
+                SkillRoles.ManageSkills,
                 async (context, input, ct) =>
                 {
                     var command = new SaveAiSkillReference(
