@@ -730,20 +730,26 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   store that names a person gets a period there, or a line in the processors document saying why
   it is kept for good.
 
-## An api file the worker compiles may only use what the worker compiles
+## An api file the worker compiles may only reach for what the worker compiles
+
+**Run `python3 -m tools.worker_link_check.check .` before committing anything under `api/`.** It
+answers this in about a second and it is the only check that does.
 
 `worker/Jewel.JPMS.Worker.csproj` links a NAMED SUBSET of `api/` by `Compile Include` (about 180
-files), so an api file in that subset compiles twice — once with the whole api, once with the
-worker's much smaller set. A `using` it takes for granted in the api can be a namespace the worker
-has never heard of: that is what broke main twice, `IImagineImageStore` on 2026-09-21 morning and
-`Jewel.JPMS.Api.Auth` the same afternoon, each time from a one-line using at the top of
-`ImagineNotifier.cs`. Before adding a using to a linked file, check whether the worker links the
-namespace it names; when it does not, the fact belongs in `contracts/` — under `Jewel.JPMS.Models`
-if api, worker and jpms all want it, since all three global-use it (`PrivacyNoticeLink` moved there
-for exactly this reason) — and only a fact that is genuinely the api's own earns a new
-`Compile Include` line. Neither the api nor the worker can be compiled from a cloud session (the
-SDK's hosts are blocked by the egress proxy), so the first CI build is the compile check and a
-using added blind is a red main.
+files), so a linked file compiles twice — once with the whole api, once with the worker's much
+smaller set. A type it reaches for that the worker does not compile fails only the worker build,
+and the source gives no sign of it: **a type in the file's OWN namespace needs no `using`**, so
+nothing to read says it is missing. That broke main three times on 2026-09-21 —
+`IImagineImageStore` and `Jewel.JPMS.Api.Auth` through usings on `ImagineNotifier.cs`, then
+`LeadMarketingConsents` through a bare call in `SalesEntityMapping.cs`, which no reading of the
+usings could have caught.
+
+Two ways out, and the type decides which: a fact the api, the worker and the portal all state
+belongs in `contracts/` under `Jewel.JPMS.Models`, which all three global-use (`PrivacyNoticeLink`
+moved there for this reason); a type that is genuinely the api's own earns a new `Compile Include`
+line next to the file that needs it (`LeadMarketingConsents` beside `SalesEntityMapping`). Neither
+project can be compiled from a cloud session — the SDK's hosts are blocked by the egress proxy —
+so the first CI build is the compile check, and this tool is what stands in for it.
 
 ## Work-order mail tags are project-qualified (api + jpms)
 
