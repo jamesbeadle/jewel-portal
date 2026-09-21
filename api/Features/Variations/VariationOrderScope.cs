@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Features.Architects;
 using Jewel.JPMS.Api.Features.ClientPortal;
 
 namespace Jewel.JPMS.Api.Features.Variations;
@@ -10,15 +11,20 @@ namespace Jewel.JPMS.Api.Features.Variations;
 /// AllowedToApproveVariations admits Role.Client for ANY order id, and approval writes the contract
 /// figures — so without this a signed-in client could approve or reject another client's variation
 /// (found by the permission check, 2026-09-19). The ownership rule is the client portal's own
-/// ClientProjects, so the two surfaces answer the same question the same way.
+/// ClientProjects, so the two surfaces answer the same question the same way. An architect is
+/// confined the same way to the projects that name their practice (ArchitectProjects).
 /// </summary>
 internal static class VariationOrderScope
 {
-    public static async Task<bool> IsTheirsToActOnAsync(
+    public static async Task<bool> MayActOnAsync(
         JpmsContext context, SignedInUser user, string variationOrderId,
         CancellationToken cancellationToken)
     {
-        if (VariationRoles.AllowedToManageVariations.IncludesAny(user.Roles)) return true;
+        if (JpmsRoleSets.AllInternal.IncludesAny(user.Roles)) return true;
+
+        var architectId = ArchitectScope.OwnArchitectId(user);
+        if (architectId is not null)
+            return await ArchitectProjects.OwnsVariationOrderAsync(context, architectId, variationOrderId, cancellationToken);
 
         var clientId = ClientScope.OwnClientId(user);
         if (clientId is null) return false;

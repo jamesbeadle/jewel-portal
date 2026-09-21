@@ -9,17 +9,20 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 public sealed class UpdateRequestFormEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly JpmsContext context;
     private readonly UpdateRequestFormAuthorisation authorisation;
     private readonly UpdateRequestFormValidation validation;
     private readonly ICommandHandler<UpdateRequestForm, Request> handler;
 
     public UpdateRequestFormEndpoint(
         SignedInUserResolver users,
+        JpmsContext context,
         UpdateRequestFormAuthorisation authorisation,
         UpdateRequestFormValidation validation,
         ICommandHandler<UpdateRequestForm, Request> handler)
     {
         this.users = users;
+        this.context = context;
         this.authorisation = authorisation;
         this.validation = validation;
         this.handler = handler;
@@ -41,6 +44,8 @@ public sealed class UpdateRequestFormEndpoint
         var command = body with { RequestId = requestId };
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
+        if (!await RequestScope.MayActOnAsync(context, signedInUser, requestId, cancellationToken))
+            return new StatusCodeResult(403);
 
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);

@@ -26,9 +26,9 @@ public sealed class VariationOrderScopeTests
         await using var context = await SeededContextAsync();
         var client = Signed(Role.Client, clientId: TheirClient);
 
-        Assert.True(await VariationOrderScope.IsTheirsToActOnAsync(
+        Assert.True(await VariationOrderScope.MayActOnAsync(
             context, client, TheirVariation, CancellationToken.None));
-        Assert.False(await VariationOrderScope.IsTheirsToActOnAsync(
+        Assert.False(await VariationOrderScope.MayActOnAsync(
             context, client, AnotherVariation, CancellationToken.None));
     }
 
@@ -38,7 +38,7 @@ public sealed class VariationOrderScopeTests
         await using var context = await SeededContextAsync();
         var unlinked = Signed(Role.Client, clientId: null);
 
-        Assert.False(await VariationOrderScope.IsTheirsToActOnAsync(
+        Assert.False(await VariationOrderScope.MayActOnAsync(
             context, unlinked, TheirVariation, CancellationToken.None));
     }
 
@@ -49,7 +49,7 @@ public sealed class VariationOrderScopeTests
 
         foreach (var role in new[] { Role.ProjectManager, Role.QuantitySurveyor, Role.ManagingDirector })
         {
-            Assert.True(await VariationOrderScope.IsTheirsToActOnAsync(
+            Assert.True(await VariationOrderScope.MayActOnAsync(
                 context, Signed(role), AnotherVariation, CancellationToken.None));
         }
     }
@@ -59,7 +59,7 @@ public sealed class VariationOrderScopeTests
     {
         await using var context = await SeededContextAsync();
 
-        Assert.False(await VariationOrderScope.IsTheirsToActOnAsync(
+        Assert.False(await VariationOrderScope.MayActOnAsync(
             context, Signed(Role.SiteManager), TheirVariation, CancellationToken.None));
     }
 

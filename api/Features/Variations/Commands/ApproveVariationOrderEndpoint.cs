@@ -44,7 +44,7 @@ public sealed class ApproveVariationOrderEndpoint
         var command = body with { VariationOrderId = voId, ApprovedByEmail = signedInUser.Email };
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
-        if (!await VariationOrderScope.IsTheirsToActOnAsync(context, signedInUser, voId, cancellationToken))
+        if (!await VariationOrderScope.MayActOnAsync(context, signedInUser, voId, cancellationToken))
             return new StatusCodeResult(403);
 
         var validationOutcome = validation.Check(command);

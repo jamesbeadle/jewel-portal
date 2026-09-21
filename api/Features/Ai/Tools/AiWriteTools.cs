@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.Requests.Commands;
 using Jewel.JPMS.Api.Features.Todos;
@@ -61,6 +62,8 @@ internal static class AiWriteTools
 
                     var authorisation = context.Services.GetRequiredService<PostRequestMessageAuthorisation>();
                     if (!authorisation.Allows(context.User, command)) return Refused();
+                    var isTheirs = await AiActionScopes.AllowsAsync(context.Db, context.User, command, ct);
+                    if (!isTheirs) return Refused();
                     var validation = context.Services.GetRequiredService<PostRequestMessageValidation>().Check(command);
                     if (validation.HasFailed) return Invalid(validation);
 
