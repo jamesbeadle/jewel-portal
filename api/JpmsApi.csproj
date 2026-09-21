@@ -78,7 +78,7 @@
          nothing to install. AnyCPU rather than -x64 because local development on an Apple-silicon
          Mac needs the osx-arm64 build; the unused platforms are removed at publish by
          TrimPublishedRuntimes, otherwise ~150 MB of native libraries would go to Azure. -->
-    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="13.10.0" />
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.17.1" />
     <!--
       ClosedXML (MIT, pure managed — fine on the Linux Functions host) reads the spreadsheets users
       attach to the assistant chat (AiAttachmentReader): the boss's tracker workbook goes in, text
