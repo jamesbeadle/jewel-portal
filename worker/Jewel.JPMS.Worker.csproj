@@ -31,7 +31,7 @@
     <PackageReference Include="PdfPig" Version="0.1.9" />
     <!-- Azure.Storage.Blobs: the extraction reads revision PDFs from, and writes payload blobs to,
          the drawings container via the api's own AzureBlobDrawingStore (linked below). -->
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.22.2" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.29.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
     <!-- Azure.Communication.Email: the imagine render worker emails the prospect when their
          concepts are ready — same package + version as the api, whose notifier is linked below. -->
