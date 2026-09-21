@@ -41,7 +41,7 @@
       intake message reader, which fetches an email's full body + attachment names live when a
       triager opens it. Ganss.Xss sanitises that untrusted HTML body before it is rendered.
     -->
-    <PackageReference Include="Azure.Identity" Version="1.12.1" />
+    <PackageReference Include="Azure.Identity" Version="1.17.0" />
     <PackageReference Include="HtmlSanitizer" Version="8.1.870" />
     <!--
       Azure.Storage.Queues is the producer SDK used by StorageMailboxQueue to enqueue work for the
@@ -57,7 +57,7 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.22.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="1.3.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.17.4" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.ApplicationInsights" Version="1.2.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.ApplicationInsights" Version="2.51.0" />
     <!--
       PDFsharp/MigraDoc (MIT) renders the branded request (RFI) document. The pure-managed package
       (no -gdi / -wpf suffix) is the right choice for the Linux Azure Functions host; a custom
