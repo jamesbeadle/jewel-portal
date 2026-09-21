@@ -1,7 +1,7 @@
 {
  "summaries": {
   "every endpoint is gated": 0,
-  "an external write is scoped to its own rows": 14,
+  "an external write is scoped to its own rows": 0,
   "correspondence is read by the internal team": 0,
   "correspondence is sent by the directors": 0,
   "Client reaches only what the policy declares": 0,
@@ -9,6 +9,7 @@
   "SiteOperative reaches only what the policy declares": 0,
   "Architect reaches only what the policy declares": 0,
   "the connector offers no more than the gate allows": 0,
+  "a scoped command is scoped on the connector too": 0,
   "a page states who may open it": 84
  },
  "reachByRole": {

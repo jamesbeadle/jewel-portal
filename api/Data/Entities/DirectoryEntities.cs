@@ -17,6 +17,12 @@ public sealed class DirectoryUserEntity
     /// sees nothing. Null for all internal users.</summary>
     [MaxLength(64)] public string? ClientId { get; set; }
 
+    /// <summary>Set when this login belongs to an architect practice's contact. Architect reads and
+    /// writes scope to the projects that name this practice as their party (Gates/ArchitectScope,
+    /// Features/Architects/ArchitectProjects) — a Role.Architect session with no link reaches
+    /// nothing. Null for all internal users.</summary>
+    [MaxLength(64)] public string? ArchitectId { get; set; }
+
     /// <summary>Set when the user's access is revoked. The row and its role rows survive — so a
     /// restore puts the user back exactly as they were — but a revoked user cannot sign in and is
     /// filtered out of every active-user read. Null = active.</summary>
