@@ -48,7 +48,7 @@
       worker Function App. The Functions queue/timer *trigger* extensions and Azure.Identity (Graph)
       live in the worker project — SWA managed functions only support HTTP triggers.
     -->
-    <PackageReference Include="Azure.Storage.Queues" Version="12.19.1" />
+    <PackageReference Include="Azure.Storage.Queues" Version="12.27.1" />
     <!--
       Azure.Storage.Blobs stores the actual drawing files behind each revision (private container,
       proxied downloads). Uploads run through the SWA-managed HTTP Function; no queue/timer trigger.
