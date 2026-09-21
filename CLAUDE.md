@@ -658,6 +658,34 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   subcontractor RAMS/induction acceptance, the H&S officer's role-home tiles, a printable report
   in her layout, `create_hs_audit_from_message` for the next audit she emails.
 
+## An external login carries its identity, and every external write is scoped by it (api + jpms)
+
+- **An architect login belongs to an architect** (2026-09-21, from the system-wide permission
+  check). `DirectoryUsers.ArchitectId` (migration `AddDirectoryUserArchitectId`, script
+  `add-directory-user-architect-id.sql`) is the architect twin of `ClientId` and
+  `SubcontractorId`: set by the Architects page's "Invite to portal" (`InviteArchitectPortalUserHandler`,
+  `POST architects/{id}/portal-invite`, the same office roles as the client invite), carried on
+  `SignedInUser.ArchitectId` / `AuthenticatedUserResponse.ArchitectId` / `Auth.CurrentArchitectId`,
+  and read by `Gates/ArchitectScope.OwnArchitectId`. **An architect's projects are the ones that
+  name their practice as the party** — `Project.PartyKind == Architect && PartyId == theirs`
+  (Nigel's decision), never Lead-stage — through `Features/Architects/ArchitectProjects`, the
+  twin of `ClientPortal/ClientProjects`. A Role.Architect login with no link reaches nothing.
+- **Every write an external role may make consults a scope in the endpoint** — the permission
+  check's rule, now at zero. `RequestScope` (raise on a project: architect → their projects,
+  subcontractor → a project they hold an issued work order on, `Portal/SubcontractorProjects`;
+  edit, form, messages, attachments: architect → their request), `ArchitectInstructionScope`
+  (file on a project, act on an instruction), `VariationOrderScope` and `DefectScope` (both
+  gained the architect branch; both, like `QuoteScope`, answer true for an internal role first
+  and false for an external login with no link — `DefectScope` used to let an unlinked Client
+  through). Pinned by `ArchitectScopeTests`; the shape to copy for the next external role.
+- **The connector runs the same scopes** (`AiActionScopes`, `api/Features/Ai/Tools/Actions`):
+  `perform_action` used to run an action's Authorisation and Validation and nothing else, so an
+  external login connected through MCP reached any record its role admitted (the security
+  review's finding, 2026-09-21). `AiActionExecutor` now asks `AiActionScopes.AllowsAsync` after
+  the role gate, and so does `post_request_message`; a command that consults a scope on its
+  endpoint needs an entry there — the permission check's rule "a scoped command is scoped on the
+  connector too" fails when one is missing. Pinned by `AiActionScopesTests`.
+
 ## Work-order mail tags are project-qualified (api + jpms)
 
 - **A work order's tag stem carries its project** (2026-09-14, the By France / Coombe Lane

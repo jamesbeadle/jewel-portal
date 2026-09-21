@@ -5,8 +5,8 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 
 /// <summary>
 /// Runs one <see cref="AiAction"/> exactly the way its HTTP endpoint would: bind the command with
-/// the actor stamped server-side, Authorisation.Allows, Validation.Check, then the registered
-/// ICommandHandler — resolved from the same DI scope, so behaviour cannot drift from the portal's.
+/// the actor stamped server-side, Authorisation.Allows, the record scope (<see cref="AiActionScopes"/>),
+/// Validation.Check, then the registered ICommandHandler — resolved from the same DI scope, so behaviour cannot drift from the portal's.
 /// Everything here is reflection over the conventions every endpoint already follows; an action
 /// whose classes break the convention fails loudly at boot via <see cref="AiActionRegistry"/>.
 /// </summary>
@@ -23,6 +23,9 @@ internal static class AiActionExecutor
         var authorisation = context.Services.GetRequiredService(action.AuthorisationType);
         if (!InvokeAllows(authorisation, context.User, command))
             return Serialise(new { ok = false, error = "Your portal roles do not allow this action." });
+        var isTheirs = await AiActionScopes.AllowsAsync(context.Db, context.User, command, cancellationToken).ConfigureAwait(false);
+        if (!isTheirs)
+            return Serialise(new { ok = false, error = "That record is not on a project your login reaches." });
 
         if (action.ValidationType is not null)
         {

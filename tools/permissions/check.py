@@ -10,7 +10,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import connector, inventory, rules
+from . import connector, inventory, rules, source
 
 RULES_IN_REPORT_ORDER = [
     rules.EVERY_ENDPOINT_IS_GATED,
@@ -22,6 +22,7 @@ RULES_IN_REPORT_ORDER = [
     "SiteOperative reaches only what the policy declares",
     "Architect reaches only what the policy declares",
     rules.CONNECTOR_MATCHES_THE_GATE,
+    rules.A_SCOPED_COMMAND_IS_SCOPED_ON_THE_CONNECTOR,
     rules.A_PAGE_STATES_WHO_MAY_OPEN_IT,
 ]
 FINDINGS_SHOWN_PER_RULE = 12
@@ -43,7 +44,18 @@ def findingsFor(model: dict, policy: dict, repositoryRoot: Path) -> list[dict]:
             *rules.correspondence(model, policy),
             *rules.externalReach(model, policy),
             *rules.connectorDrift(model["connectorActions"]),
+            *rules.scopedCommandsOffTheConnector(model, bodies, connectorText(repositoryRoot),
+                                                 scopesText(repositoryRoot)),
             *rules.pagesWithoutACheck(model["pages"], policy)]
+
+
+def connectorText(repositoryRoot: Path) -> str:
+    return "\n".join(path.read_text(errors="replace") for path in source.connectorFiles(repositoryRoot))
+
+
+def scopesText(repositoryRoot: Path) -> str:
+    scopes = repositoryRoot / "api/Features/Ai/Tools/Actions/AiActionScopes.cs"
+    return scopes.read_text(errors="replace") if scopes.exists() else ""
 
 
 def summarise(findings: list[dict]) -> dict[str, int]:

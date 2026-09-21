@@ -30,6 +30,11 @@ field, and one gate delegating to another. Resolution follows private helper met
 classes split across files, and expression-bodied members — an endpoint whose gate sits in a
 private `Gate(request)` helper is not a hole, and must not be reported as one.
 
+The connector is held to the site's record scopes as well as its role gates: an endpoint that
+consults a `*Scope` after its role check is matched by an entry in `AiActionScopes`, which
+`perform_action` runs before the handler — the rule "a scoped command is scoped on the connector
+too" reports any scoped command the connector dispatches without one.
+
 ## policy.json is the declared truth
 
 The policy is written in the business's words and reviewed like a document. It says who may reach

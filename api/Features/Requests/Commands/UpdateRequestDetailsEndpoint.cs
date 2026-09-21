@@ -5,11 +5,12 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 public sealed class UpdateRequestDetailsEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly JpmsContext context;
     private readonly UpdateRequestDetailsAuthorisation authorisation;
     private readonly UpdateRequestDetailsValidation validation;
     private readonly ICommandHandler<UpdateRequestDetails, Request> handler;
-    public UpdateRequestDetailsEndpoint(SignedInUserResolver users, UpdateRequestDetailsAuthorisation authorisation, UpdateRequestDetailsValidation validation, ICommandHandler<UpdateRequestDetails, Request> handler)
-    { this.users = users; this.authorisation = authorisation; this.validation = validation; this.handler = handler; }
+    public UpdateRequestDetailsEndpoint(SignedInUserResolver users, JpmsContext context, UpdateRequestDetailsAuthorisation authorisation, UpdateRequestDetailsValidation validation, ICommandHandler<UpdateRequestDetails, Request> handler)
+    { this.users = users; this.context = context; this.authorisation = authorisation; this.validation = validation; this.handler = handler; }
 
     [Function(nameof(UpdateRequestDetails))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "requests/{requestId}")] HttpRequest request, string requestId)
@@ -20,6 +21,8 @@ public sealed class UpdateRequestDetailsEndpoint
         if (command is null) return new BadRequestResult();
         if (command.RequestId != requestId) return new BadRequestObjectResult("Route requestId does not match body.");
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
+        if (!await RequestScope.MayActOnAsync(context, signedInUser, requestId, request.HttpContext.RequestAborted))
+            return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
         try

@@ -12,6 +12,9 @@ CORRESPONDENCE_IS_READ_BY = "correspondence is read by the internal team"
 CORRESPONDENCE_IS_SENT_BY = "correspondence is sent by the directors"
 CONNECTOR_MATCHES_THE_GATE = "the connector offers no more than the gate allows"
 A_PAGE_STATES_WHO_MAY_OPEN_IT = "a page states who may open it"
+A_SCOPED_COMMAND_IS_SCOPED_ON_THE_CONNECTOR = "a scoped command is scoped on the connector too"
+COMMAND_HANDLED = re.compile(r"ICommandHandler<(\w+),")
+COMMAND_DISPATCHED = re.compile(r"typeof\((\w+)\)|new (\w+)\(")
 
 
 def startsWithAny(route: str, prefixes: list[str]) -> bool:
@@ -105,3 +108,21 @@ def pagesWithoutACheck(pages: list[dict], policy: dict):
             continue
         yield finding(A_PAGE_STATES_WHO_MAY_OPEN_IT, page["routes"][0], ["page"],
                       "no OpenTo — any approved sign-in renders it", page["file"])
+
+
+def scopedCommandsOffTheConnector(inventory: dict, bodies: dict, connectorText: str, scopesText: str):
+    """An endpoint that consults a record scope after its role gate is matched by the connector,
+    which runs the same command through AiActionScopes; a command scoped on the site and
+    dispatched by the connector without an entry there reaches further over MCP than on the site."""
+    dispatched = {name for pair in COMMAND_DISPATCHED.findall(connectorText) for name in pair if name}
+    reported: set[str] = set()
+    for endpoint in inventory["endpoints"]:
+        body = bodies.get(endpoint["file"], "")
+        if not CONSULTS_A_SCOPE.search(body):
+            continue
+        for command in COMMAND_HANDLED.findall(body):
+            if command in reported or command not in dispatched or f"typeof({command})" in scopesText:
+                continue
+            reported.add(command)
+            yield finding(A_SCOPED_COMMAND_IS_SCOPED_ON_THE_CONNECTOR, endpoint["route"], endpoint["verbs"],
+                          f"{command} consults a scope on the site and none in AiActionScopes", endpoint["file"])

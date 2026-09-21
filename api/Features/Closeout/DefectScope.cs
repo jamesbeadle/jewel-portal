@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Features.Architects;
 using Jewel.JPMS.Api.Features.ClientPortal;
 
 namespace Jewel.JPMS.Api.Features.Closeout;
@@ -10,18 +11,23 @@ namespace Jewel.JPMS.Api.Features.Closeout;
 /// ANY project id (permission check, 2026-09-19). Ownership is the client portal's own
 /// ClientProjects, so both surfaces decide it the same way.
 ///
-/// The architect is admitted by the same gate and is NOT scoped here: a Role.Architect login
-/// carries no architect identity at all — DirectoryUserEntity has SubcontractorId and ClientId and
-/// no ArchitectId — so there is nothing yet to scope them against. That is a schema decision, not
-/// a fix, and the permission check goes on reporting this route until it is taken.
+/// The architect is admitted by the same gate and confined the same way, to the projects that
+/// name their practice (ArchitectProjects, since the login carries ArchitectId). An external
+/// login with no link reaches nothing.
 /// </summary>
 internal static class DefectScope
 {
     public static async Task<bool> IsOnTheirOwnProjectAsync(
         JpmsContext context, SignedInUser user, string projectId, CancellationToken cancellationToken)
     {
+        if (JpmsRoleSets.AllInternal.IncludesAny(user.Roles)) return true;
+
+        var architectId = ArchitectScope.OwnArchitectId(user);
+        if (architectId is not null)
+            return await ArchitectProjects.OwnsProjectAsync(context, architectId, projectId, cancellationToken);
+
         var clientId = ClientScope.OwnClientId(user);
-        if (clientId is null) return true;
+        if (clientId is null) return false;
 
         return await ClientProjects.OwnsProjectAsync(context, clientId, projectId, cancellationToken);
     }
