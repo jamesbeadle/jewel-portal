@@ -1,0 +1,59 @@
+@using Jewel.JPMS.Contracts.DataProtection
+
+@*
+    The dossier's two halves, read-only: the records that are the person with every detail they
+    hold (the export), and the columns that merely name them, counted.
+*@
+
+<div class="space-y-6">
+    <div>
+        <SectionHeader Title="@($"Records that are them ({Records.Count})")" />
+        @if (Records.Count == 0)
+        {
+            <EmptyState Message="No record is this person — only mentions." />
+        }
+        else
+        {
+            <dl class="space-y-3">
+                @foreach (var record in Records)
+                {
+                    <div class="border border-line rounded p-3">
+                        <dt class="text-sm font-medium text-content">@record.Kind — @record.Title</dt>
+                        <dd class="mt-1 text-xs text-content-muted grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                            @foreach (var field in record.Fields)
+                            {
+                                <span><span class="text-content-subtle">@field.Label:</span> @field.Value</span>
+                            }
+                        </dd>
+                    </div>
+                }
+            </dl>
+        }
+    </div>
+    <div>
+        <SectionHeader Title="@($"Mentions ({Mentions.Sum(mention => mention.Count)})")" />
+        @if (Mentions.Count == 0)
+        {
+            <EmptyState Message="No column names this address." />
+        }
+        else
+        {
+            <RecordsTable Dense="true" MaxHeight="max-h-96">
+                <table class="data-table data-table-dense">
+                    <thead><tr><th>Table</th><th>Column</th><th class="text-right">Rows</th></tr></thead>
+                    <tbody>
+                        @foreach (var mention in Mentions)
+                        {
+                            <tr><td>@mention.Table</td><td>@mention.Column</td><td class="text-right tabular-nums">@mention.Count</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </RecordsTable>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<PersonRecord> Records { get; set; } = Array.Empty<PersonRecord>();
+    [Parameter, EditorRequired] public IReadOnlyList<PersonMention> Mentions { get; set; } = Array.Empty<PersonMention>();
+}

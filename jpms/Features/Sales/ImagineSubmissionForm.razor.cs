@@ -24,6 +24,7 @@ public partial class ImagineSubmissionForm
     private string name = "";
     private string email = "";
     private bool consent;
+    private bool keepInTouch;
 
     private bool CanSubmit => photos.Count > 0 && !string.IsNullOrWhiteSpace(email) && consent;
 
@@ -70,7 +71,7 @@ public partial class ImagineSubmissionForm
         try
         {
             var uploads = photos.Select(photo => new ImaginePhotoUpload(photo.FileName, photo.ContentType, photo.Base64)).ToList();
-            var submission = new ImagineSubmission(name.Trim(), email.Trim(), brief.Trim(), uploads, consent);
+            var submission = new ImagineSubmission(name.Trim(), email.Trim(), brief.Trim(), uploads, consent, keepInTouch);
             var outcome = await ImagineRequests.PostAsync(Http, $"{ImagineRequests.BaseFor(Token)}/submit", submission);
             photos.Clear();
             if (outcome.Error is { } message) await OnError.InvokeAsync(message);

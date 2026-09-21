@@ -26,6 +26,7 @@ public sealed class WorkerEntity
     // the window bounds expectation, never data.
     public DateTimeOffset? EngagedFrom { get; set; }
     public DateTimeOffset? EngagedTo { get; set; }
+    public DateTimeOffset? RetiredAt { get; set; }
 }
 
 /// <summary>

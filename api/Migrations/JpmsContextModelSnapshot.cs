@@ -384,6 +384,9 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.HasKey("AuditEventId");
 
+                    b.HasIndex("OccurredAt")
+                        .HasDatabaseName("IX_AuditEvents_OccurredAt");
+
                     b.HasIndex("RecordId")
                         .HasDatabaseName("IX_AuditEvents_RecordId");
 
@@ -3579,6 +3582,12 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTimeOffset?>("ImagineTokenIssuedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("MarketingConsentGivenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("MarketingConsentWithdrawnAt")
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("LeadId");
@@ -8607,6 +8616,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset?>("RetiredAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("SubcontractorId")
                         .HasMaxLength(64)

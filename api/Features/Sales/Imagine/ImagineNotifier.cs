@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Auth;
 using System.Net;
 using Azure;
 using Azure.Communication.Email;
@@ -113,7 +114,8 @@ public sealed class AcsImagineNotifier : IImagineNotifier
     }
 
     private string Signature() =>
-        $"<p style=\"color:#666\">Jewel Bespoke Build<br><a href=\"mailto:{options.SalesAddress}\">{options.SalesAddress}</a></p>";
+        $"<p style=\"color:#666\">Jewel Bespoke Build<br><a href=\"mailto:{options.SalesAddress}\">{options.SalesAddress}</a><br>"
+        + $"<a href=\"{options.PublicSiteUrl.TrimEnd('/')}{PrivacyNoticeLink.Path}\" style=\"color:#666\">How we look after your details</a> · to stop hearing from us, use the link on your imagine page.</p>";
 
     private static string Wrap(string body) =>
         "<div style=\"font-family:Poppins,Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.55;color:#1a1a1a;max-width:600px\">"

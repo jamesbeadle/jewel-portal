@@ -7,7 +7,7 @@ internal static class LabourEntityMapping
     public static Worker ToModel(this WorkerEntity entity) =>
         new(entity.WorkerId, entity.Name, entity.SubcontractorId, entity.HourlyRate,
             entity.IsActive, entity.ContactEmail, entity.ContactPhone,
-            entity.IsSoleTrader, entity.EngagedFrom, entity.EngagedTo);
+            entity.IsSoleTrader, entity.EngagedFrom, entity.EngagedTo, entity.RetiredAt);
 
     public static ProjectWorkerAssignment ToModel(this ProjectWorkerAssignmentEntity entity, string workerName) =>
         new(entity.ProjectWorkerAssignmentId, entity.ProjectId, entity.WorkerId, workerName, entity.IsActive);

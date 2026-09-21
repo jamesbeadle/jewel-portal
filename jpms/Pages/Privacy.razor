@@ -1,0 +1,49 @@
+@page "/privacy"
+@layout LandingLayout
+@using Jewel.JPMS.Features.Privacy
+
+<PageTitle>Privacy notice · JPMS</PageTitle>
+
+@*
+    The portal's privacy notice (UK GDPR Articles 13 and 14): who we are, what we hold about
+    each kind of person the portal touches, why, who processes it for us, how long, and the
+    rights they have. Public and outside the sign-in gate — linked from the sign-in page, every
+    invite and reset email, and the imagine form. The words are the business's; the sections
+    are components so each stays readable on its own.
+*@
+
+<div class="min-h-dvh flex flex-col">
+    <header class="px-6 md:px-10 py-6 border-b border-line flex items-center gap-2.5">
+        <JewelIcon Class="w-6 h-6 text-content" />
+        <span class="font-semibold text-content">Jewel Project Management System</span>
+    </header>
+
+    <main class="flex-1 px-6 md:px-10 py-10">
+        <article class="max-w-3xl mx-auto space-y-10 text-content">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-semibold leading-tight mb-3">Privacy notice</h1>
+                <p class="text-content-muted leading-relaxed">
+                    This notice explains what Jewel Bespoke Build holds about you in its project management
+                    portal, why, who handles it for us, how long we keep it and what you can ask us to do.
+                    It covers everyone the portal touches: our staff and site operatives, our clients and the
+                    people who act for them, the architects, subcontractors and suppliers we work with, and
+                    anyone who has asked us about a project or sent photographs of their home.
+                </p>
+                <p class="text-xs text-content-subtle mt-3">Last reviewed @LastReviewed.</p>
+            </div>
+
+            <PrivacyNoticeWhoAndWhat />
+            <PrivacyNoticeWhyAndWhere />
+            <PrivacyNoticeRightsAndRetention ContactAddress="@PrivacyContacts.Address" />
+        </article>
+    </main>
+
+    <footer class="px-6 md:px-10 py-6 border-t border-line text-xs text-content-faint flex flex-wrap gap-4">
+        <span>Jewel Bespoke Build · Surrey</span>
+        <a href="/" class="text-accent hover:text-accent-hover">Back to sign in</a>
+    </footer>
+</div>
+
+@code {
+    private const string LastReviewed = "21 September 2026";
+}

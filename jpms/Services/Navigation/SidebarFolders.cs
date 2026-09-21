@@ -404,6 +404,10 @@ public static class SidebarFolders
                 // administrators-only register; nothing else in the system shows the marks.
                 new SidebarRow(new NavigationItem("KPI emails", "/admin/kpis"),
                     DesktopNavigation.AdministratorOnly),
+                // What the portal holds about one person, and the erasure that follows a
+                // request (data protection, 2026-09-21).
+                new SidebarRow(new NavigationItem("Data protection", "/admin/data-protection"),
+                    DesktopNavigation.AdministratorOnly),
                 // The connector's skills — the working knowledge the team's own Claude reads, edited
                 // by the discipline owner (docs/ai/10-mcp-connector.md §2d). Directors rather than
                 // administrator-only, deliberately: the MD maintaining his own doctrine is the

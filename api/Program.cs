@@ -23,6 +23,7 @@ using Jewel.JPMS.Api.Features.Closeout;
 using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Api.Features.CommercialInputs;
 using Jewel.JPMS.Api.Features.Cvr;
+using Jewel.JPMS.Api.Features.DataProtection;
 using Jewel.JPMS.Api.Features.Directory;
 using Jewel.JPMS.Api.Features.DocumentControl;
 using Jewel.JPMS.Api.Features.Drawings;
@@ -93,6 +94,7 @@ var host = new HostBuilder()
         services.AddScoped<PasswordResetSender>();
         RegisterInviteNotifier(services, context.Configuration);
         services.AddDirectoryFeature();
+        services.AddDataProtectionFeature();
         services.AddAccessRequestsFeature();
         services.AddProjectsFeature();
         services.AddProjectContractsFeature(context.Configuration);

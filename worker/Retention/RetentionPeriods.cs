@@ -16,4 +16,13 @@ internal static class RetentionPeriods
 
     /// <summary>The OCR text of a scanned document; the next read re-OCRs the file on a miss.</summary>
     public static readonly TimeSpan ScanText = TimeSpan.FromDays(180);
+
+    /// <summary>The audit trail: who did what to a contract, an order, a valuation. Kept as long
+    /// as the financial records it evidences — six years past the year they belong to — and no
+    /// longer, because every row names a person.</summary>
+    public static readonly TimeSpan AuditTrail = TimeSpan.FromDays(365 * 7);
+
+    /// <summary>The agent activity log: the assistant's own runs, with who asked and the cost.
+    /// Operational, not evidential — two years is enough to read the trend.</summary>
+    public static readonly TimeSpan AgentActivity = TimeSpan.FromDays(365 * 2);
 }

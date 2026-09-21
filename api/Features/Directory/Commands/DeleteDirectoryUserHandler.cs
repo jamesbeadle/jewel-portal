@@ -1,12 +1,15 @@
+using Jewel.JPMS.Api.Features.DataProtection;
 using Jewel.JPMS.Contracts.Directory;
 
 namespace Jewel.JPMS.Api.Features.Directory.Commands;
 
 /// <summary>
 /// Permanently deletes a user's record: the directory row, its role rows, the credential, any
-/// password tokens and every session. Only a row that is already revoked can be deleted — the
-/// destructive step is always a second, deliberate act on an account that already cannot sign
-/// in, never a single click on a live one.
+/// password tokens and every session — and rewrites their actor stamps on the audit trail and
+/// the agent activity log to a pseudonym, so the address leaves with them (data protection,
+/// 2026-09-21). Only a row that is already revoked can be deleted — the destructive step is
+/// always a second, deliberate act on an account that already cannot sign in, never a single
+/// click on a live one.
 /// </summary>
 public sealed class DeleteDirectoryUserHandler
     : ICommandHandler<DeleteDirectoryUser, Acknowledgement>
@@ -57,6 +60,8 @@ public sealed class DeleteDirectoryUserHandler
                 && t.AssigneePersonEmail.ToLower() == command.Email.ToLower())
             .ExecuteUpdateAsync(set => set.SetProperty(t => t.AssigneePersonEmail, (string?)null),
                 cancellationToken);
+
+        await ActorTrail.PseudonymiseAsync(context, command.Email, cancellationToken);
 
         userCache.InvalidateEmail(command.Email);
         return new Acknowledgement(command.Email);

@@ -44,7 +44,9 @@ public sealed record Lead(
     // printed as the QR code on the letter, and when it was issued. Null until a link is issued;
     // re-issuing replaces it, so an old QR code stops working.
     string? ImagineToken = null,
-    DateTimeOffset? ImagineTokenIssuedAt = null);
+    DateTimeOffset? ImagineTokenIssuedAt = null,
+    // Whether the prospect said we may keep in touch about their home (LeadMarketingConsent).
+    LeadMarketingConsent MarketingConsent = LeadMarketingConsent.NotRecorded);
 
 /// <summary>What kind of touch an activity records. Values persist as ints — append only.</summary>
 public enum LeadActivityKind

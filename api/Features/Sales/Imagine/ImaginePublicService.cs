@@ -83,6 +83,7 @@ public sealed partial class ImaginePublicService
             rounds,
             Math.Max(0, ImagineLimits.MaxRoundsPerLead - rounds.Count),
             ImagineLimits.MaxPhotosPerRound,
-            live?.ToView());
+            live?.ToView(),
+            LeadMarketingConsents.Of(lead));
     }
 }

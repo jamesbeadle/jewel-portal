@@ -46,6 +46,8 @@ public sealed class LeadEntity
     // is printed. It opens a design page, not an account. Indexed unique; null until issued.
     [MaxLength(64)]      public string? ImagineToken { get; set; }
     public DateTimeOffset? ImagineTokenIssuedAt { get; set; }
+    public DateTimeOffset? MarketingConsentGivenAt { get; set; }
+    public DateTimeOffset? MarketingConsentWithdrawnAt { get; set; }
 
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string DisplayReference => Number > 0
