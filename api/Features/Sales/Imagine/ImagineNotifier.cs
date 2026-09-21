@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Auth;
 using System.Net;
 using Azure;
 using Azure.Communication.Email;

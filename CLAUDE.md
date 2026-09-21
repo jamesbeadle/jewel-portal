@@ -730,6 +730,21 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   store that names a person gets a period there, or a line in the processors document saying why
   it is kept for good.
 
+## An api file the worker compiles may only use what the worker compiles
+
+`worker/Jewel.JPMS.Worker.csproj` links a NAMED SUBSET of `api/` by `Compile Include` (about 180
+files), so an api file in that subset compiles twice — once with the whole api, once with the
+worker's much smaller set. A `using` it takes for granted in the api can be a namespace the worker
+has never heard of: that is what broke main twice, `IImagineImageStore` on 2026-09-21 morning and
+`Jewel.JPMS.Api.Auth` the same afternoon, each time from a one-line using at the top of
+`ImagineNotifier.cs`. Before adding a using to a linked file, check whether the worker links the
+namespace it names; when it does not, the fact belongs in `contracts/` — under `Jewel.JPMS.Models`
+if api, worker and jpms all want it, since all three global-use it (`PrivacyNoticeLink` moved there
+for exactly this reason) — and only a fact that is genuinely the api's own earns a new
+`Compile Include` line. Neither the api nor the worker can be compiled from a cloud session (the
+SDK's hosts are blocked by the egress proxy), so the first CI build is the compile check and a
+using added blind is a red main.
+
 ## Work-order mail tags are project-qualified (api + jpms)
 
 - **A work order's tag stem carries its project** (2026-09-14, the By France / Coombe Lane
