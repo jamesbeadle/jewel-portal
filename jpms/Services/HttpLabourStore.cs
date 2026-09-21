@@ -118,6 +118,12 @@ public sealed class HttpLabourStore : ILabourStore
         await workersReadModel.RefreshAsync(CancellationToken.None);
     }
 
+    public async Task RetireWorkerAsync(string workerId)
+    {
+        await commands.SendAsync(new RetireWorker(workerId), CancellationToken.None);
+        await workersReadModel.RefreshAsync(CancellationToken.None);
+    }
+
     public IReadOnlyList<ProjectWorkerAssignment> AssignmentsFor(string projectId)
     {
         if (assignmentsRequested.Add(projectId)) _ = LoadAsync(() => assignmentsReadModel.RefreshAsync(projectId, CancellationToken.None), assignmentsRequested, projectId);

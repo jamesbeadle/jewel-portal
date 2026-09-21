@@ -1,0 +1,48 @@
+@inject HttpClient Http
+
+@*
+    The prospect's own door to stop us keeping in touch (data protection, 2026-09-21): one press on
+    the page they already hold, in place of "email sales@ to stop". A withdrawal is shown back so
+    they can see it took; the concepts and any open proposal are unaffected.
+*@
+
+<section class="text-xs text-content-subtle max-w-3xl">
+    @if (Consent == LeadMarketingConsent.Withdrawn)
+    {
+        <p>You've asked us not to keep in touch about your home, and we won't. Your concepts stay here for you.</p>
+    }
+    else
+    {
+        <p class="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>@Wording</span>
+            <InlineConfirm Label="Stop keeping in touch" Question="Click again and we'll stop" Danger="false" Busy="@busy" OnConfirm="StopAsync" />
+            <a class="text-info underline underline-offset-4" href="/privacy" target="_blank" rel="noopener">How we look after your details</a>
+        </p>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string Token { get; set; } = "";
+    [Parameter] public LeadMarketingConsent Consent { get; set; }
+    [Parameter] public EventCallback<ImagineView> OnChanged { get; set; }
+    [Parameter] public EventCallback<string?> OnError { get; set; }
+
+    private bool busy;
+
+    private string Wording => Consent == LeadMarketingConsent.Given
+        ? "You've said we may keep in touch about your home."
+        : "We may follow up on this enquiry.";
+
+    private async Task StopAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var outcome = await ImagineRequests.PostAsync(Http, $"{ImagineRequests.BaseFor(Token)}/keep-in-touch/stop", new { });
+            if (outcome.Error is { } message) await OnError.InvokeAsync(message);
+            if (outcome.View is { } updated) await OnChanged.InvokeAsync(updated);
+        }
+        finally { busy = false; }
+    }
+}

@@ -686,6 +686,50 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   endpoint needs an entry there — the permission check's rule "a scoped command is scoped on the
   connector too" fails when one is missing. Pinned by `AiActionScopesTests`.
 
+## Data protection: the notice, the rights and the retention (contracts + api + jpms + worker)
+
+- **The privacy notice is `/privacy`** (2026-09-21, the data-protection task): a landing-layout
+  page outside the sign-in gate (`jpms/Pages/Privacy.razor`, sections in
+  `jpms/Features/Privacy/`), linked from the sign-in page, every invite and reset email
+  (`PrivacyNoticeLink.Beside(link)` — same origin as the link the email carries), the imagine
+  form and the prospect emails' signature. The words are the business's — reviewed by people,
+  not rewritten by a session — and the processing record behind them is `docs/data-processors.md`
+  (who processes what, where, and every retention period). The privacy contact is
+  `PrivacyContacts.Address`; change it there and nowhere else.
+- **A person's dossier and their erasure live in `api/Features/DataProtection`.**
+  `GetPersonDossier(email)` (Admin → Data protection, `get_person_dossier`) is the subject-access
+  reading: the rows that ARE the person (`PersonRecordKinds` — one entry per kind, with what its
+  erasure means) and every column that merely names them (`PersonColumns`: every string property
+  ending in `Email` on the EF model, keys excluded — a column added next month is covered the day
+  it is added). `AnonymisePerson` (administrators only, confirm-first, `anonymise_person`) erases
+  the records, rewrites every mention to `PersonPseudonym.For(email)` — one deterministic
+  `erased-<hash>@erased.invalid` per person, so the trail still shows one actor — and redacts the
+  sentences that quote them (`PersonFreeText`: audit detail, agent summary, lead timeline, message
+  body, KPI note, imagine brief). Nothing is deleted: orders, invoices and audit rows keep their
+  money and dates. It refuses while a sign-in carries the address — `DeleteDirectoryUser` is the
+  door for that, and it now pseudonymises the audit and agent-activity actor (`ActorTrail`) — and
+  while a worker under it has history nobody has retired. Never add a "delete everything" path.
+- **A worker with history is retired, never deleted**: `RetireWorker` (Workers page → Retire,
+  connector `retire_worker` by name — across inactive workers too, `WorkerNameResolver.
+  ResolveWhetherActiveOrNot`) clears contact email and phone, marks inactive, closes the
+  engagement and stamps `Workers.RetiredAt`; name, rate history and timesheets stay because
+  recorded cost and CIS returns are built on them. `DeleteWorker` stays for a worker with none.
+- **The imagine form asks two things, separately**: `ImagineSubmission.Consent` (email me my
+  concepts — the service tick the round cannot go ahead without) and `KeepInTouch` (optional,
+  marketing). The second lands as `Leads.MarketingConsentGivenAt`; the prospect's own "Stop
+  keeping in touch" on their imagine page (`POST imagine/{token}/keep-in-touch/stop`) and the
+  sales team's `WithdrawLeadMarketingConsent` (`withdraw_lead_marketing_consent`) land
+  `MarketingConsentWithdrawnAt`. `LeadMarketingConsents.Of(lead)` is the ONE reading — the later
+  stamp wins; neither is NotRecorded — carried as `Lead.MarketingConsent` and `ImagineView.
+  MarketingConsent`. `SendSalesProposal` refuses a Withdrawn lead; NotRecorded (every lead captured
+  before the question existed) still allows a follow-up on the enquiry they made. The
+  concepts-ready email is service delivery and never consults it.
+- **Retention is `worker/Retention/RetentionPeriods.cs`**, one period per store with its reason,
+  swept nightly by `RetentionSweepWorker`: since 2026-09-21 the audit trail (7 years, indexed on
+  `OccurredAt` by `AddDataProtectionColumns`) and the agent activity log (2 years) too. A new
+  store that names a person gets a period there, or a line in the processors document saying why
+  it is kept for good.
+
 ## Work-order mail tags are project-qualified (api + jpms)
 
 - **A work order's tag stem carries its project** (2026-09-14, the By France / Coombe Lane

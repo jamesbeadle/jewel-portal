@@ -293,6 +293,21 @@ public static class OfficePageGuides
             + "repeat the register's contents to, or in a draft for, anyone but the administrator "
             + "asking. You navigate_to only — no dialog is registered here."),
 
+        new("/admin/data-protection", "Data protection",
+            "Admin → Data protection (administrators only): what the portal holds about one person, "
+            + "by email — the rows that are them (a client's contact, a person at an architect or a "
+            + "directory record, a lead, their imagine rounds, messages they wrote, a worker) with "
+            + "every detail, and every column that merely names them, counted — which is the "
+            + "answer to a subject access request. Below it, the erasure that follows one: a reason "
+            + "for the audit trail, then Anonymise (confirm-first, no undo): details erased, every "
+            + "mention rewritten to one pseudonym, nothing deleted. Refused while the address still "
+            + "has a sign-in (Users → revoke, Revoked → permanently delete, which also pseudonymises "
+            + "their audit trail) or names a worker with history who has not been retired (Labour → "
+            + "Workers → Retire). Over the connector: get_person_dossier reads the same dossier, "
+            + "anonymise_person erases, retire_worker retires, withdraw_lead_marketing_consent "
+            + "records a prospect's \"please stop\". The public notice is /privacy. You navigate_to "
+            + "only — no dialog is registered here."),
+
         new("/registers", "Registers",
             "The company registers — insurances, subscriptions, vehicles and trade accounts, one "
             + "tab per kind, each dated field tracking a renewal so nothing lapses unseen. A "

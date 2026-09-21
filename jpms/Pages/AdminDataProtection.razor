@@ -1,0 +1,61 @@
+@page "/admin/data-protection"
+@using Jewel.JPMS.Contracts.DataProtection
+@using Jewel.JPMS.Features.DataProtection
+@inject SessionService Session
+
+<PageTitle>Data protection · JPMS</PageTitle>
+
+@*
+    Admin → Data protection (2026-09-21): the subject-access reading and the erasure that follows
+    it. Type an email, read everything the portal holds against it — the rows that are the person
+    and every column that names them — and, when a person has asked, anonymise: details erased,
+    stamps rewritten to a pseudonym, nothing deleted. The reading is what a subject access request
+    is answered from; administrators only, like every other page in this folder.
+*@
+
+<Page OpenTo="JpmsRoleSets.AdministratorsAndFinanceDirector">
+    @if (Session.ActiveRole != Role.Admin)
+    {
+        <div class="panel p-6">
+            <p class="text-sm text-content-muted">
+                This area is for administrators. If you hold the Administrator role, switch to it to read what the portal holds about a person.
+            </p>
+        </div>
+    }
+    else
+    {
+        <WorkspaceSectionNav />
+        <PageHeader>
+            <SubtitleContent>
+                What the portal holds about one person, by email — the answer to a subject access request —
+                and the erasure that follows one: their details erased, every mention rewritten to a pseudonym,
+                nothing deleted. The <a href="/privacy" class="text-accent hover:text-accent-hover" target="_blank">privacy notice</a> says what we promise.
+            </SubtitleContent>
+        </PageHeader>
+
+        <div class="max-w-5xl space-y-6">
+            <PersonLookup OnDossier="dossier => current = dossier" />
+            @if (current is { } dossier)
+            {
+                <PersonDossierPanel Dossier="@dossier" OnAnonymised="outcome => AfterAnonymised(dossier, outcome)" />
+            }
+            @if (lastOutcome is { } outcome)
+            {
+                <Notice Tone="Tone.Positive">
+                    Anonymised as @outcome.Pseudonym: @outcome.RecordsAnonymised record(s) erased and @outcome.MentionsRewritten mention(s) rewritten.
+                </Notice>
+            }
+        </div>
+    }
+</Page>
+
+@code {
+    private PersonDossier? current;
+    private PersonAnonymisation? lastOutcome;
+
+    private void AfterAnonymised(PersonDossier dossier, PersonAnonymisation outcome)
+    {
+        lastOutcome = outcome;
+        current = null;
+    }
+}

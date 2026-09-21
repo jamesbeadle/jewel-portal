@@ -1,0 +1,69 @@
+@using Jewel.JPMS.Contracts.DataProtection
+@inject ICommandSender Commands
+
+@*
+    One person's dossier: the records that are them, with their details, and the count of every
+    column that names them. Below it, the erasure — a reason for the audit trail, then a Danger
+    confirm, because there is no undo.
+*@
+
+<Panel Title="@($"What we hold about {Dossier.Email}")">
+    @if (Dossier.IsEmpty)
+    {
+        <EmptyState Message="Nothing in the portal holds this address." />
+    }
+    else
+    {
+        <PersonDossierRecords Records="@Dossier.Records" Mentions="@Dossier.Mentions" />
+    }
+    @if (Dossier.HasALiveLogin)
+    {
+        <Notice Tone="Tone.Warning" Class="mt-4">
+            This address still has a portal sign-in. Erasure waits for it: revoke the user on the Users page, then permanently delete them from Revoked — that removes the sign-in and pseudonymises their audit trail — and read this page again.
+        </Notice>
+    }
+    else if (!Dossier.IsEmpty)
+    {
+        <div class="mt-6 border-t border-line pt-5 space-y-3">
+            <FormField Label="Reason for erasure" Required="true" Hint="Written to the audit trail — the request and its date, never the person's name." Error="@error">
+                <input type="text" class="field w-full" maxlength="512" value="@reason" disabled="@busy"
+                       @oninput="e => reason = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
+            <button type="button" class="btn-secondary text-negative" disabled="@(busy || string.IsNullOrWhiteSpace(reason))" @onclick="() => confirming = true">Anonymise this person…</button>
+        </div>
+    }
+</Panel>
+
+<ConfirmDialog IsOpen="@confirming" Title="Anonymise this person?" Danger="true" Busy="@busy"
+               ConfirmLabel="Anonymise" BusyLabel="Anonymising…" OnConfirm="AnonymiseAsync" OnCancel="() => confirming = false">
+    <p class="text-sm text-content-muted">
+        @Dossier.Records.Count record(s) lose their name, email, phone and free text, and @Dossier.MentionCount mention(s)
+        are rewritten to one pseudonym. Orders, invoices and audit rows keep their money and dates. There is no undo.
+    </p>
+</ConfirmDialog>
+
+@code {
+    [Parameter, EditorRequired] public PersonDossier Dossier { get; set; } = default!;
+    [Parameter] public EventCallback<PersonAnonymisation> OnAnonymised { get; set; }
+
+    private string reason = "";
+    private bool busy;
+    private bool confirming;
+    private string? error;
+
+    private async Task AnonymiseAsync()
+    {
+        if (busy) return;
+        busy = true;
+        error = null;
+        try
+        {
+            var outcome = await Commands.SendAsync(new AnonymisePerson(Dossier.Email, reason.Trim()), CancellationToken.None);
+            confirming = false;
+            await OnAnonymised.InvokeAsync(outcome);
+        }
+        catch (CommandFailedException refusal) { confirming = false; error = refusal.Message; }
+        catch (Exception) { confirming = false; error = "Could not anonymise — the error banner above has the detail."; }
+        finally { busy = false; }
+    }
+}

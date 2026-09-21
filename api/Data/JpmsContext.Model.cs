@@ -459,6 +459,10 @@ public sealed partial class JpmsContext
         modelBuilder.Entity<AuditEventEntity>()
             .HasIndex(row => row.RecordId)
             .HasDatabaseName("IX_AuditEvents_RecordId");
+        // The retention sweep retires rows by age (RetentionSweepWorker).
+        modelBuilder.Entity<AuditEventEntity>()
+            .HasIndex(row => row.OccurredAt)
+            .HasDatabaseName("IX_AuditEvents_OccurredAt");
 
         // ---- Site P&L ------------------------------------------------------------------------------
         modelBuilder.Entity<XeroSitePnlMonthEntity>()

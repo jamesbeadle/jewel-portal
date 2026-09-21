@@ -19,6 +19,12 @@ public static class LabourFeatureRegistration
         services.AddScoped<UpdateWorkerAuthorisation>();
         services.AddScoped<UpdateWorkerValidation>();
         services.AddScoped<ICommandHandler<DeleteWorker, Acknowledgement>, DeleteWorkerHandler>();
+        services.AddScoped<ICommandHandler<RetireWorker, Worker>, RetireWorkerHandler>();
+        services.AddScoped<RetireWorkerAuthorisation>();
+        services.AddScoped<RetireWorkerValidation>();
+        services.AddScoped<ICommandHandler<RetireWorkerByName, Worker>, RetireWorkerByNameHandler>();
+        services.AddScoped<RetireWorkerByNameAuthorisation>();
+        services.AddScoped<RetireWorkerByNameValidation>();
         services.AddScoped<ICommandHandler<SetProjectWorkerAssignment, ProjectWorkerAssignment>, SetProjectWorkerAssignmentHandler>();
         // Worker ↔ directory linking (2026-08-31): the settlement-identity command the portal UI
         // posts, its by-name connector wrappers, and the reconcile/backfill sweep.

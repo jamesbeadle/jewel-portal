@@ -45,9 +45,15 @@ public sealed class RetentionSweepWorker
         var scans = await db.DocumentOcrResults
             .Where(row => row.CreatedAtUtc < now - RetentionPeriods.ScanText)
             .ExecuteDeleteAsync(cancellationToken);
+        var auditRows = await db.AuditEvents
+            .Where(row => row.OccurredAt < now - RetentionPeriods.AuditTrail)
+            .ExecuteDeleteAsync(cancellationToken);
+        var activityRows = await db.AgentActivity
+            .Where(row => row.OccurredAt < now - RetentionPeriods.AgentActivity)
+            .ExecuteDeleteAsync(cancellationToken);
 
         logger.LogInformation(
-            "Retention sweep: {Sessions} spent session(s), {ResetTokens} spent invite/reset token(s), {AuthCodes} spent OAuth code(s), {OAuthTokens} spent OAuth token(s), {AccessRequests} unanswered access request(s) and {Scans} cached scan text(s) removed.",
-            sessions, resetTokens, authCodes, oauthTokens, accessRequests, scans);
+            "Retention sweep: {Sessions} spent session(s), {ResetTokens} spent invite/reset token(s), {AuthCodes} spent OAuth code(s), {OAuthTokens} spent OAuth token(s), {AccessRequests} unanswered access request(s), {Scans} cached scan text(s), {AuditRows} audit event(s) and {ActivityRows} agent activity row(s) past retention removed.",
+            sessions, resetTokens, authCodes, oauthTokens, accessRequests, scans, auditRows, activityRows);
     }
 }

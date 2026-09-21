@@ -1,0 +1,46 @@
+@using Jewel.JPMS.Contracts.DataProtection
+@inject IQueryClient Queries
+
+@*
+    The email box that opens a person's dossier. A lookup is a read: it never changes anything,
+    so it runs on Enter or the button and reports what it found or why it could not look.
+*@
+
+<Panel Title="Find a person">
+    <form class="flex flex-col sm:flex-row sm:items-end gap-3" @onsubmit="LookUpAsync" @onsubmit:preventDefault="true">
+        <FormField Label="Email address" Class="flex-1" Hint="Exactly as the portal holds it — the address they sign in with, were invited on, or wrote to us from.">
+            <input type="email" class="field w-full" value="@email" disabled="@busy" autocomplete="off"
+                   @oninput="e => email = e.Value?.ToString() ?? string.Empty" />
+        </FormField>
+        <button type="submit" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(email))">@(busy ? "Reading…" : "Read what we hold")</button>
+    </form>
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mt-3">@error</Notice>
+    }
+</Panel>
+
+@code {
+    [Parameter] public EventCallback<PersonDossier> OnDossier { get; set; }
+
+    private string email = "";
+    private bool busy;
+    private string? error;
+
+    private async Task LookUpAsync()
+    {
+        if (busy || string.IsNullOrWhiteSpace(email)) return;
+        busy = true;
+        error = null;
+        try
+        {
+            var dossier = await Queries.AskAsync(new GetPersonDossier(email.Trim()), CancellationToken.None);
+            await OnDossier.InvokeAsync(dossier);
+        }
+        catch (Exception)
+        {
+            error = "The dossier couldn't be read — the error banner above has the detail.";
+        }
+        finally { busy = false; }
+    }
+}

@@ -141,6 +141,18 @@ public partial class Workers
         catch (Exception) { actionError = "Could not delete the worker — try again."; }
     }
 
+    private async Task RetireAsync(string workerId)
+    {
+        actionError = null;
+        deletingWorkerId = null;
+        try
+        {
+            await Labour.RetireWorkerAsync(workerId);
+        }
+        catch (CommandFailedException failure) { actionError = failure.Message; }
+        catch (Exception) { actionError = "Could not retire the worker — try again."; }
+    }
+
     private void StartAdd()
     {
         ClearForm();

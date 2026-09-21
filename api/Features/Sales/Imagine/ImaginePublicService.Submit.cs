@@ -24,6 +24,7 @@ public sealed partial class ImaginePublicService
         // no name; now it has both, and an email to reply to.
         if (string.IsNullOrWhiteSpace(lead.ContactName) && name.Length > 0) lead.ContactName = Clip(name, 256);
         if (string.IsNullOrWhiteSpace(lead.ContactEmail)) lead.ContactEmail = Clip(email, 256);
+        if (submission.KeepInTouch) LeadMarketingConsents.RecordGiven(lead, now);
 
         var who = name.Length > 0 ? name : email;
         context.LeadActivities.Add(Activity(lead.LeadId,
@@ -42,7 +43,7 @@ public sealed partial class ImaginePublicService
         var brief = (submission.Brief ?? "").Trim();
         var email = (submission.Email ?? "").Trim();
         var name = (submission.Name ?? "").Trim();
-        if (!submission.Consent) throw new InvalidOperationException("Please tick the box so we can email you your concepts.");
+        if (!submission.Consent) throw new InvalidOperationException("Please tick the first box so we can email you your concepts.");
         if (!LooksLikeEmail(email)) throw new InvalidOperationException("Please give an email address we can send the concepts to.");
         if (brief.Length > ImagineLimits.MaxBriefLength) throw new InvalidOperationException($"Please keep the description under {ImagineLimits.MaxBriefLength} characters.");
         var photos = submission.Photos ?? Array.Empty<ImaginePhotoUpload>();

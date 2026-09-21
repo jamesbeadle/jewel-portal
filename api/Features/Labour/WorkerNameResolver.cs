@@ -15,12 +15,7 @@ internal static class WorkerNameResolver
     {
         var wanted = Normalise(workerName);
         var active = workers.Where(worker => worker.IsActive).ToList();
-
-        var matches = active.Where(worker => Normalise(worker.Name) == wanted).ToList();
-        if (matches.Count == 0)
-            matches = active.Where(worker => Normalise(worker.Name).Contains(wanted)
-                                             || wanted.Contains(Normalise(worker.Name))).ToList();
-
+        var matches = Matches(active, wanted);
         if (matches.Count == 1) return matches[0];
 
         if (matches.Count > 1)
@@ -45,6 +40,28 @@ internal static class WorkerNameResolver
                   + string.Join(", ", active.OrderBy(worker => worker.Name).Select(worker => worker.Name))
                   + ". Add anyone missing with add_worker or on the Workers page (only a name and "
                   + "hourly rate are needed — no email)."));
+    }
+
+    /// <summary>The same reading over the whole register, active or not — for retiring a worker,
+    /// who may already have been marked inactive by hand.</summary>
+    public static WorkerEntity ResolveWhetherActiveOrNot(IReadOnlyList<WorkerEntity> workers, string workerName)
+    {
+        var candidates = workers.Where(worker => worker.RetiredAt is null).ToList();
+        var matches = Matches(candidates, Normalise(workerName));
+        if (matches.Count == 1) return matches[0];
+        if (matches.Count > 1)
+            throw new InvalidOperationException(
+                $"\"{workerName}\" matches more than one worker on the register: "
+                + string.Join(", ", matches.Select(worker => worker.Name)) + ". Use the full name as the register spells it.");
+        throw new InvalidOperationException($"No worker called \"{workerName}\" is on the register, or they are already retired.");
+    }
+
+    private static List<WorkerEntity> Matches(List<WorkerEntity> candidates, string wanted)
+    {
+        var exact = candidates.Where(worker => Normalise(worker.Name) == wanted).ToList();
+        if (exact.Count > 0) return exact;
+        return candidates.Where(worker => Normalise(worker.Name).Contains(wanted)
+                                          || wanted.Contains(Normalise(worker.Name))).ToList();
     }
 
     private static string Normalise(string name) =>

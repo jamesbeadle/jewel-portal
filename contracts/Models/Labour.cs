@@ -30,7 +30,12 @@ public sealed record Worker(
     string ContactPhone,
     bool IsSoleTrader = false,
     DateTimeOffset? EngagedFrom = null,
-    DateTimeOffset? EngagedTo = null);
+    DateTimeOffset? EngagedTo = null,
+    // Stamped by RetireWorker: contact details cleared, engagement closed, name and timesheets kept.
+    DateTimeOffset? RetiredAt = null)
+{
+    public bool HasBeenRetired => RetiredAt is not null;
+}
 
 public sealed record ProjectWorkerAssignment(
     string ProjectWorkerAssignmentId,

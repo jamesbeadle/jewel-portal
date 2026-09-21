@@ -30,6 +30,8 @@ public interface ILabourStore
     /// unconfirmed accrual together.</summary>
     Task DismissChaseDayAsync(string workerId, DateTimeOffset date, string reason);
     Task DeleteWorkerAsync(string workerId);
+    /// <summary>Clears a worker's contact details and closes their engagement; name and timesheets stay.</summary>
+    Task RetireWorkerAsync(string workerId);
 
     // Project assignment.
     IReadOnlyList<ProjectWorkerAssignment> AssignmentsFor(string projectId);

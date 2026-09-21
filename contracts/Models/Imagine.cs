@@ -94,16 +94,21 @@ public sealed record ImagineView(
     int RoundsRemaining,
     int MaxPhotosPerRound,
     // The proposal, once one has been sent to this lead (null before then).
-    ProposalView? Proposal);
+    ProposalView? Proposal,
+    // Whether they have said we may keep in touch — the page offers the door to stop.
+    LeadMarketingConsent MarketingConsent = LeadMarketingConsent.NotRecorded);
 
 /// <summary>What the prospect submits on the first round: photos (already downscaled in the
-/// browser, as data URLs or bare base64 JPEG/PNG), the brief, their name and email.</summary>
+/// browser, as data URLs or bare base64 JPEG/PNG), the brief, their name and email. Consent is
+/// the service tick (email me my concepts) the round cannot go ahead without; KeepInTouch is the
+/// separate, optional marketing tick recorded on the lead as LeadMarketingConsent.</summary>
 public sealed record ImagineSubmission(
     string Name,
     string Email,
     string Brief,
     IReadOnlyList<ImaginePhotoUpload> Photos,
-    bool Consent);
+    bool Consent,
+    bool KeepInTouch = false);
 
 /// <summary>One uploaded photo: base64 bytes and the type the browser reported.</summary>
 public sealed record ImaginePhotoUpload(string FileName, string ContentType, string Base64);

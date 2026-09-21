@@ -71,7 +71,9 @@ public static class WorkspaceSections
             // The curated trade list every directory record and bid package picks from.
             new WorkspaceTab("Trades", "/admin/trades", Array.Empty<Role>()),
             // Emails marked as a KPI against a member of staff — administrators only (2026-09-03).
-            new WorkspaceTab("KPI emails", "/admin/kpis", Array.Empty<Role>())
+            new WorkspaceTab("KPI emails", "/admin/kpis", Array.Empty<Role>()),
+            // What the portal holds about one person, and the erasure that follows a request.
+            new WorkspaceTab("Data protection", "/admin/data-protection", Array.Empty<Role>())
         });
 
     // Sales (2026-09-06): the lead register and the strategies that feed it read as one area.

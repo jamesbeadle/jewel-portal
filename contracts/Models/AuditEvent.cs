@@ -150,7 +150,13 @@ public enum AuditEventType
     // primary contact and company contacts were written onto its linked Xero contact, replacing
     // Xero's additional persons. Someone pressed it; the detail says what Xero holds after. Not
     // client-facing: Pathway is "".
-    DirectoryContactsPushedToXero = 45
+    DirectoryContactsPushedToXero = 45,
+
+    // Data protection (2026-09-21): a person's records erased and their stamps rewritten to a
+    // pseudonym (AnonymisePerson), or a worker's contact details cleared (RetireWorker). The
+    // detail carries the pseudonym, never the address it replaced.
+    PersonAnonymised = 46,
+    WorkerRetired = 47
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

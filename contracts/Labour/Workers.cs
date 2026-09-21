@@ -49,3 +49,12 @@ public sealed record DeleteWorker(string WorkerId) : ICommand<Acknowledgement>;
 /// <summary>The daily site register — who was on site, signed in/out when.</summary>
 public sealed record ListSiteAttendanceForProject(string ProjectId)
     : IQuery<IReadOnlyList<SiteAttendance>>;
+
+/// <summary>Retires a worker who has timesheet or register history: their contact details are
+/// cleared and their engagement closed, while the name, rate history and every timesheet stay
+/// because recorded cost is built on them (data protection, 2026-09-21). A worker with no
+/// history is deleted outright instead (DeleteWorker).</summary>
+public sealed record RetireWorker(string WorkerId) : ICommand<Worker>;
+
+/// <summary>The connector's RetireWorker: keyed by the worker's name as the register spells it.</summary>
+public sealed record RetireWorkerByName(string WorkerName) : ICommand<Worker>;

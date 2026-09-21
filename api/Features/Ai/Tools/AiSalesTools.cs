@@ -82,7 +82,8 @@ internal static class AiSalesTools
             + "terms, status Draft → Sent → Accepted / Declined / Superseded). Takes the leadId "
             + "from list_leads, or an LD-#### reference. The enquiry mail tagged to the lead is "
             + "read_record_emails record_type lead; imagineLinkIssued says whether "
-            + "send_sales_proposal has a page to send to.",
+            + "send_sales_proposal has a page to send to; marketingConsent (Given, Withdrawn, "
+            + "NotRecorded) says whether a follow-up may be emailed — Withdrawn stops it.",
             AiToolSchema.Object(
                 ("leadId", "string", "The lead's id (list_leads) or its LD-#### reference.", true)),
             AiToolKind.Read,
@@ -97,11 +98,12 @@ internal static class AiSalesTools
                     .GetRequiredService<IQueryHandler<GetLead, LeadDetail?>>()
                     .HandleAsync(new GetLead(leadId), ct);
                 if (detail is null) return Fail($"No lead matches \"{key}\".");
+                var lead = detail.Lead;
                 return Serialise(new
                 {
                     ok = true,
-                    lead = LeadRow(detail.Lead),
-                    detail.Lead.Notes,
+                    lead = LeadRow(lead),
+                    lead.Notes,
                     timeline = detail.Activities.Select(activity => new
                     {
                         activity.LeadActivityId,
@@ -111,7 +113,8 @@ internal static class AiSalesTools
                         activity.RecordedByEmail
                     }),
                     estimates = (detail.Estimates ?? Array.Empty<LeadEstimate>()).Select(EstimateRow),
-                    imagineLinkIssued = detail.Lead.ImagineToken is not null,
+                    imagineLinkIssued = lead.ImagineToken is not null,
+                    marketingConsent = lead.MarketingConsent.ToString(),
                     proposals = (detail.Proposals ?? Array.Empty<SalesProposal>()).Select(AiSalesProposalRows.ProposalRow)
                 });
             }),

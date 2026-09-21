@@ -46,8 +46,15 @@
                        value="@email" @oninput="e => email = e.Value?.ToString() ?? string.Empty" />
             </div>
         </div>
-        <Checkbox Value="@consent" ValueChanged="c => consent = c" Disabled="@busy"
-                  Label="Email me my concepts, and keep in touch about my home. We won't pass your details on; email us at sales@jewelbb.co.uk any time to stop." />
+        <div class="space-y-2">
+            <Checkbox Value="@consent" ValueChanged="c => consent = c" Disabled="@busy"
+                      Label="Email me my concepts. We need this to send them to you." />
+            <Checkbox Value="@keepInTouch" ValueChanged="c => keepInTouch = c" Disabled="@busy"
+                      Label="Keep in touch about my home — ideas, a proposal, a site visit. Optional; you can stop any time from this page." />
+            <p class="text-xs text-content-subtle">
+                We won't pass your details on. <a class="text-info underline underline-offset-4" href="/privacy" target="_blank" rel="noopener">How we look after them</a>.
+            </p>
+        </div>
         <div class="flex items-center gap-3">
             <button type="button" class="btn-primary btn-lg" disabled="@(busy || preparing || !CanSubmit)" @onclick="SubmitAsync">
                 @(busy ? "Sending…" : "Imagine it")

@@ -16,7 +16,8 @@ public static class PasswordResetEmailBody
         "Open the link below to choose a new one:\n\n" +
         $"{resetLink}\n\n" +
         $"This link can only be used once and expires in {ExpiryDescription}.\n\n" +
-        "If you didn't ask for this, you can ignore this email — your current password still works.\n";
+        "If you didn't ask for this, you can ignore this email — your current password still works.\n\n" +
+        $"What the portal holds about you, and why: {PrivacyNoticeLink.Beside(resetLink)}\n";
 
     public static string Html(string displayName, string resetLink) =>
         $"""
@@ -28,6 +29,7 @@ public static class PasswordResetEmailBody
           </p>
           <p style="font-size:13px;color:#475569">This link can only be used once and expires in {ExpiryDescription}.</p>
           <p style="font-size:13px;color:#475569">If you didn't ask for this, you can ignore this email — your current password still works.</p>
+          <p style="font-size:13px;color:#475569">What the portal holds about you, and why: <a href="{PrivacyNoticeLink.Beside(resetLink)}">privacy notice</a>.</p>
         </div>
         """;
 

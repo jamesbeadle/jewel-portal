@@ -659,6 +659,32 @@ public sealed class AiConnectorTests
     }
 
     [Fact]
+    public void DataProtection_reachesTheConnector()
+    {
+        // 2026-09-21, the data-protection task: the rights a person can exercise, over the
+        // connector as on the site. Erasure is the administrator's and confirm-first; the dossier
+        // it is read from is a read tool; retiring a worker and recording a prospect's "please
+        // stop" are the everyday halves.
+        var names = AiActionRegistry.All.Select(a => a.Name).ToList();
+        foreach (var name in new[] { "anonymise_person", "retire_worker", "withdraw_lead_marketing_consent" })
+        {
+            Assert.Contains(name, names);
+            Assert.Equal("Data protection", AiActionRegistry.Find(name)!.Area);
+        }
+        Assert.True(AiActionRegistry.Find("anonymise_person")!.RequiresConfirmation);
+        Assert.Contains("AnonymisedByEmail", AiActionRegistry.Find("anonymise_person")!.EmailStamps);
+        Assert.Contains("get_person_dossier", AiActionRegistry.Find("anonymise_person")!.Notes);
+        Assert.False(AiActionRegistry.Find("anonymise_person")!.VisibleTo.IncludesAny(UserWith(Role.FinanceDirector).Roles));
+        Assert.True(AiActionRegistry.Find("retire_worker")!.RequiresConfirmation);
+        Assert.Contains("WithdrawnByEmail", AiActionRegistry.Find("withdraw_lead_marketing_consent")!.EmailStamps);
+
+        var administrator = AiToolCatalogue.ForConnector(UserWith(Role.Admin));
+        Assert.Contains(administrator, tool => tool.Name == "get_person_dossier");
+        Assert.DoesNotContain(AiToolCatalogue.ForConnector(UserWith(Role.ProjectManager)), tool => tool.Name == "get_person_dossier");
+        Assert.Contains("marketingConsent", administrator.Single(tool => tool.Name == "get_lead").Description);
+    }
+
+    [Fact]
     public void SalesProposals_reachTheConnector()
     {
         // 2026-09-15, Nigel: "ingest the emails and attachments and prepare a proposal" — the

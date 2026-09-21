@@ -153,6 +153,9 @@ public sealed class SendSalesProposalHandler : ICommandHandler<SendSalesProposal
         var stage = (LeadStage)lead.Stage;
         if (!stage.IsOpen())
             throw new InvalidOperationException($"The lead is {stage.DisplayName()} — reopen it before sending a proposal.");
+        var consent = LeadMarketingConsents.Of(lead);
+        if (!consent.AllowsAFollowUp())
+            throw new InvalidOperationException("The prospect has asked us to stop keeping in touch, so a proposal can't be emailed to them. If they ask for one, they can tick the box again on their imagine page.");
 
         var now = DateTimeOffset.UtcNow;
         var earlier = await context.SalesProposals

@@ -1,0 +1,36 @@
+<section class="space-y-4">
+    <h2 class="text-xl font-semibold">How long we keep it</h2>
+    <p class="text-content-muted leading-relaxed">
+        Project, contract and payment records are kept for six years after the project's final
+        account, because the law and our insurers require it. The audit trail of who did what in the
+        portal is kept for the same period; the assistant's own activity log for two years. A sign-in
+        session, an invitation link and a password reset link are removed thirty days after they expire;
+        an access request nobody answered after ninety days; recognised text from a scanned document
+        after six months. An enquiry that does not become a project — with its photographs and concept
+        pictures — is kept while we are in touch and removed when you ask, or when we close the enquiry.
+    </p>
+</section>
+
+<section class="space-y-4">
+    <h2 class="text-xl font-semibold">Your rights</h2>
+    <p class="text-content-muted leading-relaxed">
+        You can ask us for a copy of what we hold about you, to correct it, to delete it, to stop using
+        it for a particular purpose, or to give it to you in a form you can take elsewhere. Where we rely
+        on your consent you can withdraw it at any time; where we rely on our legitimate interests you can
+        object, and we will stop unless we can show a compelling reason not to.
+    </p>
+    <p class="text-content-muted leading-relaxed">
+        Some records we have to keep even when you ask us to delete them — the contract, the invoices,
+        the CIS returns, the health and safety record. In those cases we remove everything that
+        identifies you beyond what the record needs, and we tell you what stays and why.
+    </p>
+    <p class="text-content-muted leading-relaxed">
+        To ask, email <a class="text-accent hover:text-accent-hover" href="mailto:@ContactAddress">@ContactAddress</a>.
+        We answer within a month. If you are not satisfied with our answer you can complain to the
+        Information Commissioner's Office at <a class="text-accent hover:text-accent-hover" href="https://ico.org.uk" rel="noopener">ico.org.uk</a>.
+    </p>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string ContactAddress { get; set; } = "";
+}

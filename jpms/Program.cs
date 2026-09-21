@@ -213,6 +213,7 @@ using (var routeScope = app.Services.CreateScope())
     InventoryRouteRegistration.RegisterInventoryRoutes(queryRoutes, commandRoutes);
     SiteInstructionsRouteRegistration.RegisterSiteInstructionsRoutes(queryRoutes, commandRoutes);
     KpiRouteRegistration.RegisterKpiRoutes(queryRoutes, commandRoutes);
+    Jewel.JPMS.Features.DataProtection.DataProtectionRouteRegistration.RegisterDataProtectionRoutes(queryRoutes, commandRoutes);
     SalesRouteRegistration.RegisterSalesRoutes(queryRoutes, commandRoutes);
     CalendarRouteRegistration.RegisterCalendarRoutes(queryRoutes, commandRoutes);
     BuildingControlRouteRegistration.RegisterBuildingControlRoutes(queryRoutes, commandRoutes);

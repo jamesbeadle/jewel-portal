@@ -72,7 +72,7 @@
                 {
                     <ImagineRoundList Token="@Token" View="@v" OnChanged="OnViewChanged" OnError="OnChildError" OnRoundRequested="StartPollingIfNeeded" />
 
-                    <section class="panel p-6 max-w-3xl">
+                    <section class="panel p-6 max-w-3xl mb-6">
                         <h2 class="font-semibold text-content mb-1">Ready to talk it through?</h2>
                         <p class="text-sm text-content-muted">
                             Reply to the email we sent you, or write to
@@ -80,6 +80,7 @@
                             — a site visit is the next step, and it's free.
                         </p>
                     </section>
+                    <ImagineKeepInTouch Token="@Token" Consent="@v.MarketingConsent" OnChanged="OnViewChanged" OnError="OnChildError" />
                 }
             }
         </LoadGate>

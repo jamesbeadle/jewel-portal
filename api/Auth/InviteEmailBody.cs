@@ -13,7 +13,8 @@ public static class InviteEmailBody
         "An administrator has invited you to the Jewel Project Management System. " +
         "Open the link below to choose your password and sign in:\n\n" +
         $"{inviteLink}\n\n" +
-        $"This link can only be used once and expires in {ExpiryInDays} days.\n";
+        $"This link can only be used once and expires in {ExpiryInDays} days.\n\n" +
+        $"What the portal holds about you, and why: {PrivacyNoticeLink.Beside(inviteLink)}\n";
 
     public static string Html(string displayName, string inviteLink) =>
         $"""
@@ -24,6 +25,7 @@ public static class InviteEmailBody
             <a href="{inviteLink}" style="background:#0f172a;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;display:inline-block">Set your password</a>
           </p>
           <p style="font-size:13px;color:#475569">This link can only be used once and expires in {ExpiryInDays} days.</p>
+          <p style="font-size:13px;color:#475569">What the portal holds about you, and why: <a href="{PrivacyNoticeLink.Beside(inviteLink)}">privacy notice</a>.</p>
         </div>
         """;
 

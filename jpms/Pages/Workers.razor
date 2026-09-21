@@ -94,8 +94,13 @@
                                 <button type="button" class="btn-primary mr-1" @onclick="() => ConfirmDeleteAsync(worker.WorkerId)">Confirm</button>
                                 <button type="button" class="btn-ghost" @onclick="() => deletingWorkerId = null">Cancel</button>
                             }
+                            else if (worker.HasBeenRetired)
+                            {
+                                <span class="text-content-subtle" title="Contact details cleared and engagement closed">Retired</span>
+                            }
                             else
                             {
+                                <InlineConfirm Label="Retire" Question="Clears their contact details — click again" Ghost="true" Danger="false" OnConfirm="() => RetireAsync(worker.WorkerId)" Class="mr-1" />
                                 <button type="button" class="btn-ghost text-negative" @onclick="() => deletingWorkerId = worker.WorkerId">Delete</button>
                             }
                         </td>
