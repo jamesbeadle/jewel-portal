@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.Commercial;
 
 namespace Jewel.JPMS.Api.Features.Commercial.Commands;
@@ -20,15 +21,23 @@ public sealed class ConfirmValuationClaimHandler : ICommandHandler<ConfirmValuat
             ?? throw new KeyNotFoundException($"Valuation claim {command.ValuationClaimId} was not found.");
 
         // An early confirm straight from Draft is the lock as well: freeze the statement lines
-        // exactly as "We're claiming this" would have (a Preapproved claim already has them).
-        if (entity.Status == (int)ValuationClaimStatus.Draft)
-            await ValuationStatementLines.FreezeAsync(context, entity, cancellationToken);
-        await ValuationClaimSummary.ApplyTotalsAsync(context, entity, cancellationToken);
+        // exactly as "We're claiming this" would have. A Preapproved claim already has them, and
+        // keeps the contract context it was locked with — the client has read that statement.
+        var isConfirmedStraightFromDraft = entity.Status == (int)ValuationClaimStatus.Draft;
+        await (isConfirmedStraightFromDraft
+            ? LockAsync(entity, cancellationToken)
+            : ValuationClaimSummary.RefreshTotalsAsync(context, entity, cancellationToken));
         entity.Status = (int)ValuationClaimStatus.Confirmed;
         entity.ConfirmedAt = DateTimeOffset.UtcNow;
         if (entity.PreapprovedAt is null) entity.PreapprovedAt = entity.ConfirmedAt;
 
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();
+    }
+
+    private async Task LockAsync(ValuationClaimEntity entity, CancellationToken cancellationToken)
+    {
+        await ValuationStatementLines.FreezeAsync(context, entity, cancellationToken);
+        await ValuationClaimSummary.FreezeTotalsAsync(context, entity, cancellationToken);
     }
 }

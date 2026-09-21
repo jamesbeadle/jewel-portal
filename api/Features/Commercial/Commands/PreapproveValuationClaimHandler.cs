@@ -21,7 +21,7 @@ public sealed class PreapproveValuationClaimHandler : ICommandHandler<Preapprove
             ?? throw new KeyNotFoundException($"Valuation claim {command.ValuationClaimId} was not found.");
 
         await ValuationStatementLines.FreezeAsync(context, entity, cancellationToken);
-        await ValuationClaimSummary.ApplyTotalsAsync(context, entity, cancellationToken);
+        await ValuationClaimSummary.FreezeTotalsAsync(context, entity, cancellationToken);
         entity.Status = (int)ValuationClaimStatus.Preapproved;
         entity.PreapprovedAt = DateTimeOffset.UtcNow;
 
