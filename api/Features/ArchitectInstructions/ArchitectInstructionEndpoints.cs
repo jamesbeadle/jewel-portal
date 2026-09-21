@@ -99,6 +99,8 @@ public sealed class ArchitectInstructionEndpoints
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!ArchitectInstructionRoles.AllowedToManage.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await ArchitectInstructionScope.MayFileOnProjectAsync(context, signedInUser, projectId, cancellationToken))
+            return new StatusCodeResult(403);
 
         if (!request.HasFormContentType) return new BadRequestObjectResult("Expected multipart/form-data.");
         var form = await request.ReadFormAsync(cancellationToken);
@@ -172,6 +174,8 @@ public sealed class ArchitectInstructionEndpoints
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!ArchitectInstructionRoles.AllowedToManage.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await ArchitectInstructionScope.MayFileOnProjectAsync(context, signedInUser, projectId, cancellationToken))
+            return new StatusCodeResult(403);
 
         ImportArchitectInstructionFromMessage? body = null;
         try { body = await request.ReadFromJsonAsync<ImportArchitectInstructionFromMessage>(cancellationToken); }
@@ -199,6 +203,8 @@ public sealed class ArchitectInstructionEndpoints
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!ArchitectInstructionRoles.AllowedToManage.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await ArchitectInstructionScope.MayActOnAsync(context, signedInUser, instructionId, cancellationToken))
+            return new StatusCodeResult(403);
 
         UpdateArchitectInstruction? body = null;
         try { body = await request.ReadFromJsonAsync<UpdateArchitectInstruction>(cancellationToken); }
@@ -227,6 +233,8 @@ public sealed class ArchitectInstructionEndpoints
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!ArchitectInstructionRoles.AllowedToManage.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await ArchitectInstructionScope.MayActOnAsync(context, signedInUser, instructionId, cancellationToken))
+            return new StatusCodeResult(403);
 
         try
         {
@@ -248,6 +256,8 @@ public sealed class ArchitectInstructionEndpoints
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!ArchitectInstructionRoles.AllowedToManage.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await ArchitectInstructionScope.MayActOnAsync(context, signedInUser, instructionId, cancellationToken))
+            return new StatusCodeResult(403);
 
         try
         {
@@ -269,6 +279,8 @@ public sealed class ArchitectInstructionEndpoints
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!ArchitectInstructionRoles.AllowedToManage.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await ArchitectInstructionScope.MayActOnAsync(context, signedInUser, instructionId, cancellationToken))
+            return new StatusCodeResult(403);
 
         return new OkObjectResult(
             await delete.HandleAsync(new DeleteArchitectInstruction(instructionId), cancellationToken));

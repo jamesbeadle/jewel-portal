@@ -6,6 +6,7 @@ namespace Jewel.JPMS.Api.Features.Variations.Commands;
 public sealed class PostVariationOrderMessageEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly JpmsContext context;
     private readonly PostVariationOrderMessageAuthorisation authorisation;
     private readonly PostVariationOrderMessageValidation validation;
     private readonly ICommandHandler<PostVariationOrderMessage, VariationOrderMessage> handler;
@@ -13,12 +14,13 @@ public sealed class PostVariationOrderMessageEndpoint
     private readonly AuditTrail audit;
 
     public PostVariationOrderMessageEndpoint(
-        SignedInUserResolver users, PostVariationOrderMessageAuthorisation authorisation,
+        SignedInUserResolver users, JpmsContext context, PostVariationOrderMessageAuthorisation authorisation,
         PostVariationOrderMessageValidation validation,
         ICommandHandler<PostVariationOrderMessage, VariationOrderMessage> handler,
         AuditActor auditActor, AuditTrail audit)
     {
         this.users = users;
+        this.context = context;
         this.authorisation = authorisation;
         this.validation = validation;
         this.handler = handler;
@@ -43,6 +45,8 @@ public sealed class PostVariationOrderMessageEndpoint
         auditActor.Email = signedInUser.Email;
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
+        if (!await VariationOrderScope.MayActOnAsync(context, signedInUser, voId, cancellationToken))
+            return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 

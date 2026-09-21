@@ -73,37 +73,31 @@ public sealed class UserInviteService
     /// links the login to the record so their session is scoped to their own company.</summary>
     public async Task<InviteOutcome> InviteSubcontractorAsync(string subcontractorId, string? email = null, string? displayName = null)
     {
-        try
-        {
-            var request = new InviteSubcontractorPortalUserRequest(email, displayName);
-            var response = await httpClient.PostAsJsonAsync(
-                $"/api/subcontractors/{Uri.EscapeDataString(subcontractorId)}/portal-invite", request);
-            if (response.IsSuccessStatusCode)
-            {
-                var result = await response.Content.ReadFromJsonAsync<InviteResult>();
-                return result is null
-                    ? new InviteOutcome(false, null, "The server returned an unexpected response.")
-                    : new InviteOutcome(true, result, null);
-            }
-
-            var error = await TryReadErrorAsync(response);
-            return new InviteOutcome(false, null, error ?? "Couldn't create the portal invite. Please try again.");
-        }
-        catch
-        {
-            return new InviteOutcome(false, null, "Couldn't reach the server. Check your connection and try again.");
-        }
+        var request = new InviteSubcontractorPortalUserRequest(email, displayName);
+        return await PostInviteAsync($"/api/subcontractors/{Uri.EscapeDataString(subcontractorId)}/portal-invite", request);
     }
 
     /// <summary>Invites a client account's contact to the client portal: mints the set-password
     /// link and links the login to the account so their session is scoped to their own projects.</summary>
     public async Task<InviteOutcome> InviteClientAsync(string clientId, string? email = null, string? displayName = null)
     {
+        var request = new Contracts.Clients.InviteClientPortalUserRequest(email, displayName);
+        return await PostInviteAsync($"/api/clients/{Uri.EscapeDataString(clientId)}/portal-invite", request);
+    }
+
+    /// <summary>Invites an architect practice's contact to the portal: mints the set-password
+    /// link and links the login to the practice so their session is scoped to its projects.</summary>
+    public async Task<InviteOutcome> InviteArchitectAsync(string architectId, string? email = null, string? displayName = null)
+    {
+        var request = new Contracts.Architects.InviteArchitectPortalUserRequest(email, displayName);
+        return await PostInviteAsync($"/api/architects/{Uri.EscapeDataString(architectId)}/portal-invite", request);
+    }
+
+    private async Task<InviteOutcome> PostInviteAsync<TRequest>(string url, TRequest request)
+    {
         try
         {
-            var request = new Contracts.Clients.InviteClientPortalUserRequest(email, displayName);
-            var response = await httpClient.PostAsJsonAsync(
-                $"/api/clients/{Uri.EscapeDataString(clientId)}/portal-invite", request);
+            var response = await httpClient.PostAsJsonAsync(url, request);
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<InviteResult>();
