@@ -35,7 +35,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Communication.Email" Version="1.0.1" />
+    <PackageReference Include="Azure.Communication.Email" Version="1.1.0" />
     <!--
       Azure.Identity provides the app-only Graph token (client-credentials) used by the on-demand
       intake message reader, which fetches an email's full body + attachment names live when a
