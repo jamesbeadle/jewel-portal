@@ -9,7 +9,7 @@ namespace Jewel.JPMS.Api.Features.Kpi;
 /// </summary>
 public static class KpiRoles
 {
-    public static readonly RoleSet Administrators = RoleSet.Of(Role.Admin);
+    public static readonly RoleSet Administrators = JpmsRoleSets.Administrators;
 
-    public static bool IsAdministrator(SignedInUser user) => user.Roles.Contains(Role.Admin);
+    public static bool IsAdministrator(SignedInUser user) => Administrators.IncludesAny(user.Roles);
 }

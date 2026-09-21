@@ -4,12 +4,6 @@ namespace Jewel.JPMS.Api.Features.Subcontractors.Queries;
 
 public sealed class ListCompanyContactsEndpoint
 {
-    // Same audience as the directory list itself — the contacts are the record's contact details.
-    private static readonly RoleSet InternalRolesThatMayListDirectory = RoleSet.Of(
-        JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator,
-        JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing,
-        JpmsRoles.Foreman);
-
     private readonly SignedInUserResolver users;
     private readonly IQueryHandler<ListCompanyContacts, IReadOnlyList<CompanyContact>> handler;
 
@@ -26,7 +20,7 @@ public sealed class ListCompanyContactsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!InternalRolesThatMayListDirectory.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!DirectoryRoles.AllowedToList.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(new ListCompanyContacts(subcontractorId), request.HttpContext.RequestAborted));
     }
 }

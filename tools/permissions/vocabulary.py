@@ -1,5 +1,5 @@
-"""The role vocabulary: the Role enum, the JpmsRoles aliases, and every RoleSet in the API,
-each resolved to the concrete roles it admits."""
+"""The role vocabulary: the Role enum, the JpmsRoles aliases, and every RoleSet declared in
+contracts or the API, each resolved to the concrete roles it admits."""
 from __future__ import annotations
 
 import re
@@ -24,12 +24,12 @@ def readRoles(repositoryRoot: Path) -> list[str]:
 
 
 def readAliases(repositoryRoot: Path) -> dict[str, str]:
-    return dict(ALIAS.findall((repositoryRoot / "api/Gates/RoleSet.cs").read_text()))
+    return dict(ALIAS.findall((repositoryRoot / "contracts/Models/RoleSet.cs").read_text()))
 
 
 def readDeclarations(repositoryRoot: Path) -> dict[str, tuple[str, str]]:
     declared: dict[str, tuple[str, str]] = {}
-    for path in source.apiFiles(repositoryRoot):
+    for path in source.roleVocabularyFiles(repositoryRoot):
         for owner, body in csharp.types(path.read_text(errors="replace")):
             for name, expression in DECLARATION.findall(masking.mask(body)):
                 declared[f"{owner}.{name}"] = (
@@ -53,16 +53,21 @@ def resolve(expression: str, declared: dict, aliases: dict, roles: list[str],
 
 
 def candidateKeys(reference: str, owner: str | None, declared: dict) -> list[str]:
+    """A reference that names its owner (`JpmsRoleSets.Administrators`) means that owner's set,
+    even from inside a type that declares a member of the same name; only a bare name
+    (`Readers`) is looked up on the declaring type first."""
     tail = reference.split(".")[-1]
-    if owner and f"{owner}.{tail}" in declared:
-        return [f"{owner}.{tail}"]
     if reference in declared:
         return [reference]
     qualifier = reference.split(".")[-2] if "." in reference else None
     byQualifier = [key for key in declared
                    if key.split(".")[-1] == tail and qualifier
                    and key.rsplit(".", 1)[0].endswith(qualifier)]
-    return byQualifier or [key for key in declared if key.split(".")[-1] == tail][:1]
+    if byQualifier:
+        return byQualifier
+    if owner and f"{owner}.{tail}" in declared:
+        return [f"{owner}.{tail}"]
+    return [key for key in declared if key.split(".")[-1] == tail][:1]
 
 
 def build(repositoryRoot: Path) -> dict:

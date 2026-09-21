@@ -97,9 +97,11 @@ def connectorDrift(actions: list[dict]):
 
 
 def pagesWithoutACheck(pages: list[dict], policy: dict):
+    """A page says who may open it by naming a role set (Page OpenTo) — the same constant its
+    API reads are gated by. CanAccess is a page's further check on top, never the role answer."""
     excused = set(policy["pagesWithoutARoleCheck"])
     for page in pages:
-        if page["canAccess"] or page["routes"][0] in excused:
+        if page["openTo"] or page["routes"][0] in excused:
             continue
         yield finding(A_PAGE_STATES_WHO_MAY_OPEN_IT, page["routes"][0], ["page"],
-                      "no CanAccess — any approved sign-in renders it", page["file"])
+                      "no OpenTo — any approved sign-in renders it", page["file"])

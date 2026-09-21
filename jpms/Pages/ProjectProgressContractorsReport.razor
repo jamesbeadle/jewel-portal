@@ -15,7 +15,7 @@
     a finding. The portal never emails the report — a person downloads it and sends it.
 *@
 
-<Page CanAccess="@CanRead" AccessDeniedMessage="Contractor's Reports are for the internal team.">
+<Page OpenTo="ProgressRoles.Readers" CanAccess="@CanRead" AccessDeniedMessage="Contractor's Reports are for the internal team.">
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="progress">
         <SectionHeader Title="@(view?.Report.DisplayTitle ?? "Contractor's Report")"
                        Subtitle="@(view is { } loaded ? $"Week ending {DateText(loaded.Report.PeriodEnd)}" : null)">

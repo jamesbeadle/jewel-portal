@@ -16,8 +16,13 @@ It is read-only. It writes no source file, needs no database and no .NET SDK.
 | Surface | Read from | Resolved to |
 |---|---|---|
 | API | every `[HttpTrigger]` in `api/**` | route + verbs → the roles its gate admits |
-| UI | every `@page` in `jpms/**` | route → its `Page CanAccess` check, if it has one |
+| UI | every `@page` in `jpms/**` | route → the role set its `Page OpenTo` names, if it names one |
 | Connector | `AiTool` and `AiAction` in `api/Features/Ai/Tools/**` | `VisibleTo` versus the roles its `AuthorisationType` admits |
+
+The role vocabulary — `RoleSet`, the `JpmsRoles` aliases and every shared set (`JpmsRoleSets`,
+`TriageRoles`, `SalesRoles`, `LabourRoleSets`…) — is declared in `contracts/Models`, where the
+API's gates and the pages' `OpenTo` read the same constant; a set only one endpoint uses may still
+be declared beside that endpoint in `api/**`. Both places are read.
 
 A gate is followed through all four shapes the codebase uses: an inline
 `SomeRoles.Set.IncludesAny(user.Roles)`, `AdminGate.Allows(user)`, an injected `*Authorisation`
@@ -33,6 +38,11 @@ which are scoped by the caller's own identity, and which gates are resolved at r
 
 `correspondence.mayReach` is deliberately **ahead of the code**: it records the rule as stated
 (2026-09-19), so the check reports the distance still to travel rather than blessing what is there.
+
+`pagesWithoutARoleCheck` names the routes that render nothing to gate — the sign-in pages, a
+public token door, a redirect — with the reason beside each. Every other routed page names the
+role set that may open it (`<Page OpenTo="…">`), and `Page` throws rather than render a page that
+names nobody.
 
 `externalRouteExceptions` is where an external role's reach beyond its own portal is written down,
 with the reason — the permissions matrix row that allows it. It is the answer to "which of this is

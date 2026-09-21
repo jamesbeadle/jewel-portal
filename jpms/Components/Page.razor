@@ -1,17 +1,22 @@
 @namespace Jewel.JPMS.Components
+@inject SessionService Session
 
 @*
     THE page shell. Every routed view except the landing page is a <Page>: the signed-in +
     approved gate (ApprovedSessionGate), then the one content gutter — 32px at desktop, the
     Figma's content inset — so no page types its own <section class="px-… py-…"> again.
 
-    CanAccess is the page's own role check (CanManage, IsFinance…): false renders the quiet
+    OpenTo is who may open the page: the role set its primary read is gated by on the API —
+    the same constant (JpmsRoleSets.CommercialTeam, SalesRoles.Readers…), so the page and the
+    endpoint cannot drift. It is required: a page that names nobody throws rather than
+    rendering for any approved sign-in. CanAccess is the page's own further check, when the
+    role is not the whole answer (a client login needs its ClientId): false renders the quiet
     "you don't have access" line inside the gutter instead of the page. MaxWidth is the
     narrow-form case ("max-w-2xl"); Class is for anything else about the container.
 *@
 
 <ApprovedSessionGate>
-    @if (!CanAccess)
+    @if (!IsOpenToThisPerson)
     {
         <section class="px-4 md:px-8 py-6 text-sm text-content-subtle">@AccessDeniedMessage</section>
     }
@@ -29,7 +34,9 @@
 
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
-    /// <summary>The page's own role/permission check. False shows AccessDeniedMessage in place of the page.</summary>
+    /// <summary>Who may open the page: the role set its primary API read is gated by.</summary>
+    [Parameter, EditorRequired] public RoleSet? OpenTo { get; set; }
+    /// <summary>The page's own further check beyond the role. False shows AccessDeniedMessage in place of the page.</summary>
     [Parameter] public bool CanAccess { get; set; } = true;
     [Parameter] public string AccessDeniedMessage { get; set; } = "You don't have access to this page.";
     /// <summary>A max-width class for narrow pages (forms, settings) — e.g. "max-w-2xl".</summary>
@@ -37,4 +44,11 @@
     [Parameter] public string Class { get; set; } = "";
     /// <summary>No gutter at all — for a full-bleed workspace (the Control Centre) that lays itself out edge to edge.</summary>
     [Parameter] public bool Bare { get; set; }
+
+    private bool IsOpenToThisPerson => Session.CanOpen(OpenTo!) && CanAccess;
+
+    protected override void OnParametersSet()
+    {
+        if (OpenTo is null) throw new InvalidOperationException("Every page says who may open it: pass OpenTo.");
+    }
 }

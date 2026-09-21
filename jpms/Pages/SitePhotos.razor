@@ -18,7 +18,7 @@
     is still waiting.
 *@
 
-<Page CanAccess="@CanRead" AccessDeniedMessage="Site photos are for the internal team.">
+<Page OpenTo="ProgressRoles.Readers" CanAccess="@CanRead" AccessDeniedMessage="Site photos are for the internal team.">
     <PageHeader>
         <SubtitleContent>
             @if (photos is not null)

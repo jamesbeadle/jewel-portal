@@ -17,7 +17,7 @@
     Active / Paused / Retired) is the directors' call. Edits are modals.
 *@
 
-<Page>
+<Page OpenTo="SalesRoles.Readers">
     @if (!Detail.LoadedFor(StrategyId) && !dataFailed)
     {
         <LoadGate IsLoading="true" Prominent="true" Label="Loading strategy" />

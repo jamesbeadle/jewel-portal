@@ -1,7 +1,9 @@
-namespace Jewel.JPMS.Api.Gates;
+namespace Jewel.JPMS.Models;
 
 /// <summary>
-/// Shared role sets for endpoint authorisation. The floor for every endpoint is a role check —
+/// Shared role sets for endpoint authorisation — and for the pages that render what those
+/// endpoints serve. A page names the set its primary read is gated by (Page.OpenTo), so the
+/// two doors read one constant and cannot drift. The floor for every endpoint is a role check —
 /// "is signed in" alone is never enough, because external logins (subcontractor portal, and in
 /// future clients/architects) carry valid session cookies too. Administrators pass every gate
 /// (SignedInUserResolver grants them all roles).
@@ -71,4 +73,26 @@ public static class JpmsRoleSets
         JpmsRoles.FinanceDirector,
         JpmsRoles.ProjectManager,
         JpmsRoles.Estimator);
+
+    /// <summary>Administrators alone: the true administrator test. A non-administrator's
+    /// expanded role list can never contain Role.Admin (UserRoles.Expand).</summary>
+    public static readonly RoleSet Administrators = RoleSet.Of(Role.Admin);
+
+    /// <summary>The admin-only surfaces (user directory, invites, access requests, the system
+    /// page): administrators, and Finance Directors, who hold the same PERMISSIONS without being
+    /// linked to the Admin identity. This is AdminGate's rule.</summary>
+    public static readonly RoleSet AdministratorsAndFinanceDirector = RoleSet.Of(Role.Admin, JpmsRoles.FinanceDirector);
+
+    /// <summary>Every role there is — for a page every approved sign-in may open (the role home,
+    /// a person's own sign-offs and connections), where the API scopes by the caller rather than
+    /// by role.</summary>
+    public static readonly RoleSet Everyone = RoleSet.Of(Enum.GetValues<Role>());
+
+    /// <summary>The client portal: a Client login, which reads its own client's records and
+    /// nothing else (ClientScope). A Client role without a ClientId reaches nothing.</summary>
+    public static readonly RoleSet ClientPortal = RoleSet.Of(JpmsRoles.Client);
+
+    /// <summary>The subcontractor portal: a Subcontractor login, which reads its own directory
+    /// record and its own work orders (SubcontractorScope).</summary>
+    public static readonly RoleSet SubcontractorPortal = RoleSet.Of(JpmsRoles.Subcontractor);
 }

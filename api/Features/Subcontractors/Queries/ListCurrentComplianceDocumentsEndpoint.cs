@@ -13,20 +13,13 @@ public sealed class ListCurrentComplianceDocumentsEndpoint
         this.handler = handler;
     }
 
-    // The whole-company read is internal-only: a portal-scoped subcontractor login reads its own
-    // documents through the per-record route, never everyone's. Mirrors the per-record endpoint's
-    // internal role set.
-    private static readonly RoleSet InternalRolesThatMayReadCompliance = RoleSet.Of(
-        JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator,
-        JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
-
     [Function(nameof(ListCurrentComplianceDocuments))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "compliance-documents")] HttpRequest request)
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!InternalRolesThatMayReadCompliance.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!DirectoryRoles.AllowedToReadCompliance.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         return new OkObjectResult(await handler.HandleAsync(new ListCurrentComplianceDocuments(), request.HttpContext.RequestAborted));
     }

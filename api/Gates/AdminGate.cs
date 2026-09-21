@@ -12,5 +12,5 @@ namespace Jewel.JPMS.Api.Gates;
 public static class AdminGate
 {
     public static bool Allows(SignedInUser user) =>
-        user.Roles.Contains(Role.Admin) || user.Roles.Contains(Role.FinanceDirector);
+        JpmsRoleSets.AdministratorsAndFinanceDirector.IncludesAny(user.Roles);
 }

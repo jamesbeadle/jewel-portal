@@ -4,15 +4,6 @@ namespace Jewel.JPMS.Api.Features.Xero.Queries;
 
 public sealed class GetXeroAgedReceivablesEndpoint
 {
-    // The same finance-facing audience as Aged Payables — receivables are the valuation
-    // invoices this audience already raises and tracks, aggregated by client, not a widening.
-    // Deliberately looser than the Cash Summary's directors-only gate (no bank balances here).
-    // Admins pass because Role.Admin is included explicitly. Accounts joined 2026-08-27: the
-    // Weekly Cashflow's cash-in band is seeded from exactly this read.
-    private static readonly RoleSet AllowedToViewReceivables = RoleSet.Of(
-        Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator,
-        JpmsRoles.Accounts);
-
     private readonly SignedInUserResolver users;
     private readonly IQueryHandler<GetXeroAgedReceivables, XeroAgedReceivablesSnapshot> handler;
 
@@ -30,7 +21,7 @@ public sealed class GetXeroAgedReceivablesEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!AllowedToViewReceivables.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(StatusCodes.Status403Forbidden);
+        if (!XeroReportRoles.AgedReportReaders.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(StatusCodes.Status403Forbidden);
 
         var force = string.Equals(request.Query["force"], "true", StringComparison.OrdinalIgnoreCase);
         var snapshot = await handler.HandleAsync(new GetXeroAgedReceivables(force), request.HttpContext.RequestAborted);

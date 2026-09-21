@@ -1,5 +1,5 @@
 
-namespace Jewel.JPMS.Api.Features.WeeklyCashflow;
+namespace Jewel.JPMS.Models;
 
 /// <summary>
 /// One gate for the whole feature, reads and writes alike: the Weekly Cashflow is the
@@ -8,7 +8,7 @@ namespace Jewel.JPMS.Api.Features.WeeklyCashflow;
 /// from GetXeroCashSummary, whose directors-only gate is untouched, and the page only draws the
 /// balance for those who can read it.
 /// </summary>
-internal static class WeeklyCashflowGates
+public static class WeeklyCashflowGates
 {
     public static readonly RoleSet WeeklyCashflowRoles = RoleSet.Of(
         Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.Accounts);

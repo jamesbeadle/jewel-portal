@@ -1,7 +1,7 @@
 
-namespace Jewel.JPMS.Api.Features.Ai.Skills;
+namespace Jewel.JPMS.Models;
 
-internal static class SkillRoles
+public static class SkillRoles
 {
     /// <summary>
     /// Who may read and edit the assistant's skills. The whole point of the store is that the

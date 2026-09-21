@@ -20,7 +20,7 @@
     TriageRoles.AllowedToTriage); rows about the client pathway are ABOUT the wall, never inside it.
 *@
 
-<Page>
+<Page OpenTo="TriageRoles.AllowedToTriage">
     @if (!CanAccess)
     {
         <PageHeader Title="Not available" />

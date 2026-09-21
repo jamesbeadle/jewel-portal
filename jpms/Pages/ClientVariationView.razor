@@ -8,7 +8,7 @@
 
 <PageTitle>@(record?.VariationRef ?? record?.Reference ?? "Variation") · JPMS</PageTitle>
 
-<Page CanAccess="CanAccess" AccessDeniedMessage="This page is for client accounts.">
+<Page OpenTo="JpmsRoleSets.ClientPortal" CanAccess="CanAccess" AccessDeniedMessage="This page is for client accounts.">
     <LoadGate IsLoading="@(!loaded)" Prominent="true" Label="Loading variation order">
         @if (record is null)
         {

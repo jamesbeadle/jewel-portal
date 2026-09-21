@@ -1,6 +1,4 @@
-using Jewel.JPMS.Models;
-
-namespace Jewel.JPMS.Api.Gates;
+namespace Jewel.JPMS.Models;
 
 public sealed class RoleSet
 {

@@ -9,7 +9,7 @@
 
 <PageTitle>Home · JPMS</PageTitle>
 
-<Page>
+<Page OpenTo="JpmsRoleSets.Everyone">
     @if (Session.ActiveRole == Role.Admin)
     {
         <AdminHome CurrentUser="Auth.CurrentUser!" />

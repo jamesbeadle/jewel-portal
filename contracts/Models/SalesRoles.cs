@@ -1,4 +1,4 @@
-namespace Jewel.JPMS.Api.Features.Sales;
+namespace Jewel.JPMS.Models;
 
 /// <summary>
 /// Who works the Sales section (2026-09-06). Reads are AllInternal — a lead is not a secret from

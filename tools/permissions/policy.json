@@ -84,14 +84,22 @@
   "dynamicGates": [
     "record-emails/{record}/{recordId}/preview"
   ],
-  "pagesWithoutARoleCheck": [
-    "/",
-    "/dashboard",
-    "/login",
-    "/set-password",
-    "/forgot-password",
-    "/connect/authorize"
-  ],
+  "pagesWithoutARoleCheck": {
+    "/": "the sign-in page, outside the session gate",
+    "/login": "the sign-in page, outside the session gate",
+    "/set-password": "an invite or reset token is the credential, outside the session gate",
+    "/forgot-password": "outside the session gate",
+    "/connect/authorize": "the OAuth consent page: the caller is the scope",
+    "/imagine/{Token}": "the prospect's public door: the URL token is the credential, no session",
+    "/logout": "ends the session; renders nothing",
+    "/my-day": "retired: redirects to /dashboard, where the role home renders the worker's day",
+    "/projects/{ProjectId}": "redirects to the first project tab the role may open; renders nothing",
+    "/projects/{ProjectId}/drawings": "legacy address: redirects to /documents; renders nothing",
+    "/projects/{ProjectId}/valuation-snapshots": "legacy address: redirects to /valuation; renders nothing",
+    "/projects/{ProjectId}/financials-setup": "legacy address: redirects to /settings; renders nothing",
+    "/projects/{ProjectId}/operations-setup": "legacy address: redirects to /settings; renders nothing",
+    "/projects/{ProjectId}/setup": "legacy address: redirects to /settings; renders nothing"
+  },
   "externalRouteExceptions": {
     "Architect": [
       {

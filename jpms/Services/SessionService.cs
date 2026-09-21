@@ -36,6 +36,11 @@ public sealed class SessionService : IDisposable
 
     public bool IsApproved => AvailableRoles.Count > 0;
 
+    /// <summary>Whether one of the roles this person holds is in the set a page names as who may
+    /// open it (Page.OpenTo) — the set the page's own API reads are gated by. Administrators
+    /// hold every role, so they pass every set that admits anyone.</summary>
+    public bool CanOpen(RoleSet roles) => AvailableRoles.Any(roles.Includes);
+
     public bool HasMultipleRoles => AvailableRoles.Count > 1;
 
     /// <summary>True for users opted in to the two-hour default-back (Admin → Users), once their
