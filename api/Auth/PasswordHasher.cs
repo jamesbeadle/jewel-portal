@@ -28,6 +28,14 @@ public static class PasswordHasher
         return $"{Prefix}.{Iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(subkey)}";
     }
 
+    /// <summary>A stored hash no password matches. Verifying against it costs exactly what a real
+    /// verification costs, so a sign-in for an unknown, disabled or locked account answers in the
+    /// same time as a wrong password and the response time cannot say which (security review,
+    /// 2026-09-21).</summary>
+    private static readonly string DecoyHash = Hash(Guid.NewGuid().ToString("N"));
+
+    public static void SpendAVerification(string password) => Verify(password, DecoyHash);
+
     public static bool Verify(string password, string? storedHash)
     {
         if (string.IsNullOrEmpty(password) || string.IsNullOrEmpty(storedHash)) return false;

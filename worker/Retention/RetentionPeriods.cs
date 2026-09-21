@@ -1,0 +1,19 @@
+namespace Jewel.JPMS.Worker.Retention;
+
+/// <summary>
+/// How long the portal keeps what it no longer needs. A spent credential row is a liability
+/// tied to a person's email, not a record of the business; a cached scan can be re-read from
+/// the document it came from. Each period is the grace after the row stopped being useful.
+/// </summary>
+internal static class RetentionPeriods
+{
+    /// <summary>Sessions, invite/reset tokens and OAuth codes and tokens, after they expired or
+    /// were consumed — long enough to investigate an incident, no longer.</summary>
+    public static readonly TimeSpan SpentCredentials = TimeSpan.FromDays(30);
+
+    /// <summary>An access request nobody has approved or declined.</summary>
+    public static readonly TimeSpan UnansweredAccessRequests = TimeSpan.FromDays(90);
+
+    /// <summary>The OCR text of a scanned document; the next read re-OCRs the file on a miss.</summary>
+    public static readonly TimeSpan ScanText = TimeSpan.FromDays(180);
+}

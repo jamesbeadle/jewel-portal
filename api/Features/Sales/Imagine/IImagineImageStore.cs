@@ -14,6 +14,7 @@ public interface IImagineImageStore
     Task<string> SaveAsync(string leadId, string roundId, string imageId, string contentType, byte[] bytes, CancellationToken ct);
     Task<StoredBlob?> OpenAsync(string blobRef, CancellationToken ct);
     Task<byte[]?> ReadAllAsync(string blobRef, CancellationToken ct);
+    Task DeleteAsync(string blobRef, CancellationToken ct);
 }
 
 public sealed class AzureBlobImagineImageStore : IImagineImageStore
@@ -37,6 +38,8 @@ public sealed class AzureBlobImagineImageStore : IImagineImageStore
     }
 
     public Task<StoredBlob?> OpenAsync(string blobRef, CancellationToken ct) => store.OpenAsync(blobRef, ct);
+
+    public Task DeleteAsync(string blobRef, CancellationToken ct) => store.DeleteAsync(blobRef, ct);
 
     public async Task<byte[]?> ReadAllAsync(string blobRef, CancellationToken ct)
     {
@@ -70,4 +73,6 @@ public sealed class NullImagineImageStore : IImagineImageStore
     public Task<StoredBlob?> OpenAsync(string blobRef, CancellationToken ct) => Task.FromResult<StoredBlob?>(null);
 
     public Task<byte[]?> ReadAllAsync(string blobRef, CancellationToken ct) => Task.FromResult<byte[]?>(null);
+
+    public Task DeleteAsync(string blobRef, CancellationToken ct) => Task.CompletedTask;
 }

@@ -14,4 +14,12 @@ internal static class ProgressPhotoLimits
 
     /// <summary>A single image bigger than this is refused before it is opened.</summary>
     public const long MaxImageBytes = 40L * 1024 * 1024;
+
+    /// <summary>The largest dimension the decoder is allowed to open — comfortably above any phone
+    /// camera, far below what a small file declaring a huge canvas would decode to (a decompression
+    /// bomb: a few MB of PNG unpacking to tens of GB). Refused by the library, not by us.</summary>
+    public const ulong MaxDecodedEdgePixels = 12_000;
+
+    /// <summary>Memory the decoder may hold for one image before it refuses.</summary>
+    public const ulong MaxDecoderMemoryBytes = 1024UL * 1024 * 1024;
 }

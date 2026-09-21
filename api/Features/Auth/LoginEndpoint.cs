@@ -37,11 +37,11 @@ public sealed class LoginEndpoint
         if (credential is null
             || credential.Status != (int)CredentialStatus.Active
             || string.IsNullOrEmpty(credential.PasswordHash))
-            return Unauthorized();
+            return UnauthorizedAfterAVerification(body.Password);
 
         var now = DateTimeOffset.UtcNow;
         if (credential.LockedUntil is { } lockedUntil && lockedUntil > now)
-            return Unauthorized();
+            return UnauthorizedAfterAVerification(body.Password);
 
         if (!PasswordHasher.Verify(body.Password, credential.PasswordHash))
         {
@@ -69,6 +69,12 @@ public sealed class LoginEndpoint
         var displayName = string.IsNullOrWhiteSpace(directoryUser?.DisplayName) ? email : directoryUser!.DisplayName;
         return new OkObjectResult(new AuthenticatedUserResponse(email, displayName, roles, directoryUser?.SubcontractorId,
             HomeRoleSelection.From(directoryRoles), directoryUser?.RevertToOwnRole ?? false, directoryUser?.ClientId));
+    }
+
+    private static UnauthorizedObjectResult UnauthorizedAfterAVerification(string password)
+    {
+        PasswordHasher.SpendAVerification(password);
+        return Unauthorized();
     }
 
     private static UnauthorizedObjectResult Unauthorized() =>

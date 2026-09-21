@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Storage;
 using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 
@@ -64,15 +65,8 @@ public sealed class DownloadRequestEmailAttachmentEndpoint
             return new NotFoundObjectResult(
                 "Couldn't download that attachment from the mailbox — it may have been removed, or it isn't a file.");
 
-        // Inline rendering (?inline=1, no Content-Disposition) is honoured ONLY for content a
-        // browser can show without executing anything — the embedder's raster whitelist plus PDF.
-        // Everything else always downloads: this endpoint navigates on the portal's own origin, so
-        // serving an emailed SVG or HTML file inline would run the sender's markup as the reader.
-        var isInlineView = request.Query.TryGetValue("inline", out var inlineValue)
-            && (inlineValue == "1" || string.Equals(inlineValue, "true", StringComparison.OrdinalIgnoreCase))
-            && MayRenderInline(attachment.ContentType);
-
-        request.HttpContext.Response.Headers["X-Content-Type-Options"] = "nosniff";
+        var isInlineView = InlineRendering.IsInlineView(InlineRendering.IsAskedFor(request), attachment.ContentType);
+        InlineRendering.ForbidSniffing(request.HttpContext.Response);
         var result = new FileContentResult(attachment.Content, attachment.ContentType)
         {
             EnableRangeProcessing = true
@@ -81,8 +75,4 @@ public sealed class DownloadRequestEmailAttachmentEndpoint
             result.FileDownloadName = string.IsNullOrWhiteSpace(attachment.Name) ? "attachment" : attachment.Name;
         return result;
     }
-
-    private static bool MayRenderInline(string contentType) =>
-        InboundEmailBodyBuilder.EmbeddableImageTypes.Contains(contentType)
-        || string.Equals(contentType, "application/pdf", StringComparison.OrdinalIgnoreCase);
 }

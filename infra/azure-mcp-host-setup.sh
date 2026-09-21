@@ -51,8 +51,14 @@ if ! az functionapp show --name "${FUNC_APP}" --resource-group "${RESOURCE_GROUP
     --functions-version 4 \
     --runtime dotnet-isolated \
     --runtime-version 8 \
+    --https-only true \
     --output none
 fi
+# ---- The host that handles OAuth bearer tokens is TLS 1.2+, HTTPS only, no FTPS (security
+#      review 2026-09-21; the same line phase1-provision.sh applies to the api host). ----
+az functionapp update --name "${FUNC_APP}" --resource-group "${RESOURCE_GROUP}" --set httpsOnly=true --output none
+az functionapp config set --name "${FUNC_APP}" --resource-group "${RESOURCE_GROUP}" \
+  --min-tls-version 1.2 --ftps-state Disabled --output none
 MCP_HOSTNAME="$(az functionapp show --name "${FUNC_APP}" --resource-group "${RESOURCE_GROUP}" \
   --query defaultHostName --output tsv)"
 MCP_PUBLIC_URL="https://${MCP_HOSTNAME}/api/mcp"
@@ -62,14 +68,17 @@ echo "Function App: ${MCP_HOSTNAME}"
 #      mailbox and stores. Keys are renamed ':' -> '__' (Linux env names cannot carry ':';
 #      .NET configuration reads both spellings identically). Runtime-owned keys are skipped. ----
 echo "Copying app settings from ${SWA_NAME}…"
+# The copied settings carry every secret the portal holds: a private file, never world-readable /tmp.
+umask 077
+SETTINGS_FILE="$(mktemp)"
 az staticwebapp appsettings list --name "${SWA_NAME}" --resource-group "${RESOURCE_GROUP}" --output json \
   | jq '[.properties | to_entries[]
          | select(.key | test("^(AzureWebJobsStorage|FUNCTIONS_|WEBSITE_|APPINSIGHTS_|APPLICATIONINSIGHTS_)") | not)
          | { name: (.key | gsub(":"; "__")), value: .value, slotSetting: false }]' \
-  > /tmp/jpms-mcp-settings.json
+  > "${SETTINGS_FILE}"
 az functionapp config appsettings set --name "${FUNC_APP}" --resource-group "${RESOURCE_GROUP}" \
-  --settings @/tmp/jpms-mcp-settings.json --output none
-rm -f /tmp/jpms-mcp-settings.json
+  --settings @"${SETTINGS_FILE}" --output none
+rm -f "${SETTINGS_FILE}"
 
 # ---- Tell both hosts where the MCP endpoint publicly lives: the discovery documents (served by
 #      the SWA) advertise this exact URL as the OAuth resource, and it must match the URL the AI

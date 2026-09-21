@@ -52,7 +52,7 @@ echo "[5/5] Availability test — the one that catches a gateway 503"
 az monitor app-insights web-test create -g "$RG" -n jpms-portal-availability \
   --app-insights-id "$AI_ID" --location westeurope --web-test-kind standard \
   --frequency 300 --timeout 60 --enabled true --retry-enabled true \
-  --locations Id=emea-nl-ams-azr Id=emea-gb-db3-azr Id=emea-ru-msa-edge \
+  --locations Id=emea-nl-ams-azr Id=emea-gb-db3-azr Id=emea-fr-pra-edge \
   --request-url "$SITE_URL" --expected-status-code 200 \
   --defined-web-test-name jpms-portal-availability --web-test-name jpms-portal-availability \
   -o none 2>&1 | tail -3 || {

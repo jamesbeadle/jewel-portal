@@ -90,11 +90,18 @@ public sealed class InboundEmailBodyBuilder
     private static string NormaliseCid(string value) =>
         WebUtility.HtmlDecode(value).Trim().TrimStart('<').TrimEnd('>');
 
-    /// <summary>Ganss.Xss defaults plus the cid: scheme, so image references reach the embed step.</summary>
+    /// <summary>The tags a rendered email never needs and a phishing email does: a form drawn
+    /// inside the triage queue reads as the portal's own chrome (security review, 2026-09-21).</summary>
+    private static readonly string[] FormControlTags =
+        { "form", "input", "button", "textarea", "select", "option", "optgroup", "datalist", "fieldset", "legend", "label", "keygen", "output" };
+
+    /// <summary>Ganss.Xss defaults plus the cid: scheme, so image references reach the embed step,
+    /// minus every form control.</summary>
     public static string Sanitise(string html)
     {
         var sanitiser = new HtmlSanitizer();
         sanitiser.AllowedSchemes.Add("cid");
+        foreach (var tag in FormControlTags) sanitiser.AllowedTags.Remove(tag);
         return sanitiser.Sanitize(html);
     }
 }

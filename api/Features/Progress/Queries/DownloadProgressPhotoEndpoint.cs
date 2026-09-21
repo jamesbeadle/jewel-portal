@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Storage;
 using Jewel.JPMS.Api.Features.Progress.Storage;
 
 namespace Jewel.JPMS.Api.Features.Progress.Queries;
@@ -42,15 +43,14 @@ public sealed class DownloadProgressPhotoEndpoint
 
         var blob = await photoStore.OpenAsync(photo.BlobRef, cancellationToken);
         if (blob is null) return new NotFoundObjectResult("The stored file could not be found.");
-
-        var inline = request.Query.TryGetValue("inline", out var inlineValue)
-            && (inlineValue == "1" || string.Equals(inlineValue, "true", StringComparison.OrdinalIgnoreCase));
+        var inline = InlineRendering.IsAskedFor(request);
+        InlineRendering.ForbidSniffing(request.HttpContext.Response);
 
         var result = new FileStreamResult(blob.Content, string.IsNullOrWhiteSpace(photo.ContentType) ? blob.ContentType : photo.ContentType)
         {
             EnableRangeProcessing = true
         };
-        if (!inline)
+        if (!InlineRendering.IsInlineView(inline, result.ContentType))
             result.FileDownloadName = string.IsNullOrWhiteSpace(photo.FileName) ? progressPhotoId : photo.FileName;
         return result;
     }

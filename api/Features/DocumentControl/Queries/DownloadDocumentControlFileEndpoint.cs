@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Storage;
 using Jewel.JPMS.Api.Features.DocumentControl.Storage;
 
 namespace Jewel.JPMS.Api.Features.DocumentControl.Queries;
@@ -40,16 +41,15 @@ public sealed class DownloadDocumentControlFileEndpoint
 
         var blob = await blobStore.OpenAsync(item.BlobRef, cancellationToken);
         if (blob is null) return new NotFoundObjectResult("The stored file could not be found.");
-
-        var inline = request.Query.TryGetValue("inline", out var inlineValue)
-            && (inlineValue == "1" || string.Equals(inlineValue, "true", StringComparison.OrdinalIgnoreCase));
+        var inline = InlineRendering.IsAskedFor(request);
+        InlineRendering.ForbidSniffing(request.HttpContext.Response);
 
         // Range processing lets browser PDF viewers seek; omitting FileDownloadName renders inline.
         var result = new FileStreamResult(blob.Content, string.IsNullOrWhiteSpace(item.ContentType) ? blob.ContentType : item.ContentType)
         {
             EnableRangeProcessing = true
         };
-        if (!inline)
+        if (!InlineRendering.IsInlineView(inline, result.ContentType))
             result.FileDownloadName = string.IsNullOrWhiteSpace(item.FileName) ? itemId : item.FileName;
         return result;
     }

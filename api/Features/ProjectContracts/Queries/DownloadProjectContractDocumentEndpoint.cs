@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Storage;
 using Jewel.JPMS.Api.Features.ProjectContracts.Storage;
 
 namespace Jewel.JPMS.Api.Features.ProjectContracts.Queries;
@@ -45,9 +46,8 @@ public sealed class DownloadProjectContractDocumentEndpoint
 
         var blob = await blobStore.OpenAsync(contract.DocumentBlobRef, cancellationToken);
         if (blob is null) return new NotFoundObjectResult("The stored file could not be found.");
-
-        var inline = request.Query.TryGetValue("inline", out var inlineValue)
-            && (inlineValue == "1" || string.Equals(inlineValue, "true", StringComparison.OrdinalIgnoreCase));
+        var inline = InlineRendering.IsAskedFor(request);
+        InlineRendering.ForbidSniffing(request.HttpContext.Response);
 
         var result = new FileStreamResult(
             blob.Content,
@@ -56,7 +56,7 @@ public sealed class DownloadProjectContractDocumentEndpoint
             EnableRangeProcessing = true
         };
 
-        if (!inline)
+        if (!InlineRendering.IsInlineView(inline, result.ContentType))
         {
             result.FileDownloadName = string.IsNullOrWhiteSpace(contract.DocumentFileName)
                 ? "contract"

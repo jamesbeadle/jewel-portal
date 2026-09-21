@@ -266,7 +266,8 @@ internal static class SalesPostcode
 public sealed class DeleteLeadHandler : ICommandHandler<DeleteLead, Acknowledgement>
 {
     private readonly JpmsContext context;
-    public DeleteLeadHandler(JpmsContext context) { this.context = context; }
+    private readonly IImagineImageStore images;
+    public DeleteLeadHandler(JpmsContext context, IImagineImageStore images) { this.context = context; this.images = images; }
 
     public async Task<Acknowledgement> HandleAsync(DeleteLead command, CancellationToken cancellationToken)
     {
@@ -275,17 +276,22 @@ public sealed class DeleteLeadHandler : ICommandHandler<DeleteLead, Acknowledgem
         if (entity.Stage == (int)LeadStage.Won)
             throw new InvalidOperationException($"{entity.DisplayReference} is Won — it has a client and a project; it cannot be deleted.");
 
-        // Everything hung off the lead goes with it. The schema has no FKs, so each register is
-        // cleared by hand (the same shape as DeleteRequestHandler). Imagine image bytes stay in
-        // the blob container — nothing points at them once the rows are gone.
+        // Everything hung off the lead goes with it, the prospect's photographs included. The
+        // schema has no FKs, so each register is cleared by hand (the same shape as
+        // DeleteRequestHandler).
         var leadId = entity.LeadId;
+        var estimateIds = await context.LeadEstimates.Where(row => row.LeadId == leadId).Select(row => row.EstimateId).ToListAsync(cancellationToken);
+        var imageRows = await context.ImagineImages.Where(row => row.LeadId == leadId).ToListAsync(cancellationToken);
         context.LeadActivities.RemoveRange(await context.LeadActivities.Where(row => row.LeadId == leadId).ToListAsync(cancellationToken));
+        context.LeadEstimateLines.RemoveRange(await context.LeadEstimateLines.Where(row => estimateIds.Contains(row.EstimateId)).ToListAsync(cancellationToken));
         context.LeadEstimates.RemoveRange(await context.LeadEstimates.Where(row => row.LeadId == leadId).ToListAsync(cancellationToken));
         context.SalesProposals.RemoveRange(await context.SalesProposals.Where(row => row.LeadId == leadId).ToListAsync(cancellationToken));
-        context.ImagineImages.RemoveRange(await context.ImagineImages.Where(row => row.LeadId == leadId).ToListAsync(cancellationToken));
+        context.ImagineImages.RemoveRange(imageRows);
         context.ImagineRounds.RemoveRange(await context.ImagineRounds.Where(row => row.LeadId == leadId).ToListAsync(cancellationToken));
         context.Leads.Remove(entity);
         await context.SaveChangesAsync(cancellationToken);
+        foreach (var image in imageRows.Where(row => !string.IsNullOrWhiteSpace(row.BlobRef)))
+            await images.DeleteAsync(image.BlobRef, cancellationToken);
         return new Acknowledgement(leadId);
     }
 }

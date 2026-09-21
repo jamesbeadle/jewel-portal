@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Storage;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.Procurement;
 
@@ -166,15 +167,14 @@ public sealed class WorkOrderAttachmentEndpoints
 
         var blob = await blobStore.OpenAsync(entity.BlobRef, cancellationToken);
         if (blob is null) return new NotFoundObjectResult("The stored file could not be found.");
-
-        var inline = request.Query.TryGetValue("inline", out var inlineValue)
-            && (inlineValue == "1" || string.Equals(inlineValue, "true", StringComparison.OrdinalIgnoreCase));
+        var inline = InlineRendering.IsAskedFor(request);
+        InlineRendering.ForbidSniffing(request.HttpContext.Response);
 
         var result = new FileStreamResult(blob.Content, string.IsNullOrWhiteSpace(entity.ContentType) ? blob.ContentType : entity.ContentType)
         {
             EnableRangeProcessing = true
         };
-        if (!inline)
+        if (!InlineRendering.IsInlineView(inline, result.ContentType))
             result.FileDownloadName = string.IsNullOrWhiteSpace(entity.FileName) ? attachmentId : entity.FileName;
         return result;
     }

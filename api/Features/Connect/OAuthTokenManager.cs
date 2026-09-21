@@ -68,11 +68,13 @@ public sealed class OAuthTokenManager
         var hash = AuthTokens.Hash(refreshSecret);
         var row = await context.OAuthTokens
             .FirstOrDefaultAsync(token => token.TokenHash == hash, cancellationToken);
-        if (row is null
-            || row.Kind != (int)OAuthDefaults.TokenKind.Refresh
-            || row.RevokedAt is not null
-            || row.ExpiresAt <= now)
+        if (row is null || row.Kind != (int)OAuthDefaults.TokenKind.Refresh || row.ExpiresAt <= now)
             return null;
+        if (row.RevokedAt is not null)
+        {
+            await RevokeFamilyAsync(row.FamilyId ?? row.TokenHash, cancellationToken);
+            return null;
+        }
 
         row.RevokedAt = now;
 
@@ -136,6 +138,18 @@ public sealed class OAuthTokenManager
         var now = DateTimeOffset.UtcNow;
         var rows = await context.OAuthTokens
             .Where(token => token.FamilyId == familyId && token.RevokedAt == null)
+            .ToListAsync(cancellationToken);
+        foreach (var row in rows) row.RevokedAt = now;
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>Revokes every live token the person holds, whatever tool minted it — what a new
+    /// password means for the connected tools, exactly as it does for the browser sessions.</summary>
+    public async Task RevokeAllForUserAsync(string email, CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var rows = await context.OAuthTokens
+            .Where(token => token.UserEmail == email && token.RevokedAt == null)
             .ToListAsync(cancellationToken);
         foreach (var row in rows) row.RevokedAt = now;
         await context.SaveChangesAsync(cancellationToken);

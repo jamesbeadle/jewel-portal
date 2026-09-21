@@ -11,6 +11,8 @@ namespace Jewel.JPMS.Api.Features.Drawings.Commands;
 /// </summary>
 public sealed class UploadDrawingRevisionEndpoint
 {
+    private const long MaxRevisionBytes = 64L * 1024 * 1024;
+
     private readonly SignedInUserResolver users;
     private readonly AuditActor auditActor;
     private readonly JpmsContext context;
@@ -54,6 +56,8 @@ public sealed class UploadDrawingRevisionEndpoint
         var form = await request.ReadFormAsync(cancellationToken);
         var file = form.Files.GetFile("file") ?? form.Files.FirstOrDefault();
         if (file is null || file.Length == 0) return new BadRequestObjectResult("A non-empty file is required.");
+        if (file.Length > MaxRevisionBytes)
+            return new BadRequestObjectResult($"A drawing revision may be at most {MaxRevisionBytes / (1024 * 1024)} MB.");
 
         var drawing = await context.Drawings
             .FirstOrDefaultAsync(row => row.DrawingId == drawingId, cancellationToken);

@@ -11,6 +11,8 @@ namespace Jewel.JPMS.Api.Features.Progress.WhatsApp;
 public sealed class WhatsAppExportArchive : IDisposable
 {
     private const string ChatExtension = ".txt";
+    private const long MaxEntryBytes = 100L * 1024 * 1024;
+    private const int CopyChunkBytes = 81920;
 
     private readonly ZipArchive? zip;
     private readonly Dictionary<string, ZipArchiveEntry> entriesByName;
@@ -49,7 +51,8 @@ public sealed class WhatsAppExportArchive : IDisposable
             throw new InvalidDataException("The zip holds no chat text (.txt) — export the chat from WhatsApp with \"Export chat\", which writes the messages and their media together.");
         }
 
-        using var reader = new StreamReader(chat.Open(), Encoding.UTF8);
+        using var chatBytes = ReadBounded(chat);
+        using var reader = new StreamReader(chatBytes, Encoding.UTF8);
         return new WhatsAppExportArchive(reader.ReadToEnd(), zip, entries);
     }
 
@@ -57,10 +60,28 @@ public sealed class WhatsAppExportArchive : IDisposable
     public byte[]? ReadMedia(string fileName)
     {
         if (!entriesByName.TryGetValue(fileName, out var entry)) return null;
-        using var stream = entry.Open();
-        using var buffer = new MemoryStream();
-        stream.CopyTo(buffer);
+        using var buffer = ReadBounded(entry);
         return buffer.ToArray();
+    }
+
+    /// <summary>Decompresses one entry with the cap enforced on the REAL byte count — a zip
+    /// header can claim any size, and a crafted export that deflates a thousandfold would
+    /// otherwise be read whole into memory (security review, 2026-09-21).</summary>
+    private static MemoryStream ReadBounded(ZipArchiveEntry entry)
+    {
+        using var content = entry.Open();
+        var buffer = new MemoryStream();
+        var chunk = new byte[CopyChunkBytes];
+        while (true)
+        {
+            var bytesRead = content.Read(chunk, 0, chunk.Length);
+            if (bytesRead == 0) break;
+            if (buffer.Length + bytesRead > MaxEntryBytes)
+                throw new InvalidDataException($"A file inside the export is larger than {MaxEntryBytes / (1024 * 1024)} MB — it is not a WhatsApp export.");
+            buffer.Write(chunk, 0, bytesRead);
+        }
+        buffer.Position = 0;
+        return buffer;
     }
 
     public void Dispose() => zip?.Dispose();

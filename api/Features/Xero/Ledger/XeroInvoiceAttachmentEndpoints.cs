@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Storage;
 using Jewel.JPMS.Contracts.Xero;
 
 namespace Jewel.JPMS.Api.Features.Xero.Ledger;
@@ -105,13 +106,14 @@ public sealed class DownloadXeroInvoiceAttachmentEndpoint
             return new NotFoundObjectResult(
                 "Couldn't fetch that document from Xero — it may have been removed from the invoice.");
 
-        var inline = ListXeroInvoiceAttachmentsEndpoint.IsTruthy(request.Query["inline"].ToString());
+        var inline = InlineRendering.IsAskedFor(request);
+        InlineRendering.ForbidSniffing(request.HttpContext.Response);
 
         var result = new FileContentResult(attachment.Content, attachment.ContentType)
         {
             EnableRangeProcessing = true
         };
-        if (!inline) result.FileDownloadName = attachment.FileName;
+        if (!InlineRendering.IsInlineView(inline, attachment.ContentType)) result.FileDownloadName = attachment.FileName;
         return result;
     }
 }
