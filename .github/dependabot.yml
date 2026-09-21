@@ -1,0 +1,59 @@
+version: 2
+
+# Nothing watched the dependencies until the security review of 2026-09-21: the two native
+# parsers that read user-uploaded images and PDFs were years behind and nobody was told.
+# Saturday so a bump that changes the client bundle is never a Monday morning surprise.
+updates:
+  - package-ecosystem: nuget
+    directory: /api
+    schedule:
+      interval: weekly
+      day: saturday
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+
+  - package-ecosystem: nuget
+    directory: /jpms
+    schedule:
+      interval: weekly
+      day: saturday
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+
+  - package-ecosystem: nuget
+    directory: /worker
+    schedule:
+      interval: weekly
+      day: saturday
+    open-pull-requests-limit: 3
+    labels: [dependencies]
+
+  - package-ecosystem: nuget
+    directory: /contracts
+    schedule:
+      interval: weekly
+      day: saturday
+    open-pull-requests-limit: 3
+    labels: [dependencies]
+
+  - package-ecosystem: nuget
+    directory: /tests/Jewel.JPMS.Tests
+    schedule:
+      interval: weekly
+      day: saturday
+    open-pull-requests-limit: 3
+    labels: [dependencies]
+
+  - package-ecosystem: npm
+    directory: /jpms
+    schedule:
+      interval: weekly
+      day: saturday
+    open-pull-requests-limit: 3
+    labels: [dependencies]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels: [dependencies]

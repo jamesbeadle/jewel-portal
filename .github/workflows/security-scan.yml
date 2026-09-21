@@ -1,0 +1,74 @@
+name: Security scan
+
+# Raised by the security review of 2026-09-21. Two things nothing in CI was doing: reading the
+# dependency advisories, and looking at what is being committed. A live Google Places API key sat
+# in api/local.settings.json for months because the .gitignore rule never applied to an already
+# tracked file and no scanner was watching.
+#
+# The secret scan reads the WORKING TREE, never the history: that key is still in history at
+# c303729b and the history is deliberately not being rewritten, so a history scan would fail every
+# run forever and be switched off within a week.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  vulnerable_packages:
+    runs-on: ubuntu-latest
+    name: Vulnerable NuGet packages
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Read the advisories
+        run: |
+          for project in api/JpmsApi.csproj contracts/Jewel.JPMS.Contracts.csproj \
+                         jpms/Jewel.JPMS.csproj worker/Jewel.JPMS.Worker.csproj \
+                         tests/Jewel.JPMS.Tests/Jewel.JPMS.Tests.csproj; do
+            echo "== ${project}"
+            dotnet restore "${project}" --verbosity quiet
+            dotnet list "${project}" package --vulnerable --include-transitive | tee -a advisories.txt
+          done
+
+      - name: Fail on a high or critical advisory
+        run: |
+          if grep -Eq '\b(High|Critical)\b' advisories.txt; then
+            echo "A high or critical advisory is listed above."
+            exit 1
+          fi
+          echo "No high or critical advisory. Moderate and low ones are listed above and are the parser-upgrade task's work."
+
+      - name: Upload the advisories
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: advisories
+          path: advisories.txt
+          retention-days: 30
+
+  committed_secrets:
+    runs-on: ubuntu-latest
+    name: Secrets in the working tree
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install gitleaks
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          ./gitleaks version
+
+      - name: Scan the working tree
+        run: ./gitleaks detect --source . --no-git --redact --verbose --exit-code 1

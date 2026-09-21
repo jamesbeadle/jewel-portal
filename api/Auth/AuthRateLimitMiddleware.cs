@@ -4,15 +4,18 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Jewel.JPMS.Api.Auth;
 
 /// <summary>
-/// Answers 429 to an address that has knocked on the sign-in doors more than AuthRateLimit
-/// allows in its window. Only the routes an outsider can reach without a session are counted:
-/// sign-in, forgot-password, set-password and the invite check. Everything else passes
-/// straight through.
+/// Answers 429 to an address that has knocked fruitlessly on a sign-in door more than
+/// AuthRateLimit allows in its window. Only the routes an outsider can reach without a session
+/// are counted: sign-in, forgot-password, set-password and the invite check. Each door keeps its
+/// own budget, so a mail-bomb through forgot-password cannot shut the sign-in page, and a
+/// sign-in that succeeds is never counted at all.
 /// </summary>
 public sealed class AuthRateLimitMiddleware : IFunctionsWorkerMiddleware
 {
     private const string RoutePrefix = "/api/auth/";
+    private const string SignInRoute = "/api/auth/login";
     private const int TooManyRequests = 429;
+    private const int Unauthorised = 401;
 
     public async Task Invoke(FunctionContext context, FunctionExecutionDelegate next)
     {
@@ -23,14 +26,39 @@ public sealed class AuthRateLimitMiddleware : IFunctionsWorkerMiddleware
             return;
         }
         var limit = context.InstanceServices.GetRequiredService<AuthRateLimit>();
-        var isWithinLimit = limit.IsWithinLimit(ClientKey.Of(http.Request), DateTimeOffset.UtcNow);
-        if (!isWithinLimit)
+        var doorKey = DoorKeyFor(http.Request);
+        if (!limit.IsWithinLimit(doorKey, DateTimeOffset.UtcNow))
         {
-            http.Response.StatusCode = TooManyRequests;
-            await http.Response.WriteAsJsonAsync(new { error = "Too many attempts from this address. Try again in a few minutes." });
+            await RefuseAsync(http);
+            return;
+        }
+        if (!IsTheSignInItself(http.Request))
+        {
+            limit.RecordKnock(doorKey, DateTimeOffset.UtcNow);
+            await next(context);
             return;
         }
         await next(context);
+        var wasRefused = http.Response.StatusCode == Unauthorised;
+        if (wasRefused) limit.RecordKnock(doorKey, DateTimeOffset.UtcNow);
+    }
+
+    private static async Task RefuseAsync(HttpContext http)
+    {
+        http.Response.StatusCode = TooManyRequests;
+        await http.Response.WriteAsJsonAsync(new { error = "Too many attempts from this address. Try again in a few minutes." });
+    }
+
+    private static string DoorKeyFor(HttpRequest request)
+    {
+        var door = IsTheSignInItself(request) ? SignInRoute : RoutePrefix;
+        return $"{ClientKey.Of(request)}|{door}";
+    }
+
+    private static bool IsTheSignInItself(HttpRequest request)
+    {
+        var path = request.Path.Value ?? "";
+        return path.Equals(SignInRoute, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsASignInDoor(HttpRequest request)

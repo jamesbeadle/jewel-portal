@@ -78,8 +78,10 @@ public sealed class AuthService
             var response = await httpClient.PostAsJsonAsync(LoginEndpoint, new LoginRequest(email, password));
             if (response.StatusCode == HttpStatusCode.Unauthorized)
                 return "That email and password didn't match. Please try again.";
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                return "Too many sign-in attempts from here. Wait a few minutes and try again.";
             if (!response.IsSuccessStatusCode)
-                return "Something went wrong signing you in. Please try again.";
+                return $"Something went wrong signing you in (error {(int)response.StatusCode}). Please try again.";
 
             var user = await response.Content.ReadFromJsonAsync<AuthenticatedUserResponse>();
             Adopt(user);

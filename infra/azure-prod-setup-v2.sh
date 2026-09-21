@@ -7,9 +7,9 @@ set -euo pipefail
 #   * Adopts an existing prod SQL server in the resource group (preferring the
 #     one that already holds the database) instead of minting a new random
 #     name — prevents duplicate empty SQL servers when a run is re-executed.
-#   * Resets the adopted server's admin password to a known value so the
-#     connection string is always valid even if the original run's password
-#     was not captured.
+#   * Never touches an existing server's admin password. The v1 script reset it
+#     on every re-run, which would have left every deployed app holding the old
+#     one; the capability was removed outright on 2026-09-21, not gated.
 #   * Auto-installs the application-insights CLI extension (its absence made
 #     the App Insights step fail in the v1 run).
 # Behaviour is otherwise identical to v1.
@@ -166,9 +166,9 @@ echo "Creating SQL server (skip if exists)..."
 existing_location="$(az sql server show --name "${SQL_SERVER}" --resource-group "${RESOURCE_GROUP}" --query location --output tsv 2>/dev/null || echo "")"
 if [ -n "${existing_location}" ]; then
   SQL_LOCATION="${existing_location}"
-  echo "  SQL server already exists in ${SQL_LOCATION} — adopting (resetting admin password to a known value)"
-  az sql server update --name "${SQL_SERVER}" --resource-group "${RESOURCE_GROUP}" \
-    --admin-password "${SQL_ADMIN_PASSWORD}" --output none
+  echo "  SQL server already exists in ${SQL_LOCATION} — adopting it, admin password untouched"
+  echo "  the password in ${OUTPUT_ENV} will NOT match this server; read the live one from"
+  echo "  SqlConnectionString on swa-jpms-prod if you need it"
 else
   SQL_REGIONS_TO_TRY=("${SQL_LOCATION}" "westeurope" "ukwest")
   SQL_SERVER_CREATED=false
