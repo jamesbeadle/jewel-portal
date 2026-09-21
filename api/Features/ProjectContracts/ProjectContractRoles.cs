@@ -12,8 +12,12 @@ internal static class ProjectContractRoles
         RoleSet.Of(Role.Admin, JpmsRoles.Director, Role.FinanceDirector, JpmsRoles.Estimator);
 
     /// <summary>
-    /// Who may read them. Wider: a site manager needs the completion date, a PM needs the notice
-    /// periods. Externals are excluded — the contract sum is not theirs to read here.
+    /// Who may read them. The homeowner's name, the contract sum, the LD rates and the executed
+    /// PDF are commercial facts, so this is the money-facing set the payment certificates use,
+    /// plus the administrator (Nigel, 2026-09-21 — it was every internal role until then, which
+    /// put the contract sum in front of the foreman, H&amp;S, sales and accounts). A site manager
+    /// who needs the completion date asks the project manager for it.
     /// </summary>
-    public static readonly RoleSet AllowedToReadContract = JpmsRoleSets.AllInternal;
+    public static readonly RoleSet AllowedToReadContract =
+        RoleSet.Of(Role.Admin, JpmsRoles.Director, Role.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
 }
