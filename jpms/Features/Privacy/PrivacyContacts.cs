@@ -4,6 +4,6 @@ namespace Jewel.JPMS.Features.Privacy;
 /// the imagine form and in every email that points at the notice.</summary>
 public static class PrivacyContacts
 {
-    public const string Address = "privacy@jewelbb.co.uk";
+    public const string Address = "info@jewelbb.co.uk";
     public const string Controller = "Jewel Bespoke Build Limited";
 }

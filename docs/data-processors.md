@@ -70,4 +70,4 @@ it and the projects it holds an issued order on. The MCP connector runs the same
 - Pin the Azure AI Vision resource's region in `infra/` and record it above.
 - Set Application Insights retention and stop logging email addresses (`LogClientErrorEndpoint`).
 - Nigel's decisions on the security review task: KPI email monitoring (its notice and retention), absence notes as reason codes, signature images' gate, dropping the six dead CRM tables.
-- Confirm the privacy contact mailbox (`privacy@jewelbb.co.uk`, `jpms/Features/Privacy/PrivacyContacts.cs`) exists and is read.
+- The privacy contact mailbox is `info@jewelbb.co.uk` (`jpms/Features/Privacy/PrivacyContacts.cs`), confirmed to exist on 2026-09-21. `privacy@jewelbb.co.uk` was never created, so the notice pointed at nothing between the notice going live and that date.
