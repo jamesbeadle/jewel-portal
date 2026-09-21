@@ -2028,6 +2028,10 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<string>("ArchitectId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("ClientId")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");

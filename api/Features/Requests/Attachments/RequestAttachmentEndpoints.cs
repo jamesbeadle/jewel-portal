@@ -73,6 +73,8 @@ public sealed class RequestAttachmentEndpoints
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!AllowedToAttach.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await RequestScope.MayActOnAsync(context, signedInUser, requestId, cancellationToken))
+            return new StatusCodeResult(403);
         auditActor.Email = signedInUser.Email;
 
         AttachDrawingsToRequest? body = null;
@@ -106,6 +108,8 @@ public sealed class RequestAttachmentEndpoints
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!AllowedToAttach.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await RequestScope.MayActOnAsync(context, signedInUser, requestId, cancellationToken))
+            return new StatusCodeResult(403);
 
         if (!request.HasFormContentType) return new BadRequestObjectResult("Expected multipart/form-data.");
         var form = await request.ReadFormAsync(cancellationToken);
@@ -175,6 +179,8 @@ public sealed class RequestAttachmentEndpoints
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!AllowedToAttach.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await RequestScope.MayActOnAsync(context, signedInUser, requestId, cancellationToken))
+            return new StatusCodeResult(403);
 
         return new OkObjectResult(await remove.HandleAsync(
             new RemoveRequestAttachment(requestId, attachmentId), cancellationToken));

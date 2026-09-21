@@ -5,11 +5,12 @@ namespace Jewel.JPMS.Api.Features.Requests.Commands;
 public sealed class RaiseRequestEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly JpmsContext context;
     private readonly RaiseRequestAuthorisation authorisation;
     private readonly RaiseRequestValidation validation;
     private readonly ICommandHandler<RaiseRequest, Request> handler;
-    public RaiseRequestEndpoint(SignedInUserResolver users, RaiseRequestAuthorisation authorisation, RaiseRequestValidation validation, ICommandHandler<RaiseRequest, Request> handler)
-    { this.users = users; this.authorisation = authorisation; this.validation = validation; this.handler = handler; }
+    public RaiseRequestEndpoint(SignedInUserResolver users, JpmsContext context, RaiseRequestAuthorisation authorisation, RaiseRequestValidation validation, ICommandHandler<RaiseRequest, Request> handler)
+    { this.users = users; this.context = context; this.authorisation = authorisation; this.validation = validation; this.handler = handler; }
 
     [Function(nameof(RaiseRequest))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "projects/{projectId}/requests")] HttpRequest request, string projectId)
@@ -20,6 +21,8 @@ public sealed class RaiseRequestEndpoint
         if (command is null) return new BadRequestResult();
         if (command.ProjectId != projectId) return new BadRequestObjectResult("Route projectId does not match body.");
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
+        if (!await RequestScope.MayRaiseOnProjectAsync(context, signedInUser, projectId, request.HttpContext.RequestAborted))
+            return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
         try

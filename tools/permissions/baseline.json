@@ -1,7 +1,7 @@
 {
  "summaries": {
   "every endpoint is gated": 0,
-  "an external write is scoped to its own rows": 14,
+  "an external write is scoped to its own rows": 0,
   "correspondence is read by the internal team": 0,
   "correspondence is sent by the directors": 0,
   "Client reaches only what the policy declares": 0,
