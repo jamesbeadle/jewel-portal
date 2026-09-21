@@ -159,6 +159,7 @@
     <Compile Include="..\api\Features\Ai\AnthropicOptions.cs" Link="Shared\Sales\AnthropicOptions.cs" />
     <Compile Include="..\api\Features\Ai\ClaudeClient.cs" Link="Shared\Sales\ClaudeClient.cs" />
     <Compile Include="..\api\Features\Sales\SalesEntityMapping.cs" Link="Shared\Sales\SalesEntityMapping.cs" />
+    <Compile Include="..\api\Features\Sales\LeadMarketingConsents.cs" Link="Shared\Sales\LeadMarketingConsents.cs" />
     <Compile Include="..\api\Features\Sales\Research\SalesQueues.cs" Link="Shared\Sales\SalesQueues.cs" />
     <Compile Include="..\api\Features\Sales\Research\StrategyPlanPrompt.cs" Link="Shared\Sales\StrategyPlanPrompt.cs" />
     <Compile Include="..\api\Features\Sales\Research\StrategyResearcher.cs" Link="Shared\Sales\StrategyResearcher.cs" />
