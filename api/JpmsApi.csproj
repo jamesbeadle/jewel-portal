@@ -41,7 +41,7 @@
       intake message reader, which fetches an email's full body + attachment names live when a
       triager opens it. Ganss.Xss sanitises that untrusted HTML body before it is rendered.
     -->
-    <PackageReference Include="Azure.Identity" Version="1.12.1" />
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
     <PackageReference Include="HtmlSanitizer" Version="8.1.870" />
     <!--
       Azure.Storage.Queues is the producer SDK used by StorageMailboxQueue to enqueue work for the
