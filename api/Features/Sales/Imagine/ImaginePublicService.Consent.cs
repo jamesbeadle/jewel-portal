@@ -1,3 +1,5 @@
+using static Jewel.JPMS.Api.Features.Sales.Imagine.ImagineWording;
+
 namespace Jewel.JPMS.Api.Features.Sales.Imagine;
 
 public sealed partial class ImaginePublicService
