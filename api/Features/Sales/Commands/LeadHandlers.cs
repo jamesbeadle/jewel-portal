@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Sales.Imagine;
 using Jewel.JPMS.Contracts.Clients;
 using Jewel.JPMS.Contracts.Projects;
 using Jewel.JPMS.Contracts.Sales;
