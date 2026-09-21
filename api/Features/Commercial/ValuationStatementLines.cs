@@ -47,7 +47,7 @@ internal static class ValuationStatementLines
     /// <summary>
     /// Freezes the claim's statement onto its own rows and stamps LockedAt. Idempotent in effect:
     /// re-locking a reopened claim re-copies the bill as it stands now. The footer is written
-    /// separately by <see cref="ValuationClaimSummary.ApplyTotalsAsync"/> (same figures — both
+    /// separately by <see cref="ValuationClaimSummary.FreezeTotalsAsync"/> (same figures — both
     /// read the same rows).
     /// </summary>
     public static async Task FreezeAsync(

@@ -3,66 +3,78 @@ using Jewel.JPMS.Commercial;
 
 namespace Jewel.JPMS.Api.Features.Commercial;
 
-// Recomputes a claim's summary/retention footer from source (the project's line items
-// and this claim's per-line entries) and writes the frozen totals onto the claim entity.
-// Recomputing from source is what lets every claim reconcile to the spreadsheet.
+/// <summary>
+/// Writes a claim's frozen footer from source — the project's bill and this claim's own rows —
+/// which is what lets every claim reconcile to the spreadsheet. Two moments call it: the lock
+/// (<see cref="FreezeTotalsAsync"/>), which reads everything from the bill as it stands, and
+/// every later re-freeze (<see cref="RefreshTotalsAsync"/>) when the certified total moves,
+/// which keeps the contract context the claim was locked with (<see cref="ClaimContractContext"/>).
+/// </summary>
 internal static class ValuationClaimSummary
 {
-    public static async Task ApplyTotalsAsync(JpmsContext context, ValuationClaimEntity claim, CancellationToken cancellationToken)
+    public static async Task FreezeTotalsAsync(JpmsContext context, ValuationClaimEntity claim, CancellationToken cancellationToken)
     {
-        var lineModels = (await context.ValuationLineItems
-                .Where(line => line.ProjectId == claim.ProjectId)
-                .ToListAsync(cancellationToken))
-            .Select(line => line.ToModel())
-            .ToList();
+        var bill = await BillAsync(context, claim, cancellationToken);
+        await ApplyAsync(context, claim, bill, ClaimContractContext.FromBill(bill), cancellationToken);
+    }
 
-        var claimLineModels = (await context.ClaimLines
-                .Where(line => line.ValuationClaimId == claim.ValuationClaimId)
-                .ToListAsync(cancellationToken))
-            .Select(line => line.ToModel())
-            .ToList();
+    public static async Task RefreshTotalsAsync(JpmsContext context, ValuationClaimEntity claim, CancellationToken cancellationToken)
+    {
+        var bill = await BillAsync(context, claim, cancellationToken);
+        await ApplyAsync(context, claim, bill, ClaimContractContext.AsLocked(claim, bill), cancellationToken);
+    }
 
-        // Certified to date = GROSS certification (each invoice's cash amount plus the deposit
-        // credit embedded in it — the certificate before the deposit came off) of the issued/paid
-        // invoices that came BEFORE this claim: earlier claims' and historic ones, never this
-        // claim's own or a later claim's (the one rule, CertifiedBeforeClaim). Draft (Raised)
-        // invoices don't count until issued.
-        var certification = await CertifiedBeforeClaim.ForAsync(
-            context, claim.ProjectId, claim.ClaimNumber, cancellationToken);
-        var certifiedToDate = certification.CertifiedToDate;
-        var depositCreditedToDate = certification.DepositCreditedToDate;
-
-        var contractSum = ValuationCalculations.ContractSum(lineModels);
-        var netVariations = ValuationCalculations.NetVariations(lineModels);
-        var worksComplete = ValuationCalculations.TotalWorksComplete(claimLineModels);
+    private static async Task ApplyAsync(
+        JpmsContext context, ValuationClaimEntity claim, IReadOnlyList<ValuationLineItem> bill,
+        ClaimContractContext contractContext, CancellationToken cancellationToken)
+    {
+        var claimLines = await ClaimLinesAsync(context, claim, cancellationToken);
+        var certification = await CertifiedBeforeClaim.ForAsync(context, claim.ProjectId, claim.ClaimNumber, cancellationToken);
+        var worksComplete = ValuationCalculations.TotalWorksComplete(claimLines);
         var retentionHeld = ValuationCalculations.RetentionHeld(worksComplete, claim.RetentionPercent);
-        // Retention release adds back only when the claim carries a release % — stamped
-        // solely once the claim date has reached practical completion (pre-completion
-        // claims carry 0% and reconcile to the By France workbook's £-). Post-completion
-        // the payment due is works less NET retention, matching the architect's interim
-        // certificate convention (e.g. PLG's PC certificate: gross less 2.5%).
         var retentionReleased = ValuationCalculations.RetentionReleased(worksComplete, claim.RetentionReleasePercent);
+        var depositReleased = DepositReleased(claim, claimLines, bill, contractContext.ContractSum, certification.DepositCreditedToDate);
 
-        // Cash-up-front deposit: released back pro rata against the contract-side works
-        // (contract works + PC sums + contingency — variations excluded), capped at the
-        // deposit received (deposit % of the contract sum). What the claim still deducts
-        // is the release earned to date LESS the opening balance settled before tracking
-        // LESS credits already embedded in issued/paid invoices — zero once the period's
-        // invoice is out, so a freshly rolled claim starts clean.
-        var nonVariationWorks = ValuationCalculations.NonVariationWorksComplete(claimLineModels, lineModels);
-        var depositReceived = ValuationCalculations.DepositReceived(contractSum, claim.DepositPercent);
-        var depositReleased = ValuationCalculations.DepositDeduction(
-            ValuationCalculations.DepositReleased(nonVariationWorks, claim.DepositPercent, depositReceived),
-            claim.DepositReleasedOpening, depositCreditedToDate);
-
-        claim.ContractSum = contractSum;
-        claim.NetVariations = netVariations;
-        claim.RevisedContractSum = ValuationCalculations.RevisedContractSum(contractSum, netVariations);
+        contractContext.WriteOnto(claim);
         claim.TotalWorksComplete = worksComplete;
         claim.RetentionHeld = retentionHeld;
         claim.RetentionReleased = retentionReleased;
         claim.DepositReleased = depositReleased;
-        claim.CertifiedToDate = certifiedToDate;
-        claim.PaymentDueExVat = ValuationCalculations.PaymentDueExVat(worksComplete, retentionHeld, retentionReleased, depositReleased, certifiedToDate);
+        claim.CertifiedToDate = certification.CertifiedToDate;
+        claim.PaymentDueExVat = ValuationCalculations.PaymentDueExVat(
+            worksComplete, retentionHeld, retentionReleased, depositReleased, certification.CertifiedToDate);
+    }
+
+    /// <summary>
+    /// The deposit still deducted: the release earned to date against the contract-side works,
+    /// less the opening balance settled before tracking, less the credits already embedded in
+    /// issued invoices — zero once the period's invoice is out.
+    /// </summary>
+    private static decimal DepositReleased(
+        ValuationClaimEntity claim, IReadOnlyList<ClaimLine> claimLines, IReadOnlyList<ValuationLineItem> bill,
+        decimal contractSum, decimal depositCreditedToDate)
+    {
+        var nonVariationWorks = ValuationCalculations.NonVariationWorksComplete(claimLines, bill);
+        var depositReceived = ValuationCalculations.DepositReceived(contractSum, claim.DepositPercent);
+        var releasedToDate = ValuationCalculations.DepositReleased(nonVariationWorks, claim.DepositPercent, depositReceived);
+        return ValuationCalculations.DepositDeduction(releasedToDate, claim.DepositReleasedOpening, depositCreditedToDate);
+    }
+
+    private static async Task<IReadOnlyList<ValuationLineItem>> BillAsync(
+        JpmsContext context, ValuationClaimEntity claim, CancellationToken cancellationToken)
+    {
+        var lines = await context.ValuationLineItems
+            .Where(line => line.ProjectId == claim.ProjectId)
+            .ToListAsync(cancellationToken);
+        return lines.Select(line => line.ToModel()).ToList();
+    }
+
+    private static async Task<IReadOnlyList<ClaimLine>> ClaimLinesAsync(
+        JpmsContext context, ValuationClaimEntity claim, CancellationToken cancellationToken)
+    {
+        var rows = await context.ClaimLines
+            .Where(row => row.ValuationClaimId == claim.ValuationClaimId)
+            .ToListAsync(cancellationToken);
+        return rows.Select(row => row.ToModel()).ToList();
     }
 }

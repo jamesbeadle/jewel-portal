@@ -8,8 +8,9 @@ namespace Jewel.JPMS.Api.Features.ValuationInvoices;
 /// leave a preapproved claim showing the certified figure frozen at preapproval time. A claim's
 /// certified figure counts only the invoices that came before it (CertifiedBeforeClaim), so
 /// issuing the claim's OWN invoice leaves its totals exactly as the statement said them.
-/// Draft claims compute live in the UI and Confirmed claims are final, so neither is
-/// touched. Call AFTER SaveChanges: the recompute reads the invoice table from the
+/// The contract context is not recomputed: a locked claim keeps the one the client was told
+/// (ClaimContractContext). Draft claims compute live in the UI and Confirmed claims are final,
+/// so neither is touched. Call AFTER SaveChanges: the recompute reads the invoice table from the
 /// database, not the change tracker.
 /// </summary>
 internal static class PreapprovedClaimTotals
@@ -22,7 +23,7 @@ internal static class PreapprovedClaimTotals
         if (preapprovedClaims.Count == 0) return;
 
         foreach (var claim in preapprovedClaims)
-            await ValuationClaimSummary.ApplyTotalsAsync(context, claim, cancellationToken);
+            await ValuationClaimSummary.RefreshTotalsAsync(context, claim, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
     }
 }
