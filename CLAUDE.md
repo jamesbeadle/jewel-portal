@@ -678,6 +678,13 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   gained the architect branch; both, like `QuoteScope`, answer true for an internal role first
   and false for an external login with no link — `DefectScope` used to let an unlinked Client
   through). Pinned by `ArchitectScopeTests`; the shape to copy for the next external role.
+- **The connector runs the same scopes** (`AiActionScopes`, `api/Features/Ai/Tools/Actions`):
+  `perform_action` used to run an action's Authorisation and Validation and nothing else, so an
+  external login connected through MCP reached any record its role admitted (the security
+  review's finding, 2026-09-21). `AiActionExecutor` now asks `AiActionScopes.AllowsAsync` after
+  the role gate, and so does `post_request_message`; a command that consults a scope on its
+  endpoint needs an entry there — the permission check's rule "a scoped command is scoped on the
+  connector too" fails when one is missing. Pinned by `AiActionScopesTests`.
 
 ## Work-order mail tags are project-qualified (api + jpms)
 
