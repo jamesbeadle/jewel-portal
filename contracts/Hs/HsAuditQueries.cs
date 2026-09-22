@@ -6,6 +6,9 @@ namespace Jewel.JPMS.Contracts.Hs;
 /// <summary>The project's audits, newest first — the H&S tab's Audits list.</summary>
 public sealed record ListHsAuditsForProject(string ProjectId) : IQuery<IReadOnlyList<HsAudit>>;
 
+/// <summary>Every project's audits, newest first — the H&S officer's home reads the last one per site.</summary>
+public sealed record ListHsAuditsAcrossProjects : IQuery<IReadOnlyList<HsAudit>>;
+
 /// <summary>One audit with every item of its framework in template order — the form page.</summary>
 public sealed record HsAuditView(HsAudit Audit, IReadOnlyList<HsAuditItem> Items);
 

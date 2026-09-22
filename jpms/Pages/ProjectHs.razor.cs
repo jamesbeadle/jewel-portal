@@ -144,12 +144,6 @@ public partial class ProjectHs
         catch { }
     }
 
-    private static string OwnerOf(HsRecord record) =>
-        string.IsNullOrWhiteSpace(record.AssignedToName) ? record.AssignedToEmail : record.AssignedToName;
-
-    private static bool IsOverdue(HsRecord record) =>
-        record.Status != HsStatus.Closed && record.DueAt is { } due && due < DateTimeOffset.UtcNow.Date;
-
     private static int SortRank(HsRecord record) => record.Status == HsStatus.Closed ? 1 : 0;
 
     private static string StatusLabel(HsStatus status) => status switch

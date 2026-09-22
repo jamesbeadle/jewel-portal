@@ -9,6 +9,7 @@ public static class HsAuditRouteRegistration
     public static IServiceCollection AddHsAuditReadModels(this IServiceCollection services)
     {
         services.AddScoped<HsAuditReadModel>();
+        services.AddScoped<HsAuditsAcrossProjectsReadModel>();
         return services;
     }
 
@@ -17,6 +18,8 @@ public static class HsAuditRouteRegistration
         queries.Register<ListHsAuditsForProject, IReadOnlyList<HsAudit>>(
             new QueryRoute("/api/projects/{projectId}/hs-audits",
                 query => $"/api/projects/{((ListHsAuditsForProject)query).ProjectId}/hs-audits"));
+
+        queries.Register<ListHsAuditsAcrossProjects, IReadOnlyList<HsAudit>>(QueryRoute.Static("/api/hs-audits"));
 
         queries.Register<GetHsAudit, HsAuditView>(
             new QueryRoute("/api/hs-audits/{auditId}",

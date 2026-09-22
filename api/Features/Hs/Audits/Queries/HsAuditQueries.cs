@@ -18,6 +18,22 @@ public sealed class ListHsAuditsForProjectHandler : IQueryHandler<ListHsAuditsFo
     }
 }
 
+/// <summary>Every project's audits, newest first — the officer's home, one read for every site.</summary>
+public sealed class ListHsAuditsAcrossProjectsHandler : IQueryHandler<ListHsAuditsAcrossProjects, IReadOnlyList<HsAudit>>
+{
+    private readonly JpmsContext context;
+    public ListHsAuditsAcrossProjectsHandler(JpmsContext context) { this.context = context; }
+
+    public async Task<IReadOnlyList<HsAudit>> HandleAsync(ListHsAuditsAcrossProjects query, CancellationToken cancellationToken)
+    {
+        var audits = await context.HsAudits.AsNoTracking()
+            .OrderByDescending(row => row.InspectionDate)
+            .ThenByDescending(row => row.Number)
+            .ToListAsync(cancellationToken);
+        return audits.Select(row => row.ToModel()).ToList();
+    }
+}
+
 /// <summary>One audit with its items in template order — the form page's one fetch.</summary>
 public sealed class GetHsAuditHandler : IQueryHandler<GetHsAudit, HsAuditView>
 {
@@ -41,16 +57,30 @@ public sealed class HsAuditQueryEndpoints
 {
     private readonly SignedInUserResolver users;
     private readonly IQueryHandler<ListHsAuditsForProject, IReadOnlyList<HsAudit>> list;
+    private readonly IQueryHandler<ListHsAuditsAcrossProjects, IReadOnlyList<HsAudit>> listAcrossProjects;
     private readonly IQueryHandler<GetHsAudit, HsAuditView> get;
 
     public HsAuditQueryEndpoints(
         SignedInUserResolver users,
         IQueryHandler<ListHsAuditsForProject, IReadOnlyList<HsAudit>> list,
+        IQueryHandler<ListHsAuditsAcrossProjects, IReadOnlyList<HsAudit>> listAcrossProjects,
         IQueryHandler<GetHsAudit, HsAuditView> get)
     {
         this.users = users;
         this.list = list;
+        this.listAcrossProjects = listAcrossProjects;
         this.get = get;
+    }
+
+    [Function(nameof(ListHsAuditsAcrossProjects))]
+    public async Task<IActionResult> ListAcrossProjects(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "hs-audits")] HttpRequest request)
+    {
+        var cancellationToken = request.HttpContext.RequestAborted;
+        var signedInUser = await users.ResolveAsync(request, cancellationToken);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!HsAuditRoles.Readers.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        return new OkObjectResult(await listAcrossProjects.HandleAsync(new ListHsAuditsAcrossProjects(), cancellationToken));
     }
 
     [Function(nameof(ListHsAuditsForProject))]

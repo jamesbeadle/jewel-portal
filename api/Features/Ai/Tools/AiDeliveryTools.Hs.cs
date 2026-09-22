@@ -9,6 +9,7 @@ internal static partial class AiDeliveryTools
 {
     /// <summary>Mirror of ListHsRecordsEndpoint.RolesThatMayReadHsRecords.</summary>
     private static readonly RoleSet HsRecordReaders = JpmsRoleSets.AllInternal;
+    private const string EveryProject = "all";
 
     private static AiTool ListHsAudits() => new(
         "list_hs_audits",
@@ -18,7 +19,7 @@ internal static partial class AiDeliveryTools
         + "(Poor / Fair / Good / Very good), the previous audit's score, and status Draft → Issued "
         + "→ Closed. Issue mints the corrective actions; get_hs_audit reads the items.",
         AiToolSchema.Object(
-            ("projectId", "string", "Defaults to the project in view; pass it otherwise.", false)),
+            ("projectId", "string", "Defaults to the project in view; pass it otherwise, or \"all\" for every project's audits (the officer's home reads that).", false)),
         AiToolKind.Read,
         HsAuditRoles.Readers,
         ListHsAuditsAsync);
@@ -57,7 +58,10 @@ internal static partial class AiDeliveryTools
     {
         var projectId = ProjectId(context, input);
         if (string.IsNullOrWhiteSpace(projectId)) return Fail(NoProject);
-        var audits = await Query<ListHsAuditsForProject, IReadOnlyList<HsAudit>>(context, new ListHsAuditsForProject(projectId), ct);
+        var isEveryProject = projectId == EveryProject;
+        var audits = isEveryProject
+            ? await Query<ListHsAuditsAcrossProjects, IReadOnlyList<HsAudit>>(context, new ListHsAuditsAcrossProjects(), ct)
+            : await Query<ListHsAuditsForProject, IReadOnlyList<HsAudit>>(context, new ListHsAuditsForProject(projectId), ct);
         return Serialise(new { ok = true, projectId, audits = audits.Select(AuditRow) });
     }
 
@@ -85,7 +89,7 @@ internal static partial class AiDeliveryTools
 
         var records = await Query<ListHsRecords, IReadOnlyList<HsRecord>>(context, new ListHsRecords(), ct);
         var narrowed = records
-            .Where(record => projectId is null or "all" || string.Equals(record.ProjectId, projectId, StringComparison.OrdinalIgnoreCase))
+            .Where(record => projectId is null or EveryProject || string.Equals(record.ProjectId, projectId, StringComparison.OrdinalIgnoreCase))
             .Where(record => kind is null || record.Kind == kind)
             .Where(record => !openOnly || record.Status != HsStatus.Closed);
         return Serialise(new { ok = true, records = narrowed.Select(RecordRow) });

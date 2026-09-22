@@ -102,10 +102,10 @@
                 <tbody>
                     @foreach (var record in rows)
                     {
-                        <tr @key="record.HsRecordId" class="@(IsOverdue(record) ? "text-warning" : "")">
+                        <tr @key="record.HsRecordId" class="@(record.IsOverdue() ? "text-warning" : "")">
                             @if (Pane == RegisterPane) { <td class="whitespace-nowrap">@record.Kind.KindDisplayName()</td> }
                             <td class="max-w-lg">@record.Summary</td>
-                            <td class="whitespace-nowrap">@OwnerOf(record)</td>
+                            <td class="whitespace-nowrap">@record.OwnerDisplayName()</td>
                             <td><Pill Tone="@record.Severity.ToTone()">@record.Severity</Pill></td>
                             <td class="whitespace-nowrap">@DateText(record.RaisedAt)</td>
                             <td class="whitespace-nowrap">@DateText(record.DueAt)</td>

@@ -29,6 +29,7 @@ public static class HsAuditFeatureRegistration
         services.AddScoped<CloseHsAuditValidation>();
 
         services.AddScoped<IQueryHandler<ListHsAuditsForProject, IReadOnlyList<HsAudit>>, ListHsAuditsForProjectHandler>();
+        services.AddScoped<IQueryHandler<ListHsAuditsAcrossProjects, IReadOnlyList<HsAudit>>, ListHsAuditsAcrossProjectsHandler>();
         services.AddScoped<IQueryHandler<GetHsAudit, HsAuditView>, GetHsAuditHandler>();
 
         return services;
