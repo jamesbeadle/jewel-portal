@@ -34,12 +34,12 @@
         }
         Session.OnChange += StateHasChanged;
 
-        // Client logins live on their own portal home — bounce before painting an internal
-        // dashboard that holds nothing for them (mirrors HomeRouteFor, which sends the sidebar's
-        // Home there too).
-        if (Session.ActiveRole == Role.Client)
+        // Client and subcontractor logins live on their own portal homes — bounce before painting
+        // an internal dashboard that holds nothing for them (mirrors HomeRouteFor, which sends
+        // the sidebar's Home there too).
+        if (Session.ActiveRole is Role.Client or Role.Subcontractor)
         {
-            Nav.NavigateTo("/client", replace: true);
+            Nav.NavigateTo(NavigationCatalog.HomeRouteFor(Session.ActiveRole.Value), replace: true);
             return;
         }
 
