@@ -1,5 +1,7 @@
+@using Jewel.JPMS.Features.Projects
 @using Jewel.JPMS.Features.Requests
 @inject RfiRegisterReadModel Register
+@inject ProjectListReadModel Projects
 @implements IDisposable
 
 @*
@@ -9,7 +11,9 @@
     already carries DaysOutstanding and IsOverdue (open for more than seven days since issue). The
     panel shows the ones that need chasing first — overdue, longest-waiting at the top — because
     that is the question a PM actually opens the app with. Everything else is one click away on the
-    full register.
+    full register. Every row names its project (RFI numbers are minted per project, so RFI-004
+    alone says nothing about which job is waiting), resolved through the project list exactly as
+    the full register does — so the gate waits for both reads, never painting an id for a name.
 *@
 
 <div class="panel p-5">
@@ -32,7 +36,7 @@
         since issue counts as overdue.
     </p>
 
-    <LoadGate IsLoading="@(Register.Current is null)" Prominent="true" Label="Loading RFIs">
+    <LoadGate IsLoading="@(Register.Current is null || IsWaitingForProjects)" Prominent="true" Label="Loading RFIs">
     @if (Outstanding.Count == 0)
     {
         <p class="text-sm text-content-subtle italic">Nothing outstanding — every RFI has been closed.</p>
@@ -48,7 +52,11 @@
                         <span class="min-w-0">
                             <span class="flex items-center gap-2">
                                 <span class="font-mono text-xs font-semibold text-content shrink-0">@request.Reference</span>
-                                <span class="text-sm text-content truncate">@request.Title</span>
+                                @if (ProjectName(request) is { } projectName)
+                                {
+                                    <span class="text-sm font-medium text-content shrink-0">@projectName</span>
+                                }
+                                <span class="text-sm text-content-muted truncate">@request.Title</span>
                             </span>
                         </span>
                         <span class="text-right shrink-0">
@@ -91,13 +99,39 @@
     private static string Href(Request request) =>
         $"/projects/{request.ProjectId}/requests/view/{request.RequestId}";
 
+    // The gate holds the rows until the project list has landed, so a project is always found —
+    // unless that read failed, when the row simply carries no project rather than a bare id.
+    private bool projectsFailed;
+
+    private bool IsWaitingForProjects => Projects.Current is null && !projectsFailed;
+
+    private string? ProjectName(Request request) => Projects.Find(request.ProjectId)?.Name;
+
     protected override async Task OnInitializedAsync()
     {
         Register.OnChanged += StateHasChanged;
+        Projects.OnChanged += StateHasChanged;
         // Refresh on entry, never from render (the front-end data-loading convention): cached rows
-        // paint immediately on a revisit, then update when the reload lands.
+        // paint immediately on a revisit, then update when the reload lands. The project list is
+        // fetched only when nothing has landed yet — the role home refreshes it for its own tiles.
+        await Task.WhenAll(RefreshRegisterAsync(), EnsureProjectsLoadedAsync());
+    }
+
+    private async Task RefreshRegisterAsync()
+    {
         try { await Register.RefreshAsync(CancellationToken.None); } catch { /* panel shows its empty state */ }
     }
 
-    public void Dispose() => Register.OnChanged -= StateHasChanged;
+    private async Task EnsureProjectsLoadedAsync()
+    {
+        if (Projects.Current is not null) return;
+        try { await Projects.RefreshAsync(CancellationToken.None); }
+        catch { projectsFailed = true; }
+    }
+
+    public void Dispose()
+    {
+        Register.OnChanged -= StateHasChanged;
+        Projects.OnChanged -= StateHasChanged;
+    }
 }
