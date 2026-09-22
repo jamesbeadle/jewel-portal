@@ -27,7 +27,7 @@ public partial class TriageQueue
         // before project qualification can name two projects' records and the resolver refuses to
         // guess between them — filing under the stems that did match and quietly dropping the
         // rest would lose the link the triager thought they were keeping.
-        if (stems.FirstOrDefault(stem => !inherited.Any(record => Names(record, stem))) is { } unmatched)
+        if (stems.FirstOrDefault(stem => !inherited.Any(record => ThreadTagRecords.Names(record, stem))) is { } unmatched)
         {
             actionError = $"The thread's existing tag {unmatched} couldn't be matched to one record — answer No to Use existing tags and pick this email's records by hand.";
             return null;
@@ -44,14 +44,6 @@ public partial class TriageQueue
         }
         return inherited;
     }
-
-    // A resolved record answers for its stem as written (the qualified stem, or a global one like
-    // TODO-0011), for the reference people say, and for a legacy bare stem the qualified record
-    // was the only match for ("WO-0048" → "JBB-2026-001-WO-0048").
-    private static bool Names(LinkableRecord record, string stem) =>
-        record.TagReference.Equals(stem, StringComparison.OrdinalIgnoreCase)
-        || record.Reference.Equals(stem, StringComparison.OrdinalIgnoreCase)
-        || record.TagReference.EndsWith("-" + stem, StringComparison.OrdinalIgnoreCase);
 
     // ---- Document Triage: ticked attachments copy out FIRST, so the files are safely in the
     //      queue before anything else (a discard included) moves the email on. Never consumes

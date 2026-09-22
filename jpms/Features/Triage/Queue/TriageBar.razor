@@ -57,8 +57,19 @@
             @if (ThreadTags is { Count: > 0 } inheritable)
             {
                 <TriageDecisionRow Value="UseThreadTags" ValueChanged="UseThreadTagsChanged"
-                                   Title="@($"Yes files this email under the tags its thread already carries — {string.Join(", ", inheritable.Select(TriageEmailDisplay.TagLabel))} — so Apply needs no new picks. No means you pick this email's records yourself in the pathway panes")">
-                    Use existing tags <span class="text-content-subtle">· @string.Join(", ", inheritable.Take(3).Select(TriageEmailDisplay.TagLabel))@(inheritable.Count > 3 ? $" +{inheritable.Count - 3}" : "")</span>
+                                   Title="@($"Yes files this email under the records its thread already carries — {string.Join("; ", inheritable.Select(DescribeTag))} — so Apply needs no new picks. No means you pick this email's records yourself in the pathway panes. Click a tag to open its record in a new tab")">
+                    Use existing tags <span class="text-content-subtle">·
+                        @foreach (var (tag, index) in inheritable.Take(TagsShown).Select((tag, index) => (tag, index)))
+                        {
+                            var record = RecordFor(tag);
+                            if (index > 0) { <text>, </text> }
+                            <TriageThreadTagChip Tag="@tag" Record="@record" ProjectName="@ProjectNameFor(record)" />
+                        }
+                        @if (inheritable.Count > TagsShown)
+                        {
+                            <text> +@(inheritable.Count - TagsShown)</text>
+                        }
+                    </span>
                 </TriageDecisionRow>
             }
         </div>
@@ -141,6 +152,8 @@
     [Parameter] public int ThreadCount { get; set; }
     /// <summary>The record tags the thread already carries; the third pair shows only when there are some.</summary>
     [Parameter] public IReadOnlyList<string> ThreadTags { get; set; } = Array.Empty<string>();
+    /// <summary>The records those tags resolved to when the email opened — what each tag IS, and where it opens.</summary>
+    [Parameter] public IReadOnlyList<LinkableRecord> TaggedRecords { get; set; } = Array.Empty<LinkableRecord>();
 
     /// <summary>True when the project was matched from the email text rather than picked.</summary>
     [Parameter] public bool ProjectAutoMatched { get; set; }
@@ -165,6 +178,20 @@
     [Parameter] public int OutboxSendCount { get; set; }
     /// <summary>Fires the one Apply; true means stage the lined-up emails as drafts instead of sending.</summary>
     [Parameter] public EventCallback<bool> OnApply { get; set; }
+
+    private const int TagsShown = 3;
+
+    private LinkableRecord? RecordFor(string tag) => ThreadTagRecords.Find(TaggedRecords, tag);
+
+    private string ProjectNameFor(LinkableRecord? record) =>
+        record is null ? "" : Projects.FirstOrDefault(project => project.ProjectId == record.ProjectId)?.Name ?? "";
+
+    // The hover's wording for one tag: the record described when it resolved, the bare
+    // reference when it did not.
+    private string DescribeTag(string tag) =>
+        RecordFor(tag) is { } record
+            ? ThreadTagRecords.Describe(record, ProjectNameFor(record))
+            : TriageEmailDisplay.TagLabel(tag);
 
     private string DiscardToggleLabel => DiscardArmed ? "Keep email" : "🗑 Discard";
 

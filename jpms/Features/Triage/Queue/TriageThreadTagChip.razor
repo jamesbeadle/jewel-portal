@@ -1,0 +1,31 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+@using Jewel.JPMS.Features.Triage
+@using Jewel.JPMS.Features.Triage.Panels
+
+@* One tag the open email's thread already carries, on the "Use existing tags" row. Resolved to
+   its record it reads as a link that opens the record's own page in a new tab — the triager
+   keeps their place in the queue — and its hover says what the record is (INV-0021 alone says
+   nothing). A tag nothing resolved to stays plain text: the reference is still a fact. *@
+@if (Record is { } record && Href is { } href)
+{
+    <a href="@href" target="_blank" rel="noopener" class="text-accent hover:underline" title="@Description">@record.Reference</a>
+}
+@if (Record is null || Href is null)
+{
+    <span title="@Description">@TriageEmailDisplay.TagLabel(Tag)</span>
+}
+
+@code {
+    /// <summary>The mailbox tag as the thread carries it ("JPMS/INV-0021").</summary>
+    [Parameter, EditorRequired] public string Tag { get; set; } = "";
+    /// <summary>The record the tag resolved to, or null when nothing did.</summary>
+    [Parameter] public LinkableRecord? Record { get; set; }
+    /// <summary>The name the record's project shows under — "" for a company-wide record.</summary>
+    [Parameter] public string ProjectName { get; set; } = "";
+
+    private string? Href => Record is null ? null : ExplorerRecordTypes.FullPageHref(Record);
+
+    private string Description => Record is null
+        ? "This tag couldn't be matched to a record right now"
+        : ThreadTagRecords.Describe(Record, ProjectName) + " — opens in a new tab";
+}
