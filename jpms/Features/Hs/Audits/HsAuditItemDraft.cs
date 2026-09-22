@@ -47,13 +47,25 @@ public sealed class HsAuditItemDraft
         || OwnerName.Trim() != original.OwnerName
         || DateRectified != original.DateRectified;
 
+    /// <summary>The sheet's Minus column as a reading: the points the class and a repeat take
+    /// off this item. Information beside the row — the score deducts each class once.</summary>
+    public string PointsOffText
+    {
+        get
+        {
+            var pointsOff = HsAuditClassPenalties.PointsOff(AsItem());
+            return pointsOff == 0m ? "—" : $"−{pointsOff:0.#}";
+        }
+    }
+
     public HsAuditItemEntry ToEntry() =>
         new(HsAuditItemId, Comment, Rate, Class, Minus, TimeScale, Findings.Trim(), OwnerName.Trim(), DateRectified);
 
     /// <summary>The live score across every draft — what the chip shows as the officer types,
     /// before a save; HsAuditScoring is the one rule.</summary>
     public static decimal? LiveScore(IEnumerable<HsAuditItemDraft> drafts) =>
-        HsAuditScoring.ScoreOf(drafts.Select(draft => new HsAuditItem(
-            draft.HsAuditItemId, "", draft.Code, draft.Section, draft.Name, draft.Comment, draft.Rate,
-            draft.Class, draft.Minus, draft.TimeScale, draft.Findings, draft.OwnerName, draft.DateRectified, draft.HsRecordId)));
+        HsAuditScoring.ScoreOf(drafts.Select(draft => draft.AsItem()));
+
+    private HsAuditItem AsItem() =>
+        new(HsAuditItemId, "", Code, Section, Name, Comment, Rate, Class, Minus, TimeScale, Findings, OwnerName, DateRectified, HsRecordId);
 }

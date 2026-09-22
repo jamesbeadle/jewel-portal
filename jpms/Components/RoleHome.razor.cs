@@ -1,4 +1,6 @@
+using Jewel.JPMS.Contracts.Hs;
 using Jewel.JPMS.Contracts.Todos;
+using Jewel.JPMS.Features.Hs.Home;
 using Jewel.JPMS.Features.Projects;
 using Jewel.JPMS.Features.Requests;
 using Jewel.JPMS.Features.Subcontractors;
@@ -15,6 +17,9 @@ public partial class RoleHome
     /// <summary>How old a library rate may be before the QS is asked to look at it. Matches the
     /// threshold the /rate-library/stale page uses.</summary>
     private const int StaleRateThresholdDays = 60;
+
+    // Where the H&S tiles land: the panel below them on this page.
+    private const string HsPanelAnchor = "#hs-officer";
 
     private sealed record Tile(string Label, string Value, string Href, string? Note = null, bool IsBad = false,
         TileSecondLine? SecondLine = null);
@@ -50,6 +55,10 @@ public partial class RoleHome
         Role is Role.FinanceDirector or Role.ManagingDirector or Role.QuantitySurveyor;
 
     private bool ShowStaleRates => Role is Role.QuantitySurveyor;
+
+    // The H&S officer's whole brief, and the MD's watch on it. Mirrors the API's
+    // HsAuditRoles.Readers (AllInternal) and narrows to the two who act on the register.
+    private bool ShowHsOfficer => Role is Role.HealthSafetyOfficer or Role.ManagingDirector;
 
     // The FD's exposure (paying an uninsured subcontractor), the MD's watch, and the compliance
     // coordinator's whole brief. Every row links into the directory and the compliance register,
@@ -135,6 +144,21 @@ public partial class RoleHome
                     document.Status() is ComplianceStatus.ExpiringSoon or ComplianceStatus.Expired);
                 tiles.Add(new("Documents expiring", lapsing.ToString(), "/directory/compliance",
                     Note: lapsing > 0 ? "expired or due in 30 days" : "all current", IsBad: lapsing > 0));
+            }
+
+            // Fed by HsOfficerPanel's reads — the tiles appear only once every read has landed,
+            // and count exactly the rows the panel lists (HsOfficerOverview is the one rule).
+            if (ShowHsOfficer && HsRecords.Current is not null && HsAudits.Current is not null && Projects.Current is not null)
+            {
+                var liveProjects = Projects.Current.Where(project => project.Stage != ProjectStage.Completed).ToList();
+                var openActions = HsOfficerOverview.OpenActions(HsRecords.Current, liveProjects);
+                var overdueActions = openActions.Count(action => action.IsOverdue());
+                var awaitingIssue = HsOfficerOverview.AwaitingIssueCount(HsOfficerOverview.SiteStandings(HsAudits.Current, liveProjects));
+                tiles.Add(new("Open H&S actions", openActions.Count.ToString(), HsPanelAnchor));
+                tiles.Add(new("Overdue H&S actions", overdueActions.ToString(), HsPanelAnchor,
+                    Note: overdueActions > 0 ? "past their due date" : "none late", IsBad: overdueActions > 0));
+                tiles.Add(new("Audits awaiting issue", awaitingIssue.ToString(), HsPanelAnchor,
+                    Note: awaitingIssue > 0 ? "drafts to sign off" : "all issued", IsBad: awaitingIssue > 0));
             }
 
             if (ShowStaleRates)
@@ -255,6 +279,8 @@ public partial class RoleHome
         Rfis.OnChanged += StateHasChanged;
         XeroLedger.OnChanged += StateHasChanged;
         Compliance.OnChanged += StateHasChanged;
+        HsRecords.OnChanged += StateHasChanged;
+        HsAudits.OnChanged += StateHasChanged;
         _ = CurrentProject.EnsureLoadedAsync();
 
         // Refresh on entry, never from render (the front-end data-loading convention). The RFI
@@ -301,6 +327,8 @@ public partial class RoleHome
         Rfis.OnChanged -= StateHasChanged;
         XeroLedger.OnChanged -= StateHasChanged;
         Compliance.OnChanged -= StateHasChanged;
+        HsRecords.OnChanged -= StateHasChanged;
+        HsAudits.OnChanged -= StateHasChanged;
     }
 
     private static string? FirstWordOf(string fullName)

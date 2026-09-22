@@ -19,34 +19,60 @@ public sealed class HsAuditTests
     private const string ByFrance = "3490f944b29545c4b8d5a04130f42ab8";
     private const string Officer = "katy-louise.hicks@jewelbb.co.uk";
 
-    private static HsAuditItem Item(string code, HsAuditRate? rate, int minus = 0, string owner = "", HsAuditComment? comment = null) =>
-        new(code, "audit", code, 1, code, comment, rate, null, minus, null, "", owner, null, null);
+    private static HsAuditItem Item(string code, HsAuditRate? rate, int minus = 0, string owner = "", HsAuditComment? comment = null, HsAuditClass? hsAuditClass = null) =>
+        new(code, "audit", code, 1, code, comment, rate, hsAuditClass, minus, null, "", owner, null, null);
 
     // ---- Scoring: the spreadsheet's formula, pinned on the By France audit of 1 Sep 2026 ----
 
     [Fact]
     public void Score_isTheSpreadsheets_onByFrance()
     {
-        // 31 items up to date, 6 a week out of date, 1 not in place, 144 unrated: 340 / 380.
-        var items = Enumerable.Range(0, 31).Select(i => Item($"u{i}", HsAuditRate.UpToDate))
-            .Concat(Enumerable.Range(0, 6).Select(i => Item($"w{i}", HsAuditRate.OneWeekOutOfDate)))
-            .Append(Item("f10", HsAuditRate.NotInPlace))
+        // The 1 Sep audit as it stands on 22 Sep (3.04 and 11.01 unscored): 31 up to date, 5 a
+        // week out of date, the F10 not in place, 144 unrated — rate average 325 / 360 = 0.9028 —
+        // less the classes present: one C (the F10) and four Ds, each counted once: 0.06.
+        var items = Enumerable.Range(0, 31).Select(i => Item($"u{i}", HsAuditRate.UpToDate, hsAuditClass: HsAuditClass.E))
+            .Concat(Enumerable.Range(0, 4).Select(i => Item($"d{i}", HsAuditRate.OneWeekOutOfDate, hsAuditClass: HsAuditClass.D)))
+            .Append(Item("scaffold", HsAuditRate.OneWeekOutOfDate, hsAuditClass: HsAuditClass.E))
+            .Append(Item("f10", HsAuditRate.NotInPlace, hsAuditClass: HsAuditClass.C))
             .Concat(Enumerable.Range(0, 144).Select(i => Item($"n{i}", null)))
             .ToList();
 
         var score = HsAuditScoring.ScoreOf(items);
 
-        Assert.Equal(0.8947m, score);
-        Assert.Equal("89%", HsAuditScoring.PercentText(score!.Value));
-        Assert.Equal(HsAuditRating.Good, HsAuditScoring.RatingOf(score.Value));
+        Assert.Equal(0.9028m, HsAuditScoring.RateAverageOf(items));
+        Assert.Equal(0.8428m, score);
+        Assert.Equal("84%", HsAuditScoring.PercentText(score!.Value));
+        Assert.Equal(HsAuditRating.Fair, HsAuditScoring.RatingOf(score.Value));
     }
 
     [Fact]
     public void Score_isBlankUntilAnItemIsRated_andNeverBelowZero()
     {
         Assert.Null(HsAuditScoring.ScoreOf(new[] { Item("a", null), Item("b", null) }));
-        Assert.Equal(0m, HsAuditScoring.ScoreOf(new[] { Item("a", HsAuditRate.UpToDate, minus: 25) }));
-        Assert.Equal(0.5m, HsAuditScoring.ScoreOf(new[] { Item("a", HsAuditRate.UpToDate, minus: 5) }));
+        var everyClassAndARepeat = new[]
+        {
+            Item("a", HsAuditRate.NotInPlace, hsAuditClass: HsAuditClass.A, comment: HsAuditComment.Repeat),
+            Item("b", HsAuditRate.NotInPlace, hsAuditClass: HsAuditClass.B),
+            Item("c", HsAuditRate.NotInPlace, hsAuditClass: HsAuditClass.C),
+            Item("d", HsAuditRate.NotInPlace, hsAuditClass: HsAuditClass.D)
+        };
+        Assert.Equal(0.51m, HsAuditClassPenalties.TotalFor(everyClassAndARepeat));
+        Assert.Equal(0m, HsAuditScoring.ScoreOf(everyClassAndARepeat));
+    }
+
+    [Fact]
+    public void Penalty_isChargedOncePerClassPresent_notPerFinding_andMinusIsNotInTheScore()
+    {
+        var twoDs = new[]
+        {
+            Item("a", HsAuditRate.UpToDate, minus: 25, hsAuditClass: HsAuditClass.D),
+            Item("b", HsAuditRate.OneWeekOutOfDate, hsAuditClass: HsAuditClass.D)
+        };
+
+        Assert.Equal(0.01m, HsAuditClassPenalties.TotalFor(twoDs));
+        Assert.Equal(0.74m, HsAuditScoring.ScoreOf(twoDs));
+        Assert.Equal(0.1m, HsAuditClassPenalties.PointsOff(twoDs[0]));
+        Assert.Equal(0.05m, HsAuditClassPenalties.TotalFor(new[] { Item("r", HsAuditRate.UpToDate, comment: HsAuditComment.Repeat) }));
     }
 
     [Theory]
@@ -63,11 +89,25 @@ public sealed class HsAuditTests
     [Fact]
     public void Template_isTheWorkbook_itemForItem()
     {
+        Assert.Equal("2026-09-15", HsAuditTemplate.Version);
         Assert.Equal(11, HsAuditTemplate.Sections.Count);
-        Assert.Equal(182, HsAuditTemplate.Items.Count);
+        Assert.Equal(165, HsAuditTemplate.Items.Count);
+        Assert.Equal(51, HsAuditTemplate.Items.Count(item => item.Section == 7));
+        Assert.Equal("10.02", HsAuditTemplate.Items.Single(item => item.Name.StartsWith("Fire Points")).Code);
         Assert.Equal(HsAuditTemplate.Items.Count, HsAuditTemplate.Items.Select(item => item.Code).Distinct().Count());
         Assert.Equal("3.01", HsAuditTemplate.Items.Single(item => item.Name == "F10 - HSE Notification").Code);
         Assert.All(HsAuditTemplate.Items, item => Assert.Contains(HsAuditTemplate.Sections, section => section.Number == item.Section));
+    }
+
+    [Fact]
+    public void Lineage_findsTheFirstVersionsItemOnTheCurrentOne()
+    {
+        Assert.Equal("10.02", HsAuditItemLineage.CurrentCodeFor(HsAuditTemplate.FirstVersion, "10.03"));
+        Assert.Equal("9.01", HsAuditItemLineage.CurrentCodeFor(HsAuditTemplate.FirstVersion, "9.05"));
+        Assert.Equal("3.01", HsAuditItemLineage.CurrentCodeFor(HsAuditTemplate.FirstVersion, "3.01"));
+        Assert.Null(HsAuditItemLineage.CurrentCodeFor(HsAuditTemplate.FirstVersion, "8.11"));
+        Assert.Equal("10.03", HsAuditItemLineage.CurrentCodeFor(HsAuditTemplate.Version, "10.03"));
+        Assert.All(HsAuditTemplate.Items, item => Assert.Equal(item.Code, HsAuditItemLineage.CurrentCodeFor(HsAuditTemplate.Version, item.Code)));
     }
 
     [Fact]
@@ -86,7 +126,7 @@ public sealed class HsAuditTests
         Assert.Equal(HsAuditStatus.Draft, first.Status);
         Assert.Equal(HsAuditTemplate.Version, first.TemplateVersion);
         Assert.Null(first.PreviousScore);
-        Assert.Equal(182, await context.HsAuditItems.CountAsync(item => item.HsAuditId == first.HsAuditId));
+        Assert.Equal(165, await context.HsAuditItems.CountAsync(item => item.HsAuditId == first.HsAuditId));
 
         await RateEverything(context, first.HsAuditId, HsAuditRate.UpToDate);
         await new IssueHsAuditHandler(context).HandleAsync(new IssueHsAudit(first.HsAuditId, Officer), CancellationToken.None);

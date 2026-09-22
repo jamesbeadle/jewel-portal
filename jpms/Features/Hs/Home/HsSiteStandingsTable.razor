@@ -1,0 +1,71 @@
+@using Jewel.JPMS.Features.Hs.Home
+
+@*
+    Each live site's standing: the last audit issued there with its score and band, and the
+    draft still waiting for the officer's Issue, which is the row she is most likely here for.
+*@
+
+<header class="flex items-center justify-between gap-3 px-5 py-3 border-y border-line bg-surface-raised">
+    <h2 class="text-sm font-medium text-content-muted">Sites</h2>
+    @if (AwaitingIssueCount > 0)
+    {
+        <span class="text-xs text-warning font-medium">@AwaitingIssueCount awaiting issue</span>
+    }
+</header>
+@if (Standings.Count == 0)
+{
+    <p class="px-5 py-4 text-sm text-content-subtle">No live site.</p>
+}
+@if (Standings.Count > 0)
+{
+    <table class="data-table data-table-dense">
+        <thead>
+            <tr>
+                <th>Site</th>
+                <th>Last audit</th>
+                <th class="text-right">Score</th>
+                <th class="text-right">Draft</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var standing in Standings)
+            {
+                <tr @key="standing.Project.ProjectId" class="last:border-b-0 hover:bg-surface-raised/60">
+                    <td class="whitespace-nowrap">
+                        <a href="@($"/projects/{standing.Project.ProjectId}/hs")" class="hover:underline underline-offset-4 text-content font-medium">@standing.Project.Name</a>
+                    </td>
+                    <td class="whitespace-nowrap">
+                        @if (standing.LastIssued is { } issued)
+                        {
+                            <a href="@AuditRoute(issued)" class="hover:underline underline-offset-4">@issued.Reference · @DateText(issued.InspectionDate)</a>
+                        }
+                        @if (standing.LastIssued is null)
+                        {
+                            <span class="text-content-subtle">Not yet audited</span>
+                        }
+                    </td>
+                    <td class="text-right whitespace-nowrap">
+                        @if (standing.LastIssued?.Score is { } score)
+                        {
+                            <Pill Tone="@HsAuditScoring.RatingOf(score).ToTone()">@HsAuditScoring.PercentText(score) · @HsAuditScoring.RatingOf(score).DisplayName()</Pill>
+                        }
+                    </td>
+                    <td class="text-right whitespace-nowrap">
+                        @if (standing.AwaitingIssue is { } draft)
+                        {
+                            <a href="@AuditRoute(draft)" class="hover:underline underline-offset-4"><Pill Tone="Tone.Warning">@draft.Reference awaiting issue</Pill></a>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<HsSiteStanding> Standings { get; set; } = Array.Empty<HsSiteStanding>();
+
+    private int AwaitingIssueCount => HsOfficerOverview.AwaitingIssueCount(Standings);
+
+    private static string AuditRoute(HsAudit audit) => $"/projects/{audit.ProjectId}/hs/audits/{audit.HsAuditId}";
+}

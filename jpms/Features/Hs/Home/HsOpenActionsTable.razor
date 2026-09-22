@@ -1,0 +1,46 @@
+@using Jewel.JPMS.Contracts.Hs
+
+@*
+    The open corrective actions across the live sites, as the officer's home lists them: overdue
+    rows in warning, each linking to its project's H&S page where the status is changed.
+*@
+
+@if (Actions.Count == 0)
+{
+    <p class="px-5 py-4 text-sm text-content-subtle">No corrective action is open on any live site.</p>
+}
+@if (Actions.Count > 0)
+{
+    <table class="data-table data-table-dense">
+        <thead>
+            <tr>
+                <th>Site</th>
+                <th>Action</th>
+                <th>Owner</th>
+                <th class="text-right">Due</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var action in Actions)
+            {
+                <tr @key="action.HsRecordId" class="last:border-b-0 hover:bg-surface-raised/60 @(action.IsOverdue() ? "text-warning" : "")">
+                    <td class="whitespace-nowrap">
+                        <a href="@($"/projects/{action.ProjectId}/hs?view=actions")" class="hover:underline underline-offset-4 text-content font-medium">@ProjectNameFor(action.ProjectId)</a>
+                    </td>
+                    <td>@action.Summary</td>
+                    <td class="whitespace-nowrap">@action.OwnerDisplayName()</td>
+                    <td class="text-right whitespace-nowrap @(action.DueAt is null ? "text-content-subtle" : "")">@DueText(action)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<HsRecord> Actions { get; set; } = Array.Empty<HsRecord>();
+    [Parameter, EditorRequired] public Func<string, string> ProjectNameFor { get; set; } = _ => "";
+
+    private const string NoDueDate = "Ongoing";
+
+    private static string DueText(HsRecord action) => action.DueAt is { } due ? DateText(due) : NoDueDate;
+}

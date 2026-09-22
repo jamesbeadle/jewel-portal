@@ -1,8 +1,8 @@
 using Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
 using Jewel.JPMS.Contracts.Progress;
 using MigraDoc.DocumentObjectModel;
-using MigraDoc.DocumentObjectModel.Tables;
 
+using static Jewel.JPMS.Api.Features.Documents.DocumentTables;
 using static Jewel.JPMS.Api.Features.Documents.JewelDocumentStyle;
 
 namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Documents;
@@ -53,28 +53,5 @@ public static partial class ContractorsReportPdfRenderer
                 ContractorsReportText.Days(subcontractor.AttendanceDays),
                 subcontractor.IsClientNominated ? ContractorsReportText.Yes : ContractorsReportText.Dash);
         SpaceAfterTable(section);
-    }
-
-    private static Table RegisterTable(Section section, params (string Heading, double Centimetres, bool IsRightAligned)[] columns)
-    {
-        var table = section.AddTable();
-        table.Borders.Color = Hair;
-        table.Borders.Width = 0.5;
-        foreach (var column in columns)
-        {
-            var added = table.AddColumn(Unit.FromCentimeter(column.Centimetres));
-            if (column.IsRightAligned) added.Format.Alignment = ParagraphAlignment.Right;
-        }
-        var header = table.AddRow();
-        header.Shading.Color = Navy;
-        header.HeadingFormat = true;
-        for (var index = 0; index < columns.Length; index++) HeaderCell(header.Cells[index], columns[index].Heading);
-        return table;
-    }
-
-    private static void BodyRow(Table table, params string[] values)
-    {
-        var row = table.AddRow();
-        for (var index = 0; index < values.Length; index++) BodyCell(row.Cells[index], values[index]);
     }
 }

@@ -3,6 +3,7 @@ using Jewel.JPMS.Contracts.Progress;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 
+using static Jewel.JPMS.Api.Features.Documents.DocumentTables;
 using static Jewel.JPMS.Api.Features.Documents.JewelDocumentStyle;
 
 namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Documents;
@@ -61,15 +62,9 @@ public static partial class ContractorsReportPdfRenderer
 
     private static void AddContactGrid(Section section, ContractorsReportBuildingControl buildingControl)
     {
-        var table = section.AddTable();
-        table.Borders.Color = Hair;
-        table.Borders.Width = 0.5;
-        table.AddColumn(Unit.FromCentimeter(3.3));
-        table.AddColumn(Unit.FromCentimeter(5.6));
-        table.AddColumn(Unit.FromCentimeter(3.3));
-        table.AddColumn(Unit.FromCentimeter(5.6));
-        AddGridRow(table, "Body", ContractorsReportText.OrDash(buildingControl.BodyName), "Contact", ContractorsReportText.OrDash(buildingControl.ContactName));
-        AddGridRow(table, "Email", ContractorsReportText.OrDash(buildingControl.ContactEmail), "Phone", ContractorsReportText.OrDash(buildingControl.ContactPhone));
+        var table = GridTable(section);
+        GridRow(table, "Body", ContractorsReportText.OrDash(buildingControl.BodyName), "Contact", ContractorsReportText.OrDash(buildingControl.ContactName));
+        GridRow(table, "Email", ContractorsReportText.OrDash(buildingControl.ContactEmail), "Phone", ContractorsReportText.OrDash(buildingControl.ContactPhone));
         SpaceAfterTable(section);
     }
 

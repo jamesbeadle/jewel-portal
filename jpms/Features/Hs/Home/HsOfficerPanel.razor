@@ -1,0 +1,90 @@
+@using Jewel.JPMS.Contracts.Hs
+@using Jewel.JPMS.Features.Hs
+@using Jewel.JPMS.Features.Hs.Audits
+@using Jewel.JPMS.Features.Projects
+@inject HsRecordsReadModel Records
+@inject HsAuditsAcrossProjectsReadModel Audits
+@inject ProjectListReadModel Projects
+@implements IDisposable
+
+@*
+    The H&S officer's home: every open corrective action across the live sites, overdue first,
+    and each site's standing — the last audit issued there and any draft still waiting for her
+    Issue. Both blocks read HsOfficerOverview over the same three reads the count tiles read, so
+    the tiles and the rows can never disagree. RoleHome.ShowHsOfficer decides who sees it.
+*@
+
+<section class="panel overflow-hidden">
+    <header class="flex items-center justify-between gap-3 px-5 py-3 border-b border-line bg-surface-raised">
+        <h2 class="text-sm font-medium text-content-muted">Open H&S actions</h2>
+        @if (OverdueCount > 0)
+        {
+            <span class="text-xs text-negative font-medium">@OverdueCount overdue</span>
+        }
+    </header>
+
+    @switch (State)
+    {
+        case PanelState.Failed:
+            <p class="px-5 py-4 text-sm text-negative">Couldn't load the H&S register — refresh to try again.</p>
+            break;
+        case PanelState.Loading:
+            <LoadGate IsLoading="true" Prominent="true" Label="Loading the H&S register" />
+            break;
+        case PanelState.Loaded:
+            <HsOpenActionsTable Actions="@OpenActions" ProjectNameFor="@ProjectNameFor" />
+            <HsSiteStandingsTable Standings="@Standings" />
+            break;
+    }
+</section>
+
+@code {
+    private bool dataFailed;
+
+    private enum PanelState { Loading, Failed, Loaded }
+
+    private PanelState State
+    {
+        get
+        {
+            if (dataFailed) return PanelState.Failed;
+            var isStillLoading = LoadState.UntilAllPresent(Records.Current, Audits.Current, Projects.Current);
+            return isStillLoading ? PanelState.Loading : PanelState.Loaded;
+        }
+    }
+
+    private IReadOnlyList<Project> LiveProjects =>
+        (Projects.Current ?? Array.Empty<Project>()).Where(project => project.Stage != ProjectStage.Completed).InWorkOrder().ToList();
+
+    private IReadOnlyList<HsRecord> OpenActions =>
+        HsOfficerOverview.OpenActions(Records.Current ?? Array.Empty<HsRecord>(), LiveProjects);
+
+    private IReadOnlyList<HsSiteStanding> Standings =>
+        HsOfficerOverview.SiteStandings(Audits.Current ?? Array.Empty<HsAudit>(), LiveProjects);
+
+    private int OverdueCount => OpenActions.Count(action => action.IsOverdue());
+
+    private string ProjectNameFor(string projectId) =>
+        LiveProjects.FirstOrDefault(project => string.Equals(project.ProjectId, projectId, StringComparison.OrdinalIgnoreCase))?.Name ?? "Unknown project";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Records.OnChanged += StateHasChanged;
+        Audits.OnChanged += StateHasChanged;
+        Projects.OnChanged += StateHasChanged;
+        await Task.WhenAll(RefreshAsync(Records.RefreshAsync), RefreshAsync(Audits.RefreshAsync), RefreshAsync(Projects.RefreshAsync));
+    }
+
+    private async Task RefreshAsync(Func<CancellationToken, Task> refresh)
+    {
+        try { await refresh(CancellationToken.None); }
+        catch { dataFailed = true; }
+    }
+
+    public void Dispose()
+    {
+        Records.OnChanged -= StateHasChanged;
+        Audits.OnChanged -= StateHasChanged;
+        Projects.OnChanged -= StateHasChanged;
+    }
+}

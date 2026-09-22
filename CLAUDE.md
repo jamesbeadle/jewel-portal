@@ -614,18 +614,28 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   can make the attached work in the portal on the H&S phase"). `HsAudit` (per-project `HSA-####`,
   `HsAuditStatus` Draft → Issued → Closed, the front-sheet fields, `Score`, `PreviousScore`,
   `TemplateVersion`) and `HsAuditItem` (one row per framework item: `HsAuditComment`,
-  `HsAuditRate` 0 / 5 / 10, `HsAuditClass` A–E, hand-keyed `Minus`, `HsAuditTimeScale`, findings,
-  `OwnerName`, `DateRectified`, `HsRecordId`). `HsAuditTemplate` (contracts/Models) IS the
-  workbook — 11 sections, 182 items, `Version` "2026-08-27" stamped on every audit planted from
-  it; a change to the framework is a new version, never an edit of a planted audit. The
-  machine-readable extract and the scoping note live in `docs/03-workflows/04-hs/`.
-- **The score is the spreadsheet's, exactly** (`HsAuditScoring`, the one rule, pinned by
-  `HsAuditTests.Score_isTheSpreadsheets_onByFrance`): `max(0, (Σ rate − Σ minus) ÷ (rated items
-  × 10))`, unrated rows out of the denominator, banded Poor < 70% / Fair / Good 85–94 / Very good
-  95+. The class penalties her key describes (A −25% …) are NOT applied by the portal — Nigel's
-  decision, "match the spreadsheet for now"; `Minus` is whatever the officer keys. Recomputed on
-  every `UpdateHsAuditItems` and on Issue; never computed client-side except as the form's live
-  chip (`HsAuditItemDraft.LiveScore`, same rule).
+  `HsAuditRate` 0 / 5 / 10, `HsAuditClass` A–E, `Minus` (stored, no longer scored — see below),
+  `HsAuditTimeScale`, findings, `OwnerName`, `DateRectified`, `HsRecordId`). `HsAuditTemplate`
+  (contracts/Models) IS the workbook — 11 sections; `Version` "2026-09-15" is her simplified
+  framework of 15 Sep (165 items, `HsAuditTemplateItems.Current`), `FirstVersion` "2026-08-27"
+  her original (182); every audit is stamped with the version it was planted from, and a change
+  to the framework is a new version, never an edit of a planted audit. Only sections 2, 8 (from
+  8.07), 9 and 10 renumbered between the two; `HsAuditItemLineage.CurrentCodeFor(version, code)`
+  is the one map (the fire bell's 10.03 is now 10.02; Lorries & Trailers has no successor). The
+  machine-readable extracts and the scoping note live in `docs/03-workflows/04-hs/`.
+- **The score is her sheet's, exactly — and since 2026-09-22 the class penalties bite**
+  (`HsAuditScoring` + `HsAuditClassPenalties`, the one rule, pinned by
+  `HsAuditTests.Score_isTheSpreadsheets_onByFrance`): `max(0, rateAverage − penalty)` where
+  `rateAverage = Σ rate ÷ (rated items × 10)` (unrated rows out of the denominator) and the
+  penalty is charged ONCE PER CLASS PRESENT anywhere on the report — A 0.25, B 0.15, C 0.05,
+  D 0.01 — plus 0.05 once if any item's comment is R (repeat); two D findings cost one point, not
+  two (Katy-Louise, 15 Sep: "Yes please — Jeremy has since added in a column for the deductions";
+  the rule is her sheet's `Analytics!H11`). Banded Poor < 70% / Fair / Good 85–94 / Very good
+  95+. The hand-keyed `Minus` of the 27 Aug workbook is NOT in the score any more: the column is
+  kept on the row and the form shows `HsAuditClassPenalties.PointsOff` (the sheet's own Minus
+  reading) beside it. Recomputed on every `UpdateHsAuditItems` and on Issue; never computed
+  client-side except as the form's live chip (`HsAuditItemDraft.LiveScore`, same rule). Under
+  this rule By France's HSA-0001 reads 84% Fair (one C, four Ds).
 - **Issue is the officer's declaration and mints the corrective actions** (`IssueHsAuditHandler`
   → `HsAuditCorrectiveActions`, pure): one `HsRecord` of kind `CorrectiveAction` per FINDING — an
   item with an owner named OR a rate below 10, unless marked N/A — derived from the row's own
@@ -653,10 +663,32 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   `close_hs_audit`; page guides on both routes. Seed for the first record:
   `scripts/2026-09-15-seed-by-france-hs-audit.sql` (HSA-0001 on By France, Draft, her rows —
   a person presses Issue).
+- **The officer's home and her report** (2026-09-22, Katy-Louise's reply read as an ask: for
+  the portal to replace her spreadsheet she needs the screen she opens every morning and the
+  document she sends on). `RoleHome.ShowHsOfficer` (H&S officer + MD) renders `HsOfficerPanel`
+  (`jpms/Features/Hs/Home`): the open corrective actions across the LIVE sites, overdue first,
+  and each site's standing — the last issued audit with its score, and the Draft still awaiting
+  her Issue; three count tiles read the same `HsOfficerOverview` (pure), so tiles and rows never
+  disagree. It reads `ListHsRecords` and the new `ListHsAuditsAcrossProjects` (`GET hs-audits`,
+  `HsAuditRoles.Readers`; `list_hs_audits` with `projectId: "all"` on the connector). The
+  register's readings `HsRecord.OwnerDisplayName()` / `IsOpen()` / `IsOverdue()` live on the
+  model (contracts) — the project page and the home share them. **`GET hs-audits/{id}/pdf`**
+  (`HsAuditPdfRenderer` + `HsAuditReportText`, `api/Features/Hs/Audits/Documents`) is the
+  inspection report in the house style laid out as her sheet: front sheet, score in its band,
+  the keys, the eleven sections printing only the rows she wrote on
+  (`HsAuditReportText.IsWorthPrinting`), further comments, the two declarations; any status,
+  never stored, never emailed — "Download PDF" in the audit page's toolbar. The register, grid
+  and muted-line tables every house-style report draws are `DocumentTables`
+  (`api/Features/Documents`), shared with the Contractor's Report renderer; a renderer composes
+  them and never re-types a border. Download endpoints render inline with no separate handler,
+  as every other download in the api does — an accepted gap in the pattern audit.
 - **Not built yet (workflow 04 keeps them):** mobilisation checklist and gate, scheduled
   inspections with overdue escalation, incident investigation, permits-to-work, temporary works,
-  subcontractor RAMS/induction acceptance, the H&S officer's role-home tiles, a printable report
-  in her layout, `create_hs_audit_from_message` for the next audit she emails.
+  subcontractor RAMS/induction acceptance, `create_hs_audit_from_message` for the next audit she
+  emails; and from her 15 Sep replies (YBT, Phase 2 goal): site-manager comments on an action
+  with her notified, one digest per session of sign-offs to the site manager, officer-only close
+  on a visit or a photograph, and her other site checks (toolbox talks with attendance,
+  ladder/PUWER inspections, accident forms, first-aid kits, extinguishers).
 
 ## An external login carries its identity, and every external write is scoped by it (api + jpms)
 

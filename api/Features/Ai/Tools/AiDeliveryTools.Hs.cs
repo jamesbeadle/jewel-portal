@@ -9,24 +9,28 @@ internal static partial class AiDeliveryTools
 {
     /// <summary>Mirror of ListHsRecordsEndpoint.RolesThatMayReadHsRecords.</summary>
     private static readonly RoleSet HsRecordReaders = JpmsRoleSets.AllInternal;
+    private const string EveryProject = "all";
 
     private static AiTool ListHsAudits() => new(
         "list_hs_audits",
         "A project's H&S site audits (HSA refs), newest first: inspection date, type, safety "
-        + "officer, site manager, the score as the spreadsheet computes it with its rating band "
+        + "officer, site manager, the score as her sheet computes it (rate average less a penalty "
+        + "per class present, once each) with its rating band "
         + "(Poor / Fair / Good / Very good), the previous audit's score, and status Draft → Issued "
         + "→ Closed. Issue mints the corrective actions; get_hs_audit reads the items.",
         AiToolSchema.Object(
-            ("projectId", "string", "Defaults to the project in view; pass it otherwise.", false)),
+            ("projectId", "string", "Defaults to the project in view; pass it otherwise, or \"all\" for every project's audits (the officer's home reads that).", false)),
         AiToolKind.Read,
         HsAuditRoles.Readers,
         ListHsAuditsAsync);
 
     private static AiTool GetHsAudit() => new(
         "get_hs_audit",
-        "One H&S site audit with every item of its framework in order — 11 sections, 182 items — "
-        + "each with the officer's comment code (N/A, N, N/C, N/S, R), rate (0 / 5 / 10), class "
-        + "(A–E), minus, time-scale (I, 1, 3, 7, 1M, O), findings, owner and date rectified, plus "
+        "One H&S site audit with every item of its framework in order — 11 sections, 165 items "
+        + "on the 2026-09-15 framework (182 on 2026-08-27) — each with the officer's comment code "
+        + "(N/A, N, N/C, N/S, R), rate (0 / 5 / 10), class (A–E), time-scale (I, 1, 3, 7, 1M, O), "
+        + "findings, owner and date rectified, its currentCode on the current framework (null when "
+        + "the item was dropped — compare audits across versions by currentCode, never by code), plus "
         + "the corrective action id Issue minted for it. Every item carries the hsAuditItemId that "
         + "update_hs_audit_items takes.",
         AiToolSchema.Object(
@@ -54,7 +58,10 @@ internal static partial class AiDeliveryTools
     {
         var projectId = ProjectId(context, input);
         if (string.IsNullOrWhiteSpace(projectId)) return Fail(NoProject);
-        var audits = await Query<ListHsAuditsForProject, IReadOnlyList<HsAudit>>(context, new ListHsAuditsForProject(projectId), ct);
+        var isEveryProject = projectId == EveryProject;
+        var audits = isEveryProject
+            ? await Query<ListHsAuditsAcrossProjects, IReadOnlyList<HsAudit>>(context, new ListHsAuditsAcrossProjects(), ct)
+            : await Query<ListHsAuditsForProject, IReadOnlyList<HsAudit>>(context, new ListHsAuditsForProject(projectId), ct);
         return Serialise(new { ok = true, projectId, audits = audits.Select(AuditRow) });
     }
 
@@ -68,7 +75,7 @@ internal static partial class AiDeliveryTools
             ok = true,
             audit = AuditRow(view.Audit),
             sections = HsAuditTemplate.Sections.Select(section => new { section.Number, section.Name }),
-            items = view.Items.Select(AuditItemRow)
+            items = view.Items.Select(item => AuditItemRow(item, view.Audit.TemplateVersion))
         });
     }
 
@@ -82,7 +89,7 @@ internal static partial class AiDeliveryTools
 
         var records = await Query<ListHsRecords, IReadOnlyList<HsRecord>>(context, new ListHsRecords(), ct);
         var narrowed = records
-            .Where(record => projectId is null or "all" || string.Equals(record.ProjectId, projectId, StringComparison.OrdinalIgnoreCase))
+            .Where(record => projectId is null or EveryProject || string.Equals(record.ProjectId, projectId, StringComparison.OrdinalIgnoreCase))
             .Where(record => kind is null || record.Kind == kind)
             .Where(record => !openOnly || record.Status != HsStatus.Closed);
         return Serialise(new { ok = true, records = narrowed.Select(RecordRow) });
@@ -111,10 +118,11 @@ internal static partial class AiDeliveryTools
         audit.ClosedAt
     };
 
-    private static object AuditItemRow(HsAuditItem item) => new
+    private static object AuditItemRow(HsAuditItem item, string templateVersion) => new
     {
         item.HsAuditItemId,
         item.Code,
+        currentCode = HsAuditItemLineage.CurrentCodeFor(templateVersion, item.Code),
         item.Section,
         item.Name,
         comment = item.Comment?.Code(),

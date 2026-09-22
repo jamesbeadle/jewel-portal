@@ -58,4 +58,14 @@ public static class HsRecordExtensions
         _ => kind.ToString()
     };
 
+    /// <summary>Who owns the record as a person reads it: the name when one is on it, else the login.</summary>
+    public static string OwnerDisplayName(this HsRecord record) =>
+        string.IsNullOrWhiteSpace(record.AssignedToName) ? record.AssignedToEmail : record.AssignedToName;
+
+    public static bool IsOpen(this HsRecord record) => record.Status != HsStatus.Closed;
+
+    /// <summary>Open with a due date already past — the register's warning reading.</summary>
+    public static bool IsOverdue(this HsRecord record) =>
+        record.IsOpen() && record.DueAt is { } due && due < DateTimeOffset.UtcNow.Date;
+
 }

@@ -1,9 +1,9 @@
 using Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
 using Jewel.JPMS.Contracts.Progress;
 using MigraDoc.DocumentObjectModel;
-using MigraDoc.DocumentObjectModel.Tables;
 using MigraDoc.Rendering;
 
+using static Jewel.JPMS.Api.Features.Documents.DocumentTables;
 using static Jewel.JPMS.Api.Features.Documents.JewelDocumentStyle;
 
 namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Documents;
@@ -56,29 +56,10 @@ public static partial class ContractorsReportPdfRenderer
             new HeaderFact($"Period  {ContractorsReportText.Period(header)}"),
             new HeaderFact($"Date of issue  {ContractorsReportText.Date(header.DateOfIssue)}"));
 
-        var table = section.AddTable();
-        table.Borders.Color = Hair;
-        table.Borders.Width = 0.5;
-        var labelWidth = Unit.FromCentimeter(3.3);
-        var valueWidth = Unit.FromCentimeter(5.6);
-        table.AddColumn(labelWidth);
-        table.AddColumn(valueWidth);
-        table.AddColumn(labelWidth);
-        table.AddColumn(valueWidth);
-        AddGridRow(table, "Valuation No.", ContractorsReportText.ValuationNumber(header), "Programme reference", ContractorsReportText.OrDash(header.ProgrammeReference));
-        AddGridRow(table, "Prepared by", ContractorsReportText.OrDash(header.PreparedByName), "Issued to", ContractorsReportText.OrDash(header.IssuedTo));
+        var table = GridTable(section);
+        GridRow(table, "Valuation No.", ContractorsReportText.ValuationNumber(header), "Programme reference", ContractorsReportText.OrDash(header.ProgrammeReference));
+        GridRow(table, "Prepared by", ContractorsReportText.OrDash(header.PreparedByName), "Issued to", ContractorsReportText.OrDash(header.IssuedTo));
         SpaceAfterTable(section);
-    }
-
-    private static void AddGridRow(Table table, string firstLabel, string firstValue, string secondLabel, string secondValue)
-    {
-        var row = table.AddRow();
-        row.TopPadding = Unit.FromMillimeter(1.2);
-        row.BottomPadding = Unit.FromMillimeter(1.2);
-        LabelCell(row.Cells[0], firstLabel);
-        ValueCell(row.Cells[1], firstValue);
-        LabelCell(row.Cells[2], secondLabel);
-        ValueCell(row.Cells[3], secondValue);
     }
 
     private static void AddNarrative(Section section, string heading, string text)
@@ -86,14 +67,5 @@ public static partial class ContractorsReportPdfRenderer
         SectionHeading(section, heading);
         Panelled(section, ContractorsReportText.OrNothingToReport(text));
         SpaceAfterTable(section);
-    }
-
-    private static void MutedLine(Section section, string text)
-    {
-        var line = section.AddParagraph(text);
-        line.Format.Font.Size = 9;
-        line.Format.Font.Italic = true;
-        line.Format.Font.Color = Muted;
-        SpaceAfter(line, 2);
     }
 }

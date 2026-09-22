@@ -3,6 +3,11 @@
 @using Jewel.JPMS.Features.Requests
 @using Jewel.JPMS.Features.Subcontractors
 @using Jewel.JPMS.Features.Xero
+@using Jewel.JPMS.Features.Hs
+@using Jewel.JPMS.Features.Hs.Audits
+@using Jewel.JPMS.Features.Hs.Home
+@inject HsRecordsReadModel HsRecords
+@inject HsAuditsAcrossProjectsReadModel HsAudits
 @inject ComplianceOverviewReadModel Compliance
 @inject ProjectListReadModel Projects
 @inject CurrentProjectService CurrentProject
@@ -91,6 +96,16 @@
             @* Which valuations are coming up or overdue across every project — the dates
                themselves are set on each project's Setup tab. *@
             <NextValuationsPanel />
+        }
+
+        @if (ShowHsOfficer)
+        {
+            @* The H&S officer's register across every live site: open corrective actions and each
+               site's last audit. The panel owns the three reads; the tiles above read the same
+               snapshot through HsOfficerOverview, so the two can never disagree. *@
+            <div id="hs-officer">
+                <HsOfficerPanel />
+            </div>
         }
 
         @if (ShowExpiringDocuments)

@@ -27,7 +27,7 @@
                         <th class="w-28">Comment</th>
                         <th class="w-24">Rate</th>
                         <th class="w-20">Class</th>
-                        <th class="w-20 text-right">Minus</th>
+                        <th class="w-20 text-right" title="Points the class and a repeat take off, as the sheet prints them — the score deducts each class once">Pts off</th>
                         <th class="w-28">Time-scale</th>
                         <th>Findings / advice given</th>
                         <th class="w-36">Owner</th>
@@ -76,10 +76,7 @@
                                     }
                                 </select>
                             </td>
-                            <td class="text-right">
-                                <input type="number" min="0" class="field py-1 text-right" disabled="@ReadOnly"
-                                       value="@draft.Minus" @onchange="e => Edit(() => draft.Minus = ParseInt(e))" />
-                            </td>
+                            <td class="text-right text-content-subtle">@draft.PointsOffText</td>
                             <td>
                                 <select class="field py-1" disabled="@ReadOnly" value="@EnumValue(draft.TimeScale)"
                                         @onchange="e => draft.TimeScale = ParseEnum<HsAuditTimeScale>(e)">
@@ -136,9 +133,6 @@
 
     private static TEnum? ParseEnum<TEnum>(ChangeEventArgs e) where TEnum : struct, Enum =>
         int.TryParse(e.Value?.ToString(), out var value) ? (TEnum)Enum.ToObject(typeof(TEnum), value) : null;
-
-    private static int ParseInt(ChangeEventArgs e) =>
-        int.TryParse(e.Value?.ToString(), out var value) && value >= 0 ? value : 0;
 
     private static string DateInput(DateTimeOffset? value) =>
         value is { } date ? date.ToString("yyyy-MM-dd") : "";
