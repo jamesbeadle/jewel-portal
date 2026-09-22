@@ -16,7 +16,12 @@ public partial class RoleHome
     /// threshold the /rate-library/stale page uses.</summary>
     private const int StaleRateThresholdDays = 60;
 
-    private sealed record Tile(string Label, string Value, string Href, string? Note = null, bool IsBad = false);
+    private sealed record Tile(string Label, string Value, string Href, string? Note = null, bool IsBad = false,
+        TileSecondLine? SecondLine = null);
+
+    // A second, less urgent figure under the headline, with its own destination — "3 due soon"
+    // in warning under the red-or-green overdue count. Omitted when there is nothing to say.
+    private sealed record TileSecondLine(string Label, string Href);
 
     // ---- Which panels this role gets -------------------------------------------------------------
     // Deliberately explicit rather than clever: a landing page that guesses wrong wastes the one
@@ -85,9 +90,15 @@ public partial class RoleHome
             {
                 var live = Projects.Current.Where(p => p.Stage != ProjectStage.Completed).ToList();
                 var overdue = live.Count(ValuationDue.IsOverdue);
+                var dueSoon = live.Count(ValuationDue.IsDueSoon);
                 tiles.Add(new("Live projects", live.Count.ToString(), "/projects"));
+                // The overdue count keeps its red/green reading; the valuations due within the
+                // week ride underneath in warning, as a line of their own (2026-09-21, agreed
+                // with Jeremy: "0 overdue" stayed truthful while three claims were due that week
+                // and nothing on Home said so). Hidden when there are none.
                 tiles.Add(new("Valuations overdue", overdue.ToString(), ValuationDue.OverdueFilterRoute,
-                    Note: overdue > 0 ? "needs chasing" : "up to date", IsBad: overdue > 0));
+                    Note: overdue > 0 ? "needs chasing" : "up to date", IsBad: overdue > 0,
+                    SecondLine: dueSoon > 0 ? new($"{dueSoon} due soon", ValuationDue.DueSoonFilterRoute) : null));
             }
 
             // The two back-office queues: a non-zero count is work someone is not doing. Each

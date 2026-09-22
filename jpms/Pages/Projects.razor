@@ -30,10 +30,16 @@
     </PageHeader>
 
     <div class="mb-3 flex items-center justify-end gap-4">
-        @* Where the dashboard's "Valuations overdue" tile lands: the same rows it counted. *@
+        @* Where the dashboard's "Valuations overdue" tile lands: the same rows it counted — its
+           red count on the first tick, its orange "due soon" line on the second. One filter, so
+           ticking one clears the other. *@
         <label class="flex items-center gap-2 text-sm cursor-pointer select-none @(overdueValuationsOnly ?"text-negative font-medium" : "text-content-muted")">
-            <input type="checkbox" checked="@overdueValuationsOnly" @onchange="e => overdueValuationsOnly = (bool)e.Value!" />
+            <input type="checkbox" checked="@overdueValuationsOnly" @onchange="e => SetValuationFilter((bool)e.Value!, ValuationDue.Status.Overdue)" />
             <span>Overdue valuations only@(OverdueValuationCount > 0 ? $" ({OverdueValuationCount})" : "")</span>
+        </label>
+        <label class="flex items-center gap-2 text-sm cursor-pointer select-none @(dueSoonValuationsOnly ?"text-warning font-medium" : "text-content-muted")">
+            <input type="checkbox" checked="@dueSoonValuationsOnly" @onchange="e => SetValuationFilter((bool)e.Value!, ValuationDue.Status.DueSoon)" />
+            <span>Due soon only@(DueSoonValuationCount > 0 ? $" ({DueSoonValuationCount})" : "")</span>
         </label>
         <label class="flex items-center gap-2 text-sm text-content-muted cursor-pointer select-none">
             <input type="checkbox" checked="@showCompleted" @onchange="e => showCompleted = (bool)e.Value!" />
@@ -50,10 +56,14 @@
     {
         <p class="text-sm text-content-subtle italic mb-3">No live project has an overdue valuation date. Dates are set on each project's Settings tab.</p>
     }
-    @* Filtered to overdue valuations, a row is a claim to chase — it lands on the project's
-       Valuation Report. Unfiltered, the row keeps the role's default project tab. *@
+    @if (dueSoonValuationsOnly && VisibleProjects.Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic mb-3">No live project has a valuation due in the next week. Dates are set on each project's Settings tab.</p>
+    }
+    @* Filtered to overdue or due-soon valuations, a row is a claim to raise — it lands on the
+       project's Valuation Report. Unfiltered, the row keeps the role's default project tab. *@
     <ProjectsTable Projects="VisibleProjects"
-                   RowHref="@(overdueValuationsOnly ? OverdueRowHref : null)" />
+                   RowHref="@(IsFilteredByValuation ? ValuationRowHref : null)" />
 
     <Modal IsOpen="showForm" Title="New project" ShowFooter="false" OnCancel="CloseForm">
         <NewProjectForm OnCreated="HandleCreated" OnClosed="CloseForm" />
@@ -63,19 +73,29 @@
 @code {
     private bool showForm;
     private bool showCompleted;
-    private bool overdueValuationsOnly;
+
+    // The one valuation filter: null is unfiltered; Overdue or DueSoon narrows to that status.
+    private ValuationDue.Status? valuationFilter;
+
+    private bool overdueValuationsOnly => valuationFilter == ValuationDue.Status.Overdue;
+    private bool dueSoonValuationsOnly => valuationFilter == ValuationDue.Status.DueSoon;
+    private bool IsFilteredByValuation => valuationFilter is not null;
+
+    private void SetValuationFilter(bool isTicked, ValuationDue.Status status) =>
+        valuationFilter = isTicked ? status : null;
 
     private IReadOnlyList<Project> ActiveProjects =>
         ProjectsReadModel.Current ?? Array.Empty<Project>();
 
     private IReadOnlyList<Project> VisibleProjects =>
         (showCompleted ? ActiveProjects : ActiveProjects.Where(p => p.Stage != ProjectStage.Completed))
-            .Where(p => !overdueValuationsOnly || ValuationDue.IsOverdue(p))
+            .Where(p => valuationFilter is null || ValuationDue.Of(p) == valuationFilter)
             .ToList();
 
     private int OverdueValuationCount => ActiveProjects.Count(ValuationDue.IsOverdue);
+    private int DueSoonValuationCount => ActiveProjects.Count(ValuationDue.IsDueSoon);
 
-    private static readonly Func<Project, string> OverdueRowHref =
+    private static readonly Func<Project, string> ValuationRowHref =
         project => ValuationDue.ProjectRoute(project.ProjectId);
 
     // Mirrors the server-side authorisation (CreateProjectShellAuthorisation):
@@ -131,12 +151,20 @@
             Nav.NavigateTo("/login", forceLoad: true);
             return;
         }
-        // ?valuations=overdue (the dashboard tile) opens the page already filtered. Read once at
-        // load; the tick box is the source of truth thereafter.
-        overdueValuationsOnly = new Uri(Nav.Uri).Query.Contains(ValuationDue.OverdueFilterQuery, StringComparison.OrdinalIgnoreCase);
+        // ?valuations=overdue / ?valuations=due-soon (the dashboard tile and its due-soon line)
+        // open the page already filtered. Read once at load; the tick boxes are the source of
+        // truth thereafter.
+        valuationFilter = FilterFromQuery(new Uri(Nav.Uri).Query);
         ProjectsReadModel.OnChanged += StateHasChanged;
         Session.OnChange += StateHasChanged;
         await ProjectsReadModel.RefreshAsync(CancellationToken.None);
+    }
+
+    private static ValuationDue.Status? FilterFromQuery(string query)
+    {
+        if (query.Contains(ValuationDue.OverdueFilterQuery, StringComparison.OrdinalIgnoreCase)) return ValuationDue.Status.Overdue;
+        if (query.Contains(ValuationDue.DueSoonFilterQuery, StringComparison.OrdinalIgnoreCase)) return ValuationDue.Status.DueSoon;
+        return null;
     }
 
     public void Dispose()
