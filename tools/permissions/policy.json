@@ -26,7 +26,7 @@
         "FinanceDirector",
         "ProjectManager"
       ],
-      "why": "Writing as the business is the directors' and the project manager's (Nigel, 2026-09-19). Free-form compose is tighter still \u2014 Admin, MD and FD alone (MailboxComposeRoles) \u2014 and this rule only says nothing may be WIDER than the four."
+      "why": "Writing as the business is the directors' and the project manager's (Nigel, 2026-09-19). Free-form compose is tighter still — Admin, MD and FD alone (MailboxComposeRoles) — and this rule only says nothing may be WIDER than the four."
     }
   },
   "externalSurfaces": {
@@ -145,6 +145,12 @@
         "why": "P09 defects sign-off is the client's; the architect raises alongside them on close-out.",
         "routes": [
           "projects/{projectId}/defects"
+        ]
+      },
+      {
+        "why": "The per-role nav (2026-09-22): an architect's sidebar rows are project-scoped, so the project list admits the architect and answers with the projects that name their practice (ArchitectProjects), never the whole portfolio.",
+        "routes": [
+          "projects"
         ]
       }
     ],
