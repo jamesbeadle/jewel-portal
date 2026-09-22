@@ -1,0 +1,22 @@
+@using Jewel.JPMS.Contracts.WeeklyCashflow
+@namespace Jewel.JPMS.Features.WeeklyCashflow
+@using static Jewel.JPMS.Features.Cashflow.CashflowDisplay
+
+@* The net movement row — cash in less cash out, per week, the Later column included: the
+   grid's running answer, read off the view the page computed once (WeeklyCashflowMaths). *@
+<tr class="border-t-2 font-semibold">
+    <td class="text-content">
+        Net movement
+        <span class="block text-xs text-content-faint font-normal">cash in less cash out, per week</span>
+    </td>
+    @for (var index = 0; index < View.WeekStarts.Count; index++)
+    {
+        var net = View.Net[index];
+        <td class="text-right whitespace-nowrap @(net < 0m ?"text-negative" : "text-positive")">@Signed(net)</td>
+    }
+    <td class="text-right whitespace-nowrap border-l @(View.Net[^1] < 0m ?"text-negative" : "text-positive")">@Signed(View.Net[^1])</td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public WeeklyCashflowView View { get; set; } = default!;
+}
