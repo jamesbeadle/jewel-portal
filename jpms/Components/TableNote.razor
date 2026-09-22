@@ -1,0 +1,23 @@
+@namespace Jewel.JPMS.Components
+
+@*
+    THE explanatory note beside a table or a grid — the small print that says what a column
+    means or how a figure is made. Its one rule: a note is as wide as the thing it explains, so
+    under a full-width table it runs the full content width. The cap that used to be typed into
+    each view (max-w-3xl, max-w-4xl) is what left an empty column down the right of the CVR
+    and cashflow pages (Nigel, 2026-09-21); no view sets a width on a note again. Small print
+    (12/Reg, subtle) by default; IsLead is the one-line introduction under a section header
+    (14/Reg, subtle). Spacing belongs to the call site, through Class.
+*@
+
+<p class="@Type text-content-subtle @Class">@ChildContent</p>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    /// <summary>The introduction under a section header rather than the small print under a table.</summary>
+    [Parameter] public bool IsLead { get; set; }
+    /// <summary>The call site's spacing — a margin, never a width.</summary>
+    [Parameter] public string Class { get; set; } = "";
+
+    private string Type => IsLead ? "text-sm" : "text-xs";
+}

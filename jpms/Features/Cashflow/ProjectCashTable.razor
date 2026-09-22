@@ -32,7 +32,7 @@
         </tfoot>
     }
 </RecordsTable>
-<p class="text-xs text-content-subtle mt-3 max-w-3xl">
+<TableNote Class="mt-3">
     Each row is that project's Cashflow tab collapsed to a line — the same sources,
     the same arithmetic, to the penny. Cash allocated counts valuation invoices the
     client has paid plus retention withheld on works complete; left to claim is net
@@ -42,7 +42,7 @@
     part-payment aware; a
     retention release is only added back while it is still forecast. Click a
     project for the full statement.
-</p>
+</TableNote>
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<(Project Project, CashRow Row)> Rows { get; set; } = default!;

@@ -105,6 +105,7 @@ behind each: `docs/ui/stage-1-components.md`.
 | `SearchInput` | The debounced search box |
 | `StatTile` / `MetricStat` | The labelled figure (Figma stat card) / the un-boxed headline figure with delta |
 | `EmptyState` | "Nothing here yet", with room for the one action |
+| `TableNote` | The explanatory note beside a table or grid — small print (`IsLead` for the one-line intro under a section header). As wide as the thing it explains: no view caps a note's width; `Class` carries only the margin |
 | `ConfirmDialog` / `InlineConfirm` | The confirm modal (`Danger`) / the two-click armed button |
 | `Modal` | The Figma dialog: 24/Semi title, hairline under the header, Large Cancel/Action footer |
 | `Toolbar` / `ToolbarButton` / `ToolbarDivider` / `ExportToExcelButton` | THE in-view menu of icon buttons with hover text |
@@ -123,11 +124,14 @@ light email-body surfaces `bg-white text-gray-900`, and `LoadGate.razor`, the on
 render a `JewelSpinner`, are the known exceptions):
 
 ```
-grep -rnE "slate-|amber-|emerald-|rose-|red-[0-9]|text-\[1?[0-9]px\]|rounded-(xl|2xl|lg|md)|uppercase|tracking-|shadow-(sm|md|lg|xl|2xl)|bg-negative/10 border|btn-primary text-xs|<section class=\"px-|RequestAccessView Email|<label class=\"block eyebrow|<h1 |<thead class=|<tbody class=\"divide|ToString\(\"d{1,2} MMM yyyy|confirming[A-Z]|Armed\b|(Chip|Tab)Class\(|<JewelSpinner|fixed inset-0" Pages Components Features Layout
+grep -rnE "slate-|amber-|emerald-|rose-|red-[0-9]|text-\[1?[0-9]px\]|rounded-(xl|2xl|lg|md)|uppercase|tracking-|shadow-(sm|md|lg|xl|2xl)|bg-negative/10 border|btn-primary text-xs|<section class=\"px-|RequestAccessView Email|<label class=\"block eyebrow|<h1 |<thead class=|<tbody class=\"divide|ToString\(\"d{1,2} MMM yyyy|confirming[A-Z]|Armed\b|(Chip|Tab)Class\(|<JewelSpinner|fixed inset-0|text-content-(subtle|muted) m[bt]-[0-9.]+ max-w-[34]xl|<p class=\"max-w-3xl\"" Pages Components Features Layout
 ```
 
 (`rounded-lg` is allowed on the modal panel and `DropdownMenu`; `<h1` on the auth pages outside
-the shell. `fixed inset-0` catches a hand-rolled dropdown backdrop — the panel-from-a-toggle is
+the shell. `max-w-3xl` after a note's type is a hand-rolled `TableNote` with its own width cap —
+the empty column down the right of the CVR pages, 2026-09-21; a note is as wide as the table it
+explains. The prospect-facing pages (`Imagine`, `Privacy`) keep their centred reading column, and a
+card or a deliberately narrow table keeps its width — those are not notes. `fixed inset-0` catches a hand-rolled dropdown backdrop — the panel-from-a-toggle is
 always `DropdownMenu`, which dismisses itself without swallowing the press; `Modal` owns the one
 legitimate full-screen scrim.)
 

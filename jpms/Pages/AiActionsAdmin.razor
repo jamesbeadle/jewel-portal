@@ -119,7 +119,7 @@
                                                         <span class="text-content-subtle" title="Confirm-first: the first call is refused until the user says yes.">· confirm-first</span>
                                                     }
                                                 </span>
-                                                <span class="block text-xs text-content-subtle max-w-3xl">@action.Summary</span>
+                                                <TableNote>@action.Summary</TableNote>
                                             </div>
                                             <div class="flex flex-wrap items-center gap-1.5">
                                                 @foreach (var skillKey in AttachedTo(AiActionSkillTargets.Action, action.Name))
@@ -179,12 +179,12 @@
             </p>
             @if (inheritedFromArea is not null)
             {
-                <p class="text-xs text-content-subtle mb-2 max-w-3xl">
+                <TableNote Class="mb-2">
                     Greyed ticks come from the @inheritedFromArea area and are already served with every
                     action in it — change those with the area's
                     <span class="text-content">Area skills</span> button. Tick here only to add a skill
                     this action alone needs.
-                </p>
+                </TableNote>
             }
             @if (saveErrors.Count > 0)
             {

@@ -146,13 +146,13 @@
 
             var forecast = forecastView!;
 
-            <p class="text-xs text-content-subtle mb-3 max-w-4xl">
+            <TableNote Class="mb-3">
                 <span class="font-medium text-content-muted">No signs to decode:</span> the band
                 carries the direction — Cash in adds, Cash out subtracts; only Net movement and
                 the balance are signed. Anything overdue sits in the current month, never the
                 past. Flows with no honest date (no practical-completion date set) sit in
                 Undated and never touch the balance.
-            </p>
+            </TableNote>
 
             <CashForecastTable Forecast="forecast" IsDirector="IsDirector"
                                ExpandedCategories="expandedCategories" OnToggle="ToggleCategory"
@@ -178,12 +178,12 @@
                project's completion cashflow on the statement below — to the penny. ── *@
             @if (forecast.Variances.Count == 0)
             {
-                <p class="text-xs text-content-subtle mb-10 max-w-4xl">
+                <TableNote Class="mb-10">
                     <span class="text-positive font-semibold">✓ Ties to the statement below, to the penny.</span>
                     Every project's phased months (dated, later and undated together) sum to its
                     Project Completion Cashflow — the forecast is the same figures spread in
                     time, never a second opinion.
-                </p>
+                </TableNote>
             }
             else
             {
@@ -200,12 +200,12 @@
                 <p class="eyebrow whitespace-nowrap">Position to completion — the former Cash Summary</p>
                 <div class="h-px bg-line flex-1"></div>
             </div>
-            <p class="text-xs text-content-subtle mb-4 max-w-4xl">
+            <TableNote Class="mb-4">
                 The to-completion statement this page grew out of, unchanged: no time axis, just
                 where the selected jobs' cash lands if they run to the end. The forecast above is
                 these same figures with "when" added. The old bank tiles are not repeated here —
                 their figures live in the strip at the top.
-            </p>
+            </TableNote>
 
             var combined = Totals();
             <CombinedStatementCard Combined="combined" SelectionLabel="@SelectionLabel" />
