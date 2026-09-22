@@ -22,7 +22,11 @@ internal sealed partial class LabourAndBackOfficeActions
             VisibleTo: UsefulInformationRoles.AllowedToManage,
             EmailStamps: new[] { "CreatedByEmail" },
             NameStamps: Array.Empty<string>(),
-            Notes: "projectId comes from list_projects."),
+            Notes: "projectId comes from list_projects. A shared site credential (WiFi, alarm or "
+                + "gate code) is NOT put in the body: it is entered on the note from the Useful "
+                + "Information tab, where it is masked, held encrypted and revealed only to the "
+                + "directors with every reveal audited. The connector never carries one, and a "
+                + "person's own password is never stored anywhere in the portal."),
 
         new AiAction(
             Name: "update_useful_information_note",

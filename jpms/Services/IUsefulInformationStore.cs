@@ -13,4 +13,9 @@ public interface IUsefulInformationStore
     Task<UsefulInformationNote> AddAsync(AddUsefulInformationNote command, CancellationToken cancellationToken = default);
     Task<UsefulInformationNote> UpdateAsync(UpdateUsefulInformationNote command, CancellationToken cancellationToken = default);
     Task<Acknowledgement> DeleteAsync(string usefulInformationNoteId, CancellationToken cancellationToken = default);
+
+    // The shared site credential a note may hold: set (or removed, with a blank) by anyone who
+    // manages notes; revealed to the directors alone, every reveal audited on the server.
+    Task<UsefulInformationNote> SetSecretAsync(SetUsefulInformationSecret command, CancellationToken cancellationToken = default);
+    Task<UsefulInformationSecret> RevealSecretAsync(string usefulInformationNoteId, CancellationToken cancellationToken = default);
 }

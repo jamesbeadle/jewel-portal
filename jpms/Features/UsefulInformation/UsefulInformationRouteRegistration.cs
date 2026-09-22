@@ -23,5 +23,14 @@ public static class UsefulInformationRouteRegistration
         commands.Register<DeleteUsefulInformationNote, Acknowledgement>(
             new CommandRoute("DELETE", "/api/useful-information-notes/{noteId}",
                 command => $"/api/useful-information-notes/{((DeleteUsefulInformationNote)command).UsefulInformationNoteId}"));
+
+        // The note's credential: set at PUT, revealed at GET — the same address, two gates.
+        commands.Register<SetUsefulInformationSecret, UsefulInformationNote>(
+            new CommandRoute("PUT", "/api/useful-information-notes/{noteId}/secret",
+                command => $"/api/useful-information-notes/{((SetUsefulInformationSecret)command).UsefulInformationNoteId}/secret"));
+
+        queries.Register<RevealUsefulInformationSecret, UsefulInformationSecret>(
+            new QueryRoute("/api/useful-information-notes/{noteId}/secret",
+                query => $"/api/useful-information-notes/{((RevealUsefulInformationSecret)query).UsefulInformationNoteId}/secret"));
     }
 }

@@ -7,7 +7,9 @@
     quirks. Strictly internal (the API gates reads and writes to internal roles), and every
     internal role may edit as well as read: whoever discovers the gate code changed fixes the note
     on the spot. Notes are looked up, not worked — nothing here is assigned or due; anything that
-    needs doing belongs on the To-do tab.
+    needs doing belongs on the To-do tab. A note may hold one shared site credential (WiFi, alarm,
+    gate code — never a person's own password), masked here, encrypted on the server and revealed
+    to the directors alone with every reveal audited (UsefulInformationCredentialField).
 
     The list is A–Z by title (the server's order — reference material is found by name, not by
     recency). Clicking a note opens it in the edit dialog, where delete also lives; Add opens the
@@ -66,7 +68,13 @@
                     <button type="button" @key="note.UsefulInformationNoteId" title="Open this note to read or edit it"
                             class="w-full rounded border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                             @onclick="() => OpenEdit(note)">
-                        <p class="truncate text-sm font-medium text-content">@note.Title</p>
+                        <span class="flex items-center gap-2">
+                            <span class="truncate text-sm font-medium text-content">@note.Title</span>
+                            @if (note.HasSecret)
+                            {
+                                <Pill Tone="Tone.Muted">Credential held</Pill>
+                            }
+                        </span>
                         <p class="mt-0.5 text-sm text-content-muted whitespace-pre-wrap line-clamp-3">@note.Body</p>
                         <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
                             @if (note.UpdatedAt is not null)
@@ -101,10 +109,12 @@
 
         <div>
             <FormField Label="Note" Required>
-            <textarea class="field" rows="6" placeholder="The information itself — e.g. Front gate code 4482#, changes first Monday of the month."
+            <textarea class="field" rows="6" placeholder="The information itself — e.g. Key safe is on the left gatepost, changes first Monday of the month."
                       value="@draftBody" @oninput="OnDraftBodyInput"></textarea>
             </FormField>
         </div>
+
+        <UsefulInformationCredentialField Note="editing" @bind-Draft="draftSecret" @bind-Remove="removeSecret" />
     </div>
 
     </ChildContent>
@@ -137,6 +147,10 @@
     private UsefulInformationNote? editing;
     private string draftTitle = "";
     private string draftBody = "";
+    // The credential typed in the dialog (blank = leave what is held alone) and the tick that
+    // takes a held one off. Written through SetUsefulInformationSecret, never on the note itself.
+    private string draftSecret = "";
+    private bool removeSecret;
 
     protected override Task OnInitializedAsync() => LoadAsync();
 
@@ -163,7 +177,8 @@
     private void OpenAdd()
     {
         editing = null;
-        draftTitle = draftBody = "";
+        draftTitle = draftBody = draftSecret = "";
+        removeSecret = false;
         dialogError = null;
         dialogOpen = true;
     }
@@ -173,6 +188,8 @@
         editing = note;
         draftTitle = note.Title;
         draftBody = note.Body;
+        draftSecret = "";
+        removeSecret = false;
         dialogError = null;
         dialogOpen = true;
     }
@@ -195,14 +212,26 @@
         var editingId = editing?.UsefulInformationNoteId;
         await Run(async () =>
         {
-            if (editingId is null)
-                await Notes.AddAsync(new AddUsefulInformationNote(ProjectId, draftTitle.Trim(), draftBody.Trim()));
-            else
-                await Notes.UpdateAsync(new UpdateUsefulInformationNote(editingId, draftTitle.Trim(), draftBody.Trim()));
+            var saved = await SaveNoteAsync(editingId);
+            await SaveCredentialAsync(saved.UsefulInformationNoteId);
             CloseDialog();
         });
         // A failed save leaves the dialog open with the panel-level error mirrored inside it.
         if (error is not null && dialogOpen) dialogError = error;
+    }
+
+    private Task<UsefulInformationNote> SaveNoteAsync(string? editingId) =>
+        editingId is null
+            ? Notes.AddAsync(new AddUsefulInformationNote(ProjectId, draftTitle.Trim(), draftBody.Trim()))
+            : Notes.UpdateAsync(new UpdateUsefulInformationNote(editingId, draftTitle.Trim(), draftBody.Trim()));
+
+    // A typed credential replaces what is held; the tick removes it; neither leaves it alone.
+    private async Task SaveCredentialAsync(string noteId)
+    {
+        var isUntouched = !removeSecret && string.IsNullOrWhiteSpace(draftSecret);
+        if (isUntouched) return;
+        var secret = removeSecret ? null : draftSecret.Trim();
+        await Notes.SetSecretAsync(new SetUsefulInformationSecret(noteId, secret));
     }
 
     private async Task Delete()

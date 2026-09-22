@@ -7280,6 +7280,10 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<string>("SecretCiphertext")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(256)
