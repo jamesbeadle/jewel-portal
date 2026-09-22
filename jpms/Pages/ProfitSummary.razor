@@ -118,9 +118,9 @@
             <div class="flex items-center gap-4 flex-wrap">
                 @* The table's view controls: never gated. Compact fits every band onto one
                    screen and is remembered; Show detail brings the sub-lines back while compact. *@
-                <Checkbox Class="hidden md:inline-flex" Value="isCompactTable" ValueChanged="OnCompactChangedAsync" Label="Compact table"
+                <Checkbox Class="hidden md:inline-flex" Value="IsCompactTable" ValueChanged="OnCompactChangedAsync" Label="Compact table"
                           Title="Fit every column onto one screen — smaller type, tighter cells, the margin and memo lines behind Show detail. Remembered for you." />
-                @if (isCompactTable)
+                @if (IsCompactTable)
                 {
                     <Checkbox Class="hidden md:inline-flex" @bind-Value="showCompactDetail" Label="Show detail"
                               Title="Show the margin %, retention and variation lines in the compact table." />
@@ -139,6 +139,7 @@
                                 @bind-MonthPercentFloor="monthPercentFloor"
                                 IsLatestWindow="IsLatestWindow" CanPageEarlier="CanPageEarlier"
                                 OnPageEarlier="PageEarlier" OnPageLater="PageLater" OnPageToNow="PageToNow"
+                                WindowMonths="RunningWindowMonths" WindowMonthsChanged="OnWindowMonthsChangedAsync"
                                 AccrualHover="AccrualHover"
                                 AccrualOwnFor="AccrualOwnFor"
                                 AccrualToDateFor="AccrualToDateFor" />
@@ -180,17 +181,17 @@
             }
 
             <ProfitTable Rows="rows" Total="total" Class="hidden md:block"
-                         IsCompact="isCompactTable" ShowDetail="showCompactDetail"
+                         IsCompact="IsCompactTable" ShowDetail="showCompactDetail"
                          SortColumn="@sortColumn" SortDescending="sortDescending" OnSort="SortBy" />
             <ProfitCards Rows="rows" Total="total" Class="md:hidden" />
             <ProfitTableNotes />
         }
         </LoadGate>
 
-        @* The trajectory cards read the LATEST six months whichever page the grid is on: their
+        @* The trajectory cards read the LATEST six months whatever window the grid shows: their
            headline is the position now, and the card sits over the table's to-date figures. *@
         @if (selectionInitialised && SelectedProjects.Count > 0
-             && SitePnl.Current is { IsConfigured: true } && MovementFor(GridProjects, ThisMonth) is { } trend)
+             && SitePnl.Current is { IsConfigured: true } && TrajectoryMovementFor(GridProjects) is { } trend)
         {
             <TrajectoryPanel Cards="TrajectoriesFor(trend)" BasisLabel="@BasisLabel" />
         }

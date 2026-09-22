@@ -63,16 +63,16 @@ public sealed record RunningCell(MonthCell Own, decimal CumIncome, decimal CumPr
 
 public sealed record MovementRow(
     Project Project,
-    IReadOnlyList<RunningCell> MonthCells,  // the month ends on screen, oldest first — the latest six, or an earlier page of six
-    MonthCell Window,                       // the LATEST six months' own figures taken together (the Δ cell's hover) — never the page on screen
-    decimal? WindowDelta,                   // running % now minus six months ago — "6-mo Δ" (null when there was no % back then); to date whichever page is on screen
+    IReadOnlyList<RunningCell> MonthCells,  // the month ends on screen, oldest first — the rolling window
+    MonthCell Window,                       // the LATEST months' own figures taken together, as many as are on screen (the Δ cell's hover) — never the window itself
+    decimal? WindowDelta,                   // running % now minus N months ago, N the months on screen — "N-mo Δ" (null when there was no % back then); to date whichever months are shown
     decimal? RunningPercent,                // running % to date — "Position now"
     decimal PositionMoney,                  // cumulative profit £ (the memo line)
-    decimal MoneySixMonthDelta,             // £ over the window — the trajectory's headline
+    decimal MoneyWindowDelta,               // £ over the latest N months — the trajectory's headline
     bool Stale);
 
 public sealed record MovementModel(
-    IReadOnlyList<DateTime> Months,            // the month columns on screen — paged back six at a time from the latest (2026-09-10)
+    IReadOnlyList<DateTime> Months,            // the month columns on screen — a rolling window of 6, 9 or 12, one month per step (2026-09-21)
     IReadOnlyList<MovementRow> Rows,
     IReadOnlyList<RunningCell> ColumnTotals,   // the combined book to date, per month end
     MonthCell TotalWindow,
@@ -80,4 +80,8 @@ public sealed record MovementModel(
     decimal? TotalRunningPercent,
     decimal TotalPositionMoney,
     IReadOnlyList<Project> Excluded,
-    decimal MonthPercentFloor);                // months invoicing under this show their £ only
+    decimal MonthPercentFloor)                 // months invoicing under this show their £ only
+{
+    /// <summary>The Δ column's label for the window on screen — "6-mo Δ", "12-mo Δ".</summary>
+    public string WindowDeltaLabel => $"{Months.Count}-mo Δ";
+}
