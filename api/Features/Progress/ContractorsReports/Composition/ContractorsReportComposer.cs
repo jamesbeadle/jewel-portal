@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Features.Progress.WhatsApp;
 using Jewel.JPMS.Contracts.Progress;
 
 namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
@@ -19,14 +18,14 @@ public sealed class ContractorsReportComposer
         if (entity is null) return null;
 
         var report = entity.ToModel();
-        var week = new WhatsAppWeek(report.PeriodStart, report.PeriodEnd);
+        var week = new ReportingWeek(report.PeriodStart, report.PeriodEnd);
         var updates = await ContractorsReportProgressReader.UpdatesInPeriodAsync(context, report.ProjectId, week, cancellationToken);
         var document = await ComposeAsync(report, week, updates, cancellationToken);
         return new ContractorsReportView(report, document, Choices(report, updates));
     }
 
     private async Task<ContractorsReportDocument> ComposeAsync(
-        ContractorsReport report, WhatsAppWeek week, IReadOnlyList<ContractorsReportUpdate> updates, CancellationToken cancellationToken)
+        ContractorsReport report, ReportingWeek week, IReadOnlyList<ContractorsReportUpdate> updates, CancellationToken cancellationToken)
     {
         var project = await context.Projects.AsNoTracking()
             .Where(row => row.ProjectId == report.ProjectId)

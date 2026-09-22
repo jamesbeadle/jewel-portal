@@ -111,14 +111,6 @@
             </div>
             <p class="text-xs text-content-subtle">Town and postcode power "Find subcontractors" on bid packages — local companies are searched near the site.</p>
 
-            <FormField Label="Site note senders (WhatsApp)">
-                <textarea class="field" rows="2" @bind="siteNoteSenderNames" placeholder="James Everitt"></textarea>
-            </FormField>
-            <p class="text-xs text-content-subtle">
-                The people whose messages in the site WhatsApp group are this project's site notes, one name
-                per line exactly as WhatsApp shows the sender. "Import WhatsApp week" on the Progress tab keeps
-                their messages for this project and leaves out senders listed on another project.
-            </p>
 
             <FormField Label="Xero site (tracking option)" Value="@xeroSiteName" OnChange="v => xeroSiteName = v" />
             <p class="text-xs text-content-subtle">
@@ -222,7 +214,6 @@
     private string town = "";
     private string postcode = "";
     private string xeroSiteName = "";
-    private string siteNoteSenderNames = "";
 
     // The Xero contact mapping as held: Xero's ContactID + the name as Xero holds it ("" = not
     // mapped). xeroContacts is null until Xero has been read — the select stays disabled until then.
@@ -273,7 +264,6 @@
         town = project.Town;
         postcode = project.Postcode;
         xeroSiteName = project.XeroSiteName ?? "";
-        siteNoteSenderNames = project.SiteNoteSenderNames ?? "";
         xeroContactId = project.XeroContactId ?? "";
         xeroContactName = project.XeroContactName ?? "";
         xeroContacts = null;
@@ -427,8 +417,7 @@
                     postcode.Trim(),
                     string.IsNullOrWhiteSpace(xeroSiteName) ? null : xeroSiteName.Trim(),
                     string.IsNullOrWhiteSpace(xeroContactId) ? null : xeroContactId.Trim(),
-                    string.IsNullOrWhiteSpace(xeroContactId) ? null : xeroContactName.Trim(),
-                    string.IsNullOrWhiteSpace(siteNoteSenderNames) ? null : siteNoteSenderNames.Trim()),
+                    string.IsNullOrWhiteSpace(xeroContactId) ? null : xeroContactName.Trim()),
                 CancellationToken.None);
             await Projects.RefreshAsync(CancellationToken.None);
             Close();

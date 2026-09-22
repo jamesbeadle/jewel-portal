@@ -115,7 +115,6 @@ builder.Services.AddScoped<IPaymentCertificateStore, HttpPaymentCertificateStore
 builder.Services.AddScoped<IProjectContractStore, HttpProjectContractStore>();
 builder.Services.AddScoped<IProgressStore, HttpProgressStore>();
 builder.Services.AddScoped<Jewel.JPMS.Features.Progress.SitePhotos.ISitePhotoStore, Jewel.JPMS.Features.Progress.SitePhotos.HttpSitePhotoStore>();
-builder.Services.AddScoped<Jewel.JPMS.Features.Progress.WhatsApp.IWhatsAppWeekIntake, Jewel.JPMS.Features.Progress.WhatsApp.HttpWhatsAppWeekIntake>();
 builder.Services.AddScoped<ISubcontractorStore, HttpSubcontractorStore>();
 builder.Services.AddScoped<IPortalStore, HttpPortalStore>();
 builder.Services.AddClientPortalServices();

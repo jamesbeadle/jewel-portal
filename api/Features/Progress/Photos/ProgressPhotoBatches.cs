@@ -5,7 +5,7 @@ namespace Jewel.JPMS.Api.Features.Progress.Photos;
 
 /// <summary>
 /// One batch of photographs onto one existing update, the way every caller does it — the page's
-/// form, the connector's add_progress_photos and the WhatsApp week intake: take the images through
+/// form, the connector's add_progress_photos and the site photo pool: take the images through
 /// the intake, then record the stored ones through the AddProgressPhotos command. When nothing at
 /// all was stored the update is untouched and the outcomes say why.
 /// </summary>

@@ -1,5 +1,4 @@
 using Jewel.JPMS.Api.Features.Documents;
-using Jewel.JPMS.Api.Features.Progress.WhatsApp;
 using Jewel.JPMS.Contracts.Progress;
 
 namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
@@ -9,7 +8,7 @@ namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
 /// fall on it. Pure, so the shape is pinned by tests.</summary>
 internal static class ContractorsReportDays
 {
-    public static IReadOnlyList<ContractorsReportDay> Group(WhatsAppWeek week, IReadOnlyList<ContractorsReportUpdate> updates) =>
+    public static IReadOnlyList<ContractorsReportDay> Group(ReportingWeek week, IReadOnlyList<ContractorsReportUpdate> updates) =>
         week.Days()
             .Where(IsWorkingDay)
             .Select(day => new ContractorsReportDay(day, Heading(day), EntriesOn(day, updates)))

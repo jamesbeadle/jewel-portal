@@ -38,6 +38,6 @@ public sealed class WeeklyReportIntakeConnectorTests
         var tool = AiToolCatalogue.Find(AiProgressPhotoTools.AddProgressPhotos)!;
         Assert.Equal(AiToolKind.Write, tool.Kind);
         Assert.Contains("list_sources", tool.Description);
-        Assert.Contains("Import WhatsApp week", tool.Description);
+        Assert.Contains("match_site_photos", tool.Description);
     }
 }

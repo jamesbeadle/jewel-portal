@@ -11,8 +11,8 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools;
 /// weekly-report spec, change 2). A tool call carries words, not files, so the images come from a
 /// SOURCE the portal can already reach — the attachments on an email tagged to a record, or a
 /// document filed on the project — by the source_id list_sources hands out. Photographs dropped
-/// into the chat never reach the portal; the site WhatsApp export goes through the Progress
-/// tab's "Import WhatsApp week" instead. Same intake as the page's form: JPEG, PNG and HEIC, up
+/// into the chat never reach the portal; files in a folder on the laptop come in through the Site
+/// photos pool and land by fingerprint. Same intake as the page's form: JPEG, PNG and HEIC, up
 /// to fifty per call, deduplicated on content, resized on store, one outcome per image.
 /// </summary>
 internal static partial class AiProgressPhotoTools
@@ -38,7 +38,7 @@ internal static partial class AiProgressPhotoTools
             + "folder on the laptop are not sources: for those the person drops the files on the Site "
             + "photos page and you match them by fingerprint (match_site_photos, then "
             + "file_site_photos). Otherwise ask the user to email them to the projects mailbox (then "
-            + "pass the attachment source_ids) or to use Import WhatsApp week on the Progress tab.",
+            + "pass the attachment source_ids).",
             AiToolSchema.Object(
                 ("progressUpdateId", "string", "The update's id — list_progress or create_progress_update gives it.", true),
                 ("sourceIds", "array", "The images' source_ids from list_sources, in the order they should appear.", true)),

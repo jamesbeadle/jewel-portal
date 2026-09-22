@@ -55,8 +55,7 @@ public sealed class ProjectEntity
     [MaxLength(64)]      public string? XeroContactId { get; set; }
     [MaxLength(256)]     public string? XeroContactName { get; set; }
 
-    // The people whose WhatsApp messages are this project's site notes, one name per line as
-    // WhatsApp shows the sender (2026-09-16). Read by the WhatsApp week intake to keep this
-    // project's messages and set aside another project's.
+    // Retired 2026-09-22 with the Import WhatsApp week page: nothing reads or writes it, and the
+    // column stays only so the schema needs no migration.
     [MaxLength(1024)]    public string? SiteNoteSenderNames { get; set; }
 }
