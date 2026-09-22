@@ -1,10 +1,12 @@
 namespace Jewel.JPMS.Models;
 
 /// <summary>
-/// The spreadsheet's score, exactly (decision 2026-09-15, Nigel: match the spreadsheet):
-/// score = max(0, (Σ rate − Σ minus) ÷ (rated items × 10)). An item with no rate is not in the
-/// denominator, so a "not seen" item costs nothing; the class penalties the key describes are
-/// NOT applied by the portal — Minus is whatever the officer keyed. Null until an item is rated.
+/// The officer's sheet's score, exactly (her workbook of 15 Sep 2026, Analytics!H11):
+/// rate average − the class penalties, floored at zero. The rate average is Σ rate ÷ (rated
+/// items × 10) — an item with no rate is not in the denominator, so a "not seen" item costs
+/// nothing. The penalties are HsAuditClassPenalties: once per class present, plus the repeat.
+/// The hand-keyed Minus of the 27 Aug workbook is no longer in the score. Null until an item is
+/// rated.
 /// </summary>
 public static class HsAuditScoring
 {
@@ -12,11 +14,20 @@ public static class HsAuditScoring
 
     public static decimal? ScoreOf(IEnumerable<HsAuditItem> items)
     {
+        var everyItem = items.ToList();
+        var rateAverage = RateAverageOf(everyItem);
+        if (rateAverage is null) return null;
+        var penalty = HsAuditClassPenalties.TotalFor(everyItem);
+        return Math.Max(0m, Math.Round(rateAverage.Value - penalty, 4));
+    }
+
+    public static decimal? RateAverageOf(IReadOnlyCollection<HsAuditItem> items)
+    {
         var rated = items.Where(item => item.Rate is not null).ToList();
         if (rated.Count == 0) return null;
-        var earned = rated.Sum(item => (int)item.Rate!.Value) - rated.Sum(item => item.Minus);
+        var earned = rated.Sum(item => (int)item.Rate!.Value);
         var available = rated.Count * PointsPerItem;
-        return Math.Max(0m, Math.Round((decimal)earned / available, 4));
+        return Math.Round((decimal)earned / available, 4);
     }
 
     private const decimal FairFrom = 0.70m;

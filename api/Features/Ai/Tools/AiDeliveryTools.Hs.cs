@@ -13,7 +13,8 @@ internal static partial class AiDeliveryTools
     private static AiTool ListHsAudits() => new(
         "list_hs_audits",
         "A project's H&S site audits (HSA refs), newest first: inspection date, type, safety "
-        + "officer, site manager, the score as the spreadsheet computes it with its rating band "
+        + "officer, site manager, the score as her sheet computes it (rate average less a penalty "
+        + "per class present, once each) with its rating band "
         + "(Poor / Fair / Good / Very good), the previous audit's score, and status Draft → Issued "
         + "→ Closed. Issue mints the corrective actions; get_hs_audit reads the items.",
         AiToolSchema.Object(
@@ -24,9 +25,10 @@ internal static partial class AiDeliveryTools
 
     private static AiTool GetHsAudit() => new(
         "get_hs_audit",
-        "One H&S site audit with every item of its framework in order — 11 sections, 182 items — "
-        + "each with the officer's comment code (N/A, N, N/C, N/S, R), rate (0 / 5 / 10), class "
-        + "(A–E), minus, time-scale (I, 1, 3, 7, 1M, O), findings, owner and date rectified, plus "
+        "One H&S site audit with every item of its framework in order — 11 sections, 165 items "
+        + "on the 2026-09-15 framework (182 on 2026-08-27) — each with the officer's comment code "
+        + "(N/A, N, N/C, N/S, R), rate (0 / 5 / 10), class (A–E), time-scale (I, 1, 3, 7, 1M, O), "
+        + "findings, owner and date rectified, plus "
         + "the corrective action id Issue minted for it. Every item carries the hsAuditItemId that "
         + "update_hs_audit_items takes.",
         AiToolSchema.Object(

@@ -65,8 +65,8 @@ internal sealed partial class LabourAndBackOfficeActions
             Area: "Health & safety",
             Description: "Starts an H&S site audit on a project — the header (type, inspection "
                 + "date, safety officer, site manager, summary of activities, operative count) — "
-                + "and plants every item of the inspection framework blank (11 sections, 182 "
-                + "items). Returns the audit with its HSA reference; get_hs_audit then lists the "
+                + "and plants every item of the current inspection framework blank (11 sections, "
+                + "165 items, version 2026-09-15). Returns the audit with its HSA reference; get_hs_audit then lists the "
                 + "items with the ids update_hs_audit_items takes.",
             CommandType: typeof(CreateHsAudit),
             ResultType: typeof(HsAudit),
@@ -98,10 +98,12 @@ internal sealed partial class LabourAndBackOfficeActions
             Name: "update_hs_audit_items",
             Area: "Health & safety",
             Description: "Writes what the officer found on any number of a site audit's items — "
-                + "each entry replaces that item's comment, rate (0 / 5 / 10), class (A–E), minus, "
+                + "each entry replaces that item's comment, rate (0 / 5 / 10), class (A–E), "
                 + "time-scale, findings, owner name and date rectified wholesale; items not named "
-                + "are untouched. The score is recomputed from every item after the write (the "
-                + "spreadsheet's rule: (Σ rate − Σ minus) ÷ (rated × 10), unrated items excluded).",
+                + "are untouched (minus is carried but no longer scored). The score is recomputed "
+                + "from every item after the write (the officer's sheet's rule: Σ rate ÷ (rated × 10), "
+                + "unrated items excluded, less a penalty for each class present on the report once — "
+                + "A 25%, B 15%, C 5%, D 1% — and 5% once if any item is a repeat).",
             CommandType: typeof(UpdateHsAuditItems),
             ResultType: typeof(HsAuditView),
             AuthorisationType: typeof(UpdateHsAuditItemsAuthorisation),

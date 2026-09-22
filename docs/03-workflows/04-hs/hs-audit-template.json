@@ -83,7 +83,7 @@
   ]
  },
  "scoring": {
-  "rule": "score = max(0, (sum(rate) - sum(minus)) / (count(rated items) * 10)); unrated rows (blank rate) are excluded from the denominator; class penalties in the key are NOT applied automatically - the Minus column is entered by hand (decision 2026-09-15: match the spreadsheet)",
+  "rule": "SUPERSEDED 2026-09-22 by hs-audit-template-2026-09-15.json: score = max(0, rateAverage - classPenalty), the penalty charged once per class present. This 27 Aug rule was score = max(0, (sum(rate) - sum(minus)) / (count(rated items) * 10)) with Minus hand-entered and no class penalty.",
   "formula": "=IFERROR(MAX(0,(SUM(F29:F220)-SUM(H29:H220))/(COUNT(F29:F220)*10)),\"\")"
  },
  "itemColumns": [

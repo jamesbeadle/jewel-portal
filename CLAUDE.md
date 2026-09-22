@@ -614,18 +614,28 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   can make the attached work in the portal on the H&S phase"). `HsAudit` (per-project `HSA-####`,
   `HsAuditStatus` Draft → Issued → Closed, the front-sheet fields, `Score`, `PreviousScore`,
   `TemplateVersion`) and `HsAuditItem` (one row per framework item: `HsAuditComment`,
-  `HsAuditRate` 0 / 5 / 10, `HsAuditClass` A–E, hand-keyed `Minus`, `HsAuditTimeScale`, findings,
-  `OwnerName`, `DateRectified`, `HsRecordId`). `HsAuditTemplate` (contracts/Models) IS the
-  workbook — 11 sections, 182 items, `Version` "2026-08-27" stamped on every audit planted from
-  it; a change to the framework is a new version, never an edit of a planted audit. The
-  machine-readable extract and the scoping note live in `docs/03-workflows/04-hs/`.
-- **The score is the spreadsheet's, exactly** (`HsAuditScoring`, the one rule, pinned by
-  `HsAuditTests.Score_isTheSpreadsheets_onByFrance`): `max(0, (Σ rate − Σ minus) ÷ (rated items
-  × 10))`, unrated rows out of the denominator, banded Poor < 70% / Fair / Good 85–94 / Very good
-  95+. The class penalties her key describes (A −25% …) are NOT applied by the portal — Nigel's
-  decision, "match the spreadsheet for now"; `Minus` is whatever the officer keys. Recomputed on
-  every `UpdateHsAuditItems` and on Issue; never computed client-side except as the form's live
-  chip (`HsAuditItemDraft.LiveScore`, same rule).
+  `HsAuditRate` 0 / 5 / 10, `HsAuditClass` A–E, `Minus` (stored, no longer scored — see below),
+  `HsAuditTimeScale`, findings, `OwnerName`, `DateRectified`, `HsRecordId`). `HsAuditTemplate`
+  (contracts/Models) IS the workbook — 11 sections; `Version` "2026-09-15" is her simplified
+  framework of 15 Sep (165 items, `HsAuditTemplateItems.Current`), `FirstVersion` "2026-08-27"
+  her original (182); every audit is stamped with the version it was planted from, and a change
+  to the framework is a new version, never an edit of a planted audit. Only sections 2, 8 (from
+  8.07), 9 and 10 renumbered between the two; `HsAuditItemLineage.CurrentCodeFor(version, code)`
+  is the one map (the fire bell's 10.03 is now 10.02; Lorries & Trailers has no successor). The
+  machine-readable extracts and the scoping note live in `docs/03-workflows/04-hs/`.
+- **The score is her sheet's, exactly — and since 2026-09-22 the class penalties bite**
+  (`HsAuditScoring` + `HsAuditClassPenalties`, the one rule, pinned by
+  `HsAuditTests.Score_isTheSpreadsheets_onByFrance`): `max(0, rateAverage − penalty)` where
+  `rateAverage = Σ rate ÷ (rated items × 10)` (unrated rows out of the denominator) and the
+  penalty is charged ONCE PER CLASS PRESENT anywhere on the report — A 0.25, B 0.15, C 0.05,
+  D 0.01 — plus 0.05 once if any item's comment is R (repeat); two D findings cost one point, not
+  two (Katy-Louise, 15 Sep: "Yes please — Jeremy has since added in a column for the deductions";
+  the rule is her sheet's `Analytics!H11`). Banded Poor < 70% / Fair / Good 85–94 / Very good
+  95+. The hand-keyed `Minus` of the 27 Aug workbook is NOT in the score any more: the column is
+  kept on the row and the form shows `HsAuditClassPenalties.PointsOff` (the sheet's own Minus
+  reading) beside it. Recomputed on every `UpdateHsAuditItems` and on Issue; never computed
+  client-side except as the form's live chip (`HsAuditItemDraft.LiveScore`, same rule). Under
+  this rule By France's HSA-0001 reads 84% Fair (one C, four Ds).
 - **Issue is the officer's declaration and mints the corrective actions** (`IssueHsAuditHandler`
   → `HsAuditCorrectiveActions`, pure): one `HsRecord` of kind `CorrectiveAction` per FINDING — an
   item with an owner named OR a rate below 10, unless marked N/A — derived from the row's own

@@ -121,7 +121,7 @@
             <Notice Tone="Tone.Muted" Class="mb-5">
                 Rate 0 not in place · 5 in place but a week out of date · 10 up to date. Class A prosecution · B prohibition · C improvement notice · D minor · E compliant.
                 Time-scale I immediately · 1 within 24 hours · 3 / 7 days · 1M a month · O ongoing. Comment N/A · N note · N/C not checked · N/S not seen · R repeat.
-                Score = (Σ rate − Σ minus) ÷ (rated items × 10); unrated items don't count. Under 70% poor · 70–84 fair · 85–94 good · 95+ very good.
+                Score = Σ rate ÷ (rated items × 10), less a penalty for each class present on the report — A 25% · B 15% · C 5% · D 1%, once per class not per finding, and 5% once for any repeat; unrated items don't count. Under 70% poor · 70–84 fair · 85–94 good · 95+ very good.
             </Notice>
 
             @foreach (var section in HsAuditTemplate.Sections)
