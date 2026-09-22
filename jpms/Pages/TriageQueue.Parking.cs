@@ -187,6 +187,7 @@ public partial class TriageQueue
         triageEntireThread = null;
         useThreadTags = null;
         threadTagsNameAProject = null; // re-classified for the new email by TryPrefillProjectFromEmailAsync
+        threadTagRecords = Array.Empty<LinkableRecord>(); // re-resolved for the new email by LoadThreadTagRecordsAsync
         // The document-triage ticks are drafted against ONE email's attachments — leaving them
         // across a selection change would send another email's attachment ids against this
         // message. Parked above, reset here, restored below like every other per-email draft.
@@ -203,8 +204,8 @@ public partial class TriageQueue
         // The email reads in the window OPPOSITE the list, side by side — desktop's version of
         // the old list/detail split, but with both halves loadable anywhere.
         workspace.ShowOpposite(PanelKind.Email, PanelKind.Inbox);
-        // Body and thread are independent live reads — fetch them side by side.
-        await Task.WhenAll(LoadDetailAsync(item), LoadThreadAsync(item));
+        // Body, thread and the thread's tagged records are independent live reads — fetch them side by side.
+        await Task.WhenAll(LoadDetailAsync(item), LoadThreadAsync(item), LoadThreadTagRecordsAsync(item));
         // A restored draft brings its record picks back, so the pool they came from is refetched.
         if (restoredParkedWork && !string.IsNullOrWhiteSpace(triageProjectId))
             await ReloadLinkRecordsKeepingPicksAsync();
