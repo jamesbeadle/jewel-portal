@@ -92,7 +92,7 @@ public partial class ProfitSummary
         selectionInitialised = true;
         // The table's per-project loads, the Xero panel's single read and the remembered table
         // view are independent regions with independent gates — load them in parallel.
-        await Task.WhenAll(LoadSelectedAsync(), LoadSitePnlAsync(), LoadTableViewAsync());
+        await Task.WhenAll(LoadSelectedAsync(), LoadSitePnlAsync(), LoadViewAsync());
     }
 
     private async Task OnSelectionChangedAsync(IReadOnlyCollection<string> ids)

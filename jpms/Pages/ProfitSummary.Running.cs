@@ -31,22 +31,33 @@ public partial class ProfitSummary
     // control changes it for the session.
     private decimal monthPercentFloor = RunningMovement.DefaultMonthPercentFloor;
 
-    // ---- Paging the grid back in time (Jeremy, 2026-09-10) ---------------------------------
-    // "Go back further… see what the run rate was prior": the grid's six month columns end at
-    // runningWindowEnd — this month until the reader pages, then six months earlier per press,
-    // a plain page of six at a time, never a wider grid. Paging moves ONLY the month columns:
-    // "6-mo Δ" and "Position now" keep meaning what they say — now against six months ago, and
-    // the job to date — whichever months are on screen, so the story reads "this is where it
-    // was, this is where it is". The trajectory cards and the cumulative charts stay on the
-    // latest months; the Excel export carries whatever window is on screen. Page state only —
-    // reloading lands on the latest six months again, which is where every reader starts.
+    // ---- The rolling window (Jeremy, 2026-09-10 and 2026-09-21) ----------------------------
+    // "Go back further… see what the run rate was prior", then "read a job's run as a continuous
+    // line, not in blocks": the grid shows the RunningWindowMonths months (6, 9 or 12, remembered
+    // per user) ending at runningWindowEnd — this month on first open, one month earlier or later
+    // per press, never past the first month any job on the grid has data for and never past this
+    // month. A window reaching back before the grid's first month is trimmed to the months that
+    // exist, so a four-month job in a twelve-month window is four columns, not eight blanks.
+    // Moving the window moves ONLY the month columns: "N-mo Δ" is the running % now against N
+    // months ago for the N months on screen, and "Position now" is the job to date, whichever
+    // months are shown. The trajectory cards and the stale check keep their own fixed six months;
+    // the Excel export carries whatever window is on screen.
     private DateTime runningWindowEnd = ThisMonth;
 
-    private const int RunningWindowMonths = 6;
+    private const int TrajectoryMonths = 6;
+    private const int StaleMonths = 6;
     private static DateTime ThisMonth => new(DateTime.Today.Year, DateTime.Today.Month, 1);
 
-    private static List<DateTime> WindowEndingAt(DateTime end) =>
-        Enumerable.Range(0, RunningWindowMonths).Select(offset => end.AddMonths(offset - (RunningWindowMonths - 1))).ToList();
+    private static List<DateTime> WindowEndingAt(DateTime end, int length) =>
+        Enumerable.Range(0, length).Select(offset => end.AddMonths(offset - (length - 1))).ToList();
+
+    private List<DateTime> MonthsOnScreen(IReadOnlyList<Project> projects)
+    {
+        var window = WindowEndingAt(runningWindowEnd, RunningWindowMonths);
+        if (EarliestGridMonth(projects) is not DateTime earliest) return window;
+        var shown = window.Where(month => month >= earliest).ToList();
+        return shown.Count == 0 ? window : shown;
+    }
 
     // The earliest stored month across the jobs on the grid bounds the paging: a page that
     // could show nothing but "—" isn't offered.
@@ -61,16 +72,16 @@ public partial class ProfitSummary
 
     private bool IsLatestWindow => runningWindowEnd >= ThisMonth;
     private bool CanPageEarlier => EarliestGridMonth(GridProjects) is DateTime earliest
-                                   && WindowEndingAt(runningWindowEnd)[0] > earliest;
+                                   && MonthsOnScreen(GridProjects)[0] > earliest;
 
     private void PageEarlier()
     {
-        if (CanPageEarlier) runningWindowEnd = runningWindowEnd.AddMonths(-RunningWindowMonths);
+        if (CanPageEarlier) runningWindowEnd = runningWindowEnd.AddMonths(-1);
     }
 
     private void PageLater()
     {
-        var later = runningWindowEnd.AddMonths(RunningWindowMonths);
+        var later = runningWindowEnd.AddMonths(1);
         runningWindowEnd = later > ThisMonth ? ThisMonth : later;
     }
 
@@ -81,10 +92,15 @@ public partial class ProfitSummary
     private static decimal ProfitOf(XeroSiteMonthlyPnl row) =>
         row.Income - row.CostOfSales - row.OperatingExpenses;
 
-    /// <summary>The grid's model for the window on screen (the paged one) — or, with
-    /// <paramref name="windowEnd"/> given, for a window of the caller's choosing: the trajectory
-    /// cards always read the latest six months.</summary>
-    private MovementModel? MovementFor(IReadOnlyList<Project> projects, DateTime? windowEnd = null)
+    /// <summary>The grid's model for the window on screen.</summary>
+    private MovementModel? MovementFor(IReadOnlyList<Project> projects) =>
+        MovementFor(projects, MonthsOnScreen(projects));
+
+    /// <summary>The trajectory cards' model: always the latest six months, whatever the grid shows.</summary>
+    private MovementModel? TrajectoryMovementFor(IReadOnlyList<Project> projects) =>
+        MovementFor(projects, WindowEndingAt(ThisMonth, TrajectoryMonths));
+
+    private MovementModel? MovementFor(IReadOnlyList<Project> projects, List<DateTime> months)
     {
         var all = EffectivePnlRows();
         if (all is null || all.Count == 0) return null;
@@ -92,10 +108,11 @@ public partial class ProfitSummary
             .GroupBy(row => row.ProjectId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
 
-        // The six month columns on screen — the latest six (the mock's window) unless paged —
-        // and, separately, the latest six, which is what "6-mo Δ" always compares across.
-        var months = WindowEndingAt(windowEnd ?? runningWindowEnd);
-        var latestMonths = WindowEndingAt(ThisMonth);
+        // The month columns on screen, and separately the same number of LATEST months, which
+        // is what "N-mo Δ" compares across whichever months are shown; the stale check keeps
+        // its own six.
+        var latestMonths = WindowEndingAt(ThisMonth, months.Count);
+        var staleMonths = WindowEndingAt(ThisMonth, StaleMonths);
 
         static MonthCell CellFor(List<XeroSiteMonthlyPnl> pnl, Func<XeroSiteMonthlyPnl, bool> inRange) =>
             new(pnl.Where(inRange).Sum(row => row.Income),
@@ -126,11 +143,11 @@ public partial class ProfitSummary
             return cells;
         }
 
-        // "6-mo Δ": the running % to date against the running % six months ago — the latest
+        // "N-mo Δ": the running % to date against the running % N months ago — the latest
         // window's baseline whatever months are on screen (null baseline — nothing invoiced
         // back then — means no honest Δ, the "—"). With the latest window on screen this is
-        // exactly the last column against the month before the first, as it always was.
-        static decimal? SixMonthDelta(List<XeroSiteMonthlyPnl> pnl, DateTime latestStart, MonthCell toDate) =>
+        // exactly the last column against the month before the first.
+        static decimal? WindowDelta(List<XeroSiteMonthlyPnl> pnl, DateTime latestStart, MonthCell toDate) =>
             toDate.Percent is decimal now && RunningBefore(pnl, latestStart) is decimal from ? now - from : (decimal?)null;
 
         List<MonthCell> OwnCellsFor(List<XeroSiteMonthlyPnl> pnl, List<DateTime> window) => window
@@ -150,20 +167,20 @@ public partial class ProfitSummary
             included.Add(pnl);
 
             var runningCells = RunningFor(pnl, OwnCellsFor(pnl, months));
-            // The to-date columns read the latest six months, not the months on screen.
+            // The to-date columns read the latest months, not the months on screen.
             var window = CellFor(pnl, row => row.Month >= latestMonths[0]);
             var running = CellFor(pnl, _ => true);
-            // Stale needs history: a job whose data only starts inside the window isn't
+            // Stale needs history: a job whose data only starts inside the six months isn't
             // "stalled", it's young — only flag silence on jobs that were already running.
-            var stale = OwnCellsFor(pnl, latestMonths).All(cell => Math.Abs(cell.Profit) < RunningMovement.ZeroThreshold
-                                                                   && Math.Abs(cell.Income) < RunningMovement.ZeroThreshold)
-                        && pnl.Any(row => row.Month < latestMonths[0]);
+            var stale = OwnCellsFor(pnl, staleMonths).All(cell => Math.Abs(cell.Profit) < RunningMovement.ZeroThreshold
+                                                                  && Math.Abs(cell.Income) < RunningMovement.ZeroThreshold)
+                        && pnl.Any(row => row.Month < staleMonths[0]);
 
             rows.Add(new MovementRow(
                 project,
                 runningCells,
                 window,
-                SixMonthDelta(pnl, latestMonths[0], running),
+                WindowDelta(pnl, latestMonths[0], running),
                 running.Percent,
                 running.Profit,
                 window.Profit,
@@ -181,7 +198,7 @@ public partial class ProfitSummary
 
         return new MovementModel(
             months, rows, columnTotals,
-            totalWindow, SixMonthDelta(combined, latestMonths[0], totalRunning),
+            totalWindow, WindowDelta(combined, latestMonths[0], totalRunning),
             totalRunning.Percent,
             rows.Sum(row => row.PositionMoney),
             excluded, monthPercentFloor);
@@ -194,8 +211,8 @@ public partial class ProfitSummary
             .GroupBy(row => row.ProjectId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
 
-        // Seven month-end points: the window's six intervals need a starting position.
-        var points = Enumerable.Range(0, 7).Select(offset => movement.Months[0].AddMonths(offset - 1)).ToList();
+        // One more month-end point than the window has months: its intervals need a starting position.
+        var points = Enumerable.Range(0, movement.Months.Count + 1).Select(offset => movement.Months[0].AddMonths(offset - 1)).ToList();
 
         var cards = new List<TrajectoryCard>();
         foreach (var row in movement.Rows)
@@ -236,7 +253,7 @@ public partial class ProfitSummary
                 budget is decimal band ? YFor(band) : null,
                 underBudget ? "#c25555" : "#2ea065",
                 row.PositionMoney,
-                row.MoneySixMonthDelta,
+                row.MoneyWindowDelta,
                 budget,
                 row.Stale));
         }

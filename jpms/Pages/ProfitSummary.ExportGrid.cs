@@ -47,7 +47,7 @@ public partial class ProfitSummary
     {
         var columns = new List<ExcelColumn> { new("Project", Width: GridLabelColumnWidth) };
         columns.AddRange(movement.Months.Select(month => new ExcelColumn(month.ToString("MMM yy"), Width: GridMonthColumnWidth)));
-        columns.Add(new ExcelColumn("6-mo Δ", Width: GridMonthColumnWidth));
+        columns.Add(new ExcelColumn(movement.WindowDeltaLabel, Width: GridMonthColumnWidth));
         columns.Add(new ExcelColumn("Position now", Width: GridMonthColumnWidth));
         var columnCount = columns.Count;
 
@@ -73,7 +73,7 @@ public partial class ProfitSummary
 
         AddMergedRow(Band(new ExcelStyledCell("Running profit by month", GridBandTitle)));
         AddMergedRow(Band(new ExcelStyledCell(
-            $"Xero site P&L, {BasisLabel} · months {movement.Months[0]:MMM yy} – {movement.Months[^1]:MMM yy} as on screen · 6-mo Δ and Position now are the job to date · exported {DateTime.Now:dd MMM yyyy HH:mm} · month % floor £{movement.MonthPercentFloor:N0}",
+            $"Xero site P&L, {BasisLabel} · months {movement.Months[0]:MMM yy} – {movement.Months[^1]:MMM yy} as on screen · {movement.WindowDeltaLabel} and Position now are the job to date · exported {DateTime.Now:dd MMM yyyy HH:mm} · month % floor £{movement.MonthPercentFloor:N0}",
             GridBandText)));
         AddMergedRow(new object?[]
         {
