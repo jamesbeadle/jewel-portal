@@ -25,9 +25,14 @@ public static class ValuationDue
 
     public static bool IsOverdue(Project project) => Of(project) == Status.Overdue;
 
-    // The portfolio page filtered to the overdue rows — where the dashboard tile lands.
+    public static bool IsDueSoon(Project project) => Of(project) == Status.DueSoon;
+
+    // The portfolio page filtered to the overdue rows — where the dashboard tile lands — and to
+    // the due-soon rows, where the tile's second line lands (2026-09-21, agreed with Jeremy).
     public const string OverdueFilterQuery = "valuations=overdue";
     public const string OverdueFilterRoute = "/projects?" + OverdueFilterQuery;
+    public const string DueSoonFilterQuery = "valuations=due-soon";
+    public const string DueSoonFilterRoute = "/projects?" + DueSoonFilterQuery;
 
     // Where a valuation is chased: the project's live Valuation Report, where the claim is raised.
     // A list reached BECAUSE valuations are due (the overdue-filtered portfolio, the dashboard's

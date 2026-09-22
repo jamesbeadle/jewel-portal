@@ -41,10 +41,25 @@
         <div class="grid grid-cols-2 @(Tiles.Count >= 4 ?"lg:grid-cols-4" : "lg:grid-cols-3") gap-3 md:gap-4 mb-8">
             @foreach (var tile in Tiles)
             {
-                <a href="@tile.Href" class="panel p-5 hover:border-line-strong hover:bg-surface-raised transition">
-                    <MetricStat Label="@tile.Label" Value="@tile.Value"
-                                DeltaLabel="@tile.Note" IsDeltaPositive="@(!tile.IsBad)" />
-                </a>
+                @if (tile.SecondLine is { } secondLine)
+                {
+                    @* Two destinations on one tile — the headline and its second line each link
+                       on their own, so the panel is the frame and neither anchor nests in the other. *@
+                    <div class="panel p-5 flex flex-col gap-2 hover:border-line-strong transition">
+                        <a href="@tile.Href" class="block">
+                            <MetricStat Label="@tile.Label" Value="@tile.Value"
+                                        DeltaLabel="@tile.Note" IsDeltaPositive="@(!tile.IsBad)" />
+                        </a>
+                        <a href="@secondLine.Href" class="text-sm font-medium text-warning hover:underline">@secondLine.Label</a>
+                    </div>
+                }
+                else
+                {
+                    <a href="@tile.Href" class="panel p-5 hover:border-line-strong hover:bg-surface-raised transition">
+                        <MetricStat Label="@tile.Label" Value="@tile.Value"
+                                    DeltaLabel="@tile.Note" IsDeltaPositive="@(!tile.IsBad)" />
+                    </a>
+                }
             }
         </div>
     }
