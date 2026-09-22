@@ -28,7 +28,8 @@ internal static partial class AiDeliveryTools
         "One H&S site audit with every item of its framework in order — 11 sections, 165 items "
         + "on the 2026-09-15 framework (182 on 2026-08-27) — each with the officer's comment code "
         + "(N/A, N, N/C, N/S, R), rate (0 / 5 / 10), class (A–E), time-scale (I, 1, 3, 7, 1M, O), "
-        + "findings, owner and date rectified, plus "
+        + "findings, owner and date rectified, its currentCode on the current framework (null when "
+        + "the item was dropped — compare audits across versions by currentCode, never by code), plus "
         + "the corrective action id Issue minted for it. Every item carries the hsAuditItemId that "
         + "update_hs_audit_items takes.",
         AiToolSchema.Object(
@@ -70,7 +71,7 @@ internal static partial class AiDeliveryTools
             ok = true,
             audit = AuditRow(view.Audit),
             sections = HsAuditTemplate.Sections.Select(section => new { section.Number, section.Name }),
-            items = view.Items.Select(AuditItemRow)
+            items = view.Items.Select(item => AuditItemRow(item, view.Audit.TemplateVersion))
         });
     }
 
@@ -113,10 +114,11 @@ internal static partial class AiDeliveryTools
         audit.ClosedAt
     };
 
-    private static object AuditItemRow(HsAuditItem item) => new
+    private static object AuditItemRow(HsAuditItem item, string templateVersion) => new
     {
         item.HsAuditItemId,
         item.Code,
+        currentCode = HsAuditItemLineage.CurrentCodeFor(templateVersion, item.Code),
         item.Section,
         item.Name,
         comment = item.Comment?.Code(),
