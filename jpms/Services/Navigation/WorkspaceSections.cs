@@ -83,9 +83,9 @@ public static class WorkspaceSections
         "Sales",
         new[]
         {
-            new WorkspaceTab("Leads", "/sales/leads", DesktopNavigation.AllInternalRoles),
-            new WorkspaceTab("Inbox", "/sales/inbox", DesktopNavigation.AllInternalRoles),
-            new WorkspaceTab("Strategies", "/sales/strategies", DesktopNavigation.AllInternalRoles)
+            new WorkspaceTab("Leads", "/sales/leads", NavigationRoles.AllInternalRoles),
+            new WorkspaceTab("Inbox", "/sales/inbox", NavigationRoles.AllInternalRoles),
+            new WorkspaceTab("Strategies", "/sales/strategies", NavigationRoles.AllInternalRoles)
         });
 
     public static readonly IReadOnlyList<WorkspaceSectionInfo> All =

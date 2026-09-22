@@ -137,6 +137,8 @@
                            Emails tagged to the record's quoting reference or (once approved) its V-ref
                            in mailbox triage appear here, so the correspondence behind the variation is
                            visible where the record lives — not only on the project's Communications tab. *@
+                    @if (Session.MayReadRecordEmails)
+                    {
                     <div class="panel p-5">
                         <RecordCorrespondencePanel Type="RecordType.VariationQuote" RecordId="@VariationOrderId"
                                                    RecordReference="@order.Reference" ProjectId="@ProjectId"
@@ -149,6 +151,7 @@
                             </EmptyMessage>
                         </RecordCorrespondencePanel>
                     </div>
+                    }
                 </div>
 
                 <div class="space-y-5">

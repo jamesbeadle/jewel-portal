@@ -1,5 +1,6 @@
 @namespace Jewel.JPMS.Features.Triage.Panels
 @inject IQueryClient Queries
+@inject SessionService Session
 
 @*
     A record's correspondence that reads itself: the one element a register page drops into an
@@ -37,6 +38,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        if (!Session.MayReadRecordEmails) return;
         if (RecordId == loadedRecordId) return;
         loadedRecordId = RecordId;
         emails = null;

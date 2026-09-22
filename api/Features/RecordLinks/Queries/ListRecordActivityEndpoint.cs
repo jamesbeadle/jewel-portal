@@ -19,7 +19,7 @@ public sealed class ListRecordActivityEndpoint
     }
 
     // Internal mailbox metadata: every internal role, no externals.
-    private static readonly RoleSet RolesThatMayReadActivity = JpmsRoleSets.AllInternal;
+    private static readonly RoleSet RolesThatMayReadActivity = RecordEmailRoles.Readers;
 
     [Function(nameof(ListRecordActivity))]
     public async Task<IActionResult> Run(

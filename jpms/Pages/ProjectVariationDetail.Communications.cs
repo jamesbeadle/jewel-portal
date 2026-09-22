@@ -190,6 +190,7 @@ public partial class ProjectVariationDetail
     // a whole thread synced across the approval, appears once).
     private async Task LoadEmailsAsync()
     {
+        if (!Session.MayReadRecordEmails) return;
         emailsError = null;
         try
         {

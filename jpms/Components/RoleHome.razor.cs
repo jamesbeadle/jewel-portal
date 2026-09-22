@@ -33,23 +33,24 @@ public partial class RoleHome
             or Role.QuantitySurveyor or Role.SiteManager or Role.HealthSafetyOfficer
             or Role.OfficeComplianceCoordinator or Role.OfficeAdmin or Role.SalesMarketing or Role.Accounts;
 
-    // Whoever chases or answers RFIs: the PM owns the change layer, the director watches it, the
-    // QS prices what comes out of it, and the architect is usually the one being waited on.
+    // Whoever chases or answers RFIs across the company: the PM owns the change layer, the
+    // director watches it, the QS prices what comes out of it, the site manager raises them.
+    // Mirrors the API's RfiDashboardRoles — the architect is NOT in it (the cross-project register
+    // is internal; an architect's RFIs are read project by project from their sidebar rows).
     private bool ShowRequests =>
         Role is Role.ProjectManager or Role.ManagingDirector or Role.QuantitySurveyor
-            or Role.Architect or Role.SiteManager;
+            or Role.SiteManager;
 
     private bool ShowValuations =>
         Role is Role.FinanceDirector or Role.ManagingDirector or Role.QuantitySurveyor;
 
     private bool ShowStaleRates => Role is Role.QuantitySurveyor;
 
-    // The FD's exposure (paying an uninsured subcontractor) and the MD's watch. Deliberately no
-    // wider: every row links into /directory, which only Admin, MD, FD and PM may browse — a
-    // panel whose links all land on "Not available" is worse than no panel. Widening the
-    // audience means widening the directory pages' CanAccess first.
+    // The FD's exposure (paying an uninsured subcontractor), the MD's watch, and the compliance
+    // coordinator's whole brief. Every row links into the directory and the compliance register,
+    // whose gates (DirectoryRoles.AllowedToReadCompliance) admit all three.
     private bool ShowExpiringDocuments =>
-        Role is Role.ManagingDirector or Role.FinanceDirector;
+        Role is Role.ManagingDirector or Role.FinanceDirector or Role.OfficeComplianceCoordinator;
 
     // Mirrors the API's XeroLedgerRoles.AllowedToAllocate (and the sidebar's FinanceRoles): the
     // finance-facing audience that works — or, for the MD, watches — the allocation queue.
@@ -57,7 +58,7 @@ public partial class RoleHome
         Role is Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager
             or Role.QuantitySurveyor;
 
-    // Mirrors the API's TriageRoles.AllowedToTriage (and DesktopNavigation.TriageRoles): the
+    // Mirrors the API's TriageRoles.AllowedToTriage (and NavigationRoles.TriageRoles): the
     // people who route inbound mail. The MD is in that gate precisely so this tile can link
     // straight into the queue it counts.
     private bool ShowTriage =>
@@ -228,7 +229,7 @@ public partial class RoleHome
         Role.OfficeAdmin => "The office work waiting on you.",
         Role.SalesMarketing => "The enquiries and bids waiting on you.",
         Role.Accounts => "The accounts work waiting on you.",
-        Role.Architect => "The requests waiting on your response.",
+        Role.Architect => "Your projects' RFIs, variations, instructions and drawings.",
         Role.Client => "Where your project has got to.",
         Role.Foreman or Role.SiteOperative => "Sign in, log your hours, flag anything wrong.",
         _ => "Everything assigned to you, in one place."
