@@ -912,6 +912,33 @@ so the first CI build is the compile check, and this tool is what stands in for 
   the page's `MaxVariationDescriptionChars` are all gone — never re-add a length on these
   fields. Titles keep their 256.
 
+## The sidebar and the home page are per role (jpms + api)
+
+- **Every sidebar row is gated by a named duty set in `NavigationRoles`** (2026-09-22, Nigel: "review
+  each role and build the appropriate homepage dashboard and side nav for their role"; the
+  2026-08-11 directors-only clamp is gone). Each set mirrors the API gate of the page its rows land
+  on — a row is never shown to a role its page would refuse — then narrows to the role's job:
+  the MD/FD/Admin see everything; PM and QS the whole project plus the money (`FinanceRoles`);
+  the Site Manager, H&S officer and the office roles the project without any money; Accounts the
+  to-do list, Weekly Cashflow and the aged reports; the Foreman the site rows and the Site
+  Operative My Day + Policies. A new row names its set from `NavigationRoles` (add one, mirroring
+  the page's gate, when none fits) — never a bare role list, never `DirectorRoles` by default.
+  `RoleHome` picks its panels by the same reads (a panel whose read the API would refuse for the
+  role is not shown — the architect's home carries no cross-project RFI panel for that reason).
+- **External logins.** A Client lands on `/client`, a Subcontractor on `/portal` (`Dashboard`
+  bounces both; `HomeRouteFor` sends Home there), each with Home alone on the rail. An Architect
+  gets a flat rail — RFIs, Variation Orders, Architect's Instructions, Documents — on the projects
+  that name their practice: `ListProjectsVisibleToUser(ArchitectId)` scopes the project list
+  through `ArchitectProjects` for a login whose only reach is Role.Architect (the endpoint fills
+  the id from the login, never the request; declared in `tools/permissions/policy.json`).
+- **The hard rule: no external person reads the mail stored behind a record.**
+  `RecordEmailRoles.Readers` (contracts, = AllInternal) is the ONE rule: the record-mail
+  endpoints and the connector's `read_record_emails` refuse outside it, and the widgets that
+  render tagged mail (`RecordCorrespondencePanel`, `RecordEmailList`, `RecordCorrespondenceSection`)
+  render nothing and read nothing outside it — `Session.MayReadRecordEmails`, judged on the roles
+  the person HOLDS, as the API judges. A page an external role can open never depends on a 403
+  being handled. A new widget that shows mail gates on the same reading.
+
 ## Record tabs & the in-view toolbar (jpms)
 
 - **The request chain renders as document tabs, not chips.** `RecordTabBar` (Components) is on
