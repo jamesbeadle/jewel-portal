@@ -199,7 +199,10 @@ sheet scores it: Σ rate ÷ (rated × 10), unrated rows excluded, less a penalty
 each class present once (A 25% · B 15% · C 5% · D 1%) and 5% once for any repeat,
 banded Poor < 70% / Fair / Good 85–94 / Very good 95+.
 Status Draft → Issued → Closed. "New audit" (type, date, officer, site manager)
-opens the form. **Actions**: the corrective actions on the H&S register, most
+opens the form; "Download PDF" on the form gives the report in the house layout
+to send on (any status; the portal never emails it). The H&S officer's home
+lists every open corrective action across the live sites and each site's last
+audit and any draft awaiting her Issue. **Actions**: the corrective actions on the H&S register, most
 minted by an audit's Issue; owner is a person's NAME (no login needed); status
 changed on the row; overdue rows in warning. **Register**: observations, near
 misses, incidents, toolbox talks, permits — "Log record".

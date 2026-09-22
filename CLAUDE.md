@@ -663,10 +663,32 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   `close_hs_audit`; page guides on both routes. Seed for the first record:
   `scripts/2026-09-15-seed-by-france-hs-audit.sql` (HSA-0001 on By France, Draft, her rows —
   a person presses Issue).
+- **The officer's home and her report** (2026-09-22, Katy-Louise's reply read as an ask: for
+  the portal to replace her spreadsheet she needs the screen she opens every morning and the
+  document she sends on). `RoleHome.ShowHsOfficer` (H&S officer + MD) renders `HsOfficerPanel`
+  (`jpms/Features/Hs/Home`): the open corrective actions across the LIVE sites, overdue first,
+  and each site's standing — the last issued audit with its score, and the Draft still awaiting
+  her Issue; three count tiles read the same `HsOfficerOverview` (pure), so tiles and rows never
+  disagree. It reads `ListHsRecords` and the new `ListHsAuditsAcrossProjects` (`GET hs-audits`,
+  `HsAuditRoles.Readers`; `list_hs_audits` with `projectId: "all"` on the connector). The
+  register's readings `HsRecord.OwnerDisplayName()` / `IsOpen()` / `IsOverdue()` live on the
+  model (contracts) — the project page and the home share them. **`GET hs-audits/{id}/pdf`**
+  (`HsAuditPdfRenderer` + `HsAuditReportText`, `api/Features/Hs/Audits/Documents`) is the
+  inspection report in the house style laid out as her sheet: front sheet, score in its band,
+  the keys, the eleven sections printing only the rows she wrote on
+  (`HsAuditReportText.IsWorthPrinting`), further comments, the two declarations; any status,
+  never stored, never emailed — "Download PDF" in the audit page's toolbar. The register, grid
+  and muted-line tables every house-style report draws are `DocumentTables`
+  (`api/Features/Documents`), shared with the Contractor's Report renderer; a renderer composes
+  them and never re-types a border. Download endpoints render inline with no separate handler,
+  as every other download in the api does — an accepted gap in the pattern audit.
 - **Not built yet (workflow 04 keeps them):** mobilisation checklist and gate, scheduled
   inspections with overdue escalation, incident investigation, permits-to-work, temporary works,
-  subcontractor RAMS/induction acceptance, the H&S officer's role-home tiles, a printable report
-  in her layout, `create_hs_audit_from_message` for the next audit she emails.
+  subcontractor RAMS/induction acceptance, `create_hs_audit_from_message` for the next audit she
+  emails; and from her 15 Sep replies (YBT, Phase 2 goal): site-manager comments on an action
+  with her notified, one digest per session of sign-offs to the site manager, officer-only close
+  on a visit or a photograph, and her other site checks (toolbox talks with attendance,
+  ladder/PUWER inspections, accident forms, first-aid kits, extinguishers).
 
 ## An external login carries its identity, and every external write is scoped by it (api + jpms)
 

@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Features.Documents;
 using Jewel.JPMS.Contracts.Hs;
 
 namespace Jewel.JPMS.Api.Features.Hs.Audits.Documents;
