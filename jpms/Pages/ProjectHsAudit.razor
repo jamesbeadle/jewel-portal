@@ -44,6 +44,8 @@
                         <Pill Tone="Tone.Muted">Not yet scored</Pill>
                     }
                     <Toolbar>
+                        <ToolbarButton Icon="download" Label="Download PDF — the inspection report in the house layout, to send on" Href="@($"/api/hs-audits/{HsAuditId}/pdf")" Download="true" />
+                        <ToolbarDivider />
                         <ToolbarButton Icon="chevron-left" Label="Back to the H&S tab" OnClick="BackToTab" />
                     </Toolbar>
                 </Actions>
