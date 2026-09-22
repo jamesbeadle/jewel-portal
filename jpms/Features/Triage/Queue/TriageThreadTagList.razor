@@ -1,0 +1,60 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+@using Jewel.JPMS.Features.Triage
+@using Jewel.JPMS.Features.Triage.Panels
+
+@* The tags the open email's thread already carries, on the "Use existing tags" row: the first
+   few as chips, and when there are more a "+7 more" toggle that opens the whole list — every
+   tag as a link to its record with what the record IS under it, so a thread on ten records is
+   read in one panel rather than guessed from three chips and a number (2026-09-22). *@
+<span class="text-content-subtle inline-flex items-center gap-1 flex-wrap">
+    <span>·</span>
+    @foreach (var (tag, index) in Tags.Take(ChipsShown).Select((tag, index) => (tag, index)))
+    {
+        var record = RecordFor(tag);
+        if (index > 0) { <span>,</span> }
+        <TriageThreadTagChip Tag="@tag" Record="@record" ProjectName="@ProjectNameFor(record)" />
+    }
+    @if (Tags.Count > ChipsShown)
+    {
+        <DropdownMenu AlignLeft="true" WidthClass="w-96" ShowCaret="false"
+                      ToggleClass="rounded-full border border-line px-2 py-0.5 text-xs text-content-muted hover:text-content hover:border-line-strong transition inline-flex items-center gap-1"
+                      ToggleTitle="@($"Show all {Tags.Count} records this thread is tagged to")">
+            <ToggleContent>+@(Tags.Count - ChipsShown) more <span class="leading-none" aria-hidden="true">▾</span></ToggleContent>
+            <ChildContent>
+                <div class="max-h-80 overflow-y-auto p-1">
+                    <p class="eyebrow px-3 pt-1.5 pb-1">Records this thread is tagged to</p>
+                    @foreach (var tag in Tags)
+                    {
+                        var record = RecordFor(tag);
+                        <div class="rounded px-3 py-1.5 text-sm hover:bg-surface-raised">
+                            <TriageThreadTagChip Tag="@tag" Record="@record" ProjectName="@ProjectNameFor(record)" />
+                            <p class="text-xs text-content-subtle truncate">@DetailFor(record)</p>
+                        </div>
+                    }
+                </div>
+            </ChildContent>
+        </DropdownMenu>
+    }
+</span>
+
+@code {
+    private const int ChipsShown = 3;
+
+    /// <summary>The mailbox tags as the thread carries them ("JPMS/TODO-0058").</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<string> Tags { get; set; } = Array.Empty<string>();
+    /// <summary>The records those tags resolved to when the email opened.</summary>
+    [Parameter] public IReadOnlyList<LinkableRecord> Records { get; set; } = Array.Empty<LinkableRecord>();
+    /// <summary>Every project, to name a record's project in its description.</summary>
+    [Parameter] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+
+    private LinkableRecord? RecordFor(string tag) => ThreadTagRecords.Find(Records, tag);
+
+    private string ProjectNameFor(LinkableRecord? record) =>
+        record is null ? "" : Projects.FirstOrDefault(project => project.ProjectId == record.ProjectId)?.Name ?? "";
+
+    // The line under a tag in the panel: the record described, or why there is nothing to say.
+    private string DetailFor(LinkableRecord? record) =>
+        record is null
+            ? "Not matched to a record right now"
+            : ThreadTagRecords.Describe(record, ProjectNameFor(record));
+}

@@ -57,19 +57,8 @@
             @if (ThreadTags is { Count: > 0 } inheritable)
             {
                 <TriageDecisionRow Value="UseThreadTags" ValueChanged="UseThreadTagsChanged"
-                                   Title="@($"Yes files this email under the records its thread already carries — {string.Join("; ", inheritable.Select(DescribeTag))} — so Apply needs no new picks. No means you pick this email's records yourself in the pathway panes. Click a tag to open its record in a new tab")">
-                    Use existing tags <span class="text-content-subtle">·
-                        @foreach (var (tag, index) in inheritable.Take(TagsShown).Select((tag, index) => (tag, index)))
-                        {
-                            var record = RecordFor(tag);
-                            if (index > 0) { <text>, </text> }
-                            <TriageThreadTagChip Tag="@tag" Record="@record" ProjectName="@ProjectNameFor(record)" />
-                        }
-                        @if (inheritable.Count > TagsShown)
-                        {
-                            <text> +@(inheritable.Count - TagsShown)</text>
-                        }
-                    </span>
+                                   Title="Yes files this email under the records its thread already carries — so Apply needs no new picks. No means you pick this email's records yourself in the pathway panes. Hover a tag to see what the record is, click it to open the record in a new tab">
+                    Use existing tags <TriageThreadTagList Tags="@inheritable" Records="@TaggedRecords" Projects="@Projects" />
                 </TriageDecisionRow>
             }
         </div>
@@ -178,20 +167,6 @@
     [Parameter] public int OutboxSendCount { get; set; }
     /// <summary>Fires the one Apply; true means stage the lined-up emails as drafts instead of sending.</summary>
     [Parameter] public EventCallback<bool> OnApply { get; set; }
-
-    private const int TagsShown = 3;
-
-    private LinkableRecord? RecordFor(string tag) => ThreadTagRecords.Find(TaggedRecords, tag);
-
-    private string ProjectNameFor(LinkableRecord? record) =>
-        record is null ? "" : Projects.FirstOrDefault(project => project.ProjectId == record.ProjectId)?.Name ?? "";
-
-    // The hover's wording for one tag: the record described when it resolved, the bare
-    // reference when it did not.
-    private string DescribeTag(string tag) =>
-        RecordFor(tag) is { } record
-            ? ThreadTagRecords.Describe(record, ProjectNameFor(record))
-            : TriageEmailDisplay.TagLabel(tag);
 
     private string DiscardToggleLabel => DiscardArmed ? "Keep email" : "🗑 Discard";
 
