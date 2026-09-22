@@ -29,11 +29,11 @@
         <button type="button" class="btn-primary" @onclick="() => StartEdit(null)">Add item</button>
         </Actions>
     </SectionHeader>
-    <p class="text-sm text-content-subtle mb-5 max-w-3xl">
+    <TableNote IsLead="true" Class="mb-5">
         Insurances, subscriptions, vans and trade accounts, with the dates that matter.
         Anything due inside 30 days is flagged; items deactivate rather than delete, so
         history survives.
-    </p>
+    </TableNote>
 
     @if (actionError is not null)
     {

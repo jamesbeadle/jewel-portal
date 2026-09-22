@@ -44,13 +44,13 @@
         <button type="button" class="btn-primary" @onclick="() => weekEntryModal!.OpenAsync()">Enter a week</button>
         </Actions>
     </SectionHeader>
-    <p class="text-sm text-content-subtle mb-5 max-w-3xl">
+    <TableNote IsLead="true" Class="mb-5">
         Every JBB project in one view — this page ignores the project picked in the sidebar.
         Projected cost across every worker for the month, and where each day actually went.
         Contracted days multiplied by day rate, less every day recorded as holiday, a half day
         or not worked. Days not yet submitted stay at the full rate, so the figure is only as
         accurate as the submission rate below.
-    </p>
+    </TableNote>
 
     @if (actionError is not null)
     {

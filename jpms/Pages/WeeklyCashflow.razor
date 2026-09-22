@@ -129,7 +129,7 @@
                 </div>
             }
 
-            <p class="text-xs text-content-subtle mb-3 max-w-4xl">
+            <TableNote Class="mb-3">
                 <span class="font-medium text-content-muted">No signs to decode:</span> the band carries the
                 direction — Cash in adds, Cash out subtracts. Anything overdue sits in the current week, never
                 the past. An <span class="font-medium text-content-muted">Expected</span> (invoices) or
@@ -145,7 +145,7 @@
                 (top right, or the row at the foot of Cash out) keeps the outgoings Xero can't see yet — a
                 bill that hasn't landed, overheads, wages — one-off or recurring, each under its own band
                 while it has a live item.
-            </p>
+            </TableNote>
 
             <WeeklyCashflowGrid View="view" IsDirector="IsDirector"
                                 CollapsedBands="collapsedBands" OnToggleBand="ToggleBand"
@@ -163,7 +163,7 @@
                                 OnReset="ResetEntryAsync"
                                 OnMove="args => MoveEntryAsync(args.Entry, args.ToWeek)" />
 
-            <p class="text-xs text-content-subtle mb-10 max-w-4xl">
+            <TableNote Class="mb-10">
                 Every figure is an outstanding Xero document or an item added on this page — nothing is
                 invented, and moving an entry changes <span class="font-medium text-content-muted">when</span>,
                 never <span class="font-medium text-content-muted">how much</span>. Excluded entries are the
@@ -172,7 +172,7 @@
                 <a class="underline underline-offset-2" href="/finance/aged-payables">Aged Payables</a>, invoices to
                 <a class="underline underline-offset-2" href="/finance/aged-receivables">Aged Receivables</a>, to the penny.
                 Xero read at @XeroFetchedText.
-            </p>
+            </TableNote>
         }
     </LoadGate>
 

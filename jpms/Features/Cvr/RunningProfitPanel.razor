@@ -87,7 +87,7 @@
                         AccrualHover="AccrualHover"
                         AccrualOwnFor="AccrualOwnFor"
                         AccrualToDateFor="AccrualToDateFor" />
-    <p class="text-xs text-content-subtle mt-3 max-w-3xl">
+    <TableNote Class="mt-3">
         <span class="text-content-muted">Main figure</span> — the whole job to that month end:
         cumulative profit (income less cost of sales less overheads tracked to the site, in Xero)
         over cumulative invoicing, exactly the accountant's "Running % Profit" row — so the row
@@ -139,7 +139,7 @@
         {
             <text>@string.Join(", ", Movement.Excluded.Select(project => project.Name)) @(Movement.Excluded.Count == 1 ? "has" : "have") no Xero site data yet — see the cards below.</text>
         }
-    </p>
+    </TableNote>
 </div>
 
 @code {

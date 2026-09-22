@@ -25,12 +25,12 @@
            again. It is a modal now — the table is the page. *@
         <button type="button" class="btn-primary" @onclick="StartAdd">Add worker</button>
     </div>
-    <p class="text-sm text-content-subtle mb-5 max-w-3xl">
+    <TableNote IsLead="true" Class="mb-5">
         Day-rate site operatives and their cost rates. Each worker logs their own time on the
         My day page: invite them as a user with the Site Operative role, then enter the same
         email here — that links their account to this record. Assign workers to projects from
         each project's Labour tab.
-    </p>
+    </TableNote>
 
     @if (actionError is not null)
     {
