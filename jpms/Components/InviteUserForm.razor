@@ -84,7 +84,7 @@
     [Parameter] public EventCallback OnClosed { get; set; }
     [Parameter] public EventCallback<DirectoryUser> OnInvited { get; set; }
 
-    private static readonly Role[] AllRoles = Enum.GetValues<Role>();
+    private static readonly IReadOnlyList<Role> AllRoles = LoginRoles.All;
 
     private string email = "";
     private string displayName = "";

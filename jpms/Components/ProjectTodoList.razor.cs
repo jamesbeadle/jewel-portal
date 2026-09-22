@@ -40,6 +40,8 @@ public partial class ProjectTodoList
     // slate, and a successful add closes it.
     private bool addOpen;
     private string? addError;
+    // The assignee field's own message — beside the field, never a toast.
+    private string? assigneeError;
     private string newTitle = "";
     private string newNotes = "";
     private string newAssignee = "";
@@ -125,14 +127,14 @@ public partial class ProjectTodoList
         newTitle = newNotes = newAssignee = "";
         // Due defaults to one week out; clear the field to raise an item with no due date.
         newDue = DateTime.Today.AddDays(7).ToString("yyyy-MM-dd");
-        addError = null;
+        addError = assigneeError = null;
         addOpen = true;
     }
 
     private void CloseAdd()
     {
         addOpen = false;
-        addError = null;
+        addError = assigneeError = null;
     }
 
     private async Task Add()
@@ -141,6 +143,8 @@ public partial class ProjectTodoList
         if (string.IsNullOrWhiteSpace(newTitle)) { addError = "A title is required."; return; }
         addError = null;
         var assignee = TodoAssigneePicker.Parse(newAssignee);
+        if (assignee is null) { assigneeError = TodoRoles.RoleIsRequiredMessage; return; }
+        assigneeError = null;
         await Run(async () =>
         {
             await Todos.AddAsync(new AddTodoItem(

@@ -83,14 +83,17 @@ internal static class AiWriteTools
                 "add_todo",
                 "WRITE: add a to-do item — on a project (pass projectId) or company-wide (leave it out). "
                 + "It is created immediately, exactly as the user would from the To-dos page, recorded "
-                + "under the signed-in user's name. Assignment is to a ROLE (ManagingDirector, "
-                + "FinanceDirector, ProjectManager, QuantitySurveyor, SiteManager, Accounts…), "
-                + "optionally pinned to one named person holding it by their portal email.",
+                + "under the signed-in user's name. EVERY to-do names a role: assignment is to a ROLE "
+                + "(ManagingDirector, FinanceDirector, ProjectManager, QuantitySurveyor, SiteManager, "
+                + "Accounts…), or Miscellaneous when no role owns it — a conscious choice the user "
+                + "makes, never a default. If the user has not said who owns it, ASK, offering "
+                + "Miscellaneous by name; never guess a role and never omit it. Optionally pinned to "
+                + "one named person holding the role, by their portal email.",
                 AiToolSchema.Object(
                     ("title", "string", "What is to be done, as the to-do list will show it.", true),
                     ("projectId", "string", "The project it belongs to (list_projects resolves a name). Omit for company-wide.", false),
                     ("notes", "string", "Optional detail — say which record or email it concerns.", false),
-                    ("assigneeRole", "string", "The role it is assigned to, exactly as the portal names it — e.g. \"ProjectManager\", \"QuantitySurveyor\". Omit for unassigned.", false),
+                    ("assigneeRole", "string", "REQUIRED. The role it is assigned to, exactly as the portal names it — e.g. \"ProjectManager\", \"QuantitySurveyor\" — or \"Miscellaneous\" when no role owns it. Ask the user rather than guessing.", true),
                     ("assigneeEmail", "string", "Pin to one holder of that role — their portal email. Only with assigneeRole.", false),
                     ("due", "string", "Due date, yyyy-MM-dd. Omit for none.", false),
                     ("aboutRecordType", "string", "Make the item ABOUT a record on that project — the record type as the portal names it (\"Defect\"). Project items only; give aboutRecordId too.", false),
@@ -110,15 +113,13 @@ internal static class AiWriteTools
                     }
                     var aboutId = AiToolSchema.Text(input, "aboutRecordId");
 
-                    Role? assigneeRole = null;
                     var roleText = AiToolSchema.Text(input, "assigneeRole");
-                    if (!string.IsNullOrWhiteSpace(roleText))
-                    {
-                        if (!Enum.TryParse<Role>(roleText, ignoreCase: true, out var parsed))
-                            return Fail($"\"{roleText}\" is not a portal role. Roles: "
-                                        + string.Join(", ", Enum.GetNames<Role>()) + ".");
-                        assigneeRole = parsed;
-                    }
+                    if (string.IsNullOrWhiteSpace(roleText))
+                        return Fail(TodoRoles.RoleIsRequiredMessage + " Ask the user which; the roles are "
+                                    + string.Join(", ", TodoRoles.AssignableTodoRolesInPickerOrder) + ".");
+                    if (!Enum.TryParse<Role>(roleText, ignoreCase: true, out var assigneeRole))
+                        return Fail($"\"{roleText}\" is not a portal role. Roles: "
+                                    + string.Join(", ", TodoRoles.AssignableTodoRolesInPickerOrder) + ".");
 
                     DateTimeOffset? due = null;
                     var dueText = AiToolSchema.Text(input, "due");

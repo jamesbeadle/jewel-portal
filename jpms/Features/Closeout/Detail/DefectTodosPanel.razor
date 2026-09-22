@@ -75,7 +75,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <FormField Label="Assigned to">
-                <TodoAssigneeSelect Options="@AssigneeOptions" Value="@newAssignee" ValueChanged="v => newAssignee = v" />
+                <TodoAssigneeSelect Options="@AssigneeOptions" Value="@newAssignee" ValueChanged="v => { newAssignee = v; assigneeError = null; }" Error="@assigneeError" />
                 </FormField>
             </div>
             <FormField Label="Due" Value="@newDue" OnChange="v => newDue = v" InputType="date" />
@@ -104,6 +104,8 @@
 
     private bool addOpen;
     private string? addError;
+    // The assignee field's own message — beside the field, never a toast.
+    private string? assigneeError;
     private string newTitle = "";
     private string newNotes = "";
     private string newAssignee = "";
@@ -125,29 +127,30 @@
     private void OpenAdd()
     {
         // The title leads with the defect so the item reads right on every to-do list; the
-        // assignee defaults to nobody, the due date to a week out (the to-do convention).
+        // assignee starts empty (the author picks who owns it), the due date a week out.
         newTitle = $"{Defect.Reference} — {(string.IsNullOrWhiteSpace(Defect.Location) ? "defect" : Defect.Location)}: ";
         newNotes = newAssignee = "";
         newDue = DateTime.Today.AddDays(7).ToString("yyyy-MM-dd");
-        addError = null;
+        addError = assigneeError = null;
         addOpen = true;
     }
 
     private void CloseAdd()
     {
         addOpen = false;
-        addError = null;
+        addError = assigneeError = null;
     }
 
     private async Task AddAsync()
     {
         if (busy) return;
         if (string.IsNullOrWhiteSpace(newTitle)) { addError = "A title is required."; return; }
-        addError = null;
+        var assignee = TodoAssigneePicker.Parse(newAssignee);
+        if (assignee is null) { assigneeError = TodoRoles.RoleIsRequiredMessage; return; }
+        addError = assigneeError = null;
         busy = true;
         try
         {
-            var assignee = TodoAssigneePicker.Parse(newAssignee);
             await Todos.AddAsync(new AddTodoItem(
                 Defect.ProjectId,
                 newTitle.Trim(),

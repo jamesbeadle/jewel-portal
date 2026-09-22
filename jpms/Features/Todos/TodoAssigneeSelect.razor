@@ -5,7 +5,9 @@
    TodoAssigneePicker encoding ("3" = the role's pool, "3|jane@…" = pinned to Jane), so the
    surfaces that used to bind one flat SearchSelect bind this instead with no other change.
    Changing the role clears the pin (the old person doesn't hold the new role); clearing the
-   person drops back to the role's pool; clearing the role is "Unassigned". *@
+   person drops back to the role's pool. The role control starts EMPTY and every to-do must name
+   a role before it saves (2026-09-22) — Miscellaneous is the choice when no role owns it, never a
+   default — so the host validates and hands the message back through Error, beside the field. *@
 
 <div class="grid gap-2 @(ShowPeople ?"grid-cols-1 sm:grid-cols-2" : "grid-cols-1")">
     <SearchSelect Options="@RoleOptions" Value="@RoleValue" ValueChanged="OnRoleChangedAsync"
@@ -18,6 +20,10 @@
                       Disabled="@Disabled" />
     }
 </div>
+@if (Error is not null)
+{
+    <p class="text-sm text-negative mt-1" role="alert">@Error</p>
+}
 
 @code {
     /// <summary>The combined pool from <see cref="TodoAssigneePicker.BuildOptions"/> (roles and
@@ -26,8 +32,10 @@
     /// <summary>Encoded assignee value ("" = unassigned) — see <see cref="TodoAssigneePicker"/>.</summary>
     [Parameter] public string Value { get; set; } = "";
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
-    /// <summary>The role control's blank row / placeholder.</summary>
-    [Parameter] public string Placeholder { get; set; } = "Unassigned";
+    /// <summary>The role control's blank row / placeholder — the empty start, not a default.</summary>
+    [Parameter] public string Placeholder { get; set; } = "Pick a role…";
+    /// <summary>The host's validation message for this field (TodoRoles.RoleIsRequiredMessage).</summary>
+    [Parameter] public string? Error { get; set; }
     /// <summary>The person control's blank row / placeholder — blank means the whole role.</summary>
     [Parameter] public string PersonPlaceholder { get; set; } = "Anyone in the role";
     /// <summary>Values already taken elsewhere on the form (a multi-assignee row's chips) that

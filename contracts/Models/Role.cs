@@ -43,5 +43,14 @@ public enum Role
     // email on the to-do. Access-wise it mirrors OfficeAdmin (James's choice), so it is added
     // beside OfficeAdmin in every gate that role appears in. Persists as int 15 — appended, never
     // inserted mid-list.
-    SalesMarketing
+    SalesMarketing,
+
+    // Miscellaneous (2026-09-22) — a to-do DESK, never a login: the assignee an author picks
+    // when no role owns an item ("Miscellaneous" in the to-do pickers). Every to-do must name a
+    // role, and this is the conscious "nobody's" choice — never a default, never what a blank
+    // falls back to. No person holds it: LoginRoles.All leaves it out of every user picker and
+    // UserRoles.Expand never grants it, so its items are read on the To-dos browser by those who
+    // see every item (TodoRoles.AllowedToSeeAllTodos) and by nobody's "my list". Persists as
+    // int 16 — appended, never inserted mid-list.
+    Miscellaneous
 }

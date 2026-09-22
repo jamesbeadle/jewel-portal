@@ -39,8 +39,8 @@
     /// <summary>One sentence under the buttons saying what saving MEANS for this fact.</summary>
     [Parameter] public string Hint { get; set; } = "";
     [Parameter] public bool Busy { get; set; }
-    /// <summary>True when blank is not a saveable answer (a move needs a destination); false when
-    /// blank is one (reassigning to unassigned).</summary>
+    /// <summary>True when blank is not a saveable answer — a move needs a destination, and a
+    /// reassignment needs a role (Miscellaneous when none owns the item).</summary>
     [Parameter] public bool RequirePick { get; set; }
     /// <summary>Raised with the picked value; the hosting fact runs the command and decides
     /// whether the editor closes (success) or stays open with the pick intact (failure).</summary>

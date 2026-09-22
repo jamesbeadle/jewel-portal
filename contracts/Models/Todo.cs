@@ -7,7 +7,9 @@ namespace Jewel.JPMS.Models;
 // tagged "JPMS/TODO-0001" is the item's linked mail — the same live-read link mechanism the
 // Request / Bid Package families use.
 //
-// Items are assigned to a ROLE first (null = unassigned), and OPTIONALLY pinned to a named person
+// Items are assigned to a ROLE first — every item names one since 2026-09-22 (Role.Miscellaneous
+// is the conscious "no role owns this"; null survives only as the shape of a row from before the
+// rule, and the migration script moved those to Miscellaneous) — and OPTIONALLY pinned to a named person
 // who holds that role. The role is what makes assignments survive staff changes: everyone holding
 // the role sees an unpinned item and may tick it off, and when someone leaves, a new starter
 // taking over the role simply inherits the open items. A pin narrows the item to one person's list
@@ -19,7 +21,7 @@ public sealed record TodoItem(
     string Reference,        // sequential human reference, e.g. "TODO-0001" (also the tag stem)
     string Title,
     string Notes,
-    Role? AssigneeRole,      // null = unassigned; otherwise a TodoRoles.AssignableAsTodoAssignee role
+    Role? AssigneeRole,      // a TodoRoles.AssignableAsTodoAssignee role; null only on a row from before the rule
     string? AssigneePersonEmail, // optional pin to one holder of AssigneeRole; null = the whole role
     string? AssigneePersonName,  // the pinned person's directory display name, resolved server-side
     string CreatedByEmail,
@@ -61,8 +63,9 @@ public sealed record TodoAssignablePerson(Role Role, string Email, string Displa
 // row FANS OUT into one TodoItem per assignee — same title, detail and due date, but its own
 // TODO-#### reference, its own mail tag and its own tick-box. One internal email that needs the QS
 // to price something and the site manager to book access is therefore two independent to-dos
-// raised in one action, either completable without closing the other. Empty or null = a single
-// unassigned item. Duplicates are collapsed.
+// raised in one action, either completable without closing the other. Empty or null is refused
+// by validation since 2026-09-22 — every item names a role, Miscellaneous when none owns it.
+// Duplicates are collapsed.
 // LinkedTodoItemIds names EXISTING to-do items the new one is related to ("linked to-dos" — a
 // flat two-way association, no hierarchy; see TodoItemLinks in contracts/Todos). Every item the
 // row fans out into is linked to every named existing item, so a QS copy and a site-manager copy

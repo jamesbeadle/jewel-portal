@@ -26,8 +26,8 @@ public partial class TriageQueue
 
     private async Task LoadTodoAssignableRolesAsync()
     {
-        // A failed load leaves the picker with no options rather than blocking triage — to-dos can
-        // still be created, they just go in unassigned.
+        // A failed load leaves the picker with no options rather than blocking the rest of triage;
+        // a to-do draft then cannot be applied (every to-do names a role) until the page reloads.
         try
         {
             var rolesTask = Todos.ListAssignableRolesAsync();
