@@ -912,6 +912,26 @@ so the first CI build is the compile check, and this tool is what stands in for 
   the page's `MaxVariationDescriptionChars` are all gone — never re-add a length on these
   fields. Titles keep their 256.
 
+## A Useful Information note may hold one shared site credential (contracts + api + jpms)
+
+- **The credential is masked, encrypted and revealed by the directors alone** (2026-09-22,
+  Jeremy: the Woodhouse Lane WiFi code; James's decisions: a secret on the existing note, not a
+  new record; reveal by role — `UsefulInformationRoles.AllowedToReveal` = Admin, MD, FD; AES at
+  rest; every reveal audited). `UsefulInformationNotes.SecretCiphertext` (migration
+  `AddUsefulInformationSecret`, script `add-useful-information-secret.sql`) holds the value
+  AES-256-GCM under the app setting **`UsefulInformation__SecretKey`** (32 random bytes, base64;
+  `SecretProtector`, `UsefulInformationOptions`) — unset, no credential can be held or revealed and
+  the notes are unaffected. The list model carries `HasSecret` only; the value leaves the database
+  through `RevealUsefulInformationSecret` (GET `useful-information-notes/{id}/secret`) alone, which
+  writes `AuditEventType.SiteCredentialRevealed` naming the note and the person, never the value.
+- **Setting it is its own command, and the connector never carries it.** `SetUsefulInformationSecret`
+  (PUT the same route; `AllowedToManage`, so the site manager who set the WiFi writes it down;
+  blank removes it) is deliberately NOT on Add/Update and NOT an `AiAction` — a credential is typed
+  on the page (`UsefulInformationCredentialField`, masked), never into a chat, and
+  `list_useful_information` returns `hasSecret` only. **Shared site credentials only** — WiFi,
+  alarm, gate codes, shared equipment PINs. A person's own password is never stored anywhere in
+  the portal; personal device access is a local admin account and a held recovery key.
+
 ## The sidebar and the home page are per role (jpms + api)
 
 - **Every sidebar row is gated by a named duty set in `NavigationRoles`** (2026-09-22, Nigel: "review
