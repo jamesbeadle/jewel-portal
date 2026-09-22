@@ -1,0 +1,20 @@
+@namespace Jewel.JPMS.Features.Cvr
+@using static Jewel.JPMS.Features.Cvr.ProfitDisplay
+
+@* The value-of-work-done bar under a project's name on the Profit Summary — the table's
+   identity cell and the phone's card draw the same one. Nothing renders without a fraction:
+   no contract value, no honest percentage. *@
+@if (Complete is decimal complete)
+{
+    <div class="flex items-center gap-2">
+        <div class="h-1 w-32 rounded-full bg-line overflow-hidden">
+            <div class="h-full rounded-full bg-content-faint" style="width:@(Pc(Math.Clamp((double)complete * 100d, 0d, 100d)))%"></div>
+        </div>
+        <span class="text-xs text-content-subtle">@($"{complete * 100m:0}%") complete</span>
+    </div>
+}
+
+@code {
+    /// <summary>The fraction of the revised sum done — ProfitRow.PercentComplete.</summary>
+    [Parameter] public decimal? Complete { get; set; }
+}

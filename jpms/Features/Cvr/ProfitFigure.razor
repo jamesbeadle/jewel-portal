@@ -1,0 +1,21 @@
+@namespace Jewel.JPMS.Features.Cvr
+@using static Jewel.JPMS.Features.Cvr.ProfitDisplay
+
+@* One labelled figure on a phone card: the label on the left, the money on the right with the
+   same margin and memo lines as the table's cell. A profit figure wears the profit colour. *@
+<div class="flex items-start justify-between gap-3">
+    <span class="text-xs text-content-subtle">@Label</span>
+    <span class="text-right tabular-nums whitespace-nowrap @(IsProfit ? $"font-medium {ProfitClass(Value)}" : "text-content")">
+        @Money(Value)
+        <MarginLine Value="Margin" />
+        <MemoLine Text="@Memo" />
+    </span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter] public decimal Value { get; set; }
+    [Parameter] public bool IsProfit { get; set; }
+    [Parameter] public decimal? Margin { get; set; }
+    [Parameter] public string? Memo { get; set; }
+}

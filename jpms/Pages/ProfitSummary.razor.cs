@@ -90,9 +90,9 @@ public partial class ProfitSummary
         }
         selectedIds = ProjectMultiSelect.LiveJobIds(Projects.Current ?? Array.Empty<Project>());
         selectionInitialised = true;
-        // The table's per-project loads and the Xero panel's single read are independent
-        // regions with independent gates — load them in parallel.
-        await Task.WhenAll(LoadSelectedAsync(), LoadSitePnlAsync());
+        // The table's per-project loads, the Xero panel's single read and the remembered table
+        // view are independent regions with independent gates — load them in parallel.
+        await Task.WhenAll(LoadSelectedAsync(), LoadSitePnlAsync(), LoadTableViewAsync());
     }
 
     private async Task OnSelectionChangedAsync(IReadOnlyCollection<string> ids)

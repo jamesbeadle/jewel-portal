@@ -1,0 +1,27 @@
+@namespace Jewel.JPMS.Features.Cvr
+
+@* The profit table for a phone: four column groups cannot honestly fit a 390px screen, so each
+   project is a card in the table's own row order, and the totals sit pinned to the foot of the
+   screen so the reader never loses them. The page shows this below the md breakpoint and the
+   table above it — same rows, same total. *@
+<div class="@Class">
+    <div class="flex flex-col gap-3">
+        @foreach (var (project, row) in Rows)
+        {
+            <ProfitCard Project="project" Row="row" />
+        }
+    </div>
+    @if (Rows.Count > 1)
+    {
+        <div class="sticky bottom-0 z-10 mt-3 panel p-4 bg-surface-raised flex flex-col gap-3">
+            <p class="font-semibold text-content">@Rows.Count projects</p>
+            <ProfitCardBands Row="Total" IsTotal="true" />
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<(Project Project, ProfitRow Row)> Rows { get; set; } = default!;
+    [Parameter, EditorRequired] public ProfitRow Total { get; set; } = default!;
+    [Parameter] public string Class { get; set; } = "";
+}

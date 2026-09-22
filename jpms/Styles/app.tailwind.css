@@ -248,6 +248,47 @@
         @apply text-right whitespace-nowrap tabular-nums;
     }
 
+    /* `data-table-pinned` keeps the identity column and the totals row in place while the
+       figure columns scroll sideways: the first cell of every row sticks to the left edge and
+       the tfoot to the foot of the scroll box, so a wide financial table never loses which row
+       or which total the reader is on. The header's first cell sits above both. */
+    .data-table-pinned th:first-child,
+    .data-table-pinned td:first-child {
+        @apply sticky left-0 z-10 border-r border-line-strong;
+    }
+
+    .data-table-pinned th:first-child {
+        @apply z-30;
+    }
+
+    .data-table-pinned tfoot td {
+        @apply sticky bottom-0 z-20;
+    }
+
+    .data-table-pinned tfoot td:first-child {
+        @apply z-30;
+    }
+
+    /* `data-table-compact` brings a wide table onto one screen: smaller type, tighter cells,
+       headers allowed to wrap, no minimum column width, and every `data-table-subline` (a
+       margin %, a memo) hidden until `data-table-compact-detail` shows them again. */
+    .data-table-compact {
+        @apply text-xs;
+    }
+
+    .data-table-compact th,
+    .data-table-compact td {
+        @apply h-auto min-w-0 px-2 py-1.5 whitespace-normal;
+    }
+
+    .data-table-compact .data-table-subline {
+        @apply hidden;
+    }
+
+    .data-table-compact-detail .data-table-subline {
+        @apply block;
+    }
+
     /* The assistant panel's slide, and the shell's matching squeeze
        (Components/Chat/ChatPanel.razor + Layout/MainLayout.razor). The transforms live here rather
        than as inline utilities for two reasons: the movement is part of the look, and Phase 5's

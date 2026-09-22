@@ -165,6 +165,7 @@ builder.Services.AddScoped<UserInviteService>();
 builder.Services.AddScoped<ActiveRoleStorage>();
 builder.Services.AddScoped<AllocationTabStorage>();
 builder.Services.AddScoped<WorkOrderGroupingStorage>();
+builder.Services.AddScoped<ProfitSummaryViewStorage>();
 builder.Services.AddScoped<TriageSortStorage>();
 builder.Services.AddScoped<TodoViewStorage>();
 // The "open this email in the Control Centre" handoff from the to-do searches' email results.
