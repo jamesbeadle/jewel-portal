@@ -17,8 +17,7 @@ public sealed class ListRecordEmailsEndpoint
         this.handler = handler;
     }
 
-    // Internal mailbox content: every internal role, no externals.
-    private static readonly RoleSet RolesThatMayReadRecordEmails = JpmsRoleSets.AllInternal;
+    private static readonly RoleSet RolesThatMayReadRecordEmails = RecordEmailRoles.Readers;
 
     [Function(nameof(ListRecordEmails))]
     public async Task<IActionResult> Run(

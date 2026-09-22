@@ -1,6 +1,7 @@
 @namespace Jewel.JPMS.Features.Triage.Panels
 @using Jewel.JPMS.Features.Triage.Workspace
 @inject IQueryClient Queries
+@inject SessionService Session
 
 @*
     The correspondence currently tagged to the open record, read live from the mailbox — the same
@@ -11,6 +12,8 @@
     email also offers Reply (lined up in the Control Centre's Outbox; sent directly on record
     pages). Tagging stays in triage.
 *@
+@if (Session.MayReadRecordEmails)
+{
 
 @if (emails is null)
 {
@@ -24,6 +27,7 @@ else if (emails.Count > 0)
         </p>
         <CorrespondenceThreadList Emails="emails" ExcludeTag="@ExcludeTag" OnPreview="OnPreview" OnReply="OnReply" OnForward="OnForward" />
     </div>
+}
 }
 
 @code {
@@ -50,6 +54,7 @@ else if (emails.Count > 0)
 
     protected override async Task OnParametersSetAsync()
     {
+        if (!Session.MayReadRecordEmails) return;
         if (RecordId == loadedRecordId) return;
         loadedRecordId = RecordId;
         emails = null;

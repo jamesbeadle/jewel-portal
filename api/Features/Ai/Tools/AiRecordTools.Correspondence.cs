@@ -11,7 +11,7 @@ internal static partial class AiRecordTools
 {
     private static IEnumerable<AiTool> CorrespondenceTools()
     {
-        var readers = JpmsRoleSets.AllInternal;
+        var readers = RecordEmailRoles.Readers;
 
         return new AiTool[]
         {

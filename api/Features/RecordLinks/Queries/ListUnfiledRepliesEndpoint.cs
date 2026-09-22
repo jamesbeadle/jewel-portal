@@ -15,7 +15,7 @@ public sealed class ListUnfiledRepliesEndpoint
         this.handler = handler;
     }
 
-    private static readonly RoleSet RolesThatMayReadRecordEmails = JpmsRoleSets.AllInternal;
+    private static readonly RoleSet RolesThatMayReadRecordEmails = RecordEmailRoles.Readers;
 
     [Function(nameof(ListUnfiledReplies))]
     public async Task<IActionResult> Run(

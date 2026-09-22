@@ -41,6 +41,11 @@ public sealed class SessionService : IDisposable
     /// hold every role, so they pass every set that admits anyone.</summary>
     public bool CanOpen(RoleSet roles) => AvailableRoles.Any(roles.Includes);
 
+    /// <summary>Whether this person may see the mail stored behind a record (RecordEmailRoles):
+    /// judged on the roles they hold, exactly as the API judges the read, so an internal person
+    /// viewing as an external role still sees it and an external login never does.</summary>
+    public bool MayReadRecordEmails => CanOpen(RecordEmailRoles.Readers);
+
     public bool HasMultipleRoles => AvailableRoles.Count > 1;
 
     /// <summary>True for users opted in to the two-hour default-back (Admin → Users), once their

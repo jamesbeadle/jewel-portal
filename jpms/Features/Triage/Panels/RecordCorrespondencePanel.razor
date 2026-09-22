@@ -2,6 +2,7 @@
 @using Jewel.JPMS.Contracts.MailboxCompose
 @using Jewel.JPMS.Features.Triage
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel ProjectList
+@inject SessionService Session
 
 @* A record's correspondence — the mail behind it, read live by tag — with the consistent Reply
    widget: replying from a record page SENDS there and then from the projects mailbox (the
@@ -9,6 +10,8 @@
    files straight back into this list. The page owns the list (records read it by their own
    tags, sometimes merging two); the compose state — who is being answered, the confirmation
    left behind — is the panel's own. *@
+@if (Session.MayReadRecordEmails)
+{
 <div class="flex items-center justify-between mb-3">
     <h3 class="eyebrow">@Title</h3>
     <div class="flex items-center gap-3">
@@ -71,6 +74,7 @@ else
                               OnUntagged="_ => OnReload.InvokeAsync()" />
 }
 </LoadGate>
+}
 
 @code {
     /// <summary>The record whose tag the list is read by — also what the finder tags to.</summary>
