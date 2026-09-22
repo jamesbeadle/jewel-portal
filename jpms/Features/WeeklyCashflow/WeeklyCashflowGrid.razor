@@ -3,9 +3,11 @@
 @using static Jewel.JPMS.Features.Cashflow.CashflowDisplay
 
 @* The weekly grid: one column per week, the two Xero bands, a band per manual category in play
-   and the standing Add item row, then the running answer — net movement, and for directors the
-   closing bank balance. The page owns the moves, the exclusions and the dialogs; every band reads
-   the same page state and reports to the same page handlers, so Band wires a section once. *@
+   and the standing Add item row, with the running answer — net movement, and for directors the
+   closing bank balance — at BOTH ends (Nigel, 2026-09-21: a long grid reads its answer at the
+   head without scrolling past every band; the Excel export keeps its single set at the foot).
+   The page owns the moves, the exclusions and the dialogs; every band reads the same page state
+   and reports to the same page handlers, so Band wires a section once and SummaryRows the pair. *@
 <RecordsTable MaxHeight="" Class="mb-6">
     <thead>
         <tr>
@@ -19,6 +21,7 @@
         </tr>
     </thead>
     <tbody>
+        @SummaryRows
         <tr>
             <td colspan="@(View.WeekStarts.Count + 2)" class="eyebrow">Cash in</td>
         </tr>
@@ -36,23 +39,7 @@
             @Band(WeeklyCashflowMaths.BandFor(category), WeeklyCashflowCategories.BandLabel(category), "manual items — added on this page", Array.Empty<GroupSlice>())
         }
         <CashflowAddItemRow WeekCellCount="View.WeekStarts.Count + 1" OnAddItem="OnAddItem" />
-        @* ── The running answer ── *@
-        <tr class="border-t-2 font-semibold">
-            <td class="text-content">
-                Net movement
-                <span class="block text-xs text-content-faint font-normal">cash in less cash out, per week</span>
-            </td>
-            @for (var index = 0; index < View.WeekStarts.Count; index++)
-            {
-                var net = View.Net[index];
-                <td class="text-right whitespace-nowrap @(net < 0m ?"text-negative" : "text-positive")">@Signed(net)</td>
-            }
-            <td class="text-right whitespace-nowrap border-l @(View.Net[^1] < 0m ?"text-negative" : "text-positive")">@Signed(View.Net[^1])</td>
-        </tr>
-        @if (IsDirector && View.Closing is not null)
-        {
-            <WeeklyClosingBalanceRow View="View" />
-        }
+        @SummaryRows
     </tbody>
 </RecordsTable>
 
@@ -82,6 +69,17 @@
     [Parameter] public EventCallback<WeeklyCashflowEntry> OnReset { get; set; }
     [Parameter] public EventCallback<(WeeklyCashflowEntry Entry, int ToWeek)> OnMove { get; set; }
     [Parameter] public EventCallback OnAddItem { get; set; }
+
+    // The running answer, drawn at the head and the foot from the one view the page computed:
+    // net movement for everyone, the bank-anchored closing balance for directors alone.
+    private RenderFragment SummaryRows => __builder =>
+    {
+        <WeeklyNetMovementRow View="View" />
+        @if (IsDirector && View.Closing is not null)
+        {
+            <WeeklyClosingBalanceRow View="View" />
+        }
+    };
 
     private bool HasLiveItems(WeeklyCashflowCategory category) => View.Entries.Any(entry => entry.Band == WeeklyCashflowMaths.BandFor(category));
 
