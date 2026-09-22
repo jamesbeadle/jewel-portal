@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Configuration;
+
 namespace Jewel.JPMS.Api.Features.UsefulInformation;
 
 /// <summary>
