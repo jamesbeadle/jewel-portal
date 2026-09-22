@@ -60,7 +60,8 @@ public partial class AuditTrail
         (AuditEventType.KpiEmailRemoved,         "KPI removed"),
         (AuditEventType.LabourApprovalReversed,  "Labour approval reversed"),
         (AuditEventType.LabourDayMoved,          "Labour day moved"),
-        (AuditEventType.DirectoryRecordXeroLinkChanged, "Directory Xero link changed")
+        (AuditEventType.DirectoryRecordXeroLinkChanged, "Directory Xero link changed"),
+        (AuditEventType.SiteCredentialRevealed,  "Site credential revealed")
     };
 
     // Mirrors the API's TriageRoles.AllowedToTriage — the audit trail is a triage-side tool.
@@ -201,6 +202,7 @@ public partial class AuditTrail
         AuditEventType.LabourApprovalReversed => "Labour approval reversed",
         AuditEventType.LabourDayMoved         => "Labour day moved",
         AuditEventType.DirectoryRecordXeroLinkChanged => "Directory Xero link changed",
+        AuditEventType.SiteCredentialRevealed => "Site credential revealed",
         _                                     => type.ToString()
     };
 

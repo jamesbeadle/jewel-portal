@@ -156,7 +156,12 @@ public enum AuditEventType
     // pseudonym (AnonymisePerson), or a worker's contact details cleared (RetireWorker). The
     // detail carries the pseudonym, never the address it replaced.
     PersonAnonymised = 46,
-    WorkerRetired = 47
+    WorkerRetired = 47,
+    // Site credentials (written since 2026-09-22, Jeremy's ask): a director revealed the
+    // credential held against a Useful Information note — the WiFi code, the gate code. The row
+    // names the note and who looked, never the value, so a misused code can be traced to who
+    // had read it. Not client-facing: Pathway is "".
+    SiteCredentialRevealed = 48
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

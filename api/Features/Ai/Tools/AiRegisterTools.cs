@@ -276,7 +276,9 @@ internal static class AiRegisterTools
                 + "keeps against the project: door codes, key-safe locations, skip access, site "
                 + "quirks. STRICTLY INTERNAL by design: never repeat these in anything client-, "
                 + "architect- or subcontractor-facing. Reference material only — anything that "
-                + "needs doing lives on the To-do tab, not here.",
+                + "needs doing lives on the To-do tab, not here. A note with hasSecret holds a "
+                + "shared site credential (WiFi, alarm, gate code) that this read never returns: "
+                + "it is revealed on the tab, to the directors, with every reveal audited.",
                 AiToolSchema.Object(
                     ("projectId", "string", "Defaults to the project in view; pass it otherwise (list_projects returns ids).", false)),
                 AiToolKind.Read,

@@ -15,4 +15,10 @@ public static class UsefulInformationRoles
     // Same set as reading, kept as its own name so a future narrowing (e.g. admins-only editing)
     // is a one-line change here rather than a hunt through the endpoints.
     public static readonly RoleSet AllowedToManage = JpmsRoleSets.AllInternal;
+
+    // Who may REVEAL a note's credential (2026-09-22, Jeremy's ask; James's decision: a role, not
+    // a named list): the directors, mirroring the bank-position gate. Every internal role may
+    // hold one against a note — the site manager who set the WiFi code — but reading it back is
+    // the directors', and every reveal is on the audit trail.
+    public static readonly RoleSet AllowedToReveal = RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector);
 }

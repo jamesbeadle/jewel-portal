@@ -24,4 +24,10 @@ public sealed class HttpUsefulInformationStore : IUsefulInformationStore
 
     public Task<Acknowledgement> DeleteAsync(string usefulInformationNoteId, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new DeleteUsefulInformationNote(usefulInformationNoteId), cancellationToken);
+
+    public Task<UsefulInformationNote> SetSecretAsync(SetUsefulInformationSecret command, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(command, cancellationToken);
+
+    public Task<UsefulInformationSecret> RevealSecretAsync(string usefulInformationNoteId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new RevealUsefulInformationSecret(usefulInformationNoteId), cancellationToken);
 }

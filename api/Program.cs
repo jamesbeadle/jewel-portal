@@ -137,7 +137,7 @@ var host = new HostBuilder()
         services.AddTodosFeature();
         services.AddCalendarFeature();
         services.AddBuildingControlFeature(context.Configuration);
-        services.AddUsefulInformationFeature();
+        services.AddUsefulInformationFeature(context.Configuration);
         services.AddLadsFeature();
         services.AddCostCentersFeature();
         services.AddMailboxIntakeFeature(context.Configuration);

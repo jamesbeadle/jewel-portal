@@ -12,5 +12,6 @@ internal static class UsefulInformationEntityMapping
             entity.CreatedByEmail,
             entity.CreatedAt,
             entity.UpdatedByEmail,
-            entity.UpdatedAt);
+            entity.UpdatedAt,
+            HasSecret: entity.SecretCiphertext is not null);
 }

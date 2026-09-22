@@ -20,4 +20,8 @@ public sealed class UsefulInformationNoteEntity
     // Last edit, stamped by UpdateUsefulInformationNoteHandler; null = never edited.
     [MaxLength(256)]     public string? UpdatedByEmail { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
+    // The shared site credential, AES-GCM encrypted by SecretProtector (base64 of nonce + tag +
+    // ciphertext); null = no credential held. Never mapped onto the model — the value leaves the
+    // database only through RevealUsefulInformationSecret.
+    [MaxLength(1024)]    public string? SecretCiphertext { get; set; }
 }
