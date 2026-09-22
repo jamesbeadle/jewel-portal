@@ -11,7 +11,7 @@
     </td>
     <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">
         @Money(Total.CertifiedToDate)
-        <MemoLine Text="@(Total.RetentionOutstanding > 0m ? $"{Money(Total.RetentionOutstanding)} retention held" : null)" />
+        <MemoLine Text="@ProfitMemos.RetentionHeld(Total)" />
     </td>
     <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content">@Money(Total.ActualCostOfSales)</td>
     <td class="px-4 py-3 text-right whitespace-nowrap align-top @ProfitClass(Total.CurrentProfit)">
@@ -26,11 +26,11 @@
     </td>
     <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">
         @Money(Total.ContractValue)
-        <MemoLine Text="@(Total.NetVariations == 0m ? null : $"{SignedMoney(Total.NetVariations)} variations")" />
+        <MemoLine Text="@ProfitMemos.VariationsOfTotal(Total)" />
     </td>
     <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content">
         @Money(Total.ForecastCostOfSales)
-        <MemoLine Text="@(Total.CostMovement < 0m ? $"{SignedMoney(-Total.CostMovement)} vs target" : null)" />
+        <MemoLine Text="@ProfitMemos.CostMovementAgainstTarget(Total)" />
     </td>
     <td class="px-4 py-3 text-right whitespace-nowrap align-top @ProfitClass(Total.ForecastedProfit)">
         @Money(Total.ForecastedProfit)

@@ -14,15 +14,7 @@
                 </a>
                 <ProjectStageBadge Stage="Project.Stage" />
             </div>
-            @if (Row.PercentComplete is decimal complete)
-            {
-                <div class="flex items-center gap-2">
-                    <div class="h-1 w-32 rounded-full bg-line overflow-hidden">
-                        <div class="h-full rounded-full bg-content-faint" style="width:@(Pc(Math.Clamp((double)complete * 100d, 0d, 100d)))%"></div>
-                    </div>
-                    <span class="text-xs text-content-subtle">@($"{complete * 100m:0}%") complete</span>
-                </div>
-            }
+            <ProjectProgressBar Complete="Row.PercentComplete" />
             @if (Row.CertifiedToDate == 0m && Row.ActualCostOfSales > 0m)
             {
                 <Pill Tone="Tone.Warning">
@@ -37,7 +29,7 @@
     </td>
     <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">
         @Money(Row.CertifiedToDate)
-        <MemoLine Text="@(Row.RetentionOutstanding > 0m ? $"{Money(Row.RetentionOutstanding)} retention held" : null)" />
+        <MemoLine Text="@ProfitMemos.RetentionHeld(Row)" />
     </td>
     <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content">@Money(Row.ActualCostOfSales)</td>
     <td class="px-4 py-3 text-right whitespace-nowrap align-top font-medium @ProfitClass(Row.CurrentProfit)">
@@ -52,7 +44,7 @@
     </td>
     <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">
         @Money(Row.ContractValue)
-        <MemoLine Text="@(Row.NetVariations == 0m ? "no variations" : $"{SignedMoney(Row.NetVariations)} variations")" />
+        <MemoLine Text="@ProfitMemos.Variations(Row)" />
     </td>
     <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content">@Money(Row.ForecastCostOfSales)</td>
     <td class="px-4 py-3 text-right whitespace-nowrap align-top font-medium @ProfitClass(Row.ForecastedProfit)">

@@ -19,6 +19,7 @@
 @inject IQueryClient Queries
 @inject ICommandSender Commands
 @inject NavigationManager Nav
+@inject ProfitSummaryViewStorage ViewStorage
 @implements IDisposable
 
 <PageTitle>Profit Summary · JPMS</PageTitle>
@@ -114,9 +115,20 @@
             }
             @* Disabled while any selected row failed to load: the on-screen banner discloses
                the zeros, but a workbook travels without it — retry first, then export. *@
-            <ExportToExcelButton FileName="Profit summary"
-                                 Disabled="@(!TableReady || SelectedProjects.Count == 0 || FailedSelectedProjects.Count > 0)"
-                                 BuildWorkbook="BuildExportWorkbook" />
+            <div class="flex items-center gap-4 flex-wrap">
+                @* The table's view controls: never gated. Compact fits every band onto one
+                   screen and is remembered; Show detail brings the sub-lines back while compact. *@
+                <Checkbox Class="hidden md:inline-flex" Value="isCompactTable" ValueChanged="OnCompactChangedAsync" Label="Compact table"
+                          Title="Fit every column onto one screen — smaller type, tighter cells, the margin and memo lines behind Show detail. Remembered for you." />
+                @if (isCompactTable)
+                {
+                    <Checkbox Class="hidden md:inline-flex" @bind-Value="showCompactDetail" Label="Show detail"
+                              Title="Show the margin %, retention and variation lines in the compact table." />
+                }
+                <ExportToExcelButton FileName="Profit summary"
+                                     Disabled="@(!TableReady || SelectedProjects.Count == 0 || FailedSelectedProjects.Count > 0)"
+                                     BuildWorkbook="BuildExportWorkbook" />
+            </div>
         </div>
 
         @if (selectionInitialised && SelectedProjects.Count > 0
@@ -167,8 +179,10 @@
                 <BudgetForecastBridge Bridge="bridge" />
             }
 
-            <ProfitTable Rows="rows" Total="total"
+            <ProfitTable Rows="rows" Total="total" Class="hidden md:block"
+                         IsCompact="isCompactTable" ShowDetail="showCompactDetail"
                          SortColumn="@sortColumn" SortDescending="sortDescending" OnSort="SortBy" />
+            <ProfitCards Rows="rows" Total="total" Class="md:hidden" />
             <ProfitTableNotes />
         }
         </LoadGate>

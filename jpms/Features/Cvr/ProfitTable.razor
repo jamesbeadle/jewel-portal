@@ -3,17 +3,19 @@
 @* The profit table: three bands of figures per project — the deal, the current position, to
    finish, the forecast at completion — under sortable headers, with the totals row when more
    than one project is selected. The page owns the sort state and the sorted rows; the table
-   only reports the clicked column. *@
-<RecordsTable MaxHeight="">
+   only reports the clicked column. The identity column and the totals row are pinned, so the
+   figures scroll sideways under a name that stays put; Compact brings every band onto one
+   1440-wide screen, its margin and memo lines behind ShowDetail. *@
+<RecordsTable MaxHeight="" Class="@Class" TableClass="@TableClasses">
     <thead>
         @* The three bands, each with where its figures come from — the
            accountant reads the provenance before the numbers. *@
         <tr class="text-xs font-medium">
             <th></th>
-            <th class="border-l">The deal <span class="normal-case tracking-normal font-normal text-content-faint ml-1">initial contract</span></th>
-            <th class="border-l" colspan="3">Current position <span class="normal-case tracking-normal font-normal text-content-faint ml-1">valuations + allocated Xero cost · certified basis</span></th>
-            <th class="border-l" colspan="3">To finish <span class="normal-case tracking-normal font-normal text-content-faint ml-1">today → completion</span></th>
-            <th class="border-l" colspan="3">Forecast at completion <span class="normal-case tracking-normal font-normal text-content-faint ml-1">contract + variations · Financials tab</span></th>
+            <th class="border-l">The deal <span class="data-table-subline normal-case tracking-normal font-normal text-content-faint ml-1">initial contract</span></th>
+            <th class="border-l" colspan="3">Current position <span class="data-table-subline normal-case tracking-normal font-normal text-content-faint ml-1">valuations + allocated Xero cost · certified basis</span></th>
+            <th class="border-l" colspan="3">To finish <span class="data-table-subline normal-case tracking-normal font-normal text-content-faint ml-1">today → completion</span></th>
+            <th class="border-l" colspan="3">Forecast at completion <span class="data-table-subline normal-case tracking-normal font-normal text-content-faint ml-1">contract + variations · Financials tab</span></th>
         </tr>
         <tr>
             <th class="min-w-[240px]"><SortableColumnHeader Column="project" Label="Project" ActiveColumn="@SortColumn" Descending="SortDescending" OnSort="OnSort" /></th>
@@ -49,4 +51,11 @@
     [Parameter] public string? SortColumn { get; set; }
     [Parameter] public bool SortDescending { get; set; }
     [Parameter] public EventCallback<string> OnSort { get; set; }
+    [Parameter] public bool IsCompact { get; set; }
+    [Parameter] public bool ShowDetail { get; set; }
+    [Parameter] public string Class { get; set; } = "";
+
+    private string TableClasses => IsCompact
+        ? $"data-table-pinned data-table-compact {(ShowDetail ? "data-table-compact-detail" : "")}"
+        : "data-table-pinned";
 }

@@ -1,0 +1,37 @@
+@namespace Jewel.JPMS.Features.Cvr
+
+@* The four bands of one row of the profit table, stacked for a phone — the same figures, the
+   same order, the same memo lines as the table, under the band's own heading. The totals row
+   reads the same way, with the selection's memos. *@
+<div class="grid gap-3 sm:grid-cols-2">
+    <div class="border border-line p-3 flex flex-col gap-1.5">
+        <p class="eyebrow">The deal</p>
+        <ProfitFigure Label="Budgeted profit" Value="Row.BudgetedProfit" IsProfit="true" Margin="Row.BudgetedMargin" />
+    </div>
+    <div class="border border-line p-3 flex flex-col gap-1.5">
+        <p class="eyebrow">Current position</p>
+        <ProfitFigure Label="Certified" Value="Row.CertifiedToDate" Memo="@ProfitMemos.RetentionHeld(Row)" />
+        <ProfitFigure Label="Cost to date" Value="Row.ActualCostOfSales" />
+        <ProfitFigure Label="Current profit" Value="Row.CurrentProfit" IsProfit="true" Margin="Row.CurrentMargin" />
+    </div>
+    <div class="border border-line p-3 flex flex-col gap-1.5">
+        <p class="eyebrow">To finish</p>
+        <ProfitFigure Label="Left to certify" Value="Row.LeftToCertify" />
+        <ProfitFigure Label="Cost to complete" Value="Row.CostToComplete" />
+        <ProfitFigure Label="Profit to finish" Value="Row.ToFinishProfit" IsProfit="true" Margin="Row.ToFinishMargin" />
+    </div>
+    <div class="border border-line p-3 flex flex-col gap-1.5">
+        <p class="eyebrow">Forecast at completion</p>
+        <ProfitFigure Label="Final sales" Value="Row.ContractValue" Memo="@VariationsMemo" />
+        <ProfitFigure Label="Final cost" Value="Row.ForecastCostOfSales" Memo="@CostMemo" />
+        <ProfitFigure Label="Forecast profit" Value="Row.ForecastedProfit" IsProfit="true" Margin="Row.ForecastedMargin" />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ProfitRow Row { get; set; } = default!;
+    [Parameter] public bool IsTotal { get; set; }
+
+    private string? VariationsMemo => IsTotal ? ProfitMemos.VariationsOfTotal(Row) : ProfitMemos.Variations(Row);
+    private string? CostMemo => IsTotal ? ProfitMemos.CostMovementAgainstTarget(Row) : null;
+}
