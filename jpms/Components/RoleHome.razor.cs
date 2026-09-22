@@ -57,7 +57,7 @@ public partial class RoleHome
         Role is Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager
             or Role.QuantitySurveyor;
 
-    // Mirrors the API's TriageRoles.AllowedToTriage (and DesktopNavigation.TriageRoles): the
+    // Mirrors the API's TriageRoles.AllowedToTriage (and NavigationRoles.TriageRoles): the
     // people who route inbound mail. The MD is in that gate precisely so this tile can link
     // straight into the queue it counts.
     private bool ShowTriage =>

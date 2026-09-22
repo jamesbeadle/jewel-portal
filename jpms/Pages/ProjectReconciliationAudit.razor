@@ -118,7 +118,7 @@
     private string? nextCursor;
     private int total;
 
-    // Mirrors the sidebar's Financials gate (DesktopNavigation.FinanceRoles) and the API's
+    // Mirrors the sidebar's Financials gate (NavigationRoles.FinanceRoles) and the API's
     // CommercialTeam gate on the recode-filtered audit read (AuditEndpoints).
     private bool CanAccess => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector

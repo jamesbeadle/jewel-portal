@@ -26,8 +26,8 @@ public partial class SideNav
     private string CurrentPath => new Uri(Nav.Uri).AbsolutePath;
 
     // The picker only earns its space when the role's visible nav actually holds a project-scoped
-    // row to retarget — under the directors-only nav clamp (2026-08-11) that is the honest test,
-    // where "may open projects" (CanSeeProjects) would hang a picker over an empty rail.
+    // row to retarget — "may open projects" (CanSeeProjects) would hang a picker over an empty
+    // rail for a role whose whole world is company pages (Accounts).
     private bool ShowsProjectPicker =>
         Session.ActiveRole is { } role && DesktopNavigation.HasProjectScopedRows(role);
 

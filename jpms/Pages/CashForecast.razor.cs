@@ -67,7 +67,7 @@ public partial class CashForecast
 
     // Bank tiles/rows are directors-only, mirroring the API's gate on the Xero cash summary.
     private bool IsDirector =>
-        Session.ActiveRole is { } role && DesktopNavigation.CanSee(role, DesktopNavigation.DirectorRoles);
+        Session.ActiveRole is { } role && DesktopNavigation.CanSee(role, NavigationRoles.DirectorRoles);
 
     private XeroCashSummarySnapshot? BankSnapshot => IsDirector ? Cash.Snapshot() : null;
 

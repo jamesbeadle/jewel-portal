@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Projects;
 
 namespace Jewel.JPMS.Api.Features.Projects.Queries;
@@ -15,8 +16,9 @@ public sealed class ListProjectsVisibleToUserEndpoint
         this.handler = handler;
     }
 
-    // The project list is an internal read; external portal sessions use their own scoped endpoints.
-    private static readonly RoleSet RolesThatMayListProjects = JpmsRoleSets.AllInternal;
+    // Every internal role reads the whole list; an architect reads the projects that name their
+    // practice (ArchitectProjects). Clients and subcontractors use their own scoped portal reads.
+    private static readonly RoleSet RolesThatMayListProjects = JpmsRoleSets.InternalAndArchitect;
 
     [Function(nameof(ListProjectsVisibleToUser))]
     public async Task<IActionResult> Run(
@@ -26,7 +28,20 @@ public sealed class ListProjectsVisibleToUserEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
         if (!RolesThatMayListProjects.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
-        var projects = await handler.HandleAsync(new ListProjectsVisibleToUser(), request.HttpContext.RequestAborted);
+        var query = QueryFor(signedInUser);
+        if (query is null) return new StatusCodeResult(403);
+
+        var projects = await handler.HandleAsync(query, request.HttpContext.RequestAborted);
         return new OkObjectResult(projects);
+    }
+
+    // An internal role sees everything; a login whose only reach is Role.Architect sees its
+    // practice's projects, and an architect login never linked to a practice sees nothing.
+    private static ListProjectsVisibleToUser? QueryFor(SignedInUser signedInUser)
+    {
+        var isInternal = JpmsRoleSets.AllInternal.IncludesAny(signedInUser.Roles);
+        if (isInternal) return new ListProjectsVisibleToUser();
+        var architectId = ArchitectScope.OwnArchitectId(signedInUser);
+        return architectId is null ? null : new ListProjectsVisibleToUser(architectId);
     }
 }

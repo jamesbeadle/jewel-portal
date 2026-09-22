@@ -18,7 +18,7 @@ public partial class SitePhotos
 
     // The Progress page's own gates: every internal role reads the pool, the site and project
     // team (and the MD, who helps out) drop into it.
-    private bool CanRead => Auth.CurrentRoles.Any(role => DesktopNavigation.AllInternalRoles.Contains(role));
+    private bool CanRead => Auth.CurrentRoles.Any(role => NavigationRoles.AllInternalRoles.Contains(role));
 
     private bool CanContribute =>
         Auth.CurrentRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager);
