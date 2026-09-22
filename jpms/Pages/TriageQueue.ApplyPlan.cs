@@ -91,6 +91,11 @@ public partial class TriageQueue
 
         if (StagedCreateRefusal(plan) is { } createRefusal) return createRefusal;
 
+        // Every to-do names a role (2026-09-22): a titled draft with nobody on it would raise an
+        // item no role owns — Miscellaneous is the choice for that, picked on purpose.
+        if (plan.Drafts.FirstOrDefault(draft => draft.Assignees is null || draft.Assignees.Count == 0) is { } unowned)
+            return $"The to-do \"{unowned.Title}\" has nobody on it — {TodoRoles.RoleIsRequiredMessage}";
+
         if (plan.Replying)
         {
             if (ParseRecipients(replyToField).Count == 0) return "Add a To recipient to the reply.";

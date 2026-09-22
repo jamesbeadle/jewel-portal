@@ -2,7 +2,8 @@ namespace Jewel.JPMS.Features.Triage;
 
 /// <summary>
 /// One drafted to-do row in the triage to-dos modal. The ASSIGNEES are held as
-/// TodoAssigneePicker values — a role, optionally pinned to a named holder. Empty = unassigned.
+/// TodoAssigneePicker values — a role, optionally pinned to a named holder. Empty is refused at
+/// apply (every to-do names a role; Miscellaneous when none owns it).
 /// A row with several assignees is raised as one to-do PER ASSIGNEE — same title, detail and due
 /// date, separate TODO-#### references and separate tick-boxes — so an email that needs two
 /// people to act becomes two items in one apply.

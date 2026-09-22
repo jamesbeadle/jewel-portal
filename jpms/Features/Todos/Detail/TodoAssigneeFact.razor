@@ -10,14 +10,14 @@
     @if (editing)
     {
         <TodoFactEditor Options="@Options" InitialValue="@TodoAssigneePicker.ValueFor(Item)" Assignee="true"
-                        Placeholder="Unassigned" Busy="@Busy" RequirePick="false"
-                        Hint="A role puts this item on the list of everyone holding it; a named person keeps it to their list alone. Either way it leaves the old assignee's list."
+                        Placeholder="Pick a role…" Busy="@Busy" RequirePick="true"
+                        Hint="A role puts this item on the list of everyone holding it; a named person keeps it to their list alone. Either way it leaves the old assignee's list. Every item names a role — Miscellaneous when none owns it."
                         OnSave="SaveAsync" OnCancel="() => editing = false" />
     }
     else
     {
         <dd class="text-content mt-0.5 flex flex-wrap items-center gap-2">
-            <span>@(TodoAssigneePicker.Label(Item) ?? "Unassigned")</span>
+            <span>@(TodoAssigneePicker.Label(Item) ?? Role.Miscellaneous.DisplayName())</span>
             @if (ShowReassign)
             {
                 <button type="button" class="btn-secondary text-xs px-1.5 py-0.5" disabled="@Busy"

@@ -53,7 +53,9 @@ public partial class Todos
     // project's id, "" = company-wide, which only CanSeeAll may post.
     private bool addOpen;
     private string? addError;
-    private string newProject = "";
+    // The assignee field's own message — beside the field, never a toast.
+    private string? assigneeError;
+        private string newProject = "";
     private string newTitle = "";
     private string newNotes = "";
     private string newAssignee = "";

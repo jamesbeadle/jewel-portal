@@ -13,7 +13,7 @@ public partial class Todos
         // The scope filter is the reader's stated context: raising an item while one project is
         // picked means an item on that project. All / Company-wide leave the picker to say.
         newProject = scopeFilter is ScopeAll or ScopeGeneral ? "" : scopeFilter;
-        addError = null;
+        addError = assigneeError = null;
         addedNote = addedNoteHref = null;
         addOpen = true;
     }
@@ -35,7 +35,8 @@ public partial class Todos
             addError = "Pick the project this item belongs to — only the managing director adds company-wide items.";
             return;
         }
-        addError = null;
+        if (TodoAssigneePicker.Parse(newAssignee) is null) { assigneeError = TodoRoles.RoleIsRequiredMessage; return; }
+        addError = assigneeError = null;
         addedNote = addedNoteHref = null;
         // Held for the "added, but not on your list" note below — Run reloads the list around it.
         TodoItem? added = null;

@@ -36,7 +36,7 @@
                     @{ var roleOptions = OptionsFor(row); }
                     <SearchSelect Options="@roleOptions" Value=""
                                   ValueChanged="v => AddAssignee(row, v)"
-                                  Placeholder="@(row.Assignees.Count == 0 ? "Unassigned" : "Add another…")"
+                                  Placeholder="@(row.Assignees.Count == 0 ? "Pick a role…" : "Add another…")"
                                   Disabled="@(roleOptions.Count == 0)"
                                   WidthClass="w-full" />
                     @if (row.Assignees.Count > 1)

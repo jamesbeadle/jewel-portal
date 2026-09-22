@@ -3,8 +3,8 @@ using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Contracts.Todos;
 
-// Full-row update of a to-do item (details + open/done state). Assignment is to a ROLE (null =
-// unassigned), optionally pinned to a named person who holds it — see TodoItem. Completing stamps
+// Full-row update of a to-do item (details + open/done state). Assignment is to a ROLE (required —
+// Miscellaneous when no role owns it), optionally pinned to a named person who holds it — see TodoItem. Completing stamps
 // CompletedAt server-side; reopening clears it.
 public sealed record UpdateTodoItem(
     string TodoItemId,

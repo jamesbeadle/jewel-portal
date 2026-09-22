@@ -9,6 +9,7 @@ public sealed class AddTodoItemValidation
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(command.ProjectId)) errors.Add("ProjectId is required.");
         if (string.IsNullOrWhiteSpace(command.Title)) errors.Add("Title is required.");
+        if (command.AssigneeRole is null) errors.Add(TodoRoles.RoleIsRequiredMessage);
         if (command.AssigneeRole is Role role && !TodoRoles.AssignableAsTodoAssignee.Includes(role))
             errors.Add("To-do items can't be assigned to that role.");
         // A person is only ever pinned WITH a role (see TodoAssignee) — that the person actually

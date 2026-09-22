@@ -48,8 +48,16 @@ public static class TodoRoles
         JpmsRoles.SiteManager,
         JpmsRoles.HealthAndSafetyLead,
         JpmsRoles.OfficeComplianceCoordinator,
-        JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing
+        JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing,
+        // Last, deliberately: "no role owns this", picked on purpose (2026-09-22) — see Role.
+        Role.Miscellaneous
     };
+
+    // Every to-do names a role (2026-09-22): the picker starts empty and the author picks a real
+    // role or Miscellaneous before the item saves. The one message every creating path answers
+    // with — beside the field on a form, a 400 from the API, the connector's refusal.
+    public const string RoleIsRequiredMessage =
+        "Pick who owns this — a role, or Miscellaneous when no role does.";
 
     // The same pool as a set, for gate checks ("is this AssigneeRole value allowed?").
     public static readonly RoleSet AssignableAsTodoAssignee =

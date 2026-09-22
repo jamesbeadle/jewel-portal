@@ -326,7 +326,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <FormField Label="Assigned to">
-                <TodoAssigneeSelect Options="@assigneeOptions" Value="@newAssignee" ValueChanged="v => newAssignee = v" />
+                <TodoAssigneeSelect Options="@assigneeOptions" Value="@newAssignee" ValueChanged="v => { newAssignee = v; assigneeError = null; }" Error="@assigneeError" />
                 </FormField>
             </div>
             <FormField Label="Due" Value="@newDue" OnChange="v => newDue = v" InputType="date" />

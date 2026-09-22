@@ -20,10 +20,11 @@ public static class UserRoles
             .ToListAsync(cancellationToken);
 
     /// <summary>The effective role list gates run on: a directory Admin role expands to every
-    /// role; everyone else keeps exactly what the directory assigns.</summary>
+    /// LOGIN role (never the Miscellaneous to-do desk, which no person holds); everyone else keeps
+    /// exactly what the directory assigns.</summary>
     public static IReadOnlyList<Role> Expand(IReadOnlyList<Role> directoryRoles)
     {
-        if (directoryRoles.Contains(Role.Admin)) return Enum.GetValues<Role>();
+        if (directoryRoles.Contains(Role.Admin)) return LoginRoles.All;
         // Finance Directors keep their own identity: their role list stays exactly what the
         // directory assigns. Admin-equivalent permissions are granted where they matter via
         // AdminGate, not by rewriting the role list (which made the client treat FDs as

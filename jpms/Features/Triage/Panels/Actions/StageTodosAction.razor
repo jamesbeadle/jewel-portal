@@ -38,7 +38,7 @@
                    different role starts another chip; the pinned one stays as it is. *@
                 <TodoAssigneeSelect Options="@TodoAssigneeOptions" Value="@row.PendingAssignee"
                                     ValueChanged="v => PickTodoAssignee(row, v)"
-                                    Placeholder="@(row.Assignees.Count == 0 ? "Unassigned" : "Add another…")"
+                                    Placeholder="@(row.Assignees.Count == 0 ? "Pick a role…" : "Add another…")"
                                     Taken="@row.Assignees"
                                     Disabled="@(TodoAssigneeOptions.Count == 0)" />
                 @if (row.Assignees.Count > 1)
