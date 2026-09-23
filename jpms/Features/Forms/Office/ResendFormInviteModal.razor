@@ -1,0 +1,38 @@
+@inject ICommandSender Commands
+
+<Modal IsOpen="Invite is not null" Title="Send the link again" ConfirmLabel="@(write.IsBusy ? "Sending…" : "Send a fresh link")"
+       ConfirmDisabled="@(write.IsBusy || email.Trim().Length == 0)" OnConfirm="SendAsync" OnCancel="OnClose" Class="max-w-lg w-full">
+    @if (write.Problem is { } problem)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@problem</Notice>
+    }
+    <FormField Label="Their email" Required Value="@email" OnChange="typed => email = typed" InputType="email"
+               Hint="A fresh link with a fresh expiry. The old link stops working, so a forwarded email cannot be used later." />
+</Modal>
+
+@code {
+    [Parameter] public FormInvite? Invite { get; set; }
+    [Parameter] public EventCallback<SentLinkOutcome> OnSent { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private readonly FormWrite write = new();
+    private string email = "";
+    private string? shownFor;
+
+    protected override void OnParametersSet()
+    {
+        var isANewInvite = Invite is not null && Invite.FormInviteId != shownFor;
+        if (isANewInvite) email = Invite!.Email;
+        shownFor = Invite?.FormInviteId;
+    }
+
+    private async Task SendAsync()
+    {
+        SentFormLink? sent = null;
+        var command = new ResendFormInvite(Invite!.FormInviteId, email.Trim());
+        var isSent = await write.RunAsync(async () => sent = await Commands.SendAsync(command, CancellationToken.None));
+        if (!isSent || sent is null) return;
+        var outcome = SentLinkOutcome.Of(sent);
+        await OnSent.InvokeAsync(outcome);
+    }
+}

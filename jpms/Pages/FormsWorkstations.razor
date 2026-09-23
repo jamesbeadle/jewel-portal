@@ -1,0 +1,85 @@
+@page "/forms/workstations"
+@using Jewel.JPMS.Contracts.Forms
+@using Jewel.JPMS.Features.Forms.Office
+@inject IQueryClient Queries
+@inject FormsPageEntry Entry
+
+<PageTitle>Workstations · JPMS</PageTitle>
+
+<Page OpenTo="FormRoleSets.Office">
+    <PageHeader Subtitle="Every NO on a workstation assessment is something to sort out; an assessment is finished when each is fixed or accepted.">
+        <Actions>
+            <FilterChips Items="Chips" Selected="@filter" OnSelect="key => filter = key" Disabled="@(actions is null)" AriaLabel="Actions" />
+        </Actions>
+    </PageHeader>
+
+    <FormsTabs ActiveKey="@FormsTabs.Workstations" />
+
+    <RecordsTable Dense="true" MaxHeight="" IsLoading="@(actions is null && !dataFailed)" IsEmpty="@(Rows.Count == 0)" EmptyMessage="@EmptyMessage">
+        <thead>
+            <tr>
+                <th>Who</th>
+                <th>Workstation</th>
+                <th>To sort out</th>
+                <th>Raised</th>
+                <th>Standing</th>
+                <th>What was done</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var action in Rows)
+            {
+                <tr @key="action.WorkstationActionId" class="is-clickable" @onclick="() => Open(action)">
+                    <td>
+                        @action.PersonName
+                        <a class="block text-xs text-info underline underline-offset-2" href="@($"/forms/received/{action.FormSubmissionId}")"
+                           @onclick:stopPropagation="true">The assessment</a>
+                    </td>
+                    <td>@action.Workstation</td>
+                    <td class="max-w-md">@action.Action</td>
+                    <td class="whitespace-nowrap">@DateText(action.RaisedAt)</td>
+                    <td><Pill Tone="@action.State.ToTone()">@action.State.DisplayName()</Pill></td>
+                    <td class="max-w-md">@action.Note<span class="block text-xs text-content-subtle">@action.ResolvedByEmail</span></td>
+                </tr>
+            }
+        </tbody>
+    </RecordsTable>
+
+    <WorkstationActionModal ToClose="closing" OnSaved="SavedAsync" OnClose="() => closing = null" />
+</Page>
+
+@code {
+    private IReadOnlyList<WorkstationAction>? actions;
+    private bool dataFailed;
+    private string filter = WorkstationActionFilters.Open;
+    private WorkstationAction? closing;
+
+    private IReadOnlyList<WorkstationAction> Rows => WorkstationActionFilters.Apply(actions ?? Array.Empty<WorkstationAction>(), filter);
+
+    private IReadOnlyList<TabItem> Chips => WorkstationActionFilters.Chips(actions);
+
+    private string EmptyMessage => dataFailed ? "Couldn't load the actions — refresh to try again." : "Nothing to sort out.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var mayRead = await Entry.MayReadAsync(FormRoleSets.Office);
+        if (mayRead) await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try { actions = await Queries.AskAsync(new ListWorkstationActions(), CancellationToken.None); }
+        catch { dataFailed = true; }
+    }
+
+    private void Open(WorkstationAction action)
+    {
+        if (action.State == WorkstationActionState.Open) closing = action;
+    }
+
+    private async Task SavedAsync()
+    {
+        closing = null;
+        await LoadAsync();
+    }
+}

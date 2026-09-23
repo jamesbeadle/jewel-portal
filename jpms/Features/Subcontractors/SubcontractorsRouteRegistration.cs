@@ -31,6 +31,8 @@ public static class SubcontractorsRouteRegistration
         queries.Register<ListCurrentComplianceDocuments, IReadOnlyList<ComplianceDocument>>(
             QueryRoute.Static("/api/compliance-documents"));
 
+        queries.Register<ListCompaniesOnSite, IReadOnlyList<CompanyOnSite>>(QueryRoute.Static("/api/companies-on-site"));
+
         queries.Register<ListComplianceDocumentsForSubcontractor, IReadOnlyList<ComplianceDocument>>(
             new QueryRoute("/api/subcontractors/{subcontractorId}/compliance",
                 query => $"/api/subcontractors/{((ListComplianceDocumentsForSubcontractor)query).SubcontractorId}/compliance"));

@@ -12,6 +12,7 @@ using Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
 using Jewel.JPMS.Api.Features.ValuationInvoices.XeroPayments;
 using Jewel.JPMS.Contracts.ValuationInvoices;
 using Jewel.JPMS.Contracts.Xero;
+using Jewel.JPMS.Worker.Forms;
 using Jewel.JPMS.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
@@ -142,6 +143,8 @@ var host = new HostBuilder()
             services.AddSingleton<IImagineNotifier>(sp => new AcsImagineNotifier(
                 new Azure.Communication.Email.EmailClient(acsConnection!), notifierOptions, sp.GetRequiredService<ILogger<AcsImagineNotifier>>()));
         services.AddScoped<ImagineRenderRunner>();
+
+        services.AddFormsWork(context.Configuration);
 
         // The drawings blob store — the extraction reads revision PDFs and writes the payload
         // blobs beside them. Same connection resolution as DrawingsFeatureRegistration in the api.

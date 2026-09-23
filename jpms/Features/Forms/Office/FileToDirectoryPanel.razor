@@ -1,0 +1,38 @@
+@inject ICommandSender Commands
+@inject ISubcontractorStore Directory
+@implements IDisposable
+
+<Notice Tone="Tone.Info" Class="mb-4">
+    <span>@Lead</span>
+    <button type="button" class="btn-secondary ml-2" @onclick="Open">File to the directory…</button>
+</Notice>
+@if (filed is { } result)
+{
+    <Notice Tone="Tone.Positive" Class="mb-4" Dismissible OnDismiss="() => filed = null">
+        Filed to @result.CompanyName: @(string.Join(", ", result.FiledKinds)).
+    </Notice>
+}
+
+<Modal IsOpen="isOpen" Title="File to the directory" ConfirmLabel="@(write.IsBusy ? "Filing…" : "File")"
+       ConfirmDisabled="@(write.IsBusy || !IsReady)" OnConfirm="FileAsync" OnCancel="() => isOpen = false" Class="max-w-3xl w-full">
+    @if (write.Problem is { } problem)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@problem</Notice>
+    }
+    <FormField Label="Directory company" Required Hint="Not in the directory yet? Add them there first, then come back.">
+        <SearchSelect Options="Companies" Value="@subcontractorId" ValueChanged="picked => subcontractorId = picked"
+                      Placeholder="@(Directory.IsLoaded ? "Pick the company" : "Loading…")" WidthClass="w-full" InputClass="field"
+                      Disabled="@(!Directory.IsLoaded)" />
+    </FormField>
+    @foreach (var row in rows)
+    {
+        <div @key="row.FormUploadId" class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end border-t border-line pt-3 mt-3">
+            <Checkbox @bind-Value="row.IsIncluded" Label="@row.FileName" Class="sm:col-span-3" />
+            <FormField Label="What it is" Class="sm:col-span-4" Value="@row.Kind" OnChange="typed => row.Kind = typed" />
+            <FormField Label="Expires" Class="sm:col-span-2">
+                <input type="date" class="field" value="@row.ExpiresOn" @onchange="chosen => row.ExpiresOn = chosen.Value?.ToString() ?? string.Empty" />
+            </FormField>
+            <FormField Label="PL cover (£)" Class="sm:col-span-3" Value="@row.Cover" OnChange="typed => row.Cover = typed" />
+        </div>
+    }
+</Modal>

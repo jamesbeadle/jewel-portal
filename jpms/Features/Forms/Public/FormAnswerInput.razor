@@ -1,0 +1,51 @@
+@switch (Question.Kind)
+{
+    case FormQuestionKind.LongText:
+        <textarea id="@InputId" class="form-sheet-input" rows="3" maxlength="@PublicFormLimits.LongestTextBox"
+                  value="@Answer" @oninput="Typed" @onchange="OnChanged"></textarea>
+        break;
+    case FormQuestionKind.Date:
+        <input id="@InputId" type="date" class="form-sheet-input" value="@Answer" @onchange="ChosenAsync" />
+        break;
+    case FormQuestionKind.DateAndTime:
+        <input id="@InputId" type="datetime-local" class="form-sheet-input" value="@Answer" @onchange="ChosenAsync" />
+        break;
+    case FormQuestionKind.Choice:
+        <select id="@InputId" class="form-sheet-input" value="@Answer" @onchange="ChosenAsync">
+            <option value="">@FormSheetWording.SelectAnOption</option>
+            @foreach (var choice in Question.Choices)
+            {
+                <option value="@choice">@choice</option>
+            }
+        </select>
+        break;
+    case FormQuestionKind.Upload:
+        <FormUploadField Question="Question" Draft="Draft" CompanyCode="@CompanyCode" Slug="@Form.Slug" OnChanged="OnChanged" />
+        break;
+    case FormQuestionKind.Signature:
+        <FormSignatureField Form="Form" Question="Question" Draft="Draft" OnChanged="OnChanged" />
+        break;
+    default:
+        <input id="@InputId" type="text" class="form-sheet-input" maxlength="@PublicFormLimits.LongestAnswer"
+               value="@Answer" @oninput="Typed" @onchange="OnChanged" />
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public FormDefinition Form { get; set; } = default!;
+    [Parameter, EditorRequired] public FormQuestion Question { get; set; } = default!;
+    [Parameter, EditorRequired] public FormDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public string CompanyCode { get; set; } = "";
+    [Parameter, EditorRequired] public string InputId { get; set; } = "";
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private string Answer => Draft.AnswerTo(Question.Key);
+
+    private void Typed(ChangeEventArgs typed) => Draft.Answer(Form, Question.Key, typed.Value?.ToString() ?? "");
+
+    private async Task ChosenAsync(ChangeEventArgs chosen)
+    {
+        Typed(chosen);
+        await OnChanged.InvokeAsync();
+    }
+}

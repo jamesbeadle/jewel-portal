@@ -173,6 +173,19 @@
     <Compile Include="..\api\Features\Sales\Imagine\ImagineConceptWriter.cs" Link="Shared\Sales\Imagine\ImagineConceptWriter.cs" />
     <Compile Include="..\api\Features\Sales\Imagine\ImagineNotifier.cs" Link="Shared\Sales\Imagine\ImagineNotifier.cs" />
     <Compile Include="..\api\Features\Sales\Imagine\ImagineRenderRunner.cs" Link="Shared\Sales\Imagine\ImagineRenderRunner.cs" />
+    <!-- The forms' retention sweep and renewal chase (2026-09-23): the api's own code, with what it reaches for. -->
+    <Compile Include="..\api\Features\Forms\FormIdentifierFactory.cs" Link="Shared\Forms\FormIdentifierFactory.cs" />
+    <Compile Include="..\api\Features\Forms\FormAuditRecords.cs" Link="Shared\Forms\FormAuditRecords.cs" />
+    <Compile Include="..\api\Features\Forms\FormClock.cs" Link="Shared\Forms\FormClock.cs" />
+    <Compile Include="..\api\Features\Forms\FormSiteOptions.cs" Link="Shared\Forms\FormSiteOptions.cs" />
+    <Compile Include="..\api\Features\Forms\Links\FormTokens.cs" Link="Shared\Forms\FormTokens.cs" />
+    <Compile Include="..\api\Features\Forms\Links\FormInviteRows.cs" Link="Shared\Forms\FormInviteRows.cs" />
+    <Compile Include="..\api\Features\Forms\Storage\*.cs" Link="Shared\Forms\Storage\%(Filename)%(Extension)" />
+    <Compile Include="..\api\Features\Forms\Mail\IFormMailer.cs" Link="Shared\Forms\IFormMailer.cs" />
+    <Compile Include="..\api\Features\Forms\Mail\AcsFormMailer.cs" Link="Shared\Forms\AcsFormMailer.cs" />
+    <Compile Include="..\api\Features\Forms\Mail\FormEmailFrame.cs" Link="Shared\Forms\FormEmailFrame.cs" />
+    <Compile Include="..\api\Features\Forms\Mail\FormRenewalEmails.cs" Link="Shared\Forms\FormRenewalEmails.cs" />
+    <Compile Include="..\api\Features\Forms\Retention\*.cs" Link="Shared\Forms\Retention\%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

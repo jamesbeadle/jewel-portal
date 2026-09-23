@@ -1,0 +1,17 @@
+<div class="form-sheet-invitation">
+    <b class="text-paper-strong">@PersonName</b>
+    @if (CompanyName.Length > 0)
+    {
+        <span class="text-paper-hint"> · @CompanyName</span>
+    }
+    @if (Note.Length > 0)
+    {
+        <span class="form-sheet-invitation-note">@Note</span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string PersonName { get; set; } = "";
+    [Parameter] public string CompanyName { get; set; } = "";
+    [Parameter] public string Note { get; set; } = "";
+}

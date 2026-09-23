@@ -1,0 +1,34 @@
+@switch (Question.Kind)
+{
+    case FormQuestionKind.Upload:
+        <FormFileLinks Files="Reading.FilesFor(Question.Key)" />
+        break;
+    case FormQuestionKind.Signature:
+        <span>@Reading.AnswerTo(FormAnswerRules.SignatureNameKey(Question.Key))</span>
+        @foreach (var drawing in Reading.FilesFor(Question.Key).Where(file => file.DeletedAt is null))
+        {
+            <img class="block mt-1 h-16 w-auto rounded bg-paper-card" alt="Signature"
+                 src="@($"/api/form-uploads/{drawing.FormUploadId}/file?inline=1")" />
+        }
+        break;
+    case FormQuestionKind.Declaration:
+        <span>@(Reading.AnswerTo(Question.Key) == FormWording.Yes ? "Ticked" : "Not ticked")</span>
+        break;
+    default:
+        @if (Reading.IsWithheld(Question.Key))
+        {
+            <span class="text-content-subtle">Withheld</span>
+        }
+        @if (!Reading.IsWithheld(Question.Key))
+        {
+            <span class="whitespace-pre-line">@Shown(Reading.AnswerTo(Question.Key))</span>
+        }
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public FormSubmissionReading Reading { get; set; } = default!;
+    [Parameter, EditorRequired] public FormQuestion Question { get; set; } = default!;
+
+    private static string Shown(string answer) => answer.Length > 0 ? answer : "—";
+}

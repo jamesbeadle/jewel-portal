@@ -5,6 +5,7 @@
 @inject SessionService Session
 @inject ISubcontractorStore SubcontractorStore
 @inject ComplianceOverviewReadModel Compliance
+@inject IQueryClient Queries
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -80,7 +81,7 @@
                     @foreach (var row in FilteredRows)
                     {
                         <tr class="is-clickable" @onclick="() => Open(row.Company.SubcontractorId)">
-                            <td class="text-content font-medium">@row.Company.CompanyName</td>
+                            <td class="text-content font-medium">@(row.Company.CompanyName)<CompanyOnSiteNote Projects="@row.OnSiteAt" IsLapsed="@row.IsLapsedCoverOnSite" /></td>
                             <td class="hidden md:table-cell">@row.Company.TradesLabel</td>
                             <td>@row.DocumentLabel</td>
                             <td class="text-right whitespace-nowrap">@DateText(row.ExpiresAt)</td>

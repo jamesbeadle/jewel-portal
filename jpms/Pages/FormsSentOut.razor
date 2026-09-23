@@ -1,0 +1,64 @@
+@page "/forms/sent"
+@using Jewel.JPMS.Contracts.Forms
+@using Jewel.JPMS.Features.Forms.Office
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+@inject FormsPageEntry Entry
+
+<PageTitle>Forms sent out · JPMS</PageTitle>
+
+<Page OpenTo="FormRoleSets.Office">
+    <PageHeader Subtitle="Forms sent on their own to one named person — each link works once, for them alone.">
+        <Actions>
+            <FilterChips Items="Chips" Selected="@filter" OnSelect="key => filter = key" Disabled="@(invites is null)" AriaLabel="Links" />
+        </Actions>
+        <Primary>
+            <button type="button" class="btn-primary" @onclick="() => isSending = true">Send a form</button>
+        </Primary>
+    </PageHeader>
+
+    <FormsTabs ActiveKey="@FormsTabs.SentOut" />
+    <SentLinkNotice Sent="sent" OnDismiss="() => sent = null" />
+    @if (write.Problem is { } problem)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-4" Dismissible OnDismiss="write.Forget">@problem</Notice>
+    }
+
+    <RecordsTable Dense="true" MaxHeight="" IsLoading="@(invites is null && !dataFailed)" IsEmpty="@(Rows.Count == 0)" EmptyMessage="@EmptyMessage">
+        <thead>
+            <tr>
+                <th>Form</th>
+                <th>Sent to</th>
+                <th>Their company</th>
+                <th>For</th>
+                <th>Sent</th>
+                <th>Link lasts until</th>
+                <th>Standing</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var invite in Rows)
+            {
+                var state = invite.StateAt(now);
+                <tr @key="invite.FormInviteId">
+                    <td>@FormCatalogue.TitleOf(invite.FormSlug, invite.Company)</td>
+                    <td>@invite.PersonName<span class="block text-xs text-content-subtle">@invite.Email</span></td>
+                    <td>@invite.CompanyName</td>
+                    <td class="whitespace-nowrap">@invite.Company.DisplayName()</td>
+                    <td class="whitespace-nowrap">@DateText(invite.SentAt)<span class="block text-xs text-content-subtle">@invite.SentByName</span></td>
+                    <td class="whitespace-nowrap">@DateText(invite.ExpiresAt)</td>
+                    <td><Pill Tone="@state.ToTone()">@state.DisplayName()</Pill></td>
+                    <td class="text-right"><DropdownMenu Items="MenuFor(invite)" Disabled="@write.IsBusy" /></td>
+                </tr>
+            }
+        </tbody>
+    </RecordsTable>
+
+    <SendFormInviteModal IsOpen="isSending" OnSent="LinkSentAsync" OnClose="() => isSending = false" />
+    <ResendFormInviteModal Invite="resending" OnSent="LinkSentAsync" OnClose="() => resending = null" />
+    <ConfirmDialog IsOpen="cancelling is not null" Title="Cancel this link?" ConfirmLabel="Cancel the link" Danger="true"
+                   Busy="@write.IsBusy" OnConfirm="CancelAsync" OnCancel="() => cancelling = null">
+        The link stops working. Anything @cancelling?.PersonName has already sent stays on record.
+    </ConfirmDialog>
+</Page>

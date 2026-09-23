@@ -1,0 +1,26 @@
+@inject FormsPageEntry Entry
+
+<TabRow Items="Tabs" ActiveKey="@ActiveKey" AriaLabel="Forms" />
+
+@code {
+    public const string Received = "received";
+    public const string Packs = "packs";
+    public const string SentOut = "sent";
+    public const string RightToWork = "right-to-work";
+    public const string Training = "training";
+    public const string Workstations = "workstations";
+    public const string Folders = "folders";
+
+    [Parameter, EditorRequired] public string ActiveKey { get; set; } = "";
+
+    private IReadOnlyList<TabItem> Tabs => new[]
+    {
+        new TabItem(Received, "Received", "/forms"),
+        new TabItem(Packs, "New starter packs", "/forms/packs"),
+        new TabItem(SentOut, "Sent out", "/forms/sent"),
+        new TabItem(RightToWork, "Right to work", "/forms/right-to-work"),
+        new TabItem(Training, "Training", "/forms/training"),
+        new TabItem(Workstations, "Workstations", "/forms/workstations"),
+        new TabItem(Folders, "People & companies", "/forms/folders")
+    }.Where(tab => tab.Key != RightToWork || Entry.Admits(FormRoleSets.RightToWorkReaders)).ToList();
+}

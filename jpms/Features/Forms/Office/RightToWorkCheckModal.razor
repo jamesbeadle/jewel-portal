@@ -1,0 +1,17 @@
+@inject ICommandSender Commands
+@inject HttpClient Http
+
+<Modal IsOpen="Draft is not null" Title="@Title" ConfirmLabel="@(write.IsBusy ? "Recording…" : "Record the check")"
+       ConfirmDisabled="@write.IsBusy" OnConfirm="SaveAsync" OnCancel="OnClose" Class="max-w-3xl w-full">
+    @if (Draft is { } draft)
+    {
+        <Notice Tone="Tone.Warning" Class="mb-3">No completed check, no start. No exceptions.</Notice>
+        @if (problem is { } sentence)
+        {
+            <Notice Tone="Tone.Negative" Class="mb-3">@sentence</Notice>
+        }
+        <RightToWorkWhoFields Draft="draft" />
+        <RightToWorkRouteFields Draft="draft" EvidenceChosen="file => evidence = file" />
+        <RightToWorkOutcomeFields Draft="draft" />
+    }
+</Modal>

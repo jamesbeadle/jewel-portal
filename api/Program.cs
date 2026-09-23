@@ -37,6 +37,7 @@ using Jewel.JPMS.Api.Features.Registers;
 using Jewel.JPMS.Api.Features.Lads;
 using Jewel.JPMS.Api.Features.Sales;
 using Jewel.JPMS.Api.Features.MailboxIntake;
+using Jewel.JPMS.Api.Features.Forms;
 using Jewel.JPMS.Api.Features.Mobilisation;
 using Jewel.JPMS.Api.Features.Places;
 using Jewel.JPMS.Api.Features.Platform;
@@ -115,6 +116,7 @@ var host = new HostBuilder()
         services.AddClientPortalFeature();
         services.AddHsFeature();
         services.AddHsAuditFeature();
+        services.AddFormsFeature(context.Configuration);
         services.AddMobilisationFeature();
         services.AddSiteFeature();
         services.AddCommercialFeature();

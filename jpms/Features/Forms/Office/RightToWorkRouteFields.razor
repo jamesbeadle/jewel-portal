@@ -1,0 +1,32 @@
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+    <div class="sm:col-span-2">
+        <FormChoiceSelect TChoice="RightToWorkRoute" Label="2. Route used" Required Value="Draft.Route" ValueChanged="route => Draft.Route = route"
+                          Placeholder="@FormDisplayNames.NotYetChosen" Describe="route => route.DisplayName()" Hint="@RouteHint" />
+    </div>
+    <FormField Label="Share code or IDSP report reference" Required="@Draft.NeedsAReference" Hint="Required unless the route is the original passport.">
+        <input type="text" class="field" placeholder="W12 ABC 34D, or the IDSP reference" value="@Draft.Reference"
+               @oninput="typed => Draft.Reference = typed.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <FormField Label="IDSP provider (if used)">
+        <input type="text" class="field" placeholder="e.g. TrustID, Yoti" value="@Draft.IdspProvider"
+               @oninput="typed => Draft.IdspProvider = typed.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <FormChoiceSelect TChoice="RightToWorkSeenVia" Label="Seen via" Value="Draft.SeenVia" ValueChanged="seenVia => Draft.SeenVia = seenVia ?? Draft.SeenVia"
+                      Describe="seenVia => seenVia.DisplayName()" />
+    <FormField Label="Evidence file reference">
+        <input type="text" class="field" placeholder="e.g. Smith_J_PS_190826.pdf" value="@Draft.DocumentReference"
+               @oninput="typed => Draft.DocumentReference = typed.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <FormField Label="Evidence: the document page, or the online check result" Class="sm:col-span-2"
+               Hint="Filed in the restricted Right to work folder under their name. We keep the copy, never the passport. Not a photo of the person.">
+        <InputFile OnChange="chosen => EvidenceChosen.InvokeAsync(chosen.File)" accept=".pdf,image/*" class="w-full text-sm text-content-muted" />
+    </FormField>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public RightToWorkCheckDraft Draft { get; set; } = default!;
+    [Parameter] public EventCallback<IBrowserFile> EvidenceChosen { get; set; }
+
+    private const string RouteHint = "British and Irish citizens cannot get a share code, so for them it is the original passport seen, "
+        + "or an IDSP report. Everyone else: the free online check at gov.uk/view-right-to-work.";
+}

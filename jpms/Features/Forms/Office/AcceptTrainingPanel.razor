@@ -1,0 +1,61 @@
+@inject ICommandSender Commands
+
+@if (Reading.Submission.Status != FormSubmissionStatus.Handled)
+{
+    <Notice Tone="Tone.Info" Class="mb-4">
+        <span>A training certificate. Accept it onto the training register and its holder is asked for the renewal a month before it lapses.</span>
+        <button type="button" class="btn-secondary ml-2" @onclick="Open">Accept onto the register…</button>
+    </Notice>
+}
+
+<Modal IsOpen="isOpen" Title="Accept onto the training register" ConfirmLabel="@(write.IsBusy ? "Accepting…" : "Accept")"
+       ConfirmDisabled="@(write.IsBusy || !IsReady)" OnConfirm="AcceptAsync" OnCancel="() => isOpen = false" Class="max-w-lg w-full">
+    @if (write.Problem is { } problem)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@problem</Notice>
+    }
+    <div class="space-y-3">
+        <FormField Label="Whose certificate" Required Value="@personName" OnChange="typed => personName = typed"
+                   Hint="The same spelling as their other certificates, so their register reads as one person." />
+        <FormField Label="Course or ticket" Required Value="@course" OnChange="typed => course = typed" />
+        <FormField Label="Completed on" Required>
+            <input type="date" class="field" value="@completedOn" @onchange="chosen => completedOn = chosen.Value?.ToString() ?? string.Empty" />
+        </FormField>
+        <FormField Label="Expires on" Hint="Blank for a certificate that never expires; it is then never chased.">
+            <input type="date" class="field" value="@expiresOn" @onchange="chosen => expiresOn = chosen.Value?.ToString() ?? string.Empty" />
+        </FormField>
+    </div>
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public FormSubmissionReading Reading { get; set; } = default!;
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private readonly FormWrite write = new();
+    private bool isOpen;
+    private string personName = "";
+    private string course = "";
+    private string completedOn = "";
+    private string expiresOn = "";
+
+    private bool IsReady => personName.Trim().Length > 0 && course.Trim().Length > 0 && FormDates.Read(completedOn) is not null;
+
+    private void Open()
+    {
+        var certificate = TrainingCertificateForm.DetailsFrom(Reading.Submission, Reading.View.Answers);
+        personName = certificate.PersonName;
+        course = certificate.Course;
+        completedOn = FormDates.Write(certificate.CompletedOn);
+        expiresOn = FormDates.Write(certificate.ExpiresOn);
+        isOpen = true;
+    }
+
+    private async Task AcceptAsync()
+    {
+        var command = new AcceptTrainingCertificate(Reading.Submission.FormSubmissionId, personName.Trim(), course.Trim(),
+            FormDates.Read(completedOn)!.Value, FormDates.Read(expiresOn));
+        var isAccepted = await write.RunAsync(() => Commands.SendAsync(command, CancellationToken.None));
+        isOpen = !isAccepted;
+        if (isAccepted) await OnChanged.InvokeAsync();
+    }
+}

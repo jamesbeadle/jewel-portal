@@ -1,0 +1,12 @@
+<div class="flex flex-wrap gap-1">
+    @foreach (var form in Pack.CurrentForms)
+    {
+        var state = form.StateAt(Now);
+        <Pill Tone="@state.ToTone()" Title="@state.DisplayName()">@FormCatalogue.TitleOf(form.FormSlug, Pack.Company)</Pill>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public FormPack Pack { get; set; } = default!;
+    [Parameter, EditorRequired] public DateTimeOffset Now { get; set; }
+}

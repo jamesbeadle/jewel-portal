@@ -1,0 +1,48 @@
+@inject ICommandSender Commands
+@inject IQueryClient Queries
+
+@if (Check is { } done)
+{
+    <Notice Tone="@(done.IsWithinInsuranceCriteria ? Tone.Positive : Tone.Warning)" Class="mb-4">
+        <span>
+            Checked with the DVLA on @DateText(done.DvlaCheckedOn):
+            @(done.IsWithinInsuranceCriteria ? "meets" : "does not meet") the insurance criteria.
+        </span>
+        @if (done.Note.Length > 0)
+        {
+            <span class="block mt-1">@done.Note</span>
+        }
+        <span class="block mt-1 text-xs">
+            The licence photograph and the driving-record answers were removed when the check was recorded; only this outcome is kept.
+        </span>
+    </Notice>
+}
+@if (checks is not null && Check is null)
+{
+    <Notice Tone="@(DaysLeft > 0 ? Tone.Info : Tone.Warning)" Class="mb-4">
+        <span>@CodeLine</span>
+        <button type="button" class="btn-secondary ml-2" @onclick="() => isOpen = true">Record the licence check…</button>
+    </Notice>
+}
+
+<Modal IsOpen="isOpen" Title="Record the licence check" ConfirmLabel="@(write.IsBusy ? "Recording…" : "Record it")"
+       ConfirmDisabled="@(write.IsBusy || FormDates.Read(checkedOn) is null)" OnConfirm="RecordAsync" OnCancel="() => isOpen = false"
+       Class="max-w-lg w-full">
+    @if (write.Problem is { } problem)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@problem</Notice>
+    }
+    <Notice Tone="Tone.Warning" Class="mb-3">
+        Recording the check deletes the licence photograph and withholds the driving-record answers and the check code for good —
+        the form's own privacy paragraph promised that only the outcome is kept.
+    </Notice>
+    <div class="space-y-3">
+        <FormField Label="Viewed on the DVLA's service on" Required>
+            <input type="date" class="field" value="@checkedOn" @onchange="chosen => checkedOn = chosen.Value?.ToString() ?? string.Empty" />
+        </FormField>
+        <Checkbox @bind-Value="isWithinCriteria" Label="They meet our insurance criteria" />
+        <FormField Label="Note" Hint="What the record showed, in terms of the criteria — never the detail of an offence.">
+            <textarea class="field" rows="2" maxlength="1000" value="@note" @oninput="typed => note = typed.Value?.ToString() ?? string.Empty"></textarea>
+        </FormField>
+    </div>
+</Modal>

@@ -265,6 +265,31 @@ name), pinned in AiConnectorTests. The "ledger link slices unreadable" cell in �
 row is answered by this read for one supplier at a time; the whole-project slice list stays on
 list_xero_ledger_lines.
 
+**2026-09-23 (the forms moved from the JPS Dashboard for both Jewel companies)**: the /forms
+screens shipped with their connector surface in the same change. Fifteen actions
+(`FormsActions` + `.Packs` / `.Submissions` / `.RightToWork` / `.Registers`, Area "Forms"):
+send_form_invite, resend_form_invite, send_form_pack, chase_form_pack and
+send_right_to_work_confirmation email someone outside the business, so each says SENDS EMAIL,
+confirms first and stamps SentByEmail; cancel_form_invite, cancel_form_pack,
+file_form_to_directory, record_form_folder_dates, save_right_to_work_check and
+record_driving_licence_check are confirm-first too; set_form_submission_status,
+accept_training_certificate, set_training_record_details and resolve_workstation_action are
+not. The right-to-work pair is `FormRoleSets.RightToWorkReaders`, everything else
+`FormRoleSets.Office`. Ten reads (`AiFormsTools`): list_form_submissions, get_form_submission
+(answers in form order, files with their ids, the filing / training / check-code suggestions),
+list_form_packs, list_form_invites, list_form_folders, list_right_to_work_checks,
+list_training_records, list_workstation_actions, list_driving_licence_checks,
+list_emergency_contacts. **Deliberately page-only**: an emergency form's health answers
+(`RevealHealthAnswers` has no tool — each reveal is on the audit trail, and the page is where it
+is judged) and every answer `SensitiveAnswers` names (NI number, UTR, date of birth, share code,
+driving record), which get_form_submission reads as "withheld from the connector". The public
+pages (`/f/…`) are a stranger's, not the office's, and have no connector counterpart. Pinned by
+`FormsConnectorTests`; page guides for all eleven routes in `FormsPageGuides`. The compliance
+register's new "On site, insurance lapsed" chip (the Insurance Update task: who is working on a
+live project under a released work order with a certificate past its expiry) shipped with its read,
+`list_lapsed_cover_on_site` (`AiRecordTools.CoverOnSite`, the register's readers), pinned by
+`CompaniesOnSiteTests`.
+
 **Still open, with reasons**: the cash forecast/statement COMPUTATION (the phasing runs
 client-side over several stores; the inputs are now all readable — a server-side statement tool
 is a real build, not a wrapper); profit summary / Xero site P&L and Xero transactions reads;
@@ -300,3 +325,4 @@ drawings' ambiguous-revision queue; to-do activity trails; Dashboard aggregates.
 | Admin (users/trades/system/AI pages) | mirrored; invite/reset GAP-adjacent | user directory unreadable | — |
 | Portal (subcontractor) | skipped by design | out of audience | — |
 | Audit / Agent activity | read-only | unreadable (decide if deliberate) | — |
+| Forms ×8 + Emergency contacts (2026-09-23) | full parity — 15 actions, the five that email confirm-first | covered — 10 reads; health and sensitive answers page-only by design | — |

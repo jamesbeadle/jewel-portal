@@ -1,0 +1,49 @@
+@inject ICommandSender Commands
+
+<Modal IsOpen="Record is not null" Title="@Record?.Course" ConfirmLabel="@(write.IsBusy ? "Saving…" : "Save")"
+       ConfirmDisabled="@write.IsBusy" OnConfirm="SaveAsync" OnCancel="OnClose" Class="max-w-lg w-full">
+    @if (write.Problem is { } problem)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@problem</Notice>
+    }
+    <p class="text-sm text-content-subtle mb-3">@Record?.PersonName · @Record?.Provider @Record?.CertificateNumber</p>
+    <div class="space-y-3">
+        <FormField Label="Their email" Value="@email" OnChange="typed => email = typed" InputType="email"
+                   Hint="Where the renewal is asked for, a month before the certificate runs out." />
+        <FormField Label="Expires on" Hint="Blank for a certificate that never expires; it is then never chased.">
+            <input type="date" class="field" value="@expiresOn" @onchange="chosen => expiresOn = chosen.Value?.ToString() ?? string.Empty" />
+        </FormField>
+        <FormField Label="They left on" Hint="Ends the chasing, and starts the six years after which the record is destroyed.">
+            <input type="date" class="field" value="@endedOn" @onchange="chosen => endedOn = chosen.Value?.ToString() ?? string.Empty" />
+        </FormField>
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public TrainingRecord? Record { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private readonly FormWrite write = new();
+    private string email = "";
+    private string expiresOn = "";
+    private string endedOn = "";
+    private string? shownFor;
+
+    protected override void OnParametersSet()
+    {
+        var isANewRecord = Record is not null && Record.TrainingRecordId != shownFor;
+        shownFor = Record?.TrainingRecordId;
+        if (!isANewRecord) return;
+        email = Record!.Email;
+        expiresOn = FormDates.Write(Record.ExpiresOn);
+        endedOn = FormDates.Write(Record.EndedOn);
+    }
+
+    private async Task SaveAsync()
+    {
+        var command = new SetTrainingRecordDetails(Record!.TrainingRecordId, email.Trim(), FormDates.Read(expiresOn), FormDates.Read(endedOn));
+        var isSaved = await write.RunAsync(() => Commands.SendAsync(command, CancellationToken.None));
+        if (isSaved) await OnSaved.InvokeAsync();
+    }
+}

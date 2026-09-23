@@ -219,7 +219,11 @@ public static class SidebarFolders
                     NavigationRoles.RegisterRoles),
                 // Staff sign-off forms: NDAs, policies, H&S acknowledgements.
                 new SidebarRow(new NavigationItem("Policies", "/policies"),
-                    NavigationRoles.PolicyRoles)
+                    NavigationRoles.PolicyRoles),
+                new SidebarRow(new NavigationItem("Forms", "/forms"),
+                    NavigationRoles.FormRoles),
+                new SidebarRow(new NavigationItem("Emergency contacts", "/emergency-contacts"),
+                    NavigationRoles.EmergencyContactRoles)
             }),
 
         // ---- Time: timesheets — labour recorded on the picked site, and the company-wide

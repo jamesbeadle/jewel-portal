@@ -1,0 +1,28 @@
+<div class="form-sheet @SheetClass">
+    <div class="form-sheet-column">
+        <div class="form-sheet-logo-bar">
+            <img class="form-sheet-logo" src="@Logo" alt="@Company.ShortName" />
+        </div>
+        <div class="form-sheet-hero">
+            <div class="form-sheet-kicker">@Company.ShortName</div>
+            <div class="form-sheet-title"><h1>@Title</h1></div>
+            <p class="form-sheet-intro">@Intro</p>
+        </div>
+        @ChildContent
+        <FormSheetFooter Company="Company" />
+    </div>
+</div>
+
+@code {
+    private const string PropertyServeLogo = "/branding/jewel-property-serve-logo.png";
+    private const string BespokeBuildLogo = "/branding/jewel-bespoke-build-logo.svg";
+
+    [Parameter, EditorRequired] public JewelCompanyParticulars Company { get; set; } = default!;
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public string Intro { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string SheetClass => Company.Company == JewelCompany.JewelPropertyServe ? "form-sheet-jps" : "form-sheet-jbb";
+
+    private string Logo => Company.Company == JewelCompany.JewelPropertyServe ? PropertyServeLogo : BespokeBuildLogo;
+}

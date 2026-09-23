@@ -1,0 +1,10 @@
+@if (Projects.Count > 0)
+{
+    <span class="block text-xs font-normal @(IsLapsed ? "text-warning" : "text-content-subtle")"
+          title="@(IsLapsed ? DirectoryComplianceFilter.LapsedCoverOnSiteTitle : null)">On site · @(string.Join(", ", Projects))</span>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<string> Projects { get; set; } = Array.Empty<string>();
+    [Parameter] public bool IsLapsed { get; set; }
+}

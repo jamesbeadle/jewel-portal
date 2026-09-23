@@ -28,6 +28,7 @@ internal static partial class AiRecordTools
             .Concat(ContextTools())
             .Concat(DirectoryTools())
             .Concat(ComplianceTools())
+            .Concat(CoverOnSiteTools())
             .Concat(XeroContactPushTools())
             .Concat(XeroCustomerTools())
             .ToList();

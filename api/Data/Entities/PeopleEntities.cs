@@ -113,6 +113,17 @@ public sealed class ComplianceDocumentEntity
     // accountant's ask — £5m required on big jobs). Null = not recorded, never nil cover; normal
     // on a non-insurance document. decimal(18,4) by the context's convention.
     public decimal? PublicLiabilityCover { get; set; }
+
+    /// <summary>When the company was last asked for the renewal (the forms' insurance chase, 2026-09-23).</summary>
+    public DateTimeOffset? LastChasedAt { get; set; }
+    public int ChaseCount { get; set; }
+
+    /// <summary>
+    /// The Jewel company whose insurance update or questionnaire the certificate came in on (JewelCompany as
+    /// an int); null when the office filed it itself. Only these are chased, in that company's name, because
+    /// only these were told on the form that their expiry date would be used to remind them.
+    /// </summary>
+    public int? FormCompany { get; set; }
 }
 
 public sealed class HsRecordEntity

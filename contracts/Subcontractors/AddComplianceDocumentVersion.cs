@@ -7,6 +7,7 @@ namespace Jewel.JPMS.Contracts.Subcontractors;
 /// Records a stored compliance file as the new current version of its Kind, superseding (never
 /// replacing) the previous version. Constructed SERVER-SIDE by the multipart upload endpoints
 /// after the blob is stored — not sent by clients, so it has no client route registration.
+/// FormCompany is the Jewel company whose form the file came in on, when it did.
 /// </summary>
 public sealed record AddComplianceDocumentVersion(
     string ComplianceDocumentId,
@@ -17,4 +18,5 @@ public sealed record AddComplianceDocumentVersion(
     string BlobPath,
     string ContentType,
     long FileSize,
-    decimal? PublicLiabilityCover = null) : ICommand<ComplianceDocument>;
+    decimal? PublicLiabilityCover = null,
+    JewelCompany? FormCompany = null) : ICommand<ComplianceDocument>;

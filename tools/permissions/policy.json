@@ -70,7 +70,11 @@
     "imagine/{token}/submit",
     "imagine/{token}/proposal/accept",
     "imagine/{token}/proposal/decline",
-    "imagine/{token}/keep-in-touch/stop"
+    "imagine/{token}/keep-in-touch/stop",
+    "public-forms/{company}/{slug}",
+    "public-forms/{company}/{slug}/uploads",
+    "public-forms/{company}/{slug}/submit",
+    "public-form-packs/{company}/{token}"
   ],
   "callerIsTheScope": [
     "auth/me",
@@ -100,7 +104,9 @@
     "/projects/{ProjectId}/valuation-snapshots": "legacy address: redirects to /valuation; renders nothing",
     "/projects/{ProjectId}/financials-setup": "legacy address: redirects to /settings; renders nothing",
     "/projects/{ProjectId}/operations-setup": "legacy address: redirects to /settings; renders nothing",
-    "/projects/{ProjectId}/setup": "legacy address: redirects to /settings; renders nothing"
+    "/projects/{ProjectId}/setup": "legacy address: redirects to /settings; renders nothing",
+    "/f/{Company}/{Slug}": "a public form: open to anyone as it was on the JPS dashboard, a one-time link its own credential; no session",
+    "/f/{Company}/pack/{Token}": "a new starter's pack: the URL token is the credential, no session"
   },
   "externalRouteExceptions": {
     "Architect": [

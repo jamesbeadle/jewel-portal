@@ -1,0 +1,50 @@
+@inject IQueryClient Queries
+
+<SectionHeader Title="To sort out" Subtitle="Every NO on the assessment is one of these; it is finished when each is fixed or accepted." />
+<RecordsTable Dense="true" MaxHeight="" Class="mb-6" IsLoading="@(actions is null)" IsEmpty="@(Raised.Count == 0)"
+              EmptyMessage="Every answer was YES — nothing to sort out.">
+    <tbody>
+        @foreach (var action in Raised)
+        {
+            <tr @key="action.WorkstationActionId" class="@(action.State == WorkstationActionState.Open ? "is-clickable" : "")"
+                @onclick="() => Open(action)">
+                <td class="max-w-md">@action.Action</td>
+                <td><Pill Tone="@action.State.ToTone()">@action.State.DisplayName()</Pill></td>
+                <td class="max-w-md">@action.Note</td>
+            </tr>
+        }
+    </tbody>
+</RecordsTable>
+
+<WorkstationActionModal ToClose="closing" OnSaved="SavedAsync" OnClose="() => closing = null" />
+
+@code {
+    [Parameter, EditorRequired] public FormSubmissionReading Reading { get; set; } = default!;
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private IReadOnlyList<WorkstationAction>? actions;
+    private WorkstationAction? closing;
+
+    private IReadOnlyList<WorkstationAction> Raised =>
+        (actions ?? Array.Empty<WorkstationAction>()).Where(action => action.FormSubmissionId == Reading.Submission.FormSubmissionId).ToList();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try { actions = await Queries.AskAsync(new ListWorkstationActions(), CancellationToken.None); }
+        catch (Exception unreadable) when (unreadable is not OperationCanceledException) { actions = Array.Empty<WorkstationAction>(); }
+    }
+
+    private void Open(WorkstationAction action)
+    {
+        if (action.State == WorkstationActionState.Open) closing = action;
+    }
+
+    private async Task SavedAsync()
+    {
+        closing = null;
+        await LoadAsync();
+        await OnChanged.InvokeAsync();
+    }
+}

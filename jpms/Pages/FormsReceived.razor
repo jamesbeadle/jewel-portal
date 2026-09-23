@@ -1,0 +1,57 @@
+@page "/forms"
+@using Jewel.JPMS.Contracts.Forms
+@using Jewel.JPMS.Features.Forms.Office
+@inject IQueryClient Queries
+@inject FormsPageEntry Entry
+@inject NavigationManager Nav
+
+<PageTitle>Forms · JPMS</PageTitle>
+
+<Page OpenTo="FormRoleSets.Office">
+    <PageHeader Subtitle="@Subtitle">
+        <Actions>
+            <FilterChips Items="FormSubmissionFilters.CompanyChips" Selected="@company" OnSelect="key => company = key"
+                         Disabled="@(submissions is null)" AriaLabel="Company" />
+            <FilterChips Items="StatusChips" Selected="@status" OnSelect="key => status = key"
+                         Disabled="@(submissions is null)" AriaLabel="Where the office has got to" />
+        </Actions>
+    </PageHeader>
+
+    <FormsTabs ActiveKey="@FormsTabs.Received" />
+
+    @if (FolderName is { } folder)
+    {
+        <Notice Tone="Tone.Info" Class="mb-4">
+            The forms filed under @folder. <a class="underline underline-offset-2" href="/forms">Every form</a>
+        </Notice>
+    }
+
+    <RecordsTable Dense="true" MaxHeight="" IsLoading="@(submissions is null && !dataFailed)" IsEmpty="@(Rows.Count == 0)"
+                  EmptyMessage="@EmptyMessage">
+        <thead>
+            <tr>
+                <th>Received</th>
+                <th>Form</th>
+                <th>From</th>
+                <th>Filed under</th>
+                <th>Company</th>
+                <th>Came by</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var submission in Rows)
+            {
+                <tr @key="submission.FormSubmissionId" class="is-clickable" @onclick="() => Open(submission)">
+                    <td class="whitespace-nowrap">@DateTimeText(submission.SubmittedAt)</td>
+                    <td>@FormCatalogue.TitleOf(submission.FormSlug, submission.Company)</td>
+                    <td>@submission.SubmitterName</td>
+                    <td>@submission.FilingName</td>
+                    <td class="whitespace-nowrap">@submission.Company.DisplayName()</td>
+                    <td class="whitespace-nowrap">@FormSubmissionFilters.LinkText(submission)</td>
+                    <td><Pill Tone="@submission.Status.ToTone()">@submission.Status.DisplayName()</Pill></td>
+                </tr>
+            }
+        </tbody>
+    </RecordsTable>
+</Page>

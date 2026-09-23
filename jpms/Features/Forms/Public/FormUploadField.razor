@@ -1,0 +1,18 @@
+@inject HttpClient Http
+
+<div class="form-sheet-drop">
+    <label class="btn-form-choose inline-block">
+        @FormSheetWording.ChooseFile
+        <InputFile OnChange="SendChosenAsync" multiple accept="image/*,.pdf,.doc,.docx" class="hidden" />
+    </label>
+    <ul class="form-sheet-files">
+        @foreach (var file in Draft.FilesFor(Question.Key))
+        {
+            <li class="@(file.Problem is null ? "" : "form-sheet-file-problem")">@file.Line</li>
+        }
+    </ul>
+    @if (problem is { } sentence)
+    {
+        <div class="form-sheet-error">@sentence</div>
+    }
+</div>
