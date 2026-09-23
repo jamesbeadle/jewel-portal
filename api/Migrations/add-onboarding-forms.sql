@@ -19,7 +19,7 @@
 --
 -- House-style scoped script (see CLAUDE.md "Database migrations"): applies the
 -- migration directly and records its id in __EFMigrationsHistory so EF never
--- re-applies it. Mirrors api/Migrations/20260923120000_AddOnboardingForms.cs.
+-- re-applies it. Mirrors api/Migrations/20260923160000_AddOnboardingForms.cs.
 -- Safe to apply BEFORE or WITH the deploy; must be applied before the deployed
 -- api reads the tables.
 --
@@ -31,7 +31,7 @@
 BEGIN TRANSACTION;
 GO
 
-IF NOT EXISTS (SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = N'20260923120000_AddOnboardingForms')
+IF NOT EXISTS (SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = N'20260923160000_AddOnboardingForms')
 BEGIN
     IF OBJECT_ID(N'[FormPacks]', N'U') IS NULL
     BEGIN
@@ -261,10 +261,10 @@ BEGIN
 END;
 GO
 
-IF NOT EXISTS (SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = N'20260923120000_AddOnboardingForms')
+IF NOT EXISTS (SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = N'20260923160000_AddOnboardingForms')
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20260923120000_AddOnboardingForms', N'8.0.10');
+    VALUES (N'20260923160000_AddOnboardingForms', N'8.0.10');
 END;
 GO
 

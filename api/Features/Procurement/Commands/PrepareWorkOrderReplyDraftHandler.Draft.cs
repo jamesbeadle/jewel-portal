@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
+using Jewel.JPMS.Api.Features.Procurement.Acceptance;
 using Jewel.JPMS.Api.Features.Procurement.Documents;
 using Jewel.JPMS.Contracts.Procurement;
 
@@ -15,9 +16,10 @@ public sealed partial class PrepareWorkOrderReplyDraftHandler
         WorkOrderEntity order,
         WorkOrderPoDocumentModel model,
         string bucket,
+        string acceptanceLink,
         CancellationToken cancellationToken) =>
         new(command.MailboxMessageId,
-            command.HtmlCoverNote,
+            WorkOrderAcceptanceEmailParagraph.InsertInto(command.HtmlCoverNote, acceptanceLink),
             new[] { new MailboxDraftAttachment(model.FileName, "application/pdf", WorkOrderPoRenderer.Render(model)) },
             await CategoriesAsync(order, bucket, cancellationToken));
 

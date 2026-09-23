@@ -28,7 +28,7 @@ internal static class AiAuditTools
             "The System Audit Trail (/audit), newest first: who did what, when — every triage "
             + "decision (email routed, record linked, tag removed, discarded, thread swept), "
             + "record created from email, draft or email sent, snapshot frozen, work order "
-            + "approved/rejected/cancelled, cost-centre recode, budget set, labour correction, "
+            + "approved/rejected/cancelled/accepted from the PO email's link, cost-centre recode, budget set, labour correction, "
             + "Xero link and the rest. Each row carries the actor's email, the event, the "
             + "pathway, the project, the record (type, id, reference), the email or conversation "
             + "it concerns and one plain sentence of detail. Filters compose: projectId, pathway "

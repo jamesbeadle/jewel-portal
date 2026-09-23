@@ -1,0 +1,56 @@
+@*
+    The strip above the purchase order on the public acceptance page: the order's standing, and —
+    while it is awaiting acceptance — the name the accepter signs with (pre-filled from the
+    directory contact the link went to, editable) and the one Accept button. Accepted orders show
+    who and when; closed ones say so. The page owns the call; this owns the form.
+*@
+
+<div class="po-toolbar max-w-[820px] mx-auto mb-5">
+    @if (View.Order.IsAccepted)
+    {
+        <div class="flex items-center justify-end">
+            <Pill Tone="Tone.Positive">Accepted by @View.Order.AcceptedByName, @DateText(View.Order.AcceptedAt)</Pill>
+        </div>
+    }
+    @if (View.Order.IsAwaitingAcceptance)
+    {
+        <div class="flex items-end justify-end gap-3 flex-wrap">
+            <FormField Label="Your name" Required="true" Class="min-w-[260px]"
+                       Value="@Name" OnChange="OnNameChanged" Disabled="@IsBusy"
+                       Hint="@($"Accepting on behalf of {View.SupplierName}")" />
+            <button type="button" class="btn-primary" disabled="@(IsBusy || string.IsNullOrWhiteSpace(Name))" @onclick="OnAccept"
+                    title="Accept this work order electronically — your name and today's date are recorded on the purchase order">
+                @(IsBusy ? "Accepting…" : "Accept work order")
+            </button>
+        </div>
+        <p class="text-xs text-content-subtle mt-2 text-right">
+            Accepting records your electronic acceptance on the purchase order — it then forms part of the contract per the terms below.
+        </p>
+    }
+    @if (IsClosed)
+    {
+        <Notice Tone="Tone.Muted">This work order is no longer open for acceptance. If you think that's wrong, please contact Jewel Bespoke Build.</Notice>
+    }
+    @if (Error is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mt-2">@Error</Notice>
+    }
+    @if (Note is not null)
+    {
+        <Notice Tone="Tone.Positive" Class="mt-2">@Note</Notice>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public WorkOrderAcceptanceView View { get; set; } = default!;
+    [Parameter] public string Name { get; set; } = "";
+    [Parameter] public EventCallback<string> NameChanged { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public string? Note { get; set; }
+    [Parameter] public EventCallback OnAccept { get; set; }
+
+    private bool IsClosed => !View.Order.IsAccepted && !View.Order.IsAwaitingAcceptance;
+
+    private Task OnNameChanged(string value) => NameChanged.InvokeAsync(value);
+}

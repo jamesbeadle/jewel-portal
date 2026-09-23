@@ -1,0 +1,67 @@
+@page "/work-orders/accept/{Token}"
+@layout LandingLayout
+@using Jewel.JPMS.Features.Procurement.Acceptance
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<PageTitle>@Title · Jewel Bespoke Build</PageTitle>
+
+@*
+    The public acceptance page (2026-09-23) — what the acceptance link in the purchase-order email
+    opens. There is no sign-in: the token in the URL is the order's, sent to one supplier in one
+    email, so the page always knows whose order it is. It shows the purchase order exactly as the
+    attached PDF prints it and takes the supplier's electronic acceptance under the name they
+    type. Talks to the API with a raw HttpClient, like the imagine page: nothing here goes through
+    the signed-in plumbing and nothing here redirects to /login.
+*@
+
+<div class="min-h-dvh flex flex-col">
+    <header class="po-toolbar px-6 md:px-10 py-6 border-b border-line flex items-center gap-2.5">
+        <JewelIcon Class="w-6 h-6 text-content" />
+        <span class="font-semibold text-content">Jewel Bespoke Build</span>
+        <span class="text-xs text-content-subtle ml-2">Work order acceptance</span>
+    </header>
+
+    <main class="flex-1 w-full px-6 md:px-10 py-10">
+        <LoadGate IsLoading="isLoading" Prominent="true" Label="Opening your work order">
+            @if (IsLinkInvalid)
+            {
+                <div class="max-w-xl mx-auto">
+                    <h1 class="text-3xl font-semibold text-content mb-3">This link isn't valid</h1>
+                    <p class="text-content-muted leading-relaxed">
+                        The page you're looking for opens from the link in the work order email we sent you. If you've
+                        typed the address by hand, check it against the email — or contact us at
+                        <a class="text-info underline underline-offset-4" href="mailto:projects@jewelbb.co.uk">projects@jewelbb.co.uk</a>
+                        and we'll send it again.
+                    </p>
+                </div>
+            }
+            @if (view is not null)
+            {
+                <WorkOrderAcceptancePanel View="view" @bind-Name="name" IsBusy="isAccepting"
+                                          Error="@error" Note="@note" OnAccept="AcceptAsync" />
+                <div class="po-toolbar max-w-[820px] mx-auto mb-3 flex justify-end">
+                    <button type="button" class="btn-secondary text-sm" @onclick="PrintAsync"
+                            title="Print the purchase order, or save it as a PDF from the print dialog">
+                        Print / save PDF
+                    </button>
+                </div>
+                <PurchaseOrderSheet Order="view.Order"
+                                    Lines="view.Lines"
+                                    SupplierName="@view.SupplierName"
+                                    SupplierContactName="@view.SupplierContactName"
+                                    SupplierAddressLines="view.SupplierAddressLines"
+                                    ProjectName="@view.ProjectName"
+                                    SiteAddressLines="view.SiteAddressLines"
+                                    ApprovedByName="@view.ApprovedByName"
+                                    PaymentTermsDays="view.PaymentTermsDays" />
+            }
+        </LoadGate>
+    </main>
+</div>
+
+<style>
+    @@media print {
+        .po-toolbar { display: none; }
+    }
+</style>

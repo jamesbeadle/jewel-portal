@@ -20,7 +20,7 @@ namespace Jewel.JPMS.Api.Migrations
     /// api/Migrations/add-onboarding-forms.sql.
     /// </summary>
     [DbContext(typeof(JpmsContext))]
-    [Migration("20260923120000_AddOnboardingForms")]
+    [Migration("20260923160000_AddOnboardingForms")]
     public partial class AddOnboardingForms : Migration
     {
         private static readonly string[] Tables =

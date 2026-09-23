@@ -162,14 +162,19 @@ public enum AuditEventType
     // names the note and who looked, never the value, so a misused code can be traced to who
     // had read it. Not client-facing: Pathway is "".
     SiteCredentialRevealed = 48,
+    // Work order acceptance (written since 2026-09-23, Nigel's ask): a supplier accepted an issued
+    // work order from the acceptance link in the purchase-order email, with no portal login. The
+    // actor is the directory contact the link was sent to; the detail names who signed. Not
+    // client-facing: Pathway is "".
+    WorkOrderAccepted = 49,
     /// <summary>An emergency contact form's health answers were revealed; the row names the form and who looked, never the answer.</summary>
-    FormHealthAnswersRevealed = 49,
+    FormHealthAnswersRevealed = 50,
     /// <summary>The retention sweep destroyed a form's answers and files on their date, naming what and why.</summary>
-    FormRecordsDestroyed = 50,
+    FormRecordsDestroyed = 51,
     /// <summary>A person was emailed that their right-to-work check was completed; the row names the check and who sent it.</summary>
-    RightToWorkConfirmationSent = 51,
+    RightToWorkConfirmationSent = 52,
     /// <summary>A forms folder's leaving or vehicle-returned date was recorded or changed, old and new — the dates retention runs from.</summary>
-    FormFolderDatesRecorded = 52
+    FormFolderDatesRecorded = 53
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

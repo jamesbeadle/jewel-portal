@@ -8936,6 +8936,13 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<string>("AcceptanceToken")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("AcceptanceTokenIssuedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<DateTimeOffset?>("AcceptedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -9021,6 +9028,11 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.HasKey("WorkOrderId");
+
+                    b.HasIndex("AcceptanceToken")
+                        .IsUnique()
+                        .HasDatabaseName("IX_WorkOrders_AcceptanceToken")
+                        .HasFilter("[AcceptanceToken] IS NOT NULL");
 
                     b.HasIndex("ProjectId")
                         .HasDatabaseName("IX_WorkOrders_ProjectId");
