@@ -8,18 +8,24 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProjectVariationDetail
 {
+    // An ellipsis marks a pick that opens something before it moves: the approve panel when no
+    // build-up is staged, and the confirms behind Rejected and the return to quoting.
     private string PillOptionLabel(VariationOrderStatus status)
     {
-        var needsConfirm = status == VariationOrderStatus.Approved
+        var opensSomethingFirst = (status == VariationOrderStatus.Approved && !HasStagedBuildUp)
             || status == VariationOrderStatus.Rejected
             || (order?.Status == VariationOrderStatus.Approved && status == VariationOrderStatus.Quoting);
-        return needsConfirm ? $"{status.DisplayName()}…" : status.DisplayName();
+        return opensSomethingFirst ? $"{status.DisplayName()}…" : status.DisplayName();
     }
+
+    private bool HasStagedBuildUp => order is not null && VariationApproval.FromStagedBuildUp(order) is not null;
 
     private string? PillOptionTitle(VariationOrderStatus status)
     {
+        if (status == VariationOrderStatus.Approved && HasStagedBuildUp)
+            return "Approves with the staged build-up — mints the V-ref and writes the contract figures";
         if (status == VariationOrderStatus.Approved)
-            return "Approving writes the contract figures — opens the approve panel";
+            return "Approving writes the contract figures — opens the approve panel to enter the lines";
         if (order?.Status == VariationOrderStatus.Approved && status == VariationOrderStatus.Quoting)
             return "Un-approves the variation order — reverses the approval's valuation / CVR / budget writes";
         if (status == VariationOrderStatus.Rejected && order?.Status == VariationOrderStatus.Approved)
@@ -31,8 +37,8 @@ public partial class ProjectVariationDetail
         return null;
     }
 
-    // Routes the pill's chosen target per the unified transition rules: Approved always opens the
-    // approve panel (it needs a cost code and value, and writes the contract figures); Rejected
+    // Routes the pill's chosen target per the unified transition rules: Approved runs the approval
+    // with the staged build-up, or opens the approve panel when there is none to run with; Rejected
     // reverses the approval's writes when leaving Approved (routed through the inline confirm) and
     // is a plain move otherwise; leaving Approved for Quoting is the "return to quoting" repair
     // (also routed through an inline confirm); Approved -> Issued is never allowed; everything else
@@ -47,7 +53,7 @@ public partial class ProjectVariationDetail
 
         if (target == VariationOrderStatus.Approved)
         {
-            await FocusApprovePanel();
+            await ApproveFromStatusMove(order);
             return;
         }
 
@@ -130,7 +136,7 @@ public partial class ProjectVariationDetail
         editLinesError = null;
     }
 
-    private async Task SaveLinesEdit(VariationApprovePanel.ApproveRequest request)
+    private async Task SaveLinesEdit(VariationApproval request)
     {
         if (busy || order is null) return;
         editLinesError = null;
@@ -149,8 +155,17 @@ public partial class ProjectVariationDetail
         finally { busy = false; }
     }
 
-    // The status pill's "Approved…" pick opens the approve modal — the build-up (cost centres, lines)
-    // needs the room a modal gives, not the narrow sidebar.
+    // Moving to Approved is the same approval the bar's button makes: with a staged build-up it is
+    // what the panel would submit pre-seeded, so it runs at once — no confirm, no second press;
+    // with none there is nothing to approve with, and the panel is where the lines are entered.
+    private Task ApproveFromStatusMove(VariationOrder current)
+    {
+        var staged = VariationApproval.FromStagedBuildUp(current);
+        return staged is null ? FocusApprovePanel() : ApproveWithLines(staged);
+    }
+
+    // Opens the approve modal — the build-up (cost centres, lines) needs the room a modal gives,
+    // not the narrow sidebar.
     private Task FocusApprovePanel()
     {
         approveModalOpen = true;

@@ -1,10 +1,11 @@
 @namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Contracts.Variations
 @inject IVariationStore Variations
 @inject IIntakeQueue Intake
 
 @* Approve / Reject Variation Order as STAGED actions on the triage bar's project. Approving
    reuses VariationApprovePanel — the exact cost-code/lines build-up the variation page shows —
-   with the built ApproveRequest snapshotted and fired by the email's Apply; rejecting stages
+   with the built VariationApproval snapshotted and fired by the email's Apply; rejecting stages
    the same RejectAsync the page's status pill sends. *@
 
 <div class="space-y-3">
@@ -97,7 +98,7 @@
     private VariationOrder? Picked =>
         Candidates.FirstOrDefault(order => order.VariationOrderId == variationOrderId);
 
-    private async Task StageApproveAsync(VariationApprovePanel.ApproveRequest request)
+    private async Task StageApproveAsync(VariationApproval request)
     {
         if (Picked is not { } picked) return;
         var variations = Variations;

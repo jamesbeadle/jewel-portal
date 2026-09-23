@@ -76,6 +76,7 @@ public partial class ProjectVariationDetail
         _ = LoadProjectListAsync();
         sessionReady = true;
         await ReloadAsync();
+        approveModalOpen = OpenApprovePanel && order is { } loaded && loaded.Status.IsPreApproval();
     }
 
     // Covers the case where the component is REUSED for a different variation while in view:

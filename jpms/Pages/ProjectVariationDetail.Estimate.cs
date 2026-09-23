@@ -32,7 +32,7 @@ public partial class ProjectVariationDetail
         finally { busy = false; }
     }
 
-    private async Task ApproveWithLines(VariationApprovePanel.ApproveRequest request)
+    private async Task ApproveWithLines(VariationApproval request)
     {
         if (busy) return;
         error = null;
