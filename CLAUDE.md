@@ -775,6 +775,32 @@ line next to the file that needs it (`LeadMarketingConsents` beside `SalesEntity
 project can be compiled from a cloud session — the SDK's hosts are blocked by the egress proxy —
 so the first CI build is the compile check, and this tool is what stands in for it.
 
+## A supplier accepts a work order from the link in the PO email (contracts + api + jpms)
+
+- **The acceptance link is the credential** (Nigel, 2026-09-23: suppliers have no portal login and
+  need none to accept). Every purchase-order email — the PO page's send, the automatic send on
+  release, the tender award, the reply-into-a-thread draft — carries
+  `https://portal…/work-orders/accept/{token}` above its sign-off. `WorkOrders.AcceptanceToken`
+  (+ `AcceptanceTokenIssuedAt`; migration `AddWorkOrderAcceptanceToken`, script
+  `add-work-order-acceptance-token.sql`, unique index by the `[Index]` attribute on the entity —
+  SQL Server's convention filters it to IS NOT NULL) is minted ONCE by
+  `WorkOrderAcceptanceLinks.IssuedForAsync` on the first send and re-used on every later one, so an
+  older email still works; it dies only because the order closes. The paragraph is inserted
+  server-side (`WorkOrderAcceptanceEmailParagraph`, above `<p>Kind regards,`), so `WorkOrderPoEmail`
+  composes no link and no door ever sees the token. `PublicSiteUrl` is the origin, as for imagine.
+- **The public page is `/work-orders/accept/{token}`** (`WorkOrderAcceptance` page on the landing
+  layout, raw HttpClient like `/imagine`): the purchase order exactly as the PDF prints it
+  (`WorkOrderPoDocumentBuilder` feeds `WorkOrderAcceptanceView`, rendered by the same
+  `PurchaseOrderSheet`), the directory contact's name pre-filled and editable, one Accept. GET/POST
+  `work-orders/accept/{token}` (`WorkOrderAcceptanceEndpoints`, anonymous, declared in
+  `tools/permissions/policy.json`): an unknown token is a 404 with no detail. The stamp is
+  `WorkOrderAcceptance.TryStamp` — the ONE rule, shared with the logged-in `AcceptMyWorkOrder` door:
+  issued orders only, and an accepted order is never re-stamped. Via the link the order carries
+  the TYPED name and the directory contact's email; Jewel hears about it through the Accepted pill,
+  `AuditEventType.WorkOrderAccepted` (actor = that email) and the connector's work-order reads —
+  no email. `WorkOrder.IsAwaitingAcceptance` is the page's reading of whether Accept is offered.
+  Pinned by `WorkOrderAcceptanceTests`.
+
 ## Work-order mail tags are project-qualified (api + jpms)
 
 - **A work order's tag stem carries its project** (2026-09-14, the By France / Coombe Lane
