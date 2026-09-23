@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
+using Jewel.JPMS.Api.Features.Procurement.Acceptance;
 using Jewel.JPMS.Api.Features.Procurement.Documents;
 using Jewel.JPMS.Contracts.Procurement;
 
@@ -16,7 +17,9 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 ///
 /// A draft order is invisible to the supplier by definition and a rejected draft never becomes
 /// visible, so both are refused whatever the caller; a supplier without a directory email is
-/// refused with the fix in the message. The staging, the send, the degrade-to-draft and the audit
+/// refused with the fix in the message. Every email carries the order's acceptance link
+/// (2026-09-23): the token is minted here on the first send and re-used after, and the
+/// paragraph goes into the composed body on the way out, so no door needs to know the token. The staging, the send, the degrade-to-draft and the audit
 /// row are the dispatcher's (OutboundEmailDispatcher), shared with every other record's email.
 /// </summary>
 public sealed partial class SendWorkOrderPoEmailHandler : ICommandHandler<SendWorkOrderPoEmail, WorkOrderPoEmailOutcome>
@@ -27,21 +30,23 @@ public sealed partial class SendWorkOrderPoEmailHandler : ICommandHandler<SendWo
 
     private readonly JpmsContext context;
     private readonly OutboundEmailDispatcher dispatcher;
+    private readonly WorkOrderAcceptanceLinks acceptanceLinks;
 
-    public SendWorkOrderPoEmailHandler(JpmsContext context, OutboundEmailDispatcher dispatcher)
+    public SendWorkOrderPoEmailHandler(JpmsContext context, OutboundEmailDispatcher dispatcher, WorkOrderAcceptanceLinks acceptanceLinks)
     {
-        this.context = context; this.dispatcher = dispatcher;
+        this.context = context; this.dispatcher = dispatcher; this.acceptanceLinks = acceptanceLinks;
     }
 
     public async Task<WorkOrderPoEmailOutcome> HandleAsync(SendWorkOrderPoEmail command, CancellationToken cancellationToken)
     {
         var order = await ReleasedOrderAsync(command.WorkOrderId, cancellationToken);
         var supplier = await SupplierWithAnEmailAsync(order, cancellationToken);
+        var acceptanceLink = await acceptanceLinks.IssuedForAsync(context, order, cancellationToken);
 
         var message = new MailboxDraftMessage(
             To: new[] { new MailboxDraftRecipient(supplier.ContactEmail!, supplier.CompanyName) },
             Subject: command.Subject,
-            HtmlBody: command.HtmlBody,
+            HtmlBody: WorkOrderAcceptanceEmailParagraph.InsertInto(command.HtmlBody, acceptanceLink),
             Attachments: new[] { await PurchaseOrderPdfAsync(order.WorkOrderId, cancellationToken) },
             Categories: await CategoriesAsync(order, supplier, cancellationToken));
 

@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
+using Jewel.JPMS.Api.Features.Procurement.Acceptance;
 using Jewel.JPMS.Api.Features.Procurement.Documents;
 using Jewel.JPMS.Contracts.Procurement;
 
@@ -17,6 +18,7 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 // dispatcher is asked for a draft and stops there, a person reviews, adjusts recipients if needed,
 // and sends from the mailbox itself — and unlike the request flow there is NO status side effect: a
 // work order's lifecycle is driven by approval and acceptance, never by drafting its covering email.
+// The cover note gains the order's acceptance link above its sign-off, as the fresh send does.
 public sealed partial class PrepareWorkOrderReplyDraftHandler : ICommandHandler<PrepareWorkOrderReplyDraft, WorkOrderReplyDraft>
 {
     private const string StagingRefused =
@@ -25,11 +27,13 @@ public sealed partial class PrepareWorkOrderReplyDraftHandler : ICommandHandler<
 
     private readonly JpmsContext context;
     private readonly OutboundEmailDispatcher dispatcher;
+    private readonly WorkOrderAcceptanceLinks acceptanceLinks;
 
-    public PrepareWorkOrderReplyDraftHandler(JpmsContext context, OutboundEmailDispatcher dispatcher)
+    public PrepareWorkOrderReplyDraftHandler(JpmsContext context, OutboundEmailDispatcher dispatcher, WorkOrderAcceptanceLinks acceptanceLinks)
     {
         this.context = context;
         this.dispatcher = dispatcher;
+        this.acceptanceLinks = acceptanceLinks;
     }
 
     public async Task<WorkOrderReplyDraft> HandleAsync(PrepareWorkOrderReplyDraft command, CancellationToken cancellationToken)
@@ -38,8 +42,9 @@ public sealed partial class PrepareWorkOrderReplyDraftHandler : ICommandHandler<
         var model = await WorkOrderPoDocumentBuilder.BuildAsync(context, command.WorkOrderId, cancellationToken)
             ?? throw new InvalidOperationException($"Work order {command.WorkOrderId} not found.");
         var bucket = await CompanyPathways.BucketAsync(context, order, cancellationToken);
+        var acceptanceLink = await acceptanceLinks.IssuedForAsync(context, order, cancellationToken);
 
-        var reply = await PurchaseOrderReplyAsync(command, order, model, bucket, cancellationToken);
+        var reply = await PurchaseOrderReplyAsync(command, order, model, bucket, acceptanceLink, cancellationToken);
         var filing = new OutboundEmailFiling(
             AuditTrail.PathwayLabel(bucket), StagingRefused,
             order.ProjectId, RecordType.WorkOrder, order.WorkOrderId, order.Reference);

@@ -169,7 +169,9 @@ internal sealed partial class ProcurementActions
             Area: "Procurement",
             Description: "SENDS EMAIL: sends the purchase-order email for a released work order to "
                 + "the supplier's directory email from the shared projects mailbox, with the given "
-                + "subject and HTML body and the purchase-order PDF attached. saveAsDraftOnly true "
+                + "subject and HTML body and the purchase-order PDF attached. The api adds the "
+                + "order's acceptance link above the sign-off — the supplier opens it to accept the "
+                + "order electronically with no portal login. saveAsDraftOnly true "
                 + "stops after staging, leaving the reviewed draft in Drafts for Outlook instead of "
                 + "sending. A failed send leaves that same draft (outcome sent false plus a webLink) "
                 + "and never affects the order. A draft or rejected order is refused outright.",
@@ -193,7 +195,8 @@ internal sealed partial class ProcurementActions
             Area: "Procurement",
             Description: "Stages an Outlook draft REPLY, in the original email conversation thread, "
                 + "to an email linked to the work order — carrying the rendered purchase-order PDF "
-                + "as an attachment. Recipients come from the conversation (reply-all), the draft is "
+                + "as an attachment and the order's acceptance link above the cover note's sign-off. "
+                + "Recipients come from the conversation (reply-all), the draft is "
                 + "tagged so the sent copy files under the order, and NOTHING IS SENT — a person "
                 + "reviews and sends it from Outlook. Never moves the order's status. A draft, "
                 + "rejected or cancelled order is refused outright.",

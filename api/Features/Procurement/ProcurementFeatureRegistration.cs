@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Features.Procurement.Acceptance;
 using Jewel.JPMS.Api.Features.Procurement.Attachments;
 using Jewel.JPMS.Api.Features.Procurement.Commands;
 using Jewel.JPMS.Api.Features.Procurement.Queries;
@@ -135,6 +136,8 @@ public static class ProcurementFeatureRegistration
         // The automatic counterpart: SENDS the purchase-order email the moment an order is
         // released (created un-drafted, or a draft approved) — the UI warns before firing it.
         services.AddScoped<ICommandHandler<SendWorkOrderPoEmail, WorkOrderPoEmailOutcome>, SendWorkOrderPoEmailHandler>();
+        services.AddSingleton<WorkOrderAcceptanceLinks>();
+        services.AddScoped<WorkOrderAcceptanceService>();
         services.AddScoped<ICommandHandler<RetagWorkOrderWorkflowTags, WorkOrderRetagSummary>, RetagWorkOrderWorkflowTagsHandler>();
         services.AddScoped<RetagWorkOrderWorkflowTagsAuthorisation>();
         services.AddScoped<SendWorkOrderPoEmailAuthorisation>();
