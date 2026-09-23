@@ -153,6 +153,10 @@ public sealed class QuoteLineItemEntity
 // detail lives on WorkOrderLines, each carrying its own cost code (one order routinely spans
 // several cost centres — e.g. plastering + render + screed on a single drywall order); Value is
 // the order total and should equal the sum of the lines' totals.
+// The acceptance token's unique index is declared here rather than in OnModelCreating: SQL
+// Server's convention filters a unique index on a nullable column to IS NOT NULL, exactly what
+// the lead's imagine token spells out by hand.
+[Index(nameof(AcceptanceToken), IsUnique = true)]
 public sealed class WorkOrderEntity
 {
     [Key, MaxLength(64)] public string WorkOrderId { get; set; } = "";
@@ -189,11 +193,18 @@ public sealed class WorkOrderEntity
     public DateTimeOffset? ProgrammeStart { get; set; }
     [MaxLength(2000)]    public string ProgrammeNotes { get; set; } = "";
 
-    // Electronic acceptance from the subcontractor portal: stamped once when the supplier's
-    // signed-in contact clicks Accept (name/email from their login, never typed by hand).
+    // Electronic acceptance, stamped once: from the subcontractor portal (name/email from the
+    // login) or from the acceptance link in the purchase-order email (2026-09-23: the name the
+    // contact types on the public page, the email the link was sent to).
     public DateTimeOffset? AcceptedAt { get; set; }
     [MaxLength(256)]     public string AcceptedByEmail { get; set; } = "";
     [MaxLength(256)]     public string AcceptedByName { get; set; } = "";
+
+    // The secret behind the acceptance link (/work-orders/accept/{token}) — minted the first time
+    // the purchase order is emailed, re-used on every later send, unique where set. Holding the
+    // link is the whole authorisation; nobody but the supplier is assumed to have it.
+    [MaxLength(64)]      public string? AcceptanceToken { get; set; }
+    public DateTimeOffset? AcceptanceTokenIssuedAt { get; set; }
 
     // Deposit the subcontractor requires on this order, printed at the foot of the purchase
     // order. Recorded as a percentage of the order value only — never a £ figure. Percent is

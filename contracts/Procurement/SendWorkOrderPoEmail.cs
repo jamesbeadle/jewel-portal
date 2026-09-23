@@ -14,7 +14,8 @@ namespace Jewel.JPMS.Contracts.Procurement;
 // for Outlook — the award door's old behaviour, kept as an explicit choice rather than a fate.
 //
 // The subject/body are composed client-side (WorkOrderPoEmail) so every door pre-fills the same
-// words. Failure ordering is the dispatcher's: the draft is staged with its record tags first and
+// words; the api adds the order's acceptance link (/work-orders/accept/{token}, minted once on the
+// first send) above the sign-off, so the supplier accepts from the email without a login. Failure ordering is the dispatcher's: the draft is staged with its record tags first and
 // the SEND is the last step, so a failed send leaves the reviewed draft in Drafts (outcome
 // Sent=false + WebLink + FailureNote) and the order itself is never affected. A draft or rejected
 // order is refused outright.

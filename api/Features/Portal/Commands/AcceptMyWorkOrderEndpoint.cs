@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Features.Procurement;
+using Jewel.JPMS.Api.Features.Procurement.Acceptance;
 
 namespace Jewel.JPMS.Api.Features.Portal.Commands;
 
@@ -6,8 +7,9 @@ namespace Jewel.JPMS.Api.Features.Portal.Commands;
 /// POST /api/portal/my/work-orders/{workOrderId}/accept — one-click electronic acceptance of an
 /// issued work order. The subcontractor id comes from the session (SubcontractorScope) and the
 /// acceptance is stamped with the signed-in contact's name and email — nothing is read from the
-/// body, so the client can never accept another company's order or forge who accepted.
-/// Idempotent: accepting an already-accepted order returns it unchanged.
+/// body, so the client can never accept another company's order or forge who accepted. The
+/// stamp itself is WorkOrderAcceptance, shared with the acceptance link in the PO email;
+/// idempotent: accepting an already-accepted order returns it unchanged.
 /// </summary>
 public sealed class AcceptMyWorkOrderEndpoint
 {
@@ -37,16 +39,8 @@ public sealed class AcceptMyWorkOrderEndpoint
         if (order is null || !string.Equals(order.SubcontractorId, subcontractorId, StringComparison.OrdinalIgnoreCase))
             return new NotFoundResult();
 
-        // Already accepted: return as-is rather than failing, so a double-click or a stale
-        // second tab can't surface an error for an outcome that already holds.
-        if (order.AcceptedAt is not null) return new OkObjectResult(order.ToModel());
-
-        if (order.Status != (int)WorkOrderStatus.Released)
-            return new BadRequestObjectResult("Only issued work orders can be accepted.");
-
-        order.AcceptedAt = DateTimeOffset.UtcNow;
-        order.AcceptedByEmail = signedInUser.Email;
-        order.AcceptedByName = signedInUser.DisplayName;
+        var isStamped = WorkOrderAcceptance.TryStamp(order, signedInUser.DisplayName, signedInUser.Email, DateTimeOffset.UtcNow);
+        if (!isStamped) return new BadRequestObjectResult(WorkOrderAcceptance.OnlyIssuedOrdersRefusal);
         await context.SaveChangesAsync(cancellationToken);
 
         return new OkObjectResult(order.ToModel());

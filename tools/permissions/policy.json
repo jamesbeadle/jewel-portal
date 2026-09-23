@@ -70,7 +70,8 @@
     "imagine/{token}/submit",
     "imagine/{token}/proposal/accept",
     "imagine/{token}/proposal/decline",
-    "imagine/{token}/keep-in-touch/stop"
+    "imagine/{token}/keep-in-touch/stop",
+    "work-orders/accept/{token}"
   ],
   "callerIsTheScope": [
     "auth/me",
@@ -92,6 +93,7 @@
     "/forgot-password": "outside the session gate",
     "/connect/authorize": "the OAuth consent page: the caller is the scope",
     "/imagine/{Token}": "the prospect's public door: the URL token is the credential, no session",
+    "/work-orders/accept/{Token}": "the supplier's acceptance door: the URL token is the credential, no session",
     "/privacy": "the privacy notice: public by law, outside the session gate",
     "/logout": "ends the session; renders nothing",
     "/my-day": "retired: redirects to /dashboard, where the role home renders the worker's day",

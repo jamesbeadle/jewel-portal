@@ -11,9 +11,11 @@ namespace Jewel.JPMS.Features.Procurement;
 /// the order went out through: the order summary (priced lines, or value + scope when there is no
 /// breakdown), programme dates when set, and the standard pre-start paperwork line (RAMS/insurances
 /// to projects@ — never a named person). The purchase order PDF is attached by the API on both the
-/// send and the draft (2026-09-09, the accountant's ask), so the body says so and carries no link
-/// to the supplier portal: suppliers have no portal login yet and the link only reached a sign-in
-/// page. The link returns with supplier users and their role testing.
+/// send and the draft (2026-09-09, the accountant's ask), so the body says so. The acceptance
+/// link is NOT composed here: the API mints the order's token on the first send and inserts the
+/// acceptance paragraph above the sign-off on the way out (WorkOrderAcceptanceEmailParagraph,
+/// 2026-09-23), so the supplier accepts from the email with no portal login and no door ever
+/// sees the token. Keep the sign-off paragraph — it is where the API puts the link.
 /// </summary>
 public static partial class WorkOrderPoEmail
 {

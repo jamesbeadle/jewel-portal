@@ -161,7 +161,12 @@ public enum AuditEventType
     // credential held against a Useful Information note — the WiFi code, the gate code. The row
     // names the note and who looked, never the value, so a misused code can be traced to who
     // had read it. Not client-facing: Pathway is "".
-    SiteCredentialRevealed = 48
+    SiteCredentialRevealed = 48,
+    // Work order acceptance (written since 2026-09-23, Nigel's ask): a supplier accepted an issued
+    // work order from the acceptance link in the purchase-order email, with no portal login. The
+    // actor is the directory contact the link was sent to; the detail names who signed. Not
+    // client-facing: Pathway is "".
+    WorkOrderAccepted = 49
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the
