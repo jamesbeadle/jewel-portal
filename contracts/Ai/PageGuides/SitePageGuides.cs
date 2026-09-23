@@ -223,12 +223,21 @@ public static class SitePageGuides
             + "click opens the audit's form. Actions: the corrective actions on the H&S register, "
             + "most minted by an audit's Issue (one per item with an owner or a rate below 10, not "
             + "N/A), owned by a named person who needs no login, overdue rows in warning, status "
-            + "changed on the row (Open / In progress / Closed). Register: observations, near "
+            + "changed on the row (Open / In progress; Closed is the H&S officer's or a director's "
+            + "alone, on her next visit or on a photograph — a site manager cannot close one). A "
+            + "row opens the action's thread (2026-09-23): comments by the site manager and the "
+            + "officer, each with an optional photograph of the work done; a comment moves an Open "
+            + "action to In progress by itself. What is said or changed reaches the other side as "
+            + "one email per project per sitting — the site manager's address is on the project's "
+            + "settings — never one per item. Register: observations, near "
             + "misses, incidents, toolbox talks, permits, logged here with \"Log record\". "
             + "Manually: \"New audit\" takes the type, date, officer and site manager and opens "
-            + "the form. Assistant: list_hs_audits, get_hs_audit, list_hs_records, create_hs_audit, "
-            + "update_hs_audit_items, issue_hs_audit (confirm-first), close_hs_audit, "
-            + "log_hs_record, update_hs_record."),
+            + "the form; \"Site check forms\" opens one of Katy-Louise's paper sheets (toolbox "
+            + "talk, ladder, equipment schedule, PUWER, first aid kit, fire extinguishers) or an "
+            + "incident report to fill in, filed under the site on /forms. Assistant: "
+            + "list_hs_audits, get_hs_audit, list_hs_records (with each action's comments and "
+            + "photos), create_hs_audit, update_hs_audit_items, issue_hs_audit (confirm-first), "
+            + "close_hs_audit, log_hs_record, update_hs_record, comment_on_hs_record."),
 
         new("/projects/{project}/hs/audits/{audit}", "H&S Audit",
             "One site audit — the inspection report form. The Report panel is the front sheet "

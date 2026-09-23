@@ -1,5 +1,8 @@
 using Jewel.JPMS.Api.Features.Hs.Commands;
 using Jewel.JPMS.Api.Features.Hs.Queries;
+using Jewel.JPMS.Api.Features.Hs.Thread;
+using Jewel.JPMS.Api.Features.Hs.Thread.Commands;
+using Jewel.JPMS.Api.Features.Hs.Thread.Queries;
 using Jewel.JPMS.Contracts.Hs;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,6 +26,13 @@ public static class HsFeatureRegistration
         services.AddScoped<ICommandHandler<RecordAttendanceForHsRecord, HsRecordAttendance>, RecordAttendanceForHsRecordHandler>();
         services.AddScoped<RecordAttendanceForHsRecordAuthorisation>();
         services.AddScoped<RecordAttendanceForHsRecordValidation>();
+
+        services.AddScoped<CommentOnHsRecordHandler>();
+        services.AddScoped<ICommandHandler<CommentOnHsRecord, HsRecordComment>>(provider => provider.GetRequiredService<CommentOnHsRecordHandler>());
+        services.AddScoped<CommentOnHsRecordAuthorisation>();
+        services.AddScoped<CommentOnHsRecordValidation>();
+        services.AddScoped<HsRecordPhotoIntake>();
+        services.AddScoped<IQueryHandler<ListHsRecordComments, IReadOnlyList<HsRecordComment>>, ListHsRecordCommentsHandler>();
 
         return services;
     }

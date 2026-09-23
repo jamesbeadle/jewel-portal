@@ -1,8 +1,11 @@
 @using Jewel.JPMS.Contracts.Hs
+@using Jewel.JPMS.Features.Hs.Thread
 
 @*
     The open corrective actions across the live sites, as the officer's home lists them: overdue
-    rows in warning, each linking to its project's H&S page where the status is changed.
+    rows in warning, each with its thread's standing — a site manager's comment, a photograph of
+    the work done waiting for her — and linking to its project's H&S page where the thread opens
+    and the status is changed.
 *@
 
 @if (Actions.Count == 0)
@@ -17,6 +20,7 @@
                 <th>Site</th>
                 <th>Action</th>
                 <th>Owner</th>
+                <th>Thread</th>
                 <th class="text-right">Due</th>
             </tr>
         </thead>
@@ -29,6 +33,7 @@
                     </td>
                     <td>@action.Summary</td>
                     <td class="whitespace-nowrap">@action.OwnerDisplayName()</td>
+                    <td class="whitespace-nowrap"><HsRecordThreadStanding Record="action" /></td>
                     <td class="text-right whitespace-nowrap @(action.DueAt is null ? "text-content-subtle" : "")">@DueText(action)</td>
                 </tr>
             }

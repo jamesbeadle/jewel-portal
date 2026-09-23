@@ -20,6 +20,8 @@ public sealed class UpdateProjectDetailsHandler
         entity.Organisation = (int)command.Organisation;
         entity.Stage = (int)command.Stage;
         entity.ProjectManagerEmail = command.ProjectManagerEmail;
+        entity.SiteManagerName = (command.SiteManagerName ?? "").Trim();
+        entity.SiteManagerEmail = (command.SiteManagerEmail ?? "").Trim();
         entity.AddressLine = (command.AddressLine ?? "").Trim();
         entity.Town = (command.Town ?? "").Trim();
         entity.Postcode = (command.Postcode ?? "").Trim();

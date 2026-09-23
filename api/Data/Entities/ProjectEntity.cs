@@ -11,6 +11,11 @@ public sealed class ProjectEntity
     public int Organisation { get; set; }
     public int Stage { get; set; }
     [MaxLength(256)]     public string ProjectManagerEmail { get; set; } = "";
+    // The site manager who answers for the site (2026-09-23): a person, not a login — the name
+    // the audit's front sheet pre-fills, and the address the H&S digest of what the officer did
+    // on his site goes to. Blank means nobody is told.
+    [MaxLength(256)]     public string SiteManagerName { get; set; } = "";
+    [MaxLength(256)]     public string SiteManagerEmail { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
 
     // The party this project corresponds with: a client account directly (PartyKind 0) or an

@@ -1,0 +1,20 @@
+@* The thread's standing in a register cell: how many comments, and whether a photograph of the work done is waiting. *@
+
+@if (Record.CommentCount == 0)
+{
+    <span class="text-content-subtle">—</span>
+}
+@if (Record.CommentCount > 0)
+{
+    <span title="@LatestText">@Record.CommentCount @(Record.CommentCount == 1 ? "comment" : "comments")</span>
+    @if (Record.HasPhoto)
+    {
+        <Pill Tone="Tone.Info" Class="ml-2">Photo</Pill>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public HsRecord Record { get; set; } = default!;
+
+    private string LatestText => Record.LastCommentAt is { } latest ? "Latest " + DateTimeText(latest) : "";
+}

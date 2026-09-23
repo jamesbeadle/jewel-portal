@@ -14,6 +14,7 @@ public partial class ProjectHs
     private bool dataFailed;
     private bool busy;
     private string? actionError;
+    private HsRecord? openRecord;
 
     private bool newAuditOpen;
     private HsAuditType newType = HsAuditType.Routine;
@@ -57,6 +58,12 @@ public partial class ProjectHs
         Records.Current is null ? null : ActionRows.Count(record => record.Status != HsStatus.Closed);
 
     private bool LogFormReady => !string.IsNullOrWhiteSpace(logSummary) && !string.IsNullOrWhiteSpace(logOwner);
+
+    private bool MayCloseActions => Session.CanOpen(HsActionRoles.AllowedToClose);
+
+    // A corrective action's Closed is the officer's (HsActionRoles): the owner is never offered a choice the portal would refuse.
+    private IEnumerable<HsStatus> StatusesOfferedOn(HsRecord record) =>
+        Enum.GetValues<HsStatus>().Where(status => status != HsStatus.Closed || MayCloseActions || !record.IsCorrectiveAction() || record.Status == HsStatus.Closed);
 
     protected override async Task OnInitializedAsync()
     {
@@ -119,11 +126,17 @@ public partial class ProjectHs
         if (!int.TryParse(e.Value?.ToString(), out var statusValue)) return;
         var status = (HsStatus)statusValue;
         if (status == record.Status) return;
+        await SetStatusAsync(record, status);
+    }
+
+    private async Task SetStatusAsync(HsRecord record, HsStatus status)
+    {
         await RunAsync(async () =>
         {
-            await Commands.SendAsync(
+            var moved = await Commands.SendAsync(
                 new UpdateHsRecord(record.HsRecordId, record.Summary, record.Severity, status, record.AssignedToEmail, record.DueAt, record.AssignedToName),
                 CancellationToken.None);
+            if (openRecord?.HsRecordId == moved.HsRecordId) openRecord = moved;
             await RefreshRecordsAsync();
         });
     }
@@ -145,12 +158,6 @@ public partial class ProjectHs
     }
 
     private static int SortRank(HsRecord record) => record.Status == HsStatus.Closed ? 1 : 0;
-
-    private static string StatusLabel(HsStatus status) => status switch
-    {
-        HsStatus.InProgress => "In progress",
-        _ => status.ToString()
-    };
 
     private static HsAuditType ParseType(ChangeEventArgs e) =>
         int.TryParse(e.Value?.ToString(), out var value) ? (HsAuditType)value : HsAuditType.Routine;

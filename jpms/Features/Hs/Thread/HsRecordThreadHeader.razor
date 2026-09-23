@@ -1,0 +1,55 @@
+@using Jewel.JPMS.Contracts.Hs
+
+@*
+    The action itself, above its thread: what it is, who owns it, when it is due, and its status —
+    Closed offered only to someone who may close (the H&S officer or a director), so the owner sees
+    Open and In progress alone and never a choice the portal would refuse.
+*@
+
+<div class="flex flex-wrap items-start justify-between gap-4">
+    <div class="min-w-0">
+        <p class="text-base text-content">@Record.Summary</p>
+        <p class="mt-1 text-sm text-content-subtle">
+            Owner <span class="text-content">@Record.OwnerDisplayName()</span>
+            · Raised @DateText(Record.RaisedAt)
+            · Due <span class="@(Record.IsOverdue() ? "text-warning" : "text-content")">@DueText</span>
+            · <Pill Tone="@Record.Severity.ToTone()">@Record.Severity</Pill>
+        </p>
+    </div>
+    <FormField Label="Status" Class="w-44">
+        <select class="field py-1" value="@((int)Record.Status)" disabled="@Busy" @onchange="StatusChosenAsync">
+            @foreach (var status in OfferedStatuses)
+            {
+                <option value="@((int)status)">@status.DisplayName()</option>
+            }
+        </select>
+    </FormField>
+</div>
+@if (!MayClose)
+{
+    <p class="mt-2 text-xs text-content-subtle">@ClosedByTheOfficer</p>
+}
+
+@code {
+    private const string NoDueDate = "Ongoing";
+    private const string ClosedByTheOfficer = "An action is closed by the H&S officer, on her next visit or on a photograph of the work done.";
+
+    [Parameter, EditorRequired] public HsRecord Record { get; set; } = default!;
+    [Parameter] public bool MayClose { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback<HsStatus> OnStatusChanged { get; set; }
+
+    private string DueText => Record.DueAt is { } due ? DateText(due) : NoDueDate;
+
+    private IEnumerable<HsStatus> OfferedStatuses =>
+        Enum.GetValues<HsStatus>().Where(status => status != HsStatus.Closed || MayClose || Record.Status == HsStatus.Closed);
+
+    private async Task StatusChosenAsync(ChangeEventArgs chosen)
+    {
+        var isAStatus = int.TryParse(chosen.Value?.ToString(), out var value);
+        if (!isAStatus) return;
+        var status = (HsStatus)value;
+        if (status == Record.Status) return;
+        await OnStatusChanged.InvokeAsync(status);
+    }
+}

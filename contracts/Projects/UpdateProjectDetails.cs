@@ -27,4 +27,8 @@ public sealed record UpdateProjectDetails(
     // name as Xero holds it (2026-09-10). Same full-record convention as XeroSiteName: null/blank
     // clears the mapping, so carry the current values forward when they should not change.
     string? XeroContactId = null,
-    string? XeroContactName = null) : ICommand<Project>;
+    string? XeroContactName = null,
+    // The site manager who answers for the site — a person, not a login (2026-09-23). Same
+    // full-record convention: carry the current values forward when they should not change.
+    string SiteManagerName = "",
+    string SiteManagerEmail = "") : ICommand<Project>;
