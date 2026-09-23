@@ -1,4 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+// Named here, not left to the api's global usings: the worker compiles this file too and has no
+// EF global using, so a bare [Index] there is System.Index and the worker build fails (2026-09-23).
+using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Data.Entities;
 
