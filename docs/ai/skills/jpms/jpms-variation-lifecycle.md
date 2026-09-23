@@ -1,6 +1,6 @@
 ---
 name: jpms-variation-lifecycle
-description: "The variation's one-document lifecycle and the staged build-up doctrine. Load before pricing, staging, approving, revising or reporting on variations, or working an Awaiting-AI position. Encodes one-number-through-every-stage, stage-then-USER-approves, what approval mints, evidence via architect instructions, and the work-order fallback."
+description: "The variation's one-document lifecycle and the staged build-up doctrine. Load before pricing, staging, approving, revising or reporting on variations, or working an Awaiting-AI position. Encodes one-number-through-every-stage, stage-then-USER-approves, what approval mints, evidence via architect instructions, the work-order fallback, and a workbook's summary sheet being an index and never the price."
 ---
 
 # JPMS — The variation lifecycle
@@ -29,6 +29,15 @@ it has got to: Quoting → Issued → Awaiting AI → Approved / Rejected. Never
   build-up (lines, at least one, each on a cost centre) and lands in Issued — raised by hand means
   it has already gone to the client — with those lines staged and their total as the estimate.
   There is no Quoting pass to chase; the next move is the client's approval.
+- **A workbook's summary sheet is an index, not the price.** A blank value cell on the summary
+  (column F on By France's, 23/09/2026) means "the figure is on this item's own tab", never
+  "this item is nil". Before raising or pricing any variation or EOT from a workbook, open the
+  item's tab and take the build-up from there; a variation is only nil when its own sheet says
+  so, and the portal refuses a zero-total build-up precisely so a blank index cell cannot become
+  a nil variation. On the register, `list_variations` carries `estimatedValue` (the priced
+  build-up) and `approvedValue` (null until approval) — an Issued variation with no approved
+  value is priced, not nil. A number (V81) is found with find_by_reference; `search` matches
+  titles only.
 - Pre-approval estimate changes use set_variation_order_estimate; the status ladder's
   side-effect-free moves use set_variation_order_status; rejection and return-to-quoting keep
   the same document alive.
