@@ -37,12 +37,10 @@ internal sealed class PublicFormFixture : IAsyncDisposable
         ["ec_address"] = "1 High Street, Surbiton", ["relationship"] = "Brother", ["medical_detail"] = Medical
     };
 
-    public static Dictionary<string, string> RightToWorkAnswers(JewelCompany company) => new()
+    public static Dictionary<string, string> RightToWorkAnswers() => new()
     {
         ["full_name"] = "Sam Smith", ["dob"] = "1990-01-01", ["email"] = PersonEmail, ["mobile"] = Mobile,
         ["status"] = RightToWorkForm.BritishOrIrishCitizen, ["engaged_as"] = RightToWorkForm.Employee,
-        ["company"] = RightToWorkForm.Definition.QuestionFor("company")!.Choices.First(choice =>
-            choice.StartsWith(JewelCompanies.For(company).ShortName, StringComparison.Ordinal)),
         ["declaration_name"] = "Sam Smith"
     };
 
@@ -51,8 +49,8 @@ internal sealed class PublicFormFixture : IAsyncDisposable
         string? drawingId = null) =>
         new(sessionId, answers, DrawingUploads(drawingId), inviteToken, packToken);
 
-    public Task<PublicFormUploadReceipt> SignAsync(string companyCode, string sessionId) =>
-        Service.UploadAsync(companyCode, FormSlugs.RightToWork,
+    public Task<PublicFormUploadReceipt> SignAsync(string sessionId) =>
+        Service.UploadAsync(FormSlugs.RightToWork,
             new PublicFormUpload(sessionId, DrawingKey, "signature-declaration.png", Convert.ToBase64String(PngHeader)),
             Address, CancellationToken.None);
 

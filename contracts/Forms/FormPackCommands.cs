@@ -6,7 +6,6 @@ namespace Jewel.JPMS.Contracts.Forms;
 /// <summary>Sends one form to one named person as a link that is theirs alone. SentByEmail and SentByName are stamped server-side.</summary>
 public sealed record SendFormInvite(
     string FormSlug,
-    JewelCompany Company,
     string PersonName,
     string Email,
     string CompanyName,
@@ -26,7 +25,6 @@ public sealed record CancelFormInvite(string FormInviteId) : ICommand<FormInvite
 
 /// <summary>Issues a new starter's pack: the portal decides the forms from how they are engaged and the four answers.</summary>
 public sealed record SendFormPack(
-    JewelCompany Company,
     string PersonName,
     string Email,
     Engagement EngagedAs,

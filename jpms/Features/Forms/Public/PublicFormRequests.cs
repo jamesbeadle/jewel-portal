@@ -18,27 +18,22 @@ public sealed record PublicFormAnswer<TValue>(TValue? Value, string? Problem, bo
 /// </summary>
 public static class PublicFormRequests
 {
-    public static string FormAddress(string companyCode, string slug) =>
-        $"/api/public-forms/{Uri.EscapeDataString(companyCode)}/{Uri.EscapeDataString(slug)}";
+    public static string FormAddress(string slug) => $"/api/public-forms/{Uri.EscapeDataString(slug)}";
 
-    public static Task<PublicFormAnswer<PublicFormView>> OpenAsync(
-        HttpClient http, string companyCode, string slug, string? inviteToken, string? packToken)
+    public static Task<PublicFormAnswer<PublicFormView>> OpenAsync(HttpClient http, string slug, string? inviteToken, string? packToken)
     {
         var query = $"?k={Uri.EscapeDataString(inviteToken ?? "")}&p={Uri.EscapeDataString(packToken ?? "")}";
-        return AskAsync<PublicFormView>(() => http.GetAsync(FormAddress(companyCode, slug) + query));
+        return AskAsync<PublicFormView>(() => http.GetAsync(FormAddress(slug) + query));
     }
 
-    public static Task<PublicFormAnswer<PublicPackView>> OpenPackAsync(HttpClient http, string companyCode, string token) =>
-        AskAsync<PublicPackView>(() =>
-            http.GetAsync($"/api/public-form-packs/{Uri.EscapeDataString(companyCode)}/{Uri.EscapeDataString(token)}"));
+    public static Task<PublicFormAnswer<PublicPackView>> OpenPackAsync(HttpClient http, string token) =>
+        AskAsync<PublicPackView>(() => http.GetAsync($"/api/public-form-packs/{Uri.EscapeDataString(token)}"));
 
-    public static Task<PublicFormAnswer<PublicFormUploadReceipt>> UploadAsync(
-        HttpClient http, string companyCode, string slug, PublicFormUpload upload) =>
-        AskAsync<PublicFormUploadReceipt>(() => http.PostAsJsonAsync(FormAddress(companyCode, slug) + "/uploads", upload));
+    public static Task<PublicFormAnswer<PublicFormUploadReceipt>> UploadAsync(HttpClient http, string slug, PublicFormUpload upload) =>
+        AskAsync<PublicFormUploadReceipt>(() => http.PostAsJsonAsync(FormAddress(slug) + "/uploads", upload));
 
-    public static Task<PublicFormAnswer<PublicFormReceipt>> SubmitAsync(
-        HttpClient http, string companyCode, string slug, PublicFormSubmission submission) =>
-        AskAsync<PublicFormReceipt>(() => http.PostAsJsonAsync(FormAddress(companyCode, slug) + "/submit", submission));
+    public static Task<PublicFormAnswer<PublicFormReceipt>> SubmitAsync(HttpClient http, string slug, PublicFormSubmission submission) =>
+        AskAsync<PublicFormReceipt>(() => http.PostAsJsonAsync(FormAddress(slug) + "/submit", submission));
 
     private static async Task<PublicFormAnswer<TValue>> AskAsync<TValue>(Func<Task<HttpResponseMessage>> send)
     {

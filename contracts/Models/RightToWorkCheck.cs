@@ -49,7 +49,6 @@ public sealed record RightToWorkCheck(
 public sealed record RightToWorkCheckDetails(
     string PersonName,
     string Email,
-    JewelCompany Company,
     string JobRole,
     Engagement EngagedAs,
     DateOnly? EngagedSince,

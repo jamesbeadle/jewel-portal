@@ -13,13 +13,13 @@ public sealed partial class PublicFormService
     /// sensitive: a right-to-work or starter-checklist answer stays in its restricted store.
     /// </summary>
     private async Task<PublicFormInvitation> InvitationForAsync(
-        FormDefinition form, JewelCompany company, ResolvedLink link, CancellationToken cancellationToken)
+        FormDefinition form, ResolvedLink link, CancellationToken cancellationToken)
     {
         var invite = link.Invite!;
         var carried = link.Pack is null
             ? new Dictionary<string, string>()
             : await CarriedAnswersAsync(link.Pack.FormPackId, cancellationToken);
-        var prefills = FormPrefills.For(form, company, invite.PersonName, invite.CompanyName, invite.Email, carried);
+        var prefills = FormPrefills.For(form, invite.PersonName, invite.CompanyName, invite.Email, carried);
         return new PublicFormInvitation(invite.PersonName, invite.CompanyName, invite.Email, invite.SentByName, prefills);
     }
 

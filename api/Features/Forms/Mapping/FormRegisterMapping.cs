@@ -9,7 +9,7 @@ internal static class FormRegisterMapping
         entity.RecordedAt, entity.EngagementEndedOn, entity.ConfirmedOn);
 
     public static RightToWorkCheckDetails DetailsOf(this RightToWorkCheckEntity entity) => new(
-        entity.PersonName, entity.Email, (JewelCompany)entity.Company, entity.JobRole, (Engagement)entity.EngagedAs,
+        entity.PersonName, entity.Email, entity.JobRole, (Engagement)entity.EngagedAs,
         entity.EngagedSince, (RightToWorkRoute)entity.Route, entity.Reference, entity.IdspProvider,
         (RightToWorkSeenVia)entity.SeenVia, entity.DocumentReference, entity.CheckedByName, entity.CheckedOn,
         entity.IsDocumentGenuine, entity.IsLikenessConfirmed, entity.IsPermittedToDoTheWork, entity.IsEvidenceFiled,
@@ -17,7 +17,7 @@ internal static class FormRegisterMapping
         entity.Notes, entity.FormSubmissionId);
 
     public static TrainingRecord ToModel(this TrainingRecordEntity entity) => new(
-        entity.TrainingRecordId, (JewelCompany)entity.Company, entity.PersonName, entity.Email, entity.Course,
+        entity.TrainingRecordId, entity.PersonName, entity.Email, entity.Course,
         entity.Provider, entity.CertificateNumber, entity.CompletedOn, entity.ExpiresOn, entity.FormSubmissionId,
         entity.CertificateUploadId, entity.LastChasedAt, entity.ChaseCount, entity.EndedOn);
 

@@ -18,17 +18,18 @@ public sealed class PublicFormPackFlowTests
         await using var forms = new PublicFormFixture();
         var token = await SendPackAsync(forms);
 
-        var fresh = await forms.Service.OpenPackAsync("jps", token, CancellationToken.None);
-        await forms.Service.SubmitAsync("jps", FormSlugs.EmergencyContact, Posted(FirstSession, EmergencyAnswers(), packToken: token), Address, CancellationToken.None);
-        var halfway = await forms.Service.OpenPackAsync("jps", token, CancellationToken.None);
+        var fresh = await forms.Service.OpenPackAsync(token, CancellationToken.None);
+        var emergency = Posted(FirstSession, EmergencyAnswers(), packToken: token);
+        await forms.Service.SubmitAsync(FormSlugs.EmergencyContact, emergency, Address, CancellationToken.None);
+        var halfway = await forms.Service.OpenPackAsync(token, CancellationToken.None);
         var halfwayPack = await forms.Context.FormPacks.AsNoTracking().SingleAsync();
-        var drawing = await forms.SignAsync("jps", SecondSession);
-        var rightToWork = Posted(SecondSession, RightToWorkAnswers(JewelCompany.JewelPropertyServe), packToken: token, drawingId: drawing.FormUploadId);
-        var receipt = await forms.Service.SubmitAsync("jps", FormSlugs.RightToWork, rightToWork, Address, CancellationToken.None);
+        var drawing = await forms.SignAsync(SecondSession);
+        var rightToWork = Posted(SecondSession, RightToWorkAnswers(), packToken: token, drawingId: drawing.FormUploadId);
+        var receipt = await forms.Service.SubmitAsync(FormSlugs.RightToWork, rightToWork, Address, CancellationToken.None);
 
-        Assert.Equal("Sam Smith", fresh!.PersonName);
+        Assert.Equal("Sam Smith", fresh.PersonName);
         Assert.Equal(new[] { FormSlugs.EmergencyContact, FormSlugs.RightToWork }, fresh.Forms.Select(form => form.FormSlug));
-        Assert.Equal(new[] { true, false }, halfway!.Forms.Select(form => form.IsDone));
+        Assert.Equal(new[] { true, false }, halfway.Forms.Select(form => form.IsDone));
         Assert.Null(halfwayPack.CompletedAt);
         Assert.True(receipt.IsVerified);
         var pack = await forms.Context.FormPacks.SingleAsync();
@@ -41,33 +42,33 @@ public sealed class PublicFormPackFlowTests
     {
         await using var forms = new PublicFormFixture();
         var token = await SendPackAsync(forms);
-        await forms.Service.SubmitAsync("jps", FormSlugs.EmergencyContact, Posted(FirstSession, EmergencyAnswers(), packToken: token), Address, CancellationToken.None);
+        var emergency = Posted(FirstSession, EmergencyAnswers(), packToken: token);
+        await forms.Service.SubmitAsync(FormSlugs.EmergencyContact, emergency, Address, CancellationToken.None);
 
-        var opened = await forms.Service.OpenAsync("jps", FormSlugs.RightToWork, null, token, CancellationToken.None);
+        var opened = await forms.Service.OpenAsync(FormSlugs.RightToWork, null, token, CancellationToken.None);
 
         var prefills = opened!.Invitation!.Prefills;
         Assert.Equal("Sam Smith", prefills["full_name"]);
         Assert.Equal(PersonEmail, prefills["email"]);
-        Assert.Equal("Jewel Property Serve (JPS)", prefills["company"]);
         Assert.DoesNotContain(prefills.Values, value => value.Contains(Medical, StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task APackLink_isRefusedForTheOtherJewelCompany()
+    public async Task AMistypedPackLink_opensNothing()
     {
         await using var forms = new PublicFormFixture();
         var token = await SendPackAsync(forms);
 
-        var elsewhere = await forms.Service.OpenPackAsync("jbb", token, CancellationToken.None);
+        var mistyped = await forms.Service.OpenPackAsync(token[..^1], CancellationToken.None);
 
-        Assert.Equal(FormLinkProblem.NotValid, elsewhere!.Problem);
-        Assert.Empty(elsewhere.Forms);
+        Assert.Equal(FormLinkProblem.NotValid, mistyped.Problem);
+        Assert.Empty(mistyped.Forms);
     }
 
     private static async Task<string> SendPackAsync(PublicFormFixture forms)
     {
-        var pack = new SendFormPack(JewelCompany.JewelPropertyServe, "Sam Smith", PersonEmail, Engagement.SelfEmployed,
-            new FormPackAnswers(false, false, false, false), "office@jewelps.co.uk", "Jeremy");
+        var pack = new SendFormPack("Sam Smith", PersonEmail, Engagement.SelfEmployed,
+            new FormPackAnswers(false, false, false, false), "office@jewelbb.co.uk", "Jeremy");
         await new SendFormPackHandler(forms.Context, forms.Mailer, forms.Options).HandleAsync(pack, CancellationToken.None);
         return RecordingFormMailer.PackSecretIn(Assert.Single(forms.Mailer.Sent));
     }

@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Jewel.JPMS.Api.Features.Forms;
 
 /// <summary>
-/// The forms ported from the JPS Dashboard (2026-09-23): the public pages' API, the office's commands
+/// The forms ported from Jeremy's forms dashboard (2026-09-23): the public pages' API, the office's commands
 /// and queries, the three restricted stores and the mail. Every outside dependency has a null
 /// stand-in, so the API always starts and a missing setting is refused with its reason.
 /// </summary>

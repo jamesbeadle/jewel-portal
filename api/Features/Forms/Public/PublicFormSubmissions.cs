@@ -15,7 +15,7 @@ internal static class PublicFormSubmissions
     private const string WorkstationKey = "where";
 
     public static FormSubmissionEntity New(
-        FormDefinition form, JewelCompany company, IReadOnlyDictionary<string, string> answers, ResolvedLink? link,
+        FormDefinition form, IReadOnlyDictionary<string, string> answers, ResolvedLink? link,
         FormFolderEntity folder, string sessionId, string clientHash, DateTimeOffset now)
     {
         var invite = link?.Invite;
@@ -23,7 +23,6 @@ internal static class PublicFormSubmissions
         {
             FormSubmissionId = FormIdentifierFactory.NextId(),
             FormSlug = form.Slug,
-            Company = (int)company,
             SessionId = sessionId,
             FormInviteId = invite?.FormInviteId,
             FormPackId = invite?.FormPackId,

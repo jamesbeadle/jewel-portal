@@ -32,8 +32,8 @@ internal static class AiFormReading
 
     public static object SubmissionRow(FormSubmission submission) => new
     {
-        submission.FormSubmissionId, submission.FormSlug, title = FormCatalogue.TitleOf(submission.FormSlug, submission.Company),
-        company = submission.Company.ToString(), submission.SubmitterName, submission.FilingName, submission.FormFolderId,
+        submission.FormSubmissionId, submission.FormSlug, title = FormCatalogue.TitleOf(submission.FormSlug),
+        submission.SubmitterName, submission.FilingName, submission.FormFolderId,
         submission.IsVerifiedLink, submission.SentToEmail, submission.SentByName, submission.FormPackId,
         status = submission.Status.ToString(), submission.SubmittedAt, submission.HandledByEmail, submission.HandledAt
     };

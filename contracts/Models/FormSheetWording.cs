@@ -23,10 +23,10 @@ public static class FormSheetWording
     public const string EverythingSent = "Every form in your pack has been sent to the office.";
     public const string SignatureUnavailable = "The signature box did not load. Reload the page to sign.";
 
-    public static string PackIntro(string shortName) =>
-        $"Welcome to {shortName}. Before your first day we need these forms from you. Each one takes a few minutes and "
-        + "works on your phone. You do not have to do them all in one sitting: what you send is kept, and this link "
-        + "brings you back to what is left.";
+    public const string PackIntro =
+        "Welcome to " + JewelBespokeBuild.ShortName + ". Before your first day we need these forms from you. Each one takes "
+        + "a few minutes and works on your phone. You do not have to do them all in one sitting: what you send is kept, "
+        + "and this link brings you back to what is left.";
 
     public static string Uploading(string fileName) => $"Uploading {fileName}…";
 

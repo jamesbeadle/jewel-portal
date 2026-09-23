@@ -39,7 +39,7 @@ public sealed class ListEmergencyContactsHandler : IQueryHandler<ListEmergencyCo
         var answers = FormAnswersJson.Read(submission.AnswersJson);
         var hasHealthAnswers = FormSubmissionReading.HealthAnswersOf(submission).Count > 0;
         return new EmergencyContactCard(
-            submission.FormSubmissionId, submission.SubmitterName, (JewelCompany)submission.Company,
+            submission.FormSubmissionId, submission.SubmitterName,
             answers.GetValueOrDefault("ec_name", ""), answers.GetValueOrDefault("relationship", ""),
             answers.GetValueOrDefault("ec_phone", ""), answers.GetValueOrDefault("ec_email", ""),
             answers.GetValueOrDefault("ec_address", ""), submission.SubmittedAt, hasHealthAnswers, submission.IsVerifiedLink);

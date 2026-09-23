@@ -52,8 +52,8 @@ public sealed class DrivingLicenceCheckTests
         var answers = "{\"name\":\"Sam Smith\",\"points\":\"Yes\",\"points_detail\":\"SP30 in 2025\",\"dvla_code\":\"AB12CD34\"}";
         var submission = new FormSubmissionEntity
         {
-            FormSubmissionId = FormId, FormSlug = FormSlugs.CompanyVehicle, Company = (int)JewelCompany.JewelPropertyServe,
-            SessionId = PublicFormFixture.FirstSession, SubmitterName = "Sam Smith", AnswersJson = answers, SubmittedAt = DateTimeOffset.UtcNow
+            FormSubmissionId = FormId, FormSlug = FormSlugs.CompanyVehicle, SessionId = PublicFormFixture.FirstSession,
+            SubmitterName = "Sam Smith", AnswersJson = answers, SubmittedAt = DateTimeOffset.UtcNow
         };
         var photo = new FormUploadEntity
         {

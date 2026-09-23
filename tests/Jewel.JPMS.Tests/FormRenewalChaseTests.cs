@@ -7,20 +7,20 @@ namespace Jewel.JPMS.Tests;
 
 // The insurance renewal chase keeps the promise the insurance form makes ("your expiry date will be
 // used to remind you"), and only that promise: a certificate that came in on a form is asked for
-// before it lapses, in the name of the Jewel company whose form it was; one the office filed itself
-// was promised nothing and is never emailed about. Three asks at most, a week apart.
+// before it lapses; one the office filed itself was promised nothing and is never emailed about.
+// Three asks at most, a week apart.
 public sealed class FormRenewalChaseTests
 {
     private static readonly DateTimeOffset Now = new(2026, 9, 23, 7, 30, 0, TimeSpan.Zero);
 
     [Fact]
-    public async Task OnlyACertificateThatCameInOnAForm_isChased_inThatCompanysName()
+    public async Task OnlyACertificateThatCameInOnAForm_isChased()
     {
         await using var forms = new PublicFormFixture();
         AddCompany(forms, "sub-roof", "Pat Roofer", "pat@roofco.example");
         AddCompany(forms, "sub-brick", "Bea Brick", "bea@brickco.example");
-        forms.Context.ComplianceDocuments.Add(Certificate("doc-roof", "sub-roof", (int)JewelCompany.JewelPropertyServe));
-        forms.Context.ComplianceDocuments.Add(Certificate("doc-brick", "sub-brick", null));
+        forms.Context.ComplianceDocuments.Add(Certificate("doc-roof", "sub-roof", isFromAForm: true));
+        forms.Context.ComplianceDocuments.Add(Certificate("doc-brick", "sub-brick", isFromAForm: false));
         await forms.Context.SaveChangesAsync();
 
         var outcome = await new FormRenewalChase(forms.Context, forms.Mailer, forms.Options).RunAsync(Now, CancellationToken.None);
@@ -28,8 +28,7 @@ public sealed class FormRenewalChaseTests
         Assert.Equal(1, outcome.Insurance);
         var chase = Assert.Single(forms.Mailer.Sent);
         Assert.Equal(new[] { "pat@roofco.example" }, chase.To);
-        Assert.Equal(JewelCompany.JewelPropertyServe, chase.Company);
-        Assert.Contains("/f/jps/insurance?k=", chase.Text);
+        Assert.Contains("/f/insurance?k=", chase.Text);
     }
 
     [Fact]
@@ -37,7 +36,7 @@ public sealed class FormRenewalChaseTests
     {
         await using var forms = new PublicFormFixture();
         AddCompany(forms, "sub-roof", "Pat Roofer", "pat@roofco.example");
-        forms.Context.ComplianceDocuments.Add(Certificate("doc-roof", "sub-roof", (int)JewelCompany.JewelBespokeBuild));
+        forms.Context.ComplianceDocuments.Add(Certificate("doc-roof", "sub-roof", isFromAForm: true));
         await forms.Context.SaveChangesAsync();
         var chase = new FormRenewalChase(forms.Context, forms.Mailer, forms.Options);
 
@@ -52,9 +51,9 @@ public sealed class FormRenewalChaseTests
             SubcontractorId = subcontractorId, CompanyName = contactName + "'s company", ContactName = contactName, ContactEmail = contactEmail
         });
 
-    private static ComplianceDocumentEntity Certificate(string documentId, string subcontractorId, int? formCompany) => new()
+    private static ComplianceDocumentEntity Certificate(string documentId, string subcontractorId, bool isFromAForm) => new()
     {
         ComplianceDocumentId = documentId, SubcontractorId = subcontractorId, Kind = "Public liability insurance",
-        FileName = "certificate.pdf", ExpiresAt = Now.AddDays(28), UploadedAt = Now.AddYears(-1), FormCompany = formCompany
+        FileName = "certificate.pdf", ExpiresAt = Now.AddDays(28), UploadedAt = Now.AddYears(-1), IsFromAForm = isFromAForm
     };
 }

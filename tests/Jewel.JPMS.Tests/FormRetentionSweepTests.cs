@@ -95,7 +95,7 @@ public sealed class FormRetentionSweepTests
     public async Task AnUploadWhoseFormWasNeverSent_goesEighteenMonthsAfterItArrived()
     {
         await using var forms = new PublicFormFixture();
-        var drawing = await forms.SignAsync("jbb", FirstSession);
+        var drawing = await forms.SignAsync(FirstSession);
         var upload = await forms.Context.FormUploads.SingleAsync(row => row.FormUploadId == drawing.FormUploadId);
         var arrivedOn = Today.AddMonths(-FormRetention.AbandonedUploadMonths).AddDays(-1);
         upload.UploadedAt = new DateTimeOffset(arrivedOn.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
@@ -111,9 +111,9 @@ public sealed class FormRetentionSweepTests
 
     private static async Task SendRightToWorkAsync(PublicFormFixture forms, int sentYearsAgo)
     {
-        var drawing = await forms.SignAsync("jbb", FirstSession);
-        var posted = Posted(FirstSession, RightToWorkAnswers(JewelCompany.JewelBespokeBuild), drawingId: drawing.FormUploadId);
-        await forms.Service.SubmitAsync("jbb", FormSlugs.RightToWork, posted, Address, CancellationToken.None);
+        var drawing = await forms.SignAsync(FirstSession);
+        var posted = Posted(FirstSession, RightToWorkAnswers(), drawingId: drawing.FormUploadId);
+        await forms.Service.SubmitAsync(FormSlugs.RightToWork, posted, Address, CancellationToken.None);
         var submission = await forms.Context.FormSubmissions.SingleAsync();
         submission.SubmittedAt = new DateTimeOffset(Today.AddYears(-sentYearsAgo).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
         await forms.Context.SaveChangesAsync();

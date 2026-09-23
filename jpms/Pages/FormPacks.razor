@@ -28,7 +28,6 @@
         <thead>
             <tr>
                 <th>New starter</th>
-                <th>Company</th>
                 <th>Engaged as</th>
                 <th>Forms</th>
                 <th>Sent</th>
@@ -44,7 +43,6 @@
                 var standing = FormPackStanding.Of(pack, now);
                 <tr @key="pack.FormPackId">
                     <td>@pack.PersonName<span class="block text-xs text-content-subtle">@pack.Email</span></td>
-                    <td class="whitespace-nowrap">@pack.Company.DisplayName()</td>
                     <td class="whitespace-nowrap">@pack.EngagedAs.DisplayName()</td>
                     <td><FormPackForms Pack="pack" Now="now" /></td>
                     <td class="whitespace-nowrap">@DateText(pack.SentAt)<span class="block text-xs text-content-subtle">@pack.SentByName</span></td>

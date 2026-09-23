@@ -10,10 +10,9 @@ public sealed record PublicFormInvitation(
     string SentByName,
     IReadOnlyDictionary<string, string> Prefills);
 
-/// <summary>A public form as its page opens it: the form and company, who it is for when a link names them, or why the link is dead.</summary>
+/// <summary>A public form as its page opens it: the form, who it is for when a link names them, or why the link is dead.</summary>
 public sealed record PublicFormView(
     string FormSlug,
-    JewelCompany Company,
     PublicFormInvitation? Invitation,
     FormLinkProblem? Problem);
 
@@ -21,7 +20,6 @@ public sealed record PublicPackForm(string FormSlug, bool IsDone);
 
 /// <summary>A new starter's pack behind its one link: what is done and what is left, or why the link is dead.</summary>
 public sealed record PublicPackView(
-    JewelCompany Company,
     string PersonName,
     IReadOnlyList<PublicPackForm> Forms,
     FormLinkProblem? Problem);

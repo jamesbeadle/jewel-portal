@@ -17,7 +17,6 @@ public enum TrainingStanding
 /// </summary>
 public sealed record TrainingRecord(
     string TrainingRecordId,
-    JewelCompany Company,
     string PersonName,
     string Email,
     string Course,

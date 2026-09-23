@@ -119,11 +119,11 @@ public sealed class ComplianceDocumentEntity
     public int ChaseCount { get; set; }
 
     /// <summary>
-    /// The Jewel company whose insurance update or questionnaire the certificate came in on (JewelCompany as
-    /// an int); null when the office filed it itself. Only these are chased, in that company's name, because
-    /// only these were told on the form that their expiry date would be used to remind them.
+    /// True when the certificate came in on one of the portal's forms (an insurance update or a
+    /// questionnaire); false when the office filed it itself. Only these are chased, because only these
+    /// were told on the form that their expiry date would be used to remind them.
     /// </summary>
-    public int? FormCompany { get; set; }
+    public bool IsFromAForm { get; set; }
 }
 
 public sealed class HsRecordEntity

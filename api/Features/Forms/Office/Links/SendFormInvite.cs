@@ -23,7 +23,7 @@ public sealed class SendFormInviteHandler : ICommandHandler<SendFormInvite, Sent
         var form = FormCatalogue.For(command.FormSlug) ?? throw new InvalidOperationException("Unknown form.");
         var now = DateTimeOffset.UtcNow;
         var expiresAt = now.AddDays(FormLinkLifetimes.InviteDays(command.Days));
-        var recipient = new FormLinkRecipient(command.Company, command.PersonName, command.CompanyName ?? "", command.Email);
+        var recipient = new FormLinkRecipient(command.PersonName, command.CompanyName ?? "", command.Email);
         var sender = new FormLinkSender(command.SentByEmail, command.SentByName);
         var issued = FormInviteRows.New(form.Slug, recipient, sender, now, expiresAt, command.Reason ?? "", null);
         context.FormInvites.Add(issued.Invite);
@@ -46,7 +46,6 @@ public sealed class SendFormInviteValidation
         var errors = new List<string>();
         var reason = command.Reason ?? "";
         if (FormCatalogue.For(command.FormSlug) is null) errors.Add("Unknown form.");
-        if (!Enum.IsDefined(command.Company)) errors.Add("Say which Jewel company the form is for.");
         if (string.IsNullOrWhiteSpace(command.PersonName)) errors.Add("Who is it for?");
         if (!FormInviteRows.IsAnEmailAddress(command.Email ?? "")) errors.Add("That email address does not look right.");
         if (reason.Length > LongestReason) errors.Add($"Keep the reason to {LongestReason} characters.");

@@ -754,23 +754,25 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   store that names a person gets a period there, or a line in the processors document saying why
   it is kept for good.
 
-## The onboarding forms, for both Jewel companies (contracts + api + jpms + worker)
+## The onboarding forms, Jewel Bespoke Build's (contracts + api + jpms + worker)
 
-- **The JPS Dashboard's forms, ported — not redesigned** (2026-09-23, the YBT goal "New starters and
-  sub-contractors complete their forms in the portal"). Nine definitions in
-  `contracts/Models/FormDefinitions` (the JBB questionnaire folded into the one questionnaire, which
-  takes `JewelBespokeBuildTitle` when sent for JBB; `subcontractor-jbb` still answers), their slugs the
-  dashboard's own addresses (`FormSlugs`). **A change to a field, a wording or a declaration is its own
-  YBT task decided by Jeremy — never edit a definition, `FormWording` or `FormSheetWording` in
-  passing.** The office's own words (screens, emails the dashboard did not send) are ours.
-- **The company travels with everything**: `JewelCompany` on every link, pack, submission and register
-  row, `JewelCompanies` its particulars (the footer, the emails' sender, Reply-To and alert addresses).
-  A JBB sub-contractor never signs a JPS document; the company is the controller of what is sent on
-  its forms (`docs/data-processors.md`).
-- **Public pages** `/f/{jbb|jps}/{form}` and `/f/{company}/pack/{token}` (`PublicForm`, `PublicFormPack`;
-  `LandingLayout`, raw `HttpClient`, no sign-in) talk to `api/Features/Forms/Public`. The sheet is the
-  dashboard's paper form (`.form-sheet` recipes: JPS blue + Outfit, JBB canvas + Poppins), so its inputs
-  are hand-written on purpose, as the imagine form's are. A draft lives in the browser
+- **The forms of Jeremy's forms dashboard, ported — not redesigned** (2026-09-23, the YBT goal "New
+  starters and sub-contractors complete their forms in the portal"). Nine definitions in
+  `contracts/Models/FormDefinitions`, their slugs the dashboard's own addresses (`FormSlugs`); the
+  questionnaire is the JBB book's "Sub Contractor Questionnaire 2025". **A change to a field, a wording
+  or a declaration is its own YBT task decided by Jeremy — never edit a definition, `FormWording` or
+  `FormSheetWording` in passing.** The office's own words (screens, emails the dashboard did not send)
+  are ours. The dashboard is its own system: the portal never changes, redirects or retires it.
+- **The forms are Jewel Bespoke Build's alone** (James, 2026-09-23: the portal is JBB's). The first
+  build carried a second Jewel company on every link, pack, submission and register row and a company
+  question on the right-to-work form; it was taken out the same day (migrations
+  `AddComplianceDocumentIsFromAForm`, then `DropFormCompanyColumns`). `JewelBespokeBuild`
+  (contracts/Models) is the particulars the sheet's footer, the emails' Reply-To and the PDFs print.
+  Never add a company to a form, a link or a register row.
+- **Public pages** `/f/{form}` and `/f/pack/{token}` (`PublicForm`, `PublicFormPack`; `LandingLayout`,
+  raw `HttpClient`, no sign-in) talk to `api/Features/Forms/Public`. The sheet is the dashboard's paper
+  form in JBB's colours (`.form-sheet`: the canvas black, Poppins, the logo's gold), so its inputs are
+  hand-written on purpose, as the imagine form's are. A draft lives in the browser
   (`FormDraftStorage`); files upload one at a time BEFORE the form is sent, under the page's session
   id, and belong to nobody until the form claims them — an unclaimed upload is the abandoned-form
   signal the retention sweep clears after 18 months. Sending twice answers with the first receipt.
@@ -795,8 +797,8 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   tombstone and `FormRecordsDestroyed` left behind; a clock starts only on a leaving date the office
   records (Forms → People & companies, which also dates the person's checks and training records).
   The renewal chase (`FormRenewalChase`, 07:30) asks for insurance and tickets before they lapse —
-  insurance only where the certificate came in on a form (`ComplianceDocuments.FormCompany`, the
-  company it asks in the name of); the rest of the directory was never promised a reminder.
+  insurance only where the certificate came in on a form (`ComplianceDocuments.IsFromAForm`); the rest
+  of the directory was never promised a reminder.
   Who is on site with lapsed cover is read, not chased: the compliance register's "On site,
   insurance lapsed" chip is `ListCompaniesOnSite` (a Released work order on a project that is not
   Completed) beside `ComplianceInsurance.HasLapsed` (a current certificate whose kind names
@@ -804,13 +806,13 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   where under its name on every register row.
   Adding an api file the sweep or chase needs means a `Compile Include` in the worker — run
   `tools.worker_link_check`.
-- **Settings**: `Forms__Sender__<code>`, `Forms__OfficeAlert__<code>`, `Forms__AccidentAlert__<code>`
-  (semicolon-separated), `FormStorage__ConnectionString` (else DrawingsStorage, else AzureWebJobsStorage).
-  Migration `AddOnboardingForms`, script `add-onboarding-forms.sql`. Connector: 15 actions (the five
-  that email someone confirm-first) and 10 reads, pinned by `FormsConnectorTests`; page guides in
-  `FormsPageGuides`. The dashboard's `/forms/<slug>` addresses redirect to `/f/jps/<slug>` — all but
-  `subcontractor-jbb`, the JBB book's questionnaire, which goes to `/f/jbb/subcontractor` so a JBB
-  sub-contractor signs JBB's documents.
+- **Settings**: `Forms__Sender`, `Forms__OfficeAlert`, `Forms__AccidentAlert` (semicolon-separated;
+  unset, mail leaves from the portal's own sender with `info@jewelbb.co.uk` as the Reply-To, and alerts
+  go to that address), `FormStorage__ConnectionString` (else DrawingsStorage, else AzureWebJobsStorage).
+  Migration `AddOnboardingForms` (`add-onboarding-forms.sql`); the company came out in two steps,
+  `add-compliance-document-is-from-a-form.sql` before the api deploys and `drop-form-company-columns.sql`
+  after. Connector: 15 actions (the five that email someone confirm-first) and 10 reads, pinned by
+  `FormsConnectorTests`; page guides in `FormsPageGuides`.
 
 ## An api file the worker compiles may only reach for what the worker compiles
 

@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Jewel.JPMS.Api.Features.Ai.Tools;
 
 /// <summary>
-/// The forms' read surface (moved from the JPS Dashboard, 2026-09-23): each tool wraps the same query
+/// The forms' read surface (ported from Jeremy's forms dashboard, 2026-09-23): each tool wraps the same query
 /// handler its /forms endpoint composes and mirrors that endpoint's gate, and every row carries the id
 /// its action takes. Two things stay on the page: an emergency form's health answers (revealed there,
 /// each look on the audit trail — RevealHealthAnswers has no tool on purpose), and the answers

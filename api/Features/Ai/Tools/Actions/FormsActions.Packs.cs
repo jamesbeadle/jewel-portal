@@ -8,7 +8,7 @@ internal sealed partial class FormsActions
     private static AiAction SendFormPackAction() => new AiAction(
         Name: "send_form_pack",
         Area: Area,
-        Description: "SENDS EMAIL to a new starter with ONE link to every form they owe, in the name of the company picked. "
+        Description: "SENDS EMAIL to a new starter with ONE link to every form they owe. "
             + "The portal decides the forms from engagedAs and the four answers: right to work and an emergency contact from "
             + "everybody, the HMRC starter checklist from an employee with no P45, the workstation assessment for screen work, "
             + "the vehicle form for a company vehicle, a training certificate where the role needs a ticket.",

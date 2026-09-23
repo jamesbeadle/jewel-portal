@@ -15,7 +15,7 @@
         }
         @if (reading is { } opened)
         {
-            <PageHeader Title="@Title" Eyebrow="@opened.Submission.Company.DisplayName()">
+            <PageHeader Title="@Title">
                 <SubtitleContent>
                     From <span class="text-content">@opened.Submission.SubmitterName</span> · filed under
                     <a class="text-info underline underline-offset-2" href="@FolderAddress">@opened.Submission.FilingName</a>

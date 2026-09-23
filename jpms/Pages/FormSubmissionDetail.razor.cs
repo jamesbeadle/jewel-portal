@@ -20,7 +20,7 @@ public partial class FormSubmissionDetail
     private string? problem;
     private bool isRevealing;
 
-    private string Title => view is { } opened ? FormCatalogue.TitleOf(opened.Submission.FormSlug, opened.Submission.Company) : "Form";
+    private string Title => view is { } opened ? FormCatalogue.TitleOf(opened.Submission.FormSlug) : "Form";
 
     private string FolderAddress => $"/forms?folder={view?.Submission.FormFolderId}";
 

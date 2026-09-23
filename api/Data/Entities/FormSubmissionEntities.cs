@@ -14,7 +14,6 @@ public sealed class FormSubmissionEntity
 {
     [Key, MaxLength(64)] public string FormSubmissionId { get; set; } = "";
     [MaxLength(64)]      public string FormSlug { get; set; } = "";
-    public int Company { get; set; }
     [MaxLength(64)]      public string SessionId { get; set; } = "";
     [MaxLength(64)]      public string? FormInviteId { get; set; }
     [MaxLength(64)]      public string? FormPackId { get; set; }
@@ -45,7 +44,6 @@ public sealed class FormUploadEntity
     [Key, MaxLength(64)] public string FormUploadId { get; set; } = "";
     [MaxLength(64)]      public string SessionId { get; set; } = "";
     [MaxLength(64)]      public string FormSlug { get; set; } = "";
-    public int Company { get; set; }
     [MaxLength(64)]      public string QuestionKey { get; set; } = "";
     public int Store { get; set; }
     [MaxLength(512)]     public string BlobRef { get; set; } = "";
@@ -67,7 +65,6 @@ public sealed class FormFolderEntity
     [MaxLength(256)]     public string Name { get; set; } = "";
     [MaxLength(256)]     public string NormalizedName { get; set; } = "";
     public int Kind { get; set; }
-    public int Company { get; set; }
     public DateOnly? EngagementEndedOn { get; set; }
     public DateOnly? VehicleReturnedOn { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

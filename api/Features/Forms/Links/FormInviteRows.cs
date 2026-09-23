@@ -2,8 +2,8 @@ using Jewel.JPMS.Api.Data.Entities;
 
 namespace Jewel.JPMS.Api.Features.Forms.Links;
 
-/// <summary>Who a link goes to: the person, the Jewel company it speaks for, their own company and their email.</summary>
-public sealed record FormLinkRecipient(JewelCompany Company, string PersonName, string CompanyName, string Email);
+/// <summary>Who a link goes to: the person, their own company and their email.</summary>
+public sealed record FormLinkRecipient(string PersonName, string CompanyName, string Email);
 
 /// <summary>Who sent it, as the office's own sign-in says.</summary>
 public sealed record FormLinkSender(string Email, string Name);
@@ -31,7 +31,6 @@ internal static class FormInviteRows
             FormInviteId = FormIdentifierFactory.NextId(),
             FormPackId = formPackId,
             FormSlug = formSlug,
-            Company = (int)recipient.Company,
             PersonName = Clip(recipient.PersonName, LongestName),
             CompanyName = Clip(recipient.CompanyName, LongestName),
             Email = Clip(recipient.Email, LongestName),

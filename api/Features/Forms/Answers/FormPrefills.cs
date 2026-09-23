@@ -13,7 +13,7 @@ internal static class FormPrefills
     private static readonly string[] CarriedKeys = { "mobile", "email", "address", "start_date" };
 
     public static IReadOnlyDictionary<string, string> For(
-        FormDefinition form, JewelCompany company, string personName, string companyName, string email,
+        FormDefinition form, string personName, string companyName, string email,
         IReadOnlyDictionary<string, string> carried)
     {
         var name = CarriedName(carried) ?? personName.Trim();
@@ -21,7 +21,7 @@ internal static class FormPrefills
         foreach (var key in WholeNameKeys) prefills[key] = name;
         foreach (var key in CarriedKeys) prefills[key] = carried.GetValueOrDefault(key, "");
         prefills["email"] = email;
-        prefills["company"] = CompanyAnswer(form, company, companyName);
+        prefills["company"] = companyName.Trim();
         SplitName(name, prefills);
         return prefills
             .Where(pair => pair.Value.Length > 0 && form.QuestionFor(pair.Key) is not null)
@@ -33,15 +33,6 @@ internal static class FormPrefills
         var split = $"{carried.GetValueOrDefault("first_name", "")} {carried.GetValueOrDefault("last_name", "")}".Trim();
         var whole = WholeNameKeys.Select(key => carried.GetValueOrDefault(key, "")).FirstOrDefault(value => value.Length > 0);
         return whole ?? (split.Length > 0 ? split : null);
-    }
-
-    private static string CompanyAnswer(FormDefinition form, JewelCompany company, string companyName)
-    {
-        var question = form.QuestionFor("company");
-        var isAJewelCompanyChoice = question is { Kind: FormQuestionKind.Choice };
-        if (!isAJewelCompanyChoice) return companyName.Trim();
-        var shortName = JewelCompanies.For(company).ShortName;
-        return question!.Choices.FirstOrDefault(choice => choice.StartsWith(shortName, StringComparison.OrdinalIgnoreCase)) ?? "";
     }
 
     private static void SplitName(string name, Dictionary<string, string> prefills)

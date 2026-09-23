@@ -3,17 +3,15 @@ using static Jewel.JPMS.Models.Ask;
 namespace Jewel.JPMS.Models;
 
 /// <summary>
-/// The sub-contractor questionnaire, one form for both companies: Jewel Property Serve's
-/// questionnaire and the JBB book's "Sub Contractor Questionnaire 2025" had the same questions
-/// under two titles, so a question added to one silently diverged from the other. The title follows
-/// the company the form is sent for. The UTR, NI number or company registration number are for CIS
-/// verification; the expiry dates are asked as dates so the portal can chase them.
+/// Jewel Bespoke Build's sub-contractor questionnaire, "Sub Contractor Questionnaire 2025" as the JBB
+/// book's form in Jeremy's dashboard asks it. The UTR, NI number or company registration number are
+/// for CIS verification; the expiry dates are asked as dates so the portal can chase them.
 /// </summary>
 public static class SubcontractorQuestionnaireForm
 {
     public static readonly FormDefinition Definition = new(
         FormSlugs.SubcontractorQuestionnaire,
-        "Sub-Contractor Questionnaire",
+        "Sub Contractor Questionnaire 2025",
         "Please complete this questionnaire so we can set you up as an approved sub-contractor. Fields "
             + "marked * are required.",
         new[]
@@ -64,6 +62,5 @@ public static class SubcontractorQuestionnaireForm
             LongText("notes", "Anything else we should know", Optional)
         },
         FilingKind: FormFilingKind.Company,
-        FilingKeys: new[] { "company", "contact_name" },
-        JewelBespokeBuildTitle: "Sub Contractor Questionnaire 2025");
+        FilingKeys: new[] { "company", "contact_name" });
 }

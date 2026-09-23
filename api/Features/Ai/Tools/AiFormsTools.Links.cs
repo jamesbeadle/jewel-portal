@@ -6,7 +6,7 @@ internal static partial class AiFormsTools
 {
     private static AiTool PacksTool() => new(
         "list_form_packs",
-        "Every new starter's pack, newest first — the one screen of done and outstanding: formPackId, company, the person and "
+        "Every new starter's pack, newest first — the one screen of done and outstanding: formPackId, the person and "
         + "their email, how they are engaged, who sent it and when, when the link expires, how often it has been chased, and "
         + "each form in it with its state (NotOpened, Opened, Done, Expired, Replaced) and the formSubmissionId once sent. "
         + "chase_form_pack and cancel_form_pack take the formPackId.",
@@ -27,7 +27,7 @@ internal static partial class AiFormsTools
 
     private static object PackRow(FormPack pack, DateTimeOffset now) => new
     {
-        pack.FormPackId, company = pack.Company.ToString(), pack.PersonName, pack.Email, engagedAs = pack.EngagedAs.ToString(),
+        pack.FormPackId, pack.PersonName, pack.Email, engagedAs = pack.EngagedAs.ToString(),
         pack.SentByName, pack.SentAt, pack.ExpiresAt, pack.OpenedAt, pack.CompletedAt, pack.LastChasedAt, pack.ChaseCount,
         pack.CancelledAt, outstanding = pack.OutstandingForms.Count,
         forms = pack.CurrentForms.Select(form => InviteRow(form, now))
@@ -35,7 +35,7 @@ internal static partial class AiFormsTools
 
     private static AiTool InvitesTool() => new(
         "list_form_invites",
-        "Forms sent on their own to one named person, newest first (the Sent out screen): formInviteId, the form, company, "
+        "Forms sent on their own to one named person, newest first (the Sent out screen): formInviteId, the form, "
         + "the person, their company and email, who sent it and when, the expiry, and its state (NotOpened, Opened, Done, "
         + "Expired, Replaced) with the formSubmissionId once used. resend_form_invite and cancel_form_invite take the formInviteId.",
         AiToolSchema.Empty(),
@@ -52,8 +52,8 @@ internal static partial class AiFormsTools
 
     private static object InviteRow(FormInvite invite, DateTimeOffset now) => new
     {
-        invite.FormInviteId, invite.FormSlug, title = FormCatalogue.TitleOf(invite.FormSlug, invite.Company),
-        company = invite.Company.ToString(), invite.PersonName, invite.CompanyName, invite.Email, invite.SentByName,
+        invite.FormInviteId, invite.FormSlug, title = FormCatalogue.TitleOf(invite.FormSlug),
+        invite.PersonName, invite.CompanyName, invite.Email, invite.SentByName,
         invite.SentAt, invite.ExpiresAt, invite.OpenedAt, invite.UsedAt, invite.FormSubmissionId,
         state = invite.StateAt(now).ToString()
     };

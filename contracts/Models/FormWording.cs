@@ -11,8 +11,8 @@ public enum FormLinkProblem
 public sealed record FormNotice(string Heading, string Body);
 
 /// <summary>
-/// The sentences the public forms and their emails say, carried from the dashboard with the
-/// company's own name and telephone number in place of Jewel Property Serve's.
+/// The sentences the public forms and their emails say, carried from the dashboard with Jewel Bespoke
+/// Build's own name and telephone number in them.
 /// </summary>
 public static class FormWording
 {
@@ -34,17 +34,17 @@ public static class FormWording
         + legalName + ", stored confidentially, and not shared outside the business. Contact the office to "
         + "update or remove your details.";
 
-    public static FormNotice DeadLink(FormLinkProblem problem, string phone) => problem switch
+    public static FormNotice DeadLink(FormLinkProblem problem) => problem switch
     {
         FormLinkProblem.Used => new("This form has already been sent",
             "This link has been used once and cannot be used again. If you need to change something you have "
-            + $"already sent us, ring the office on {phone} rather than filling the form in twice."),
+            + $"already sent us, ring the office on {JewelBespokeBuild.Phone} rather than filling the form in twice."),
         FormLinkProblem.Expired => new("This link has expired",
-            $"Links last a few days for security. Reply to the email we sent you, or ring the office on {phone}, "
+            $"Links last a few days for security. Reply to the email we sent you, or ring the office on {JewelBespokeBuild.Phone}, "
             + "and we will send you a fresh one straight away."),
         _ => new("This link is not valid",
             "It may have been mistyped, or replaced by a newer one. Check the most recent email we sent you, "
-            + $"or ring the office on {phone}.")
+            + $"or ring the office on {JewelBespokeBuild.Phone}.")
     };
 
     public static string DefaultReason(string formTitle) =>
@@ -53,10 +53,10 @@ public static class FormWording
     public static string SentToYou(string email, string sentBy) =>
         $"This form was sent to {email}{(sentBy.Length > 0 ? " by " + sentBy : "")}. We will email you a copy of what you send.";
 
-    public static string CopyLeavesThingsOut(string phone) =>
+    public const string CopyLeavesThingsOut =
         "Some details are left out of this copy for your own security, including any reference numbers and "
-        + $"identity documents. Keep this email. If anything above is wrong, ring the office on {phone} rather "
-        + "than filling the form in again.";
+        + "identity documents. Keep this email. If anything above is wrong, ring the office on " + JewelBespokeBuild.Phone
+        + " rather than filling the form in again.";
 
     public static string PleaseFillIn(string label) => "Please fill in: " + label;
 

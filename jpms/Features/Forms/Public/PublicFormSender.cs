@@ -14,14 +14,12 @@ public sealed record FormLinkTokens(string? InviteToken, string? PackToken);
 public sealed class PublicFormSender
 {
     private readonly HttpClient http;
-    private readonly string companyCode;
     private readonly FormDefinition form;
     private readonly FormLinkTokens tokens;
 
-    public PublicFormSender(HttpClient http, string companyCode, FormDefinition form, FormLinkTokens tokens)
+    public PublicFormSender(HttpClient http, FormDefinition form, FormLinkTokens tokens)
     {
         this.http = http;
-        this.companyCode = companyCode;
         this.form = form;
         this.tokens = tokens;
     }
@@ -33,7 +31,7 @@ public sealed class PublicFormSender
         if (problem is not null) return PublicFormAnswer<PublicFormReceipt>.Refused(problem);
         foreach (var (questionKey, drawing) in drawings) await SendDrawingAsync(draft, questionKey, drawing);
         var submission = new PublicFormSubmission(draft.SessionId, draft.Answers, draft.ArrivedFileIds(), tokens.InviteToken, tokens.PackToken);
-        return await PublicFormRequests.SubmitAsync(http, companyCode, form.Slug, submission);
+        return await PublicFormRequests.SubmitAsync(http, form.Slug, submission);
     }
 
     private static Dictionary<string, int> FileCountsWith(FormDraft draft, IReadOnlyDictionary<string, string> drawings)
@@ -49,7 +47,7 @@ public sealed class PublicFormSender
         if (isAlreadySent) return;
         var fileName = $"signature-{questionKey}.png";
         var upload = new PublicFormUpload(draft.SessionId, questionKey, fileName, drawing);
-        var answer = await PublicFormRequests.UploadAsync(http, companyCode, form.Slug, upload);
+        var answer = await PublicFormRequests.UploadAsync(http, form.Slug, upload);
         if (answer.Value is not { } receipt) return;
         var sentDrawing = draft.AddFile(questionKey, receipt.FileName);
         sentDrawing.Arrived(receipt.FormUploadId, receipt.FileName);

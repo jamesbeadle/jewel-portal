@@ -6,7 +6,7 @@ internal static partial class AiFormsTools
 {
     private static AiTool FoldersTool() => new(
         "list_form_folders",
-        "The people and companies forms are filed under: formFolderId, the name, Person or Company, the Jewel company, how many "
+        "The people and companies forms are filed under: formFolderId, the name, Person or Company, how many "
         + "forms and the last one, and the two dates that start the destruction clocks — the day an engagement ended and the day "
         + "a company vehicle came back. record_form_folder_dates writes them.",
         AiToolSchema.Empty(),

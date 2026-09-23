@@ -265,7 +265,7 @@ name), pinned in AiConnectorTests. The "ledger link slices unreadable" cell in Â
 row is answered by this read for one supplier at a time; the whole-project slice list stays on
 list_xero_ledger_lines.
 
-**2026-09-23 (the forms moved from the JPS Dashboard for both Jewel companies)**: the /forms
+**2026-09-23 (Jewel Bespoke Build's onboarding forms, moved from Jeremy's forms dashboard)**: the /forms
 screens shipped with their connector surface in the same change. Fifteen actions
 (`FormsActions` + `.Packs` / `.Submissions` / `.RightToWork` / `.Registers`, Area "Forms"):
 send_form_invite, resend_form_invite, send_form_pack, chase_form_pack and

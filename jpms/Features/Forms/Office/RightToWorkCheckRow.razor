@@ -1,7 +1,6 @@
 <tr class="is-clickable" @onclick="OnOpen">
     <td>
         <span class="font-semibold">@Details.PersonName</span>
-        <Pill Class="ml-1">@Details.Company.DisplayName()</Pill>
         @if (Details.JobRole.Length > 0)
         {
             <span class="block text-xs text-content-subtle">@Details.JobRole</span>

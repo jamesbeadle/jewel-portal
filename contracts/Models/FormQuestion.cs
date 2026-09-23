@@ -19,7 +19,7 @@ public enum FormQuestionKind
 public sealed record FormCondition(string QuestionKey, string Answer);
 
 /// <summary>
-/// One question on a form, carried from the JPS Dashboard's field definitions: its key, the words
+/// One question on a form, carried from the field definitions in Jeremy's forms dashboard: its key, the words
 /// the person reads, whether it must be answered, its hint, the choices, and when it is shown. A
 /// Section is a heading and never an answer. IsSpecialCategory marks health data under UK GDPR
 /// Article 9 that the office sees only when it is revealed.

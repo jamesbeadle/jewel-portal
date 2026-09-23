@@ -24,7 +24,6 @@
             <tr>
                 <th>Filed under</th>
                 <th>Kind</th>
-                <th>Company</th>
                 <th class="num">Forms</th>
                 <th>Last form</th>
                 <th>Engagement ended</th>
@@ -40,7 +39,6 @@
                            @onclick:stopPropagation="true">@folder.Name</a>
                     </td>
                     <td>@(folder.Kind == FormFilingKind.Company ? "Company" : "Person")</td>
-                    <td class="whitespace-nowrap">@folder.Company.DisplayName()</td>
                     <td class="num">@folder.SubmissionCount</td>
                     <td class="whitespace-nowrap">@DateText(folder.LastSubmittedAt)</td>
                     <td class="whitespace-nowrap">@DateText(folder.EngagementEndedOn)</td>

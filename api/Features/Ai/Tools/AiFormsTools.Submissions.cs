@@ -8,8 +8,8 @@ internal static partial class AiFormsTools
 {
     private static AiTool ReceivedFormsTool() => new(
         "list_form_submissions",
-        "Every form that came in, newest first — the office's Received list for both Jewel companies: formSubmissionId, "
-        + "formSlug and title, company, who sent it (submitterName, from the one-time link when there was one), the person or "
+        "Every form that came in, newest first — the office's Received list: formSubmissionId, "
+        + "formSlug and title, who sent it (submitterName, from the one-time link when there was one), the person or "
         + "company it is filed under (filingName, formFolderId), whether it came by a verified link, the pack it belongs to, "
         + "and status New / InProgress / Handled / Destroyed. No answers: get_form_submission reads one.",
         AiToolSchema.Object(

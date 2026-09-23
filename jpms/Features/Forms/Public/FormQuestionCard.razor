@@ -25,7 +25,7 @@
             {
                 <p class="form-sheet-hint">@Question.Hint</p>
             }
-            <FormAnswerInput Form="Form" Question="Question" Draft="Draft" CompanyCode="@CompanyCode" InputId="@InputId" OnChanged="OnChanged" />
+            <FormAnswerInput Form="Form" Question="Question" Draft="Draft" InputId="@InputId" OnChanged="OnChanged" />
         }
     </div>
 }
@@ -34,7 +34,6 @@
     [Parameter, EditorRequired] public FormDefinition Form { get; set; } = default!;
     [Parameter, EditorRequired] public FormQuestion Question { get; set; } = default!;
     [Parameter, EditorRequired] public FormDraft Draft { get; set; } = default!;
-    [Parameter, EditorRequired] public string CompanyCode { get; set; } = "";
     [Parameter] public EventCallback OnChanged { get; set; }
 
     private bool IsAskedNow => Question.IsAsked && Question.IsShownFor(Draft.Answers);

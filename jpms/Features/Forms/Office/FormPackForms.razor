@@ -2,7 +2,7 @@
     @foreach (var form in Pack.CurrentForms)
     {
         var state = form.StateAt(Now);
-        <Pill Tone="@state.ToTone()" Title="@state.DisplayName()">@FormCatalogue.TitleOf(form.FormSlug, Pack.Company)</Pill>
+        <Pill Tone="@state.ToTone()" Title="@state.DisplayName()">@FormCatalogue.TitleOf(form.FormSlug)</Pill>
     }
 </div>
 

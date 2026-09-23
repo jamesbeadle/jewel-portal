@@ -1,4 +1,4 @@
-@page "/f/{Company}/{Slug}"
+@page "/f/{Slug}"
 @layout LandingLayout
 @using Jewel.JPMS.Contracts.Forms
 @using Jewel.JPMS.Features.Forms.Public
@@ -8,15 +8,15 @@
 
 <PageTitle>@PageTitleText</PageTitle>
 
-@if (Particulars is null || Form is null)
+@if (Form is null)
 {
     <div class="form-sheet">
         <p class="form-sheet-problem pt-10">@FormSheetWording.NotAvailable</p>
     </div>
 }
-@if (Particulars is { } company && Form is { } form)
+@if (Form is { } form)
 {
-    <FormSheet Company="company" Title="@Title" Intro="@Intro">
+    <FormSheet Title="@Title" Intro="@Intro">
         @if (openProblem is { } unreachable)
         {
             <p class="form-sheet-problem mt-4">@unreachable</p>
@@ -36,11 +36,10 @@
             <CascadingValue Value="pads" IsFixed="true">
                 @foreach (var question in form.Questions)
                 {
-                    <FormQuestionCard @key="question.Key" Form="form" Question="question" Draft="draft!" CompanyCode="@company.Code"
-                                      OnChanged="KeepDraftAsync" />
+                    <FormQuestionCard @key="question.Key" Form="form" Question="question" Draft="draft!" OnChanged="KeepDraftAsync" />
                 }
             </CascadingValue>
-            <p class="form-sheet-privacy">@form.PrivacyFor(company)</p>
+            <p class="form-sheet-privacy">@form.Privacy</p>
             <button type="button" class="btn-form-send" disabled="@isSending" @onclick="SendAsync">
                 @(isSending ? FormSheetWording.Sending : FormSheetWording.Submit)
             </button>

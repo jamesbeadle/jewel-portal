@@ -15,7 +15,6 @@ public sealed class RightToWorkCheckDraft
     public string? FormSubmissionId { get; init; }
     public string PersonName { get; set; } = "";
     public string Email { get; set; } = "";
-    public JewelCompany? Company { get; set; }
     public string JobRole { get; set; } = "";
     public Engagement? EngagedAs { get; set; }
     public string EngagedSince { get; set; } = "";
@@ -50,16 +49,15 @@ public sealed class RightToWorkCheckDraft
 
     public bool NeedsAReference => Route is { } route && route != RightToWorkRoute.OriginalPassportSeen;
 
-    /// <summary>The register's first refusal, in its order: who, which company, how engaged, then the check's own rules.</summary>
+    /// <summary>The register's first refusal, in its order: who, how engaged, then the check's own rules.</summary>
     public string? FirstProblem(DateOnly today) =>
         string.IsNullOrWhiteSpace(PersonName) ? RightToWorkRules.WhoIsBeingEngaged
-        : Company is null ? RightToWorkRules.WhichCompany
         : EngagedAs is null ? RightToWorkRules.HowEngaged
         : Route is null ? RightToWorkRules.WhichRoute
         : RightToWorkRules.ProblemsWith(ToDetails(), today).FirstOrDefault();
 
     public RightToWorkCheckDetails ToDetails() => new(
-        PersonName.Trim(), Email.Trim(), Company!.Value, JobRole.Trim(), EngagedAs!.Value, FormDates.Read(EngagedSince), Route!.Value, Reference.Trim(),
+        PersonName.Trim(), Email.Trim(), JobRole.Trim(), EngagedAs!.Value, FormDates.Read(EngagedSince), Route!.Value, Reference.Trim(),
         IdspProvider.Trim(), SeenVia, DocumentReference.Trim(), CheckedByName.Trim(), FormDates.Read(CheckedOn) ?? default,
         IsDocumentGenuine, IsLikenessConfirmed, IsPermittedToDoTheWork, IsEvidenceFiled, IsTimeLimited,
         FormDates.Read(PermissionExpiresOn), FormDates.Read(FollowUpOn), Outcome, Notes.Trim(), FormSubmissionId);
@@ -69,7 +67,7 @@ public sealed class RightToWorkCheckDraft
     public static RightToWorkCheckDraft Of(RightToWorkCheckDetails details, string? rightToWorkCheckId, DateOnly? engagementEndedOn) => new()
     {
         RightToWorkCheckId = rightToWorkCheckId, FormSubmissionId = details.FormSubmissionId,
-        PersonName = details.PersonName, Email = details.Email, Company = details.Company, JobRole = details.JobRole,
+        PersonName = details.PersonName, Email = details.Email, JobRole = details.JobRole,
         EngagedAs = details.EngagedAs, EngagedSince = FormDates.Write(details.EngagedSince), Route = details.Route,
         Reference = details.Reference, IdspProvider = details.IdspProvider, SeenVia = details.SeenVia,
         DocumentReference = details.DocumentReference, CheckedByName = details.CheckedByName, CheckedOn = FormDates.Write(details.CheckedOn),
