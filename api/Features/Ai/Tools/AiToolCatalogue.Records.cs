@@ -20,7 +20,10 @@ public static partial class AiToolCatalogue
                 "list_variations",
                 "Variations on a project. A user always reads the number as V72 — never say VOQ or VO. "
                 + "Status is one of Quoting, Issued, AwaitingArchitectInstruction (say \"Awaiting AI\"), Approved, Rejected. "
-                + "Looking for a variation by what it is about? Pass search — do not page through the register.",
+                + "Looking for a variation by what it is about? Pass search — do not page through the register; "
+                + "search matches TITLES only, so a number (V81) is find_by_reference, never search. "
+                + "estimatedValue is the priced build-up; approvedValue is set at approval and null before it — "
+                + "an Issued variation with a null approvedValue is priced, not nil.",
                 AiToolSchema.Object(
                     ("projectId", "string", "Defaults to the project in view.", false),
                     ("status", "string", "Optional filter: Quoting, Issued, AwaitingArchitectInstruction, Approved or Rejected.", false),
@@ -56,7 +59,7 @@ public static partial class AiToolCatalogue
                         .Take(100)
                         .Select(row => new
                         {
-                            row.VariationOrderId, row.Number, row.Title, row.Status,
+                            row.VariationOrderId, row.Number, row.Title, row.Status, row.EstimatedValue,
                             row.Value, row.VariationRef, row.RequestId, row.IssuedAt, row.ApprovedAt
                         })
                         .ToListAsync(ct);
@@ -79,7 +82,8 @@ public static partial class AiToolCatalogue
                             row.VariationOrderId,
                             row.Title,
                             status = ((VariationOrderStatus)row.Status).ToString(),
-                            row.Value,
+                            estimatedValue = row.EstimatedValue,
+                            approvedValue = (VariationOrderStatus)row.Status == VariationOrderStatus.Approved ? row.Value : (decimal?)null,
                             approvedRef = row.VariationRef,
                             row.RequestId,
                             row.IssuedAt,

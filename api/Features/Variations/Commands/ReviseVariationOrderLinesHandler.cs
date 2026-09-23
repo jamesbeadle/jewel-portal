@@ -54,7 +54,7 @@ public sealed class ReviseVariationOrderLinesHandler : ICommandHandler<ReviseVar
 
         var newTotal = lines.Sum(AmountOf);
         if (newTotal == 0m)
-            throw new InvalidOperationException("The total can't be zero — enter the agreed values (negative rate for an omit).");
+            throw new InvalidOperationException(VariationLineTotals.ZeroTotalMessage);
 
         var variationRef = order.VariationRef ?? throw new InvalidOperationException("This variation has no reference — it may not be approved.");
         var now = DateTimeOffset.UtcNow;

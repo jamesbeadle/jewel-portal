@@ -21,7 +21,7 @@ public sealed class CreateManualVariationOrderValidation
             if (command.Lines.Any(line => string.IsNullOrWhiteSpace(line.CostCode)))
                 errors.Add("Every line needs a cost centre.");
             if (command.Lines.Sum(line => line.Quantity * line.Rate) == 0m)
-                errors.Add("The lines' total can't be zero — enter the agreed values (a negative rate for an omit).");
+                errors.Add(VariationLineTotals.ZeroTotalMessage);
         }
 
         if (errors.Count == 0) return ValidationOutcome.Passed;

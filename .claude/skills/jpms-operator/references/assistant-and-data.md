@@ -74,6 +74,17 @@ are `post_request_message`, `add_todo`, `complete_todo`, `log_todo_progress`,
 `save_skill`, `save_skill_reference`. Every action mirrors a button; the
 registry is pinned by `AiConnectorTests` so a rename never drops one.
 
+Three rules from Jeremy's 23/09/2026 morning, written into the stored skills
+(`jpms-connector-mechanics`, `jpms-variation-lifecycle`; repo copies under
+`docs/ai/skills/jpms/`): a 400/422 refusal is "the portal needs X", never
+"portal cannot" — the missing value is the assistant's to find at the source;
+a Xero number against a valuation invoice is read off `list_valuation_invoices`
+every time, never remembered from an earlier look-up; a workbook's summary
+sheet is an index and a blank cell means "the figure is on the item's own
+tab", never nil. `list_variations` rows carry `estimatedValue` and
+`approvedValue` (null until approval) so an Issued variation never reads as 0;
+its `search` matches titles only — a number is `find_by_reference`.
+
 Key source files: MCP server `api/Features/Mcp/`; tools
 `api/Features/Ai/Tools/`; actions `api/Features/Ai/Tools/Actions/`; per-page
 guides `contracts/Ai/PageGuides/*.cs` (a page change and its guide ship in the

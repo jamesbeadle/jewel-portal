@@ -16,7 +16,7 @@ public sealed class StageVariationOrderBuildUpValidation
             if (command.Lines.Count > MaxLines) errors.Add($"At most {MaxLines} lines can be staged.");
             if (command.Lines.Any(line => string.IsNullOrWhiteSpace(line.CostCode))) errors.Add("Every staged line needs a cost centre.");
             if (command.Lines.Count > 0 && command.Lines.Sum(line => line.Quantity * line.Rate) == 0m)
-                errors.Add("The staged total can't be zero — enter the agreed values (negative rate for an omit).");
+                errors.Add(VariationLineTotals.ZeroTotalMessage);
         }
         foreach (var (name, value) in new[] { ("Commercial basis", command.CommercialBasis), ("Programme impact", command.ProgrammeImpact), ("Exclusions", command.Exclusions) })
             if (value is { Length: > VariationNarratives.MaxNarrativeChars })

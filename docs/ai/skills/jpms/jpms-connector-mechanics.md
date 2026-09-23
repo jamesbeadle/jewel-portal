@@ -1,6 +1,6 @@
 ---
 name: jpms-connector-mechanics
-description: "Cross-cutting mechanics of writing through the connector — the rules that stop a well-meant edit erasing data, and the rules that stop a well-meant 'the portal cannot' being wrong. Load with any portal write. Encodes state-from-a-read-never-a-write's-reply, the full-record-write rule, read-before-write, absolute figures, complete lists, draft work orders having no number, look-before-you-say-cannot, one yes covers the described chain, re-read before retrying a timed-out write, and the standing answers for supplier work orders."
+description: "Cross-cutting mechanics of writing through the connector — the rules that stop a well-meant edit erasing data, and the rules that stop a well-meant 'the portal cannot' being wrong. Load with any portal write. Encodes state-from-a-read-never-a-write's-reply, the full-record-write rule, read-before-write, absolute figures, complete lists, draft work orders having no number, look-before-you-say-cannot, a-refusal-is-never-cannot, Xero-numbers-are-read-never-remembered, one yes covers the described chain, re-read before retrying a timed-out write, and the standing answers for supplier work orders."
 ---
 
 # JPMS — Connector write mechanics
@@ -51,6 +51,22 @@ description: "Cross-cutting mechanics of writing through the connector — the r
   copy an id out of another system until you have done all three. When it really is a gap, say
   the one thing the user can do on the page to unblock it and carry on with the rest of the job;
   the change request is an offer at the end, never the deliverable.
+- **A refusal is never "the portal cannot"** (Jeremy's 23/09/2026 morning: the portal refused a
+  variation whose lines totalled zero, and the run reported "PORTAL CANNOT — James Beadle" when
+  the truth was that the summary sheet's cell was blank and the figure was on the item's own
+  tab). A 400/409/422 is the portal saying what the write is missing — a value, a cost centre,
+  a mapping — and the missing thing is YOURS to find. Report it as "the portal needs X; I looked
+  in A and B and have not found it", quote the refusal, and go back to the source before
+  assigning it to anyone. "Portal cannot" is reserved for a tool or action that does not exist
+  after the three looks above; it is never the status of a validation answer. A refusal has a
+  colour of its own in a status table — "NEEDS A VALUE", "NEEDS A MAPPING" — never the red of
+  a blocker.
+- **A Xero number against a portal record is read, never remembered** (the same morning: VI-0004
+  was reported as carrying INV-0219; the register has held INV-0106 against it since August). The
+  Xero number on a valuation invoice is `XeroInvoiceNumber` on the row `list_valuation_invoices`
+  returns — read that row before naming the number, every time, and never carry a number across
+  from an earlier `list_xero_sales_invoices` look-up by memory. A number the user challenges is
+  re-read, not defended.
 - **A timed-out write is re-read before any retry.** A gateway error or a timeout does not mean
   the write failed — the portal may have finished after the connection dropped. Before retrying
   an add/create/import, read for the thing you were creating (list_todos with search, search_directory,
