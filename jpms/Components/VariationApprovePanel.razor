@@ -93,7 +93,7 @@
     [Parameter] public decimal? EstimatedValue { get; set; }
     [Parameter] public string DefaultDescription { get; set; } = "";
     [Parameter] public bool Busy { get; set; }
-    [Parameter] public EventCallback<ApproveRequest> OnApprove { get; set; }
+    [Parameter] public EventCallback<VariationApproval> OnApprove { get; set; }
     // Editing an existing (approved) variation: seed the rows from its current lines instead of a
     // single estimate line, and relabel the button / help for an edit rather than an approval.
     [Parameter] public IReadOnlyList<VariationLineInput>? InitialLines { get; set; }
@@ -205,8 +205,6 @@
         };
     }
 
-    public sealed record ApproveRequest(string PrimaryCostCode, decimal Total, IReadOnlyList<VariationLineInput> Lines);
-
     private sealed class LineRow
     {
         // Set only on a row seeded from an existing report line; null on a row the user added.
@@ -302,7 +300,7 @@
     /// own Notice. The one validation pass behind the panel's button and behind a host that
     /// submits the lines as part of a larger form (ShowSubmitButton off).
     /// </summary>
-    public ApproveRequest? TryBuildRequest()
+    public VariationApproval? TryBuildRequest()
     {
         error = null;
 
@@ -342,6 +340,6 @@
             return null;
         }
 
-        return new ApproveRequest(built[0].CostCode, total, built);
+        return new VariationApproval(built[0].CostCode, total, built);
     }
 }

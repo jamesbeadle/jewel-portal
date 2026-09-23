@@ -1,4 +1,5 @@
 @namespace Jewel.JPMS.Features.Variations
+@using Jewel.JPMS.Contracts.Variations
 @inject IVariationStore Variations
 
 @* The agreed build-up, STAGED before approval: the client-agreed priced lines (from the agreed
@@ -118,7 +119,7 @@
         await DialogOpenChanged.InvokeAsync(false);
     }
 
-    private async Task StageAsync(VariationApprovePanel.ApproveRequest request)
+    private async Task StageAsync(VariationApproval request)
     {
         if (staging) return;
         error = null;

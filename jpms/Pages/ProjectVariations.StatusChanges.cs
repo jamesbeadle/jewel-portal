@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.Variations;
 using Jewel.JPMS.Features.RecordLinks;
 
 namespace Jewel.JPMS.Pages;
@@ -83,7 +84,7 @@ public partial class ProjectVariations
         }
 
         // Quoting / Issued / Awaiting AI: move directly between the side-effect-free stages, approve
-        // (through the variation, where the cost code and value are collected) or reject.
+        // (in place with the staged build-up, else through the variation's approve panel) or reject.
         choices.Add(new("Quoting", null, order.Status == VariationOrderStatus.Quoting,
             Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.Quoting)));
         choices.Add(new("Issued",
@@ -94,15 +95,35 @@ public partial class ProjectVariations
             "Issued and waiting on a formal Architect's Instruction — no commercial effect yet",
             order.Status == VariationOrderStatus.AwaitingArchitectInstruction,
             Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.AwaitingArchitectInstruction)));
-        choices.Add(new("Approved…",
-            "Approving mints the V-ref and writes the contract figures — runs on the variation itself",
-            false, Href: variationHref));
+        choices.Add(ApprovedChoice(order, variationHref));
         choices.Add(new("Rejected…",
             "Declined by the client or withdrawn — terminal, and confirmed before it is applied",
             false,
             Action: () => { decliningVariation = order; return Task.CompletedTask; }));
         return choices;
     }
+
+    // Approved is the same approval the record page's button makes. With a staged build-up it is
+    // exactly what the approve panel would submit pre-seeded, so it runs here, in one press — no
+    // confirm, no navigation. With none there is nothing to approve with, so the pick opens the
+    // variation on its approve panel to enter the lines.
+    private VariationStatusChoice ApprovedChoice(VariationOrder order, string variationHref)
+    {
+        var staged = VariationApproval.FromStagedBuildUp(order);
+        if (staged is null)
+            return new("Approved…",
+                "Approving mints the V-ref and writes the contract figures — opens the variation's approve panel to enter the lines",
+                false, Href: $"{variationHref}?approve=true");
+        return new("Approved",
+            "Approves with the staged build-up — mints the V-ref and writes the contract figures",
+            false,
+            Action: () => ApproveVariationInline(order, staged));
+    }
+
+    private Task ApproveVariationInline(VariationOrder order, VariationApproval approval) =>
+        RunInlineStatusMove(order,
+            () => Variations.ApproveAsync(order.VariationOrderId, approval.PrimaryCostCode, approval.Total, approval.Lines),
+            $"Couldn't approve {RowReference(order)}. Please try again.");
 
     // The variation the decline modal is asking about; null when the modal is closed.
     private VariationOrder? decliningVariation;
@@ -116,23 +137,32 @@ public partial class ProjectVariations
         if (variationStatusError is null) decliningVariation = null;
     }
 
-    private async Task ChangeVariationStatusInline(VariationOrder order, VariationOrderStatus status)
+    private Task ChangeVariationStatusInline(VariationOrder order, VariationOrderStatus status) =>
+        RunInlineStatusMove(order,
+            () => StatusMove(order, status),
+            $"Couldn't change the status of {RowReference(order)}. Please try again.");
+
+    private Task StatusMove(VariationOrder order, VariationOrderStatus status)
+    {
+        if (status == VariationOrderStatus.Rejected) return Variations.RejectAsync(order.VariationOrderId);
+        var isUnapproving = status == VariationOrderStatus.Quoting && order.Status == VariationOrderStatus.Approved;
+        if (isUnapproving) return Variations.ReturnToQuotingAsync(order.VariationOrderId);
+        return Variations.SetStatusAsync(order.VariationOrderId, status);
+    }
+
+    // One row moves at a time; the row's own reference leads any refusal so the list says which.
+    private async Task RunInlineStatusMove(VariationOrder order, Func<Task> move, string failureMessage)
     {
         if (variationStatusBusyId is not null) return;
         variationStatusError = null;
         try
         {
             variationStatusBusyId = order.VariationOrderId;
-            if (status == VariationOrderStatus.Rejected)
-                await Variations.RejectAsync(order.VariationOrderId);
-            else if (status == VariationOrderStatus.Quoting && order.Status == VariationOrderStatus.Approved)
-                await Variations.ReturnToQuotingAsync(order.VariationOrderId);
-            else
-                await Variations.SetStatusAsync(order.VariationOrderId, status);
+            await move();
             await LoadVariationsAsync();
         }
         catch (CommandFailedException ex) { variationStatusError = $"{RowReference(order)}: {ex.Message}"; }
-        catch { variationStatusError = $"Couldn't change the status of {RowReference(order)}. Please try again."; }
+        catch { variationStatusError = failureMessage; }
         finally { variationStatusBusyId = null; }
     }
 

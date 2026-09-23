@@ -9,6 +9,9 @@ public partial class ProjectVariationDetail
 {
     [Parameter] public string ProjectId { get; set; } = "";
     [Parameter] public string VariationOrderId { get; set; } = "";
+    // The Variations list sends a person here to enter the lines when it has no staged build-up
+    // to approve with: the page opens on the approve panel rather than leaving them to find it.
+    [SupplyParameterFromQuery(Name = "approve")] public bool OpenApprovePanel { get; set; }
 
     // Session checked and the user is signed in — not "the record is here". The tab chrome shows
     // straight away; the record and each panel's own sources arrive behind their gates.

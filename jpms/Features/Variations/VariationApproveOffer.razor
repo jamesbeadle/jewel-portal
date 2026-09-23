@@ -1,4 +1,5 @@
 @namespace Jewel.JPMS.Features.Variations
+@using Jewel.JPMS.Contracts.Variations
 
 @* The approve dialog. Approval runs from any pre-approved status. With a recorded tender (a
    subcontractor and agreed value) this is the normal end of the pipeline; without one it is a
@@ -31,7 +32,7 @@
     [Parameter] public bool ModalOpen { get; set; }
     [Parameter] public EventCallback<bool> ModalOpenChanged { get; set; }
     /// <summary>The build-up to approve with — the page writes it through.</summary>
-    [Parameter] public EventCallback<VariationApprovePanel.ApproveRequest> OnApprove { get; set; }
+    [Parameter] public EventCallback<VariationApproval> OnApprove { get; set; }
 
     private bool IsManual => string.IsNullOrEmpty(Order.SelectedSubcontractorId);
 }
