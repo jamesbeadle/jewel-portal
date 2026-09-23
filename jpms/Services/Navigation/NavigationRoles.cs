@@ -270,6 +270,14 @@ public static class NavigationRoles
     };
 
     /// <summary>
+    /// Who opens the Forms row: the office, plus the site manager and the H&amp;S officer, who read the
+    /// health and safety forms alone there — their site checks and the site's incident reports. Mirrors
+    /// the API's FormRoleSets.AnyReader.
+    /// </summary>
+    public static readonly Role[] FormReaderRoles =
+        FormRoles.Append(Role.SiteManager).Append(Role.HealthSafetyOfficer).ToArray();
+
+    /// <summary>
     /// Who reaches the emergency contacts: the office and whoever is on site when something happens.
     /// Mirrors the API's FormRoleSets.EmergencyContactReaders.
     /// </summary>

@@ -1,0 +1,38 @@
+@using Jewel.JPMS.Contracts.Hs
+
+@* The thread, oldest first: who said what, when, and the photographs sent with it — the officer's evidence before she closes. *@
+
+@if (Comments.Count == 0)
+{
+    <EmptyState Message="Nothing said on this action yet." Class="py-4" />
+}
+<ol class="space-y-4">
+    @foreach (var comment in Comments)
+    {
+        <li @key="comment.HsRecordCommentId" class="border-l-2 border-line pl-4">
+            <p class="text-sm text-content-subtle">
+                <span class="text-content font-medium">@comment.AuthorDisplayName()</span> · @DateTimeText(comment.PostedAt)
+            </p>
+            <p class="mt-1 whitespace-pre-line text-sm text-content">@comment.Text</p>
+            @if (comment.Photos.Count > 0)
+            {
+                <div class="mt-2 flex flex-wrap gap-2">
+                    @foreach (var photo in comment.Photos)
+                    {
+                        <a @key="photo.HsRecordPhotoId" href="@FileAddress(photo)" target="_blank" rel="noopener" title="@photo.FileName">
+                            <img class="h-28 w-auto rounded bg-surface-raised object-cover" alt="@photo.FileName" src="@InlineAddress(photo)" />
+                        </a>
+                    }
+                </div>
+            }
+        </li>
+    }
+</ol>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<HsRecordComment> Comments { get; set; } = Array.Empty<HsRecordComment>();
+
+    private static string FileAddress(HsRecordPhoto photo) => $"/api/hs-records/photos/{photo.HsRecordPhotoId}/file";
+
+    private static string InlineAddress(HsRecordPhoto photo) => FileAddress(photo) + "?inline=1";
+}

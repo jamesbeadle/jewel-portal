@@ -31,8 +31,7 @@ public sealed partial class PublicFormService
         var isRestricted = form.Store != FormEvidenceStore.General;
         var lines = isRestricted ? Array.Empty<FormAnswerLine>() : echoed;
         var files = isRestricted ? Array.Empty<string>() : fileNames;
-        var isAnAccident = form.Slug == FormSlugs.AccidentReport;
-        var to = isAnAccident ? options.AccidentAlert : options.OfficeAlert;
+        var to = form.IsAnAccidentReport ? options.AccidentAlert : options.OfficeAlert;
         var officeLink = options.OfficeLink(submission.FormSubmissionId);
         return FormReceiptEmails.AlertForTheOffice(form, submission.SubmitterName, to, lines, files, officeLink);
     }

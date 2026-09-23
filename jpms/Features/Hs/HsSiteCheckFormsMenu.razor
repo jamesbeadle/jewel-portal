@@ -1,0 +1,13 @@
+@*
+    The door to Katy-Louise's site check forms and the site's incident forms (2026-09-23): each
+    opens its own sheet at /f/<form>, the public forms engine's page — the same page a person
+    would reach from a bookmark. What comes back is on the Forms register.
+*@
+
+<DropdownMenu Label="Site check forms" Items="Forms" WidthClass="w-72" ToggleTitle="Open one of the H&S forms to fill in" />
+
+@code {
+    private static readonly IReadOnlyList<DropdownMenu.Item> Forms = FormCatalogue.HealthAndSafety
+        .Select(form => new DropdownMenu.Item(form.Title, Href: $"/f/{form.Slug}"))
+        .ToList();
+}

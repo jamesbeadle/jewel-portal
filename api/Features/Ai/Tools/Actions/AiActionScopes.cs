@@ -1,12 +1,14 @@
 using Jewel.JPMS.Api.Features.ArchitectInstructions;
 using Jewel.JPMS.Api.Features.Closeout;
 using Jewel.JPMS.Api.Features.Forms.Office.Submissions;
+using Jewel.JPMS.Api.Features.Hs;
 using Jewel.JPMS.Api.Features.Procurement;
 using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Features.Variations;
 using Jewel.JPMS.Contracts.ArchitectInstructions;
 using Jewel.JPMS.Contracts.Closeout;
 using Jewel.JPMS.Contracts.Forms;
+using Jewel.JPMS.Contracts.Hs;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Contracts.Variations;
@@ -65,6 +67,8 @@ internal static class AiActionScopes
             FormRecordScope.MayActOnFormAsync(context, user, ((FileFormToDirectory)command).FormSubmissionId, cancellationToken),
         [typeof(RecordFormFolderDates)] = (context, user, command, cancellationToken) =>
             FormRecordScope.MayDateFolderAsync(context, user, ((RecordFormFolderDates)command).FormFolderId, cancellationToken),
+        [typeof(UpdateHsRecord)] = (context, user, command, cancellationToken) =>
+            HsRecordCloseScope.AllowsAsync(context, user, (UpdateHsRecord)command, cancellationToken),
     };
 
     public static IEnumerable<Type> ScopedCommands => Checks.Keys;

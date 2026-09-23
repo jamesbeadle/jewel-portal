@@ -35,7 +35,9 @@ internal sealed partial class FormsActions : IAiActionSource
         VisibleTo: FormRoleSets.Office,
         EmailStamps: new[] { "SentByEmail" },
         NameStamps: new[] { "SentByName" },
-        Notes: "formSlug is one of starter, emergency, rtw, dse, vehicle, training, accident, subcontractor, insurance. "
+        Notes: "formSlug is one of starter, emergency, rtw, dse, vehicle, training, accident, subcontractor, insurance, "
+            + "or one of the H&S officer's site checks (toolbox-talk, ladder-inspection, equipment-schedule, puwer-inspection, "
+            + "site-incident, personnel-incident, first-aid-kit, fire-extinguishers), which open at their own address without a link. "
             + "For a new starter's whole set send_form_pack instead. Show the user who and which form first.",
         RequiresConfirmation: true);
 

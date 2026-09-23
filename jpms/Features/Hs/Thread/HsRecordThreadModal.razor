@@ -1,0 +1,40 @@
+@using Jewel.JPMS.Contracts.Hs
+@inject HsRecordThreadClient Thread
+@inject SessionService Session
+
+@*
+    A corrective action's thread (2026-09-23, Katy-Louise's asks of 15 Sep): what the site manager
+    and the officer have said on it, each with the photographs sent, and the box to say more —
+    words, a photograph of the work done, or both. Only the officer or a director may close from
+    here (HsActionRoles); everyone else's status choice stops at In progress. What is said here
+    reaches the other side in the project's next digest email, one per sitting.
+*@
+
+<Modal IsOpen="@(Record is not null)" Title="@Title" ShowFooter="false" OnCancel="OnClose" Class="max-w-2xl">
+    @if (Record is { } record)
+    {
+        <HsRecordThreadHeader Record="record" MayClose="@MayClose" Busy="@isSending" OnStatusChanged="OnStatusChanged" />
+        <LoadGate IsLoading="@(comments is null && problem is null)" Class="mt-5 min-h-24">
+            <HsRecordThreadComments Comments="@(comments ?? Array.Empty<HsRecordComment>())" />
+        </LoadGate>
+        @if (problem is { } refusal)
+        {
+            <Notice Tone="Tone.Negative" Class="mt-4" Dismissible OnDismiss="() => problem = null">@refusal</Notice>
+        }
+        @if (MayComment)
+        {
+            <div class="mt-5 border-t border-line pt-4">
+                <FormField Label="Add a comment" Hint="@CommentHint">
+                    <textarea class="field" rows="3" maxlength="4000" value="@draft" @oninput="e => draft = e.Value?.ToString() ?? string.Empty"></textarea>
+                </FormField>
+                <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+                    <label class="btn-secondary cursor-pointer">
+                        @ChosenFilesLabel
+                        <InputFile OnChange="FilesChosen" multiple accept="image/*,.heic,.heif" class="hidden" disabled="@isSending" />
+                    </label>
+                    <button type="button" class="btn-primary" disabled="@(!CanSend)" @onclick="SendAsync">@(isSending ? "Sending…" : "Send")</button>
+                </div>
+            </div>
+        }
+    }
+</Modal>

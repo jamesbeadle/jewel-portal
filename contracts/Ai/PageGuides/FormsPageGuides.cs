@@ -7,9 +7,13 @@ public static class FormsPageGuides
     {
         new("/forms", "Forms",
             "Received: every form that came in, newest first — chips narrow by form and by where "
-            + "the office has got to (To handle = New and In progress). A row opens the form. ?folder= lists one person's or "
-            + "company's forms. Tabs lead to New starter packs, Sent out, Right to work (its readers only), Training, "
-            + "Workstations and People & companies. Assistant: list_form_submissions, get_form_submission."),
+            + "the office has got to (To handle = New and In progress). A row opens the form. ?folder= lists one person's, "
+            + "company's or site's forms. Tabs lead to New starter packs, Sent out, Right to work (its readers only), Training, "
+            + "Workstations and People & companies. The site manager and the H&S officer open this list too and see the "
+            + "health and safety forms alone — Katy-Louise's site checks (toolbox talk register, ladder inspection record, "
+            + "work equipment schedule, PUWER inspection record, first aid kit checklist, fire extinguisher inspection "
+            + "record) and the site's incident reports (K-02 site, K-03 personnel), each filed under its site. "
+            + "Assistant: list_form_submissions, get_form_submission."),
         new("/forms/received/{form}", "Form",
             "One form read in the form's own order, files under the question that asked for them, a PDF of the record, and "
             + "the status menu (New, In progress, Handled). Above the answers sits the thing the office does with this kind "
@@ -48,8 +52,13 @@ public static class FormsPageGuides
             + "health answers, each look audited, and never over the connector. Assistant: list_emergency_contacts."),
         new("/f/{form}", "Public form",
             "The page a new starter or sub-contractor fills in on a phone, no sign-in — Jewel Bespoke Build's paper. "
-            + "Opened by its open address, a one-time link (?k=) or from a pack (?p=). Staff never fill it in; what it "
-            + "sends lands on /forms."),
+            + "Opened by its open address, a one-time link (?k=) or from a pack (?p=). Staff never fill in the onboarding "
+            + "forms; what a form sends lands on /forms. The H&S forms are the exception and are staff's own: the H&S officer "
+            + "fills in /f/toolbox-talk, /f/ladder-inspection, /f/equipment-schedule, /f/puwer-inspection, /f/first-aid-kit "
+            + "and /f/fire-extinguishers at their open address (the Site check forms menu on her home and on a project's "
+            + "H&S tab), and a site manager fills in /f/site-incident and /f/personnel-incident after an incident. Each is "
+            + "the paper sheet as it is, no more: a register's rows are added one at a time, and a checklist's rows are "
+            + "the sheet's own."),
         new("/f/pack/{token}", "New starter pack (public)",
             "A new starter's one link: the forms they owe, each ticked as it is sent. Staff never use this page.")
     };

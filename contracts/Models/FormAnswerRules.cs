@@ -29,9 +29,13 @@ public static class FormAnswerRules
             FormQuestionKind.Upload => files > 0 ? null : FormWording.NeedsAFile(question.Label),
             FormQuestionKind.Declaration => answer == FormWording.Yes ? null : FormWording.PleaseTick(question.Label),
             FormQuestionKind.Signature => IsSigned(question, answers, files) ? null : FormWording.PleaseSign(question.Label),
+            FormQuestionKind.Table => HasARow(question, answer) ? null : FormWording.PleaseFillIn(question.Label),
             _ => answer.Length > 0 ? null : FormWording.PleaseFillIn(question.Label)
         };
     }
+
+    private static bool HasARow(FormQuestion question, string answer) =>
+        question.Table is { } table && FormTableAnswers.HasAnAnswer(table, answer);
 
     private static bool IsSigned(FormQuestion question, IReadOnlyDictionary<string, string> answers, int drawings)
     {

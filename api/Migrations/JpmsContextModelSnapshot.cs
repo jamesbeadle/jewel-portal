@@ -3461,6 +3461,145 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("HsAuditItems");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.HsRecordCommentEntity", b =>
+                {
+                    b.Property<string>("HsRecordCommentId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("AuthorEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("AuthorName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("HsRecordId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("PostedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("HsRecordCommentId");
+
+                    b.HasIndex("HsRecordId")
+                        .HasDatabaseName("IX_HsRecordComments_HsRecordId");
+
+                    b.ToTable("HsRecordComments");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.HsRecordEventEntity", b =>
+                {
+                    b.Property<string>("HsRecordEventId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ByName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Detail")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("HsRecordId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("NotifiedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("HsRecordEventId");
+
+                    b.HasIndex("NotifiedAt")
+                        .HasDatabaseName("IX_HsRecordEvents_NotifiedAt");
+
+                    b.ToTable("HsRecordEvents");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.HsRecordPhotoEntity", b =>
+                {
+                    b.Property<string>("HsRecordPhotoId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("BlobRef")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("HsRecordCommentId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("HsRecordId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("HsRecordPhotoId");
+
+                    b.HasIndex("HsRecordId")
+                        .HasDatabaseName("IX_HsRecordPhotos_HsRecordId");
+
+                    b.ToTable("HsRecordPhotos");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.HsRecordEntity", b =>
                 {
                     b.Property<string>("HsRecordId")
@@ -5663,6 +5802,16 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(16)");
 
                     b.Property<string>("ProjectManagerEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("SiteManagerEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("SiteManagerName")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");

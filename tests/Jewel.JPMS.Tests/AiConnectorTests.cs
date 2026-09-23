@@ -4,6 +4,7 @@ using Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 using Jewel.JPMS.Api.Features.Ai.Tools;
 using Jewel.JPMS.Api.Features.Connect;
 using Jewel.JPMS.Api.Gates;
+using Jewel.JPMS.Contracts.Hs;
 using Jewel.JPMS.Contracts.ValuationInvoices;
 using Jewel.JPMS.Models;
 using Xunit;
@@ -845,6 +846,25 @@ public sealed class AiConnectorTests
         Assert.Contains("IssuedByEmail", AiActionRegistry.Find("issue_hs_audit")!.EmailStamps);
         Assert.Contains("list_hs_records", AiActionRegistry.Find("log_hs_record")!.Notes);
         Assert.Contains("assignedToName", AiActionRegistry.Find("log_hs_record")!.Notes);
+    }
+
+    // 2026-09-23: the thread on a corrective action. A site manager comments (the register's
+    // contributors), the author is stamped from the caller, the comment carries no image (a tool
+    // call carries words), the register read carries each record's thread standing and one
+    // record's whole thread, and update_hs_record is scoped so a site manager cannot close.
+    [Fact]
+    public void HsActionThread_reachesTheConnector_andCloseIsScoped()
+    {
+        var comment = AiActionRegistry.Find("comment_on_hs_record");
+        Assert.NotNull(comment);
+        Assert.True(comment!.VisibleTo.Includes(Role.SiteManager));
+        Assert.True(comment.VisibleTo.Includes(Role.HealthSafetyOfficer));
+        Assert.Contains("AuthorEmail", comment.EmailStamps);
+        Assert.Contains("AuthorName", comment.NameStamps);
+        Assert.Contains("carries words", comment.Description);
+        Assert.Contains("ChangedByEmail", AiActionRegistry.Find("update_hs_record")!.EmailStamps);
+        Assert.Contains(typeof(UpdateHsRecord), AiActionScopes.ScopedCommands);
+        Assert.Contains("hsRecordId", AiToolCatalogue.Find("list_hs_records")!.Description);
     }
     // 2026-09-16: update_project_details overwrites every field, so it needs a read that returns
     // them all — list_projects gives only id, reference, name and stage. get_project_details is

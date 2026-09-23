@@ -35,7 +35,7 @@ public sealed class FormDownloadEndpoints
         var cancellationToken = request.HttpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!FormRoleSets.Office.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(StatusCodes.Status403Forbidden);
+        if (!FormRoleSets.AnyReader.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(StatusCodes.Status403Forbidden);
         var upload = await access.ReadableUploadAsync(signedInUser, formUploadId, cancellationToken);
         if (upload is null) return new StatusCodeResult(StatusCodes.Status403Forbidden);
         if (upload.DeletedAt is not null) return new NotFoundObjectResult($"That file was deleted: {upload.DeletionReason}");
@@ -56,7 +56,7 @@ public sealed class FormDownloadEndpoints
         var cancellationToken = request.HttpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        var mayRead = FormRoleSets.Office.IncludesAny(signedInUser.Roles) && await access.MayReadAsync(signedInUser, formSubmissionId, cancellationToken);
+        var mayRead = FormRoleSets.AnyReader.IncludesAny(signedInUser.Roles) && await access.MayReadAsync(signedInUser, formSubmissionId, cancellationToken);
         if (!mayRead) return new StatusCodeResult(StatusCodes.Status403Forbidden);
         var view = await get.HandleAsync(new OpenFormSubmission(formSubmissionId), cancellationToken);
         var pdf = FormRecordPdf.Render(view, DateTimeOffset.UtcNow);

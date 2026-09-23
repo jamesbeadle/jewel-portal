@@ -1,0 +1,32 @@
+@*
+    A paper register's ruled rows on a phone: one card per row, the columns stacked as labelled
+    fields inside it, so an attendance list or a fire-point sheet reads down the screen rather than
+    off its edge. A checklist (fixed rows) shows the definition's rows and takes the typed cells; a
+    free table starts with one blank row and adds another per its noun.
+*@
+
+<div class="form-sheet-rows">
+    @foreach (var (row, index) in Rows.Select((row, index) => (row, index)))
+    {
+        <div class="form-sheet-row" @key="index">
+            <div class="form-sheet-row-head">
+                <span class="form-sheet-row-title">@RowTitle(row, index)</span>
+                @if (!Table.HasFixedRows && Rows.Count > 1)
+                {
+                    <button type="button" class="form-sheet-row-remove" @onclick="() => RemoveAsync(index)">Remove</button>
+                }
+            </div>
+            @foreach (var column in Table.TypedColumns)
+            {
+                <div class="form-sheet-cell" @key="column.Key">
+                    <FormTableCellInput Column="column" Value="@CellOf(row, column)" InputId="@CellId(index, column)"
+                                        OnChanged="value => CellChangedAsync(index, column, value)" />
+                </div>
+            }
+        </div>
+    }
+    @if (!Table.HasFixedRows && Rows.Count < Table.MostRows)
+    {
+        <button type="button" class="btn-form-choose mt-2" @onclick="AddRowAsync">Add another @Table.RowNoun</button>
+    }
+</div>

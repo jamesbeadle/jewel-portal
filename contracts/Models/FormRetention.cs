@@ -4,7 +4,8 @@ namespace Jewel.JPMS.Models;
 /// How long form evidence is kept (lib/retention.js — Jeremy's periods of 26 Aug 2026), destroyed on
 /// the day the dashboard would have destroyed it: right-to-work evidence two years after the person
 /// left, in one step; everything else a person sent three years after they left and three more in
-/// the archive; a company's forms the same six years from its last form; a company vehicle form six
+/// the archive; a company's forms the same six years from its last form, and a site's checks and
+/// incident reports the same six years from the site's last form; a company vehicle form six
 /// years after the vehicle came back; an upload whose form was never sent eighteen months after it
 /// arrived; a link nobody used a year after it died. A clock starts only on a recorded date — a
 /// leaver with no date is reported, never clocked — and a date recorded before a form was sent
@@ -21,7 +22,7 @@ public static class FormRetention
         FormDefinition form, DateOnly sentOn, DateOnly? engagementEndedOn, DateOnly? vehicleReturnedOn, DateOnly lastSubmittedOn)
     {
         var isRightToWork = form.Store == FormEvidenceStore.RightToWork;
-        var isACompanysForm = form.FilingKind == FormFilingKind.Company;
+        var isACompanysForm = form.FilingKind is FormFilingKind.Company or FormFilingKind.Site;
         var isAVehicleForm = form.Slug == FormSlugs.CompanyVehicle;
         var endedOn = OnOrAfter(engagementEndedOn, sentOn);
         var vehicleGoneOn = OnOrAfter(vehicleReturnedOn, sentOn) ?? endedOn;

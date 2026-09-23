@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Features.Hs.Audits;
 using Jewel.JPMS.Api.Features.Hs.Audits.Commands;
 using Jewel.JPMS.Api.Features.Hs.Commands;
+using Jewel.JPMS.Api.Features.Hs.Thread.Commands;
 using Jewel.JPMS.Contracts.Hs;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
@@ -33,17 +34,40 @@ internal sealed partial class LabourAndBackOfficeActions
             Area: "Health & safety",
             Description: "Updates an existing health & safety record — summary, severity, status "
                 + "(Open, InProgress, Closed), assignee and due date. Setting status Closed closes "
-                + "the record on the project's H&S register.",
+                + "the record on the project's H&S register. A corrective action is closed only by "
+                + "the H&S officer or a director — on her next visit or on a photograph — never by "
+                + "the site manager who owns it; the portal refuses otherwise.",
             CommandType: typeof(UpdateHsRecord),
             ResultType: typeof(HsRecord),
             AuthorisationType: typeof(UpdateHsRecordAuthorisation),
             ValidationType: typeof(UpdateHsRecordValidation),
             VisibleTo: HsRecordManagers,
-            EmailStamps: Array.Empty<string>(),
-            NameStamps: Array.Empty<string>(),
+            EmailStamps: new[] { "ChangedByEmail" },
+            NameStamps: new[] { "ChangedByName" },
             Notes: "hsRecordId comes from list_hs_records. All listed fields are replaced — carry "
                 + "forward what should not change, assignedToName included. Closing a corrective "
-                + "action minted by a site audit stamps that audit item's date rectified."),
+                + "action minted by a site audit stamps that audit item's date rectified. A status "
+                + "move on a corrective action reaches the site manager in the project's next "
+                + "digest email, one per sitting."),
+
+        new AiAction(
+            Name: "comment_on_hs_record",
+            Area: "Health & safety",
+            Description: "Writes a comment on a health & safety record's thread — the site manager "
+                + "saying he is on it or what is stopping him, the officer answering. A comment on "
+                + "an Open corrective action moves it to InProgress by itself, and reaches the other "
+                + "side in the project's next digest email. Photographs cannot come this way: a tool "
+                + "call carries words, so a photo of the work done is added on the action's thread "
+                + "on the project's H&S tab.",
+            CommandType: typeof(CommentOnHsRecord),
+            ResultType: typeof(HsRecordComment),
+            AuthorisationType: typeof(CommentOnHsRecordAuthorisation),
+            ValidationType: typeof(CommentOnHsRecordValidation),
+            VisibleTo: HsActionRoles.Contributors,
+            EmailStamps: new[] { "AuthorEmail" },
+            NameStamps: new[] { "AuthorName" },
+            Notes: "hsRecordId comes from list_hs_records, which also carries each record's comments. "
+                + "text is what the person said, in their words."),
 
         new AiAction(
             Name: "record_attendance_for_hs_record",

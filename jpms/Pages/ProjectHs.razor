@@ -2,6 +2,7 @@
 @using Jewel.JPMS.Contracts.Hs
 @using Jewel.JPMS.Features.Hs
 @using Jewel.JPMS.Features.Hs.Audits
+@using Jewel.JPMS.Features.Hs.Thread
 @inject AuthService Auth
 @inject SessionService Session
 @inject NavigationManager Nav
@@ -19,13 +20,15 @@
     scored as her spreadsheet scores it. Actions — the corrective actions on the H&S register,
     most of them minted by an audit's Issue, each owned by a person and closed here when done.
     Register — everything else on the register: observations, near misses, incidents, toolbox
-    talks, permits.
+    talks, permits. A row opens the record's thread (2026-09-23): the site manager's comments and
+    photographs, the officer's answers, and the status — Closed being hers alone.
 *@
 
 <Page OpenTo="HsAuditRoles.Readers">
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="hs">
         <SectionHeader Title="Health & Safety">
             <Actions>
+                <HsSiteCheckFormsMenu />
                 @if (Pane == AuditsPane)
                 {
                     <button type="button" class="btn-primary" @onclick="() => newAuditOpen = true">New audit</button>
@@ -96,25 +99,27 @@
                         <th>Severity</th>
                         <th>Raised</th>
                         <th>Due</th>
+                        <th>Thread</th>
                         <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var record in rows)
                     {
-                        <tr @key="record.HsRecordId" class="@(record.IsOverdue() ? "text-warning" : "")">
+                        <tr @key="record.HsRecordId" class="is-clickable @(record.IsOverdue() ? "text-warning" : "")" @onclick="() => openRecord = record">
                             @if (Pane == RegisterPane) { <td class="whitespace-nowrap">@record.Kind.KindDisplayName()</td> }
                             <td class="max-w-lg">@record.Summary</td>
                             <td class="whitespace-nowrap">@record.OwnerDisplayName()</td>
                             <td><Pill Tone="@record.Severity.ToTone()">@record.Severity</Pill></td>
                             <td class="whitespace-nowrap">@DateText(record.RaisedAt)</td>
                             <td class="whitespace-nowrap">@DateText(record.DueAt)</td>
-                            <td>
+                            <td class="whitespace-nowrap"><HsRecordThreadStanding Record="record" /></td>
+                            <td @onclick:stopPropagation="true">
                                 <select class="field py-1" value="@((int)record.Status)" disabled="@busy"
                                         @onchange="e => SetStatusAsync(record, e)">
-                                    @foreach (var status in Enum.GetValues<HsStatus>())
+                                    @foreach (var status in StatusesOfferedOn(record))
                                     {
-                                        <option value="@((int)status)">@StatusLabel(status)</option>
+                                        <option value="@((int)status)">@status.DisplayName()</option>
                                     }
                                 </select>
                             </td>
@@ -123,6 +128,9 @@
                 </tbody>
             </RecordsTable>
         }
+
+        <HsRecordThreadModal Record="@openRecord" OnClose="() => openRecord = null"
+                             OnStatusChanged="status => SetStatusAsync(openRecord!, status)" OnCommented="RefreshRecordsAsync" />
 
         <Modal IsOpen="@newAuditOpen" Title="New site audit" ConfirmLabel="Start audit" ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(newInspectionDate))"
                OnConfirm="CreateAuditAsync" OnCancel="() => newAuditOpen = false">

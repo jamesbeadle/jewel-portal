@@ -40,8 +40,10 @@ internal sealed partial class ProjectsAndTendersActions
             Area: "Projects",
             Description: "Overwrites a project's details wholesale — reference, name, client, "
                 + "organisation, stage, project manager, correspondent party, site address, Xero "
-                + "site name and the Xero contact mapping (xeroContactId + xeroContactName: the Xero "
-                + "customer the project's sales invoices are raised on). Fields omitted are not kept: "
+                + "site name, the Xero contact mapping (xeroContactId + xeroContactName: the Xero "
+                + "customer the project's sales invoices are raised on) and the site manager "
+                + "(siteManagerName + siteManagerEmail — a person, not a login: the address the H&S "
+                + "digest of the officer's sign-offs goes to). Fields omitted are not kept: "
                 + "call get_project_details first and carry forward everything that should not "
                 + "change. The party assignment decides where project emails (RFIs and other request "
                 + "documents) are addressed.",

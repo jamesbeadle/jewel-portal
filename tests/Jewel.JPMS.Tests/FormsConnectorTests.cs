@@ -86,6 +86,23 @@ public sealed class FormsConnectorTests
         Assert.All(Buttons, name => Assert.False(AiActionRegistry.Find(name)!.VisibleTo.Includes(role)));
     }
 
+    // 2026-09-23: the site manager and the H&S officer read the Received list for the health and
+    // safety forms alone — their site checks and the site's incident reports — and nothing else of
+    // the office's: no packs, no links, no registers, no filing.
+    [Theory]
+    [InlineData(Role.SiteManager)]
+    [InlineData(Role.HealthSafetyOfficer)]
+    public void TheSiteRoles_readTheHealthAndSafetyFormsAlone(Role role)
+    {
+        var tools = ToolsFor(role);
+        Assert.Contains("list_form_submissions", tools);
+        Assert.Contains("get_form_submission", tools);
+        Assert.All(Reads.Except(new[] { "list_form_submissions", "get_form_submission", "list_emergency_contacts" }), name => Assert.DoesNotContain(name, tools));
+        Assert.All(Buttons, name => Assert.False(AiActionRegistry.Find(name)!.VisibleTo.Includes(role)));
+        Assert.True(FormRoleSets.ReadersOf(FormEvidenceStore.HealthAndSafety).Includes(role));
+        Assert.False(FormRoleSets.ReadersOf(FormEvidenceStore.General).Includes(role));
+    }
+
     [Fact]
     public void AFormReadOverTheConnector_keepsTheSensitiveAndTheHealthAnswersOnThePage()
     {

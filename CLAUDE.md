@@ -674,13 +674,42 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   (`api/Features/Documents`), shared with the Contractor's Report renderer; a renderer composes
   them and never re-types a border. Download endpoints render inline with no separate handler,
   as every other download in the api does — an accepted gap in the pattern audit.
+- **The thread on a corrective action, and who closes it** (2026-09-23, her 15 Sep replies, the
+  YBT goal "Katy-Louise Runs Health and Safety in the Portal"). `HsRecordComments` +
+  `HsRecordPhotos` (migration `AddHsActionThread`, script `add-hs-action-thread.sql`):
+  `CommentOnHsRecord` (POST `hs-records/{id}/comments`, words alone — the connector's
+  `comment_on_hs_record`, `AuthorEmail`/`AuthorName` stamped) and the multipart door
+  `hs-records/{id}/comments/with-photos` (the page's `HsRecordThreadModal`, a row click on the
+  Actions or Register pane; photographs through `HsRecordPhotoIntake`, prepared and deduplicated
+  exactly as a progress photo, stored under `hs-records/{id}` in the progress photo store, served
+  by `GET hs-records/photos/{id}/file`). A comment on an Open corrective action moves it to
+  InProgress by itself. **`HsActionRoles`** (contracts) is the rule: `Contributors` =
+  `HsAuditRoles.Auditors` write; `AllowedToClose` = Admin, MD/FD, H&S officer — a site manager
+  never closes his own action. `HsRecordCloseScope` consults it on `UpdateHsRecordEndpoint` and
+  in `AiActionScopes` (the connector too); the page offers Closed only to those who may
+  (`HsRecordThreadHeader`, the row's select). `UpdateHsRecord` carries `ChangedByEmail`/`Name`
+  (stamped by the endpoint and the action) so a status move is an event of that person's. The
+  register read (`ListHsRecords`, `list_hs_records`) carries each record's `CommentCount` /
+  `LastCommentAt` / `HasPhoto`; `list_hs_records` with `hsRecordId` reads one thread whole.
+- **One email per project per sitting, never one per item** (`api/Features/Hs/Notifications`).
+  Every door that changes a corrective action — a comment, a status move, an audit's Issue
+  minting it — writes one `HsRecordEvents` row through `HsRecordEvents.Record` and sends
+  nothing itself. `worker/Hs/HsNotificationWorker` (every ten minutes) runs
+  `HsNotificationSweep`: `HsNotificationDigests.Plan` (pure) calls a project's sitting over when
+  its newest unsent event is `SessionEnd` (30 minutes) old, then ONE email to the project's site
+  manager with everything that was not his own doing and ONE to each H&S officer (the
+  `Role.HealthSafetyOfficer` directory users) with everything that was not an officer's — nobody
+  is told about their own change; the events are stamped `NotifiedAt` once every digest planned
+  for the project went, and wait for the next run when one would not. The site manager's address
+  is **`Projects.SiteManagerName` / `SiteManagerEmail`** (Project settings → Edit details; on
+  `UpdateProjectDetails`, `get_project_details` / `update_project_details`) — a person, not a
+  login; blank means nobody is told. The email is `HsDigestEmails` through `IFormMailer` (ACS,
+  the same mailer every portal email leaves by) in the `FormEmailFrame`. Pinned by
+  `HsActionThreadTests` and `HsNotificationDigestTests`.
 - **Not built yet (workflow 04 keeps them):** mobilisation checklist and gate, scheduled
   inspections with overdue escalation, incident investigation, permits-to-work, temporary works,
   subcontractor RAMS/induction acceptance, `create_hs_audit_from_message` for the next audit she
-  emails; and from her 15 Sep replies (YBT, Phase 2 goal): site-manager comments on an action
-  with her notified, one digest per session of sign-offs to the site manager, officer-only close
-  on a visit or a photograph, and her other site checks (toolbox talks with attendance,
-  ladder/PUWER inspections, accident forms, first-aid kits, extinguishers).
+  emails.
 
 ## An external login carries its identity, and every external write is scoped by it (api + jpms)
 
@@ -813,6 +842,41 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   `add-compliance-document-is-from-a-form.sql` before the api deploys and `drop-form-company-columns.sql`
   after. Connector: 15 actions (the five that email someone confirm-first) and 10 reads, pinned by
   `FormsConnectorTests`; page guides in `FormsPageGuides`.
+
+## Katy-Louise's site checks are forms in the forms engine (contracts + api + jpms)
+
+- **Eight definitions, her paper sheets as they are and no more** (Nigel, 2026-09-23, the YBT
+  goal's five form tasks): `ToolboxTalkRegisterForm` (G-01, `/f/toolbox-talk`; the talk chosen
+  from `ToolboxTalkTopics` — Akeva's G-02 89 + G-03 26, one choice gives title and number),
+  `LadderInspectionRecordForm` (I-05, `/f/ladder-inspection`), `WorkEquipmentScheduleForm` (I-01,
+  `/f/equipment-schedule`), `PuwerInspectionRecordForm` (I-03, `/f/puwer-inspection`),
+  `SiteIncidentReportForm` (K-02, `/f/site-incident`), `PersonnelIncidentReportForm` (K-03,
+  `/f/personnel-incident`), `FirstAidKitChecklistForm` (I-14, `/f/first-aid-kit`; the sixteen
+  items and their quantities per kit size are `FirstAidKitContents`), `FireExtinguisherInspectionForm`
+  (E-02, `/f/fire-extinguishers`; eight dated check columns, no servicing, no supplier, no
+  reminders). `FormCatalogue.HealthAndSafety` lists them; the door is `HsSiteCheckFormsMenu` on
+  the officer's home panel and the project H&S tab. A change to a field or a wording is
+  Katy-Louise's own task, as every definition's is Jeremy's.
+- **The engine grew what her sheets needed, as data.** `FormQuestionKind.Table` (`Ask.Table`,
+  `FormTable`: `FormColumn`s of kind Text / Date / Choice / Tick / Label, a `RowNoun`, an optional
+  `FixedRows` checklist, `MostRows` 60) is a paper register's ruled rows; the answer is ONE JSON
+  string of rows under the question's key (`FormTableAnswers`: `Read` / `Write` / `Cleaned` —
+  only the table's own columns, cells capped at 512, a checklist keeps exactly its fixed rows with
+  the labels re-imposed, a free table drops a row nobody wrote on — `HasAnAnswer`, `Sentence` for
+  emails and the PDF). On the sheet a row is a card of labelled fields (`FormTableInput`,
+  `FormTableCellInput`; a free table adds "another <noun>"); the office reads it as a small table
+  (`FormTableAnswerView`). **`FormFilingKind.Site`** files a submission under the site named in
+  its `site` answer (a `FormFolder` of kind Site; retention as a company's). **`FormEvidenceStore.
+  HealthAndSafety`** (container `form-health-and-safety`) is read by `FormRoleSets.
+  HealthAndSafetyReaders` — the office plus the site manager and the H&S officer — so the Received
+  list (`/forms`, `list_form_submissions`, `get_form_submission`, the PDF and files) opens to
+  `FormRoleSets.AnyReader` and is narrowed per row to the stores the reader may read
+  (`FormSubmissionReading.VisibleTo`); a site role sees the Received tab alone (`FormsTabs`,
+  `NavigationRoles.FormReaderRoles`). The two incident reports are `IsAnAccidentReport`
+  (the alert goes to `Forms__AccidentAlert`, and — the store being restricted — carries no
+  answers); K-03's injury, cause, treatment, absence and notes are `IsSpecialCategory` (withheld
+  until revealed, each reveal audited), its NI number, date of birth and sex sensitive by key.
+  Pinned by `FormTableTests` and the site-role case in `FormsConnectorTests`.
 
 ## An api file the worker compiles may only reach for what the worker compiles
 

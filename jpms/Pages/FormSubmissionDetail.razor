@@ -7,7 +7,7 @@
 
 <PageTitle>@Title · JPMS</PageTitle>
 
-<Page OpenTo="FormRoleSets.Office">
+<Page OpenTo="FormRoleSets.AnyReader">
     <LoadGate IsLoading="@(reading is null && problem is null)" Prominent="true" Label="Opening the form">
         @if (problem is { } sentence)
         {

@@ -71,6 +71,9 @@ public sealed partial class JpmsContext : DbContext
 
     public DbSet<HsRecordEntity> HsRecords => Set<HsRecordEntity>();
     public DbSet<HsRecordAttendanceEntity> HsRecordAttendance => Set<HsRecordAttendanceEntity>();
+    public DbSet<HsRecordCommentEntity> HsRecordComments => Set<HsRecordCommentEntity>();
+    public DbSet<HsRecordPhotoEntity> HsRecordPhotos => Set<HsRecordPhotoEntity>();
+    public DbSet<HsRecordEventEntity> HsRecordEvents => Set<HsRecordEventEntity>();
     public DbSet<HsAuditEntity> HsAudits => Set<HsAuditEntity>();
     public DbSet<HsAuditItemEntity> HsAuditItems => Set<HsAuditItemEntity>();
     public DbSet<MobilisationItemEntity> MobilisationItems => Set<MobilisationItemEntity>();

@@ -44,12 +44,15 @@ internal static partial class AiDeliveryTools
         "The H&S register: every observation, near miss, incident, corrective action, toolbox "
         + "talk and permit across projects, newest first — kind, summary, severity, status (Open / "
         + "InProgress / Closed), the assignee (a portal email or a person's name), raised, due and "
-        + "closed dates. Filter by projectId and/or kind. Corrective actions minted by an audit "
-        + "carry the audit item's code in their summary.",
+        + "closed dates, and the thread's standing (commentCount, lastCommentAt, hasPhoto). Filter "
+        + "by projectId and/or kind; pass hsRecordId to read one record with its whole thread — "
+        + "every comment, who said it and when, and the ids of the photographs on it. Corrective "
+        + "actions minted by an audit carry the audit item's code in their summary.",
         AiToolSchema.Object(
             ("projectId", "string", "Narrow to one project (defaults to the project in view when one is; pass \"all\" for every project).", false),
             ("kind", "string", "Narrow to one kind: Observation, NearMiss, Incident, CorrectiveAction, ToolboxTalk or Permit.", false),
-            ("openOnly", "boolean", "true lists only Open and InProgress records.", false)),
+            ("openOnly", "boolean", "true lists only Open and InProgress records.", false),
+            ("hsRecordId", "string", "One record, with its thread (comments and photographs).", false)),
         AiToolKind.Read,
         HsRecordReaders,
         ListHsRecordsAsync);
@@ -87,6 +90,9 @@ internal static partial class AiDeliveryTools
         if (!string.IsNullOrWhiteSpace(kindText) && kind is null) return Fail($"Unknown kind '{kindText}'.");
         var openOnly = AiToolSchema.Flag(input, "openOnly") ?? false;
 
+        var hsRecordId = AiToolSchema.Text(input, "hsRecordId");
+        if (!string.IsNullOrWhiteSpace(hsRecordId)) return await OneRecordWithThreadAsync(context, hsRecordId, ct);
+
         var records = await Query<ListHsRecords, IReadOnlyList<HsRecord>>(context, new ListHsRecords(), ct);
         var narrowed = records
             .Where(record => projectId is null or EveryProject || string.Equals(record.ProjectId, projectId, StringComparison.OrdinalIgnoreCase))
@@ -94,6 +100,25 @@ internal static partial class AiDeliveryTools
             .Where(record => !openOnly || record.Status != HsStatus.Closed);
         return Serialise(new { ok = true, records = narrowed.Select(RecordRow) });
     }
+
+    private static async Task<string> OneRecordWithThreadAsync(AiToolContext context, string hsRecordId, CancellationToken ct)
+    {
+        var records = await Query<ListHsRecords, IReadOnlyList<HsRecord>>(context, new ListHsRecords(), ct);
+        var record = records.FirstOrDefault(row => row.HsRecordId == hsRecordId);
+        if (record is null) return Fail($"No H&S record with id {hsRecordId} (list_hs_records returns ids).");
+        var thread = await Query<ListHsRecordComments, IReadOnlyList<HsRecordComment>>(context, new ListHsRecordComments(hsRecordId), ct);
+        return Serialise(new { ok = true, record = RecordRow(record), comments = thread.Select(CommentRow) });
+    }
+
+    private static object CommentRow(HsRecordComment comment) => new
+    {
+        comment.HsRecordCommentId,
+        comment.AuthorEmail,
+        comment.AuthorName,
+        comment.Text,
+        comment.PostedAt,
+        photos = comment.Photos.Select(photo => new { photo.HsRecordPhotoId, photo.FileName, photo.UploadedAt })
+    };
 
     private static object AuditRow(HsAudit audit) => new
     {
@@ -148,6 +173,9 @@ internal static partial class AiDeliveryTools
         record.AssignedToName,
         record.RaisedAt,
         record.DueAt,
-        record.ClosedAt
+        record.ClosedAt,
+        record.CommentCount,
+        record.LastCommentAt,
+        record.HasPhoto
     };
 }

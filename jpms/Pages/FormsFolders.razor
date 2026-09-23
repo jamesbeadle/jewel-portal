@@ -38,7 +38,7 @@
                         <a class="text-info underline underline-offset-2" href="@($"/forms?folder={folder.FormFolderId}")"
                            @onclick:stopPropagation="true">@folder.Name</a>
                     </td>
-                    <td>@(folder.Kind == FormFilingKind.Company ? "Company" : "Person")</td>
+                    <td>@folder.Kind.DisplayName()</td>
                     <td class="num">@folder.SubmissionCount</td>
                     <td class="whitespace-nowrap">@DateText(folder.LastSubmittedAt)</td>
                     <td class="whitespace-nowrap">@DateText(folder.EngagementEndedOn)</td>

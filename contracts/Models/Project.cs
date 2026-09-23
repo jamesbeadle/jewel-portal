@@ -37,4 +37,9 @@ public sealed record Project(
     // explicit mapping like XeroSiteName — Xero's ContactID and the name as Xero holds it — set
     // from the Xero contacts list in Project settings; Raise in Xero is blocked until it is set.
     string? XeroContactId = null,
-    string? XeroContactName = null);
+    string? XeroContactName = null,
+    // The site manager who answers for the site (2026-09-23): a person, not a login. His name
+    // pre-fills the audit's front sheet; his address is where the H&S digest of what the officer
+    // did on his site goes. Blank means nobody is told.
+    string SiteManagerName = "",
+    string SiteManagerEmail = "");

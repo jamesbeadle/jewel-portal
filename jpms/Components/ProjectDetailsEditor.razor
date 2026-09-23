@@ -104,6 +104,12 @@
 
             <FormField Label="Project manager email" Value="@projectManagerEmail" OnChange="v => projectManagerEmail = v" InputType="email" Required="true" />
 
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField Label="Site manager" Value="@siteManagerName" OnChange="v => siteManagerName = v" Hint="A person, not a login — pre-fills the H&S audit's front sheet." />
+                <FormField Label="Site manager email" Value="@siteManagerEmail" OnChange="v => siteManagerEmail = v" InputType="email"
+                           Hint="Where the H&S officer's sign-offs and comments on his actions are sent, one email per sitting." />
+            </div>
+
             <FormField Label="Site address" Value="@addressLine" OnChange="v => addressLine = v" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField Label="Town" Value="@town" OnChange="v => town = v" />
@@ -210,6 +216,8 @@
     private Organisation organisation = Organisation.JewelBespokeBuild;
     private ProjectStage stage = ProjectStage.LiveDelivery;
     private string projectManagerEmail = "";
+    private string siteManagerName = "";
+    private string siteManagerEmail = "";
     private string addressLine = "";
     private string town = "";
     private string postcode = "";
@@ -260,6 +268,8 @@
         organisation = project.Organisation;
         stage = project.Stage;
         projectManagerEmail = project.ProjectManagerEmail;
+        siteManagerName = project.SiteManagerName;
+        siteManagerEmail = project.SiteManagerEmail;
         addressLine = project.AddressLine;
         town = project.Town;
         postcode = project.Postcode;
@@ -417,7 +427,9 @@
                     postcode.Trim(),
                     string.IsNullOrWhiteSpace(xeroSiteName) ? null : xeroSiteName.Trim(),
                     string.IsNullOrWhiteSpace(xeroContactId) ? null : xeroContactId.Trim(),
-                    string.IsNullOrWhiteSpace(xeroContactId) ? null : xeroContactName.Trim()),
+                    string.IsNullOrWhiteSpace(xeroContactId) ? null : xeroContactName.Trim(),
+                    siteManagerName.Trim(),
+                    siteManagerEmail.Trim()),
                 CancellationToken.None);
             await Projects.RefreshAsync(CancellationToken.None);
             Close();

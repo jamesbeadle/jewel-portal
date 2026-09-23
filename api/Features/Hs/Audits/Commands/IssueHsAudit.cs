@@ -1,10 +1,12 @@
+using Jewel.JPMS.Api.Features.Hs.Notifications;
 using Jewel.JPMS.Contracts.Hs;
 
 namespace Jewel.JPMS.Api.Features.Hs.Audits.Commands;
 
 /// <summary>The officer's declaration. Draft → Issued, and every unlinked finding becomes a
 /// corrective action on the project's H&S register, linked back to its item — one save, so an
-/// audit is never Issued with half its actions minted.</summary>
+/// audit is never Issued with half its actions minted. Each minted action is an event on its
+/// thread, so the site manager hears of the audit's findings in one digest.</summary>
 public sealed class IssueHsAuditHandler : ICommandHandler<IssueHsAudit, HsAuditView>
 {
     private readonly JpmsContext context;
@@ -30,6 +32,7 @@ public sealed class IssueHsAuditHandler : ICommandHandler<IssueHsAudit, HsAuditV
             var correctiveAction = HsAuditCorrectiveActions.Mint(finding, audit.ProjectId, issuedAt);
             context.HsRecords.Add(correctiveAction);
             finding.HsRecordId = correctiveAction.HsRecordId;
+            HsRecordEvents.Record(context, correctiveAction, HsRecordEventKind.Raised, audit.Reference, command.IssuedByEmail, audit.SafetyOfficerName, issuedAt);
         }
 
         audit.Score = HsAuditRules.ScoreOf(items);

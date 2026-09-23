@@ -23,6 +23,14 @@ public static class FormAnswerLines
         var key = isSignature ? FormAnswerRules.SignatureNameKey(question.Key) : question.Key;
         var answer = answers.GetValueOrDefault(key, "").Trim();
         if (answer.Length == 0) return null;
+        var table = question.Table;
+        if (table is not null) return RowsLine(question, table, answer);
         return new FormAnswerLine(question.Key, question.Label, isSignature ? "Signed by " + answer : answer);
+    }
+
+    private static FormAnswerLine RowsLine(FormQuestion question, FormTable table, string answer)
+    {
+        var rows = FormTableAnswers.Sentence(table, answer);
+        return new FormAnswerLine(question.Key, question.Label, rows);
     }
 }

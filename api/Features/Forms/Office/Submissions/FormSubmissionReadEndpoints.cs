@@ -4,9 +4,10 @@ using Jewel.JPMS.Contracts.Forms;
 namespace Jewel.JPMS.Api.Features.Forms.Office.Submissions;
 
 /// <summary>
-/// What came in: the Received list and each form (the form's store decides who may open it), the
-/// people and companies it is filed under, and the emergency contacts — which the site manager and
-/// the H&amp;S lead reach as well, since the point of them is being reached fast.
+/// What came in: the Received list and each form (the form's store decides who may open it — the
+/// site manager and the H&amp;S officer see the list too, narrowed to the health and safety forms),
+/// the people and companies it is filed under, and the emergency contacts — which the site manager
+/// and the H&amp;S lead reach as well, since the point of them is being reached fast.
 /// </summary>
 public sealed class FormSubmissionReadEndpoints
 {
@@ -42,10 +43,11 @@ public sealed class FormSubmissionReadEndpoints
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!FormRoleSets.Office.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(StatusCodes.Status403Forbidden);
+        if (!FormRoleSets.AnyReader.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(StatusCodes.Status403Forbidden);
         var formFolderId = request.Query["folder"].ToString();
         var query = new ListFormSubmissions(string.IsNullOrWhiteSpace(formFolderId) ? null : formFolderId);
-        return await OfficeAnswers.ReadAsync(list, query, request.HttpContext.RequestAborted);
+        var submissions = await list.HandleAsync(query, request.HttpContext.RequestAborted);
+        return new OkObjectResult(FormSubmissionReading.VisibleTo(signedInUser, submissions));
     }
 
     [Function(nameof(OpenFormSubmission))]
@@ -56,7 +58,7 @@ public sealed class FormSubmissionReadEndpoints
         var cancellationToken = request.HttpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        var mayRead = FormRoleSets.Office.IncludesAny(signedInUser.Roles) && await access.MayReadAsync(signedInUser, formSubmissionId, cancellationToken);
+        var mayRead = FormRoleSets.AnyReader.IncludesAny(signedInUser.Roles) && await access.MayReadAsync(signedInUser, formSubmissionId, cancellationToken);
         if (!mayRead) return new StatusCodeResult(StatusCodes.Status403Forbidden);
         return await OfficeAnswers.ReadAsync(get, new OpenFormSubmission(formSubmissionId), cancellationToken);
     }
