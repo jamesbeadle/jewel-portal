@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Data;
 
 namespace Jewel.JPMS.Api.Features.Hs.Notifications;
 
