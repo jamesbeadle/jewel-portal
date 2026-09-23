@@ -3,15 +3,16 @@ using Jewel.JPMS.Api.Features.Forms;
 using Jewel.JPMS.Api.Features.Forms.Mail;
 using Jewel.JPMS.Api.Features.Forms.Retention;
 using Jewel.JPMS.Api.Features.Forms.Storage;
+using Jewel.JPMS.Api.Features.Hs.Notifications;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Worker.Forms;
 
 /// <summary>
-/// The forms' nightly work, on the api's own code (linked source): the same three stores, the same
+/// The forms' nightly work, on the api's own code (linked source): the same four stores, the same
 /// mail and the same link options, resolved from the same settings, so a destruction or a chase here
-/// is exactly what the api would do.
+/// is exactly what the api would do. The H&amp;S digest sweep rides on the same mailer and options.
 /// </summary>
 public static class FormsWorkerRegistration
 {
@@ -31,6 +32,7 @@ public static class FormsWorkerRegistration
             : new NullFormMailer());
         services.AddScoped<FormRetentionSweep>();
         services.AddScoped<FormRenewalChase>();
+        services.AddScoped<HsNotificationSweep>();
         return services;
     }
 }
