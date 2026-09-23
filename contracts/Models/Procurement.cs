@@ -158,7 +158,8 @@ public sealed record WorkOrder(
     //      ScheduledCompletion above is the target completion date) ----
     DateTimeOffset? ProgrammeStart = null,
     string ProgrammeNotes = "",
-    // ---- Electronic acceptance from the subcontractor portal (one click under their login) ----
+    // ---- Electronic acceptance: one click under their portal login, or from the acceptance
+    //      link in the purchase-order email (the name they typed, the email it was sent to) ----
     DateTimeOffset? AcceptedAt = null,
     string AcceptedByEmail = "",
     string AcceptedByName = "",
@@ -167,8 +168,13 @@ public sealed record WorkOrder(
     bool DepositRequired = false,
     decimal? DepositPercent = null)
 {
-    /// <summary>The supplier has electronically accepted this order from the portal.</summary>
+    /// <summary>The supplier has electronically accepted this order — from their portal login
+    /// or from the acceptance link in the purchase-order email.</summary>
     public bool IsAccepted => AcceptedAt is not null;
+
+    /// <summary>Issued and not yet accepted: the one state in which Accept is offered. Complete
+    /// and Cancelled orders are history, and a draft is not yet the supplier's to see.</summary>
+    public bool IsAwaitingAcceptance => !IsAccepted && Status == WorkOrderStatus.Released;
 
     /// <summary>Still being put together — unnumbered and invisible to the supplier, though it
     /// already counts in committed figures. ApproveWorkOrder mints the sequential number and
