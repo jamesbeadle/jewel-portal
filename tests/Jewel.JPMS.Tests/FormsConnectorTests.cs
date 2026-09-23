@@ -7,10 +7,10 @@ using Xunit;
 
 namespace Jewel.JPMS.Tests;
 
-// The forms moved from the JPS Dashboard (2026-09-23): every button on the /forms screens reaches the
-// connector, anything that emails a stranger says so and confirms first, the right-to-work register
-// is its readers' alone, nobody on site or outside the business reaches any of it, and a form read
-// over the connector keeps its health and sensitive answers on the page.
+// The forms moved from Jeremy's forms dashboard (2026-09-23): every button on the /forms screens
+// reaches the connector, anything that emails a stranger says so and confirms first, the right-to-work
+// register is its readers' alone, nobody on site or outside the business reaches any of it, and a form
+// read over the connector keeps its health and sensitive answers on the page.
 public sealed class FormsConnectorTests
 {
     private static readonly string[] Buttons =
@@ -102,7 +102,7 @@ public sealed class FormsConnectorTests
 
     private static string Read(string formSlug, Dictionary<string, string> answers, params string[] withheldKeys)
     {
-        var submission = new FormSubmission("form-1", formSlug, JewelCompany.JewelPropertyServe, "Sam Smith", "Sam Smith", null, true,
+        var submission = new FormSubmission("form-1", formSlug, "Sam Smith", "Sam Smith", null, true,
             "sam@example.com", "Jeremy", null, FormSubmissionStatus.New, DateTimeOffset.UtcNow, "", null);
         var view = new FormSubmissionView(submission, answers, Array.Empty<FormUploadedFile>(), withheldKeys);
         return JsonSerializer.Serialize(AiFormReading.Of(view, DateTimeOffset.UtcNow));

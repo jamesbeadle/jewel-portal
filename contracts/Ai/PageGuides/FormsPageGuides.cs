@@ -6,7 +6,7 @@ public static class FormsPageGuides
     public static readonly IReadOnlyList<PageGuide> Guides = new PageGuide[]
     {
         new("/forms", "Forms",
-            "Received: every form that came in, for both Jewel companies, newest first — chips narrow by company and by where "
+            "Received: every form that came in, newest first — chips narrow by form and by where "
             + "the office has got to (To handle = New and In progress). A row opens the form. ?folder= lists one person's or "
             + "company's forms. Tabs lead to New starter packs, Sent out, Right to work (its readers only), Training, "
             + "Workstations and People & companies. Assistant: list_form_submissions, get_form_submission."),
@@ -21,12 +21,12 @@ public static class FormsPageGuides
             + "record_driving_licence_check, save_right_to_work_check, resolve_workstation_action."),
         new("/forms/packs", "New starter packs",
             "One link per new starter to every form they owe, and the one screen of done and outstanding. Send a pack asks "
-            + "who, for which company, how they are engaged and four questions (P45, screen work, a company vehicle, a "
+            + "who, how they are engaged and four questions (P45, screen work, a company vehicle, a "
             + "ticket), and shows the forms before it sends. Each row's menu chases (a new link, fourteen fresh days; what "
             + "is done stays done) or cancels. Assistant: list_form_packs, send_form_pack, chase_form_pack, cancel_form_pack."),
         new("/forms/sent", "Forms sent out",
             "Forms sent on their own to one named person, with whether each link has been opened or used. Send a form "
-            + "picks the form, the company, the person and how long the link lasts; a row's menu sends it again (the old "
+            + "picks the form, the person and how long the link lasts; a row's menu sends it again (the old "
             + "link dies) or cancels it. Assistant: list_form_invites, send_form_invite, resend_form_invite, cancel_form_invite."),
         new("/forms/right-to-work", "Right to work",
             "The checker's register, behind its own readers: each check cleared, not finished (with what is missing) or do "
@@ -46,11 +46,11 @@ public static class FormsPageGuides
         new("/emergency-contacts", "Emergency contacts",
             "Each person's latest emergency contact as a card, for whoever is on site. Health answers show only after Show "
             + "health answers, each look audited, and never over the connector. Assistant: list_emergency_contacts."),
-        new("/f/{company}/{form}", "Public form",
-            "The page a new starter or sub-contractor fills in on a phone, no sign-in — the company's own paper (Jewel "
-            + "Property Serve in its blue, Jewel Bespoke Build in black). Opened by its open address, a one-time link (?k=) "
-            + "or from a pack (?p=). Staff never fill it in; what it sends lands on /forms."),
-        new("/f/{company}/pack/{token}", "New starter pack (public)",
+        new("/f/{form}", "Public form",
+            "The page a new starter or sub-contractor fills in on a phone, no sign-in — Jewel Bespoke Build's paper. "
+            + "Opened by its open address, a one-time link (?k=) or from a pack (?p=). Staff never fill it in; what it "
+            + "sends lands on /forms."),
+        new("/f/pack/{token}", "New starter pack (public)",
             "A new starter's one link: the forms they owe, each ticked as it is sent. Staff never use this page.")
     };
 }

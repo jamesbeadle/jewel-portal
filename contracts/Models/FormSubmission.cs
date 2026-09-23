@@ -17,7 +17,6 @@ public enum FormSubmissionStatus
 public sealed record FormSubmission(
     string FormSubmissionId,
     string FormSlug,
-    JewelCompany Company,
     string SubmitterName,
     string FilingName,
     string? FormFolderId,
@@ -58,7 +57,6 @@ public sealed record FormFolder(
     string FormFolderId,
     string Name,
     FormFilingKind Kind,
-    JewelCompany Company,
     DateOnly? EngagementEndedOn,
     DateOnly? VehicleReturnedOn,
     DateTimeOffset LastSubmittedAt,
@@ -68,7 +66,6 @@ public sealed record FormFolder(
 public sealed record EmergencyContactCard(
     string FormSubmissionId,
     string PersonName,
-    JewelCompany Company,
     string ContactName,
     string Relationship,
     string ContactPhone,

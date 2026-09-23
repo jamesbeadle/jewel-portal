@@ -6,7 +6,7 @@ using Jewel.JPMS.Contracts.Forms;
 namespace Jewel.JPMS.Api.Features.Forms.Office.Links;
 
 /// <summary>
-/// A new starter's pack: the office says who, which company, how they are engaged and four answers,
+/// A new starter's pack: the office says who, how they are engaged and four answers,
 /// and the portal decides the forms (FormPackPlanner) rather than asking anyone to remember. One
 /// link; one invite row per form behind it, so each form keeps its own opened, used and expired state.
 /// </summary>
@@ -28,7 +28,7 @@ public sealed class SendFormPackHandler : ICommandHandler<SendFormPack, SentForm
         var now = DateTimeOffset.UtcNow;
         var token = FormTokens.NewSecret();
         var pack = NewPack(command, FormTokens.Hash(token), now);
-        var recipient = new FormLinkRecipient(command.Company, command.PersonName, "", command.Email);
+        var recipient = new FormLinkRecipient(command.PersonName, "", command.Email);
         var sender = new FormLinkSender(command.SentByEmail, command.SentByName);
         var invites = FormPackPlanner.FormsFor(command.EngagedAs, command.Answers)
             .Select(slug => FormInviteRows.New(slug, recipient, sender, now, pack.ExpiresAt, "", pack.FormPackId).Invite)
@@ -42,7 +42,6 @@ public sealed class SendFormPackHandler : ICommandHandler<SendFormPack, SentForm
     private static FormPackEntity NewPack(SendFormPack command, string tokenHash, DateTimeOffset now) => new()
     {
         FormPackId = FormIdentifierFactory.NextId(),
-        Company = (int)command.Company,
         PersonName = command.PersonName.Trim(),
         Email = command.Email.Trim(),
         EngagedAs = (int)command.EngagedAs,
@@ -68,7 +67,6 @@ public sealed class SendFormPackValidation
     public ValidationOutcome Check(SendFormPack command)
     {
         var errors = new List<string>();
-        if (!Enum.IsDefined(command.Company)) errors.Add("Say which Jewel company they are joining.");
         if (!Enum.IsDefined(command.EngagedAs)) errors.Add("Say whether they are an employee or self-employed.");
         if (string.IsNullOrWhiteSpace(command.PersonName)) errors.Add("Who is it for?");
         if (!FormInviteRows.IsAnEmailAddress(command.Email ?? "")) errors.Add("That email address does not look right.");

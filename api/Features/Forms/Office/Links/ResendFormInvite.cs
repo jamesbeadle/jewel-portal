@@ -31,7 +31,7 @@ public sealed class ResendFormInviteHandler : ICommandHandler<ResendFormInvite, 
         var now = DateTimeOffset.UtcNow;
         old.CancelledAt ??= now;
         var email = string.IsNullOrWhiteSpace(command.Email) ? old.Email : command.Email.Trim();
-        var recipient = new FormLinkRecipient((JewelCompany)old.Company, old.PersonName, old.CompanyName, email);
+        var recipient = new FormLinkRecipient(old.PersonName, old.CompanyName, email);
         var sender = new FormLinkSender(command.SentByEmail, command.SentByName);
         var expiresAt = now.AddDays(FormLinkLifetimes.DefaultInviteDays);
         var issued = FormInviteRows.New(old.FormSlug, recipient, sender, now, expiresAt, old.Reason, old.FormPackId);

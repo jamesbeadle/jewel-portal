@@ -20,12 +20,12 @@ public sealed record ResolvedLink(FormInviteEntity? Invite, FormPackEntity? Pack
 internal static class FormLinkResolution
 {
     public static async Task<ResolvedLink> ForInviteAsync(
-        JpmsContext context, string? token, string formSlug, JewelCompany company, CancellationToken cancellationToken)
+        JpmsContext context, string? token, string formSlug, CancellationToken cancellationToken)
     {
         if (!FormTokens.IsWellFormed(token)) return ResolvedLink.NotValid;
         var hash = FormTokens.Hash(token!);
         var invite = await context.FormInvites.FirstOrDefaultAsync(row => row.TokenHash == hash, cancellationToken);
-        var isThisForm = invite is not null && invite.FormSlug == formSlug && invite.Company == (int)company;
+        var isThisForm = invite is not null && invite.FormSlug == formSlug;
         if (!isThisForm) return ResolvedLink.NotValid;
         var pack = await context.FormPacks.FirstOrDefaultAsync(row => row.FormPackId == invite!.FormPackId, cancellationToken);
         return Judged(invite!, pack, invite!.ExpiresAt);
@@ -42,11 +42,11 @@ internal static class FormLinkResolution
     }
 
     public static async Task<ResolvedLink> ForPackFormAsync(
-        JpmsContext context, string? token, string formSlug, JewelCompany company, CancellationToken cancellationToken)
+        JpmsContext context, string? token, string formSlug, CancellationToken cancellationToken)
     {
         var packLink = await ForPackAsync(context, token, cancellationToken);
         var pack = packLink.Pack;
-        if (pack is null || pack.Company != (int)company) return ResolvedLink.NotValid;
+        if (pack is null) return ResolvedLink.NotValid;
         var invite = await context.FormInvites.FirstOrDefaultAsync(
             row => row.FormPackId == pack.FormPackId && row.FormSlug == formSlug && row.CancelledAt == null, cancellationToken);
         return invite is null ? ResolvedLink.NotValid : Judged(invite, pack, pack.ExpiresAt);

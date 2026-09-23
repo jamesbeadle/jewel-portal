@@ -23,44 +23,41 @@ public sealed class PublicFormEndpoints
 
     [Function("PublicFormOpen")]
     public async Task<IActionResult> Open(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "public-forms/{company}/{slug}")] HttpRequest request,
-        string company, string slug)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "public-forms/{slug}")] HttpRequest request,
+        string slug)
     {
         var inviteToken = request.Query["k"].ToString();
         var packToken = request.Query["p"].ToString();
-        var view = await forms.OpenAsync(company, slug, inviteToken, packToken, request.HttpContext.RequestAborted);
+        var view = await forms.OpenAsync(slug, inviteToken, packToken, request.HttpContext.RequestAborted);
         return view is null ? new NotFoundObjectResult(FormSheetWording.NotAvailable) : new OkObjectResult(view);
     }
 
     [Function("PublicFormPack")]
     public async Task<IActionResult> Pack(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "public-form-packs/{company}/{token}")] HttpRequest request,
-        string company, string token)
-    {
-        var view = await forms.OpenPackAsync(company, token, request.HttpContext.RequestAborted);
-        return view is null ? new NotFoundObjectResult(FormSheetWording.NotAvailable) : new OkObjectResult(view);
-    }
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "public-form-packs/{token}")] HttpRequest request,
+        string token) =>
+        new OkObjectResult(await forms.OpenPackAsync(token, request.HttpContext.RequestAborted));
 
     [Function("PublicFormUpload")]
     public async Task<IActionResult> Upload(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "public-forms/{company}/{slug}/uploads")] HttpRequest request,
-        string company, string slug)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "public-forms/{slug}/uploads")] HttpRequest request,
+        string slug)
     {
         var upload = await ReadBody<PublicFormUpload>(request);
         if (upload is null) return new BadRequestObjectResult("Bad file data.");
         var clientHash = ClientHashOf(request);
-        return await Answer(() => forms.UploadAsync(company, slug, upload, clientHash, request.HttpContext.RequestAborted));
+        return await Answer(() => forms.UploadAsync(slug, upload, clientHash, request.HttpContext.RequestAborted));
     }
 
     [Function("PublicFormSubmit")]
     public async Task<IActionResult> Submit(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "public-forms/{company}/{slug}/submit")] HttpRequest request,
-        string company, string slug)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "public-forms/{slug}/submit")] HttpRequest request,
+        string slug)
     {
         var submission = await ReadBody<PublicFormSubmission>(request);
         if (submission?.Answers is null || submission.Uploads is null) return new BadRequestObjectResult("Could not read the form - try again.");
         var clientHash = ClientHashOf(request);
-        return await Answer(() => forms.SubmitAsync(company, slug, submission, clientHash, request.HttpContext.RequestAborted));
+        return await Answer(() => forms.SubmitAsync(slug, submission, clientHash, request.HttpContext.RequestAborted));
     }
 
     private async Task<IActionResult> Answer<TResult>(Func<Task<TResult>> handle)

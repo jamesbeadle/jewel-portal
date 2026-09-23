@@ -11,7 +11,6 @@ namespace Jewel.JPMS.Api.Data.Entities;
 public sealed class FormPackEntity
 {
     [Key, MaxLength(64)] public string FormPackId { get; set; } = "";
-    public int Company { get; set; }
     [MaxLength(256)]     public string PersonName { get; set; } = "";
     [MaxLength(256)]     public string Email { get; set; } = "";
     public int EngagedAs { get; set; }
@@ -39,7 +38,6 @@ public sealed class FormInviteEntity
     [Key, MaxLength(64)] public string FormInviteId { get; set; } = "";
     [MaxLength(64)]      public string? FormPackId { get; set; }
     [MaxLength(64)]      public string FormSlug { get; set; } = "";
-    public int Company { get; set; }
     [MaxLength(256)]     public string PersonName { get; set; } = "";
     [MaxLength(256)]     public string CompanyName { get; set; } = "";
     [MaxLength(256)]     public string Email { get; set; } = "";

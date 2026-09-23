@@ -11,12 +11,10 @@
             <select class="field" value="@formSlug" @onchange="chosen => formSlug = chosen.Value?.ToString() ?? formSlug">
                 @foreach (var form in FormCatalogue.All)
                 {
-                    <option value="@form.Slug">@TitleOf(form)</option>
+                    <option value="@form.Slug">@form.Title</option>
                 }
             </select>
         </FormField>
-        <FormChoiceSelect TChoice="JewelCompany" Label="Sent for" Required @bind-Value="company" Placeholder="@FormDisplayNames.NotYetChosen"
-                          Describe="choice => choice.DisplayName()" />
         <FormField Label="Their full name" Required Value="@personName" OnChange="typed => personName = typed" />
         <FormField Label="Their email" Required Value="@email" OnChange="typed => email = typed" InputType="email" />
         <FormField Label="Their company" Value="@companyName" OnChange="typed => companyName = typed"
@@ -29,7 +27,7 @@
                 }
             </select>
         </FormField>
-        <FormField Label="Why we are asking" Hint="@($"Left blank, the email says: {FormWording.DefaultReason(TitleOf(FormCatalogue.For(formSlug)!))}")">
+        <FormField Label="Why we are asking" Hint="@($"Left blank, the email says: {FormWording.DefaultReason(FormCatalogue.TitleOf(formSlug))}")">
             <textarea class="field" rows="3" maxlength="300" value="@reason" @oninput="typed => reason = typed.Value?.ToString() ?? string.Empty"></textarea>
         </FormField>
     </div>
@@ -42,24 +40,20 @@
 
     private readonly FormWrite write = new();
     private string formSlug = FormCatalogue.All[0].Slug;
-    private JewelCompany? company;
     private string personName = "";
     private string email = "";
     private string companyName = "";
     private int days = FormLinkLifetimes.DefaultInviteDays;
     private string reason = "";
 
-    private bool IsReady => company is not null && personName.Trim().Length > 0 && email.Trim().Length > 0;
-
-    private string TitleOf(FormDefinition form) => company is { } chosen ? form.TitleFor(chosen) : form.Title;
+    private bool IsReady => personName.Trim().Length > 0 && email.Trim().Length > 0;
 
     private void ChooseDays(ChangeEventArgs chosen) => days = int.TryParse(chosen.Value?.ToString(), out var picked) ? picked : days;
 
     private async Task SendAsync()
     {
-        if (company is not { } chosen) return;
         SentFormLink? sent = null;
-        var command = new SendFormInvite(formSlug, chosen, personName.Trim(), email.Trim(), companyName.Trim(), days, reason.Trim());
+        var command = new SendFormInvite(formSlug, personName.Trim(), email.Trim(), companyName.Trim(), days, reason.Trim());
         var isSent = await write.RunAsync(async () => sent = await Commands.SendAsync(command, CancellationToken.None));
         if (!isSent || sent is null) return;
         personName = "";

@@ -26,7 +26,7 @@ public sealed class AcceptTrainingCertificateHandler : ICommandHandler<AcceptTra
             ?? throw new InvalidOperationException("That form no longer exists.");
         var isATrainingForm = submission.FormSlug == FormSlugs.TrainingCertificate;
         if (!isATrainingForm) throw new InvalidOperationException("Only a Training Certificate form can go onto the training register.");
-        var record = await RecordToWriteAsync(command, (JewelCompany)submission.Company, cancellationToken);
+        var record = await RecordToWriteAsync(command, cancellationToken);
         var answers = FormAnswersJson.Read(submission.AnswersJson);
         var certificate = await context.FormUploads.AsNoTracking()
             .Where(row => row.FormSubmissionId == submission.FormSubmissionId && row.DeletedAt == null)
@@ -39,14 +39,14 @@ public sealed class AcceptTrainingCertificateHandler : ICommandHandler<AcceptTra
         return record.ToModel();
     }
 
-    private async Task<TrainingRecordEntity> RecordToWriteAsync(AcceptTrainingCertificate command, JewelCompany company, CancellationToken cancellationToken)
+    private async Task<TrainingRecordEntity> RecordToWriteAsync(AcceptTrainingCertificate command, CancellationToken cancellationToken)
     {
         var person = command.PersonName.Trim().ToLower();
         var course = command.Course.Trim().ToLower();
         var existing = await context.TrainingRecords.FirstOrDefaultAsync(
-            row => row.PersonName.ToLower() == person && row.Course.ToLower() == course && row.Company == (int)company, cancellationToken);
+            row => row.PersonName.ToLower() == person && row.Course.ToLower() == course, cancellationToken);
         if (existing is not null) return existing;
-        var created = new TrainingRecordEntity { TrainingRecordId = FormIdentifierFactory.NextId(), Company = (int)company };
+        var created = new TrainingRecordEntity { TrainingRecordId = FormIdentifierFactory.NextId() };
         context.TrainingRecords.Add(created);
         return created;
     }

@@ -12,7 +12,7 @@ public sealed partial class FormRenewalChase
     {
         var horizon = now.AddDays(DaysBeforeExpiry);
         var expiring = await context.ComplianceDocuments
-            .Where(row => row.SupersededAt == null && row.FormCompany != null && row.ExpiresAt != null && row.ExpiresAt >= now
+            .Where(row => row.SupersededAt == null && row.IsFromAForm && row.ExpiresAt != null && row.ExpiresAt >= now
                 && row.ExpiresAt <= horizon && row.Kind.ToLower().Contains(ComplianceInsurance.KindWord))
             .ToListAsync(cancellationToken);
         var sent = 0;
@@ -30,10 +30,10 @@ public sealed partial class FormRenewalChase
         if (!canBeReached) return 0;
         var expiresAt = document.ExpiresAt!.Value;
         var expiresOn = DateOnly.FromDateTime(expiresAt.UtcDateTime);
-        var recipient = new FormLinkRecipient((JewelCompany)document.FormCompany!.Value, company!.ContactName, company.CompanyName, company.ContactEmail);
+        var recipient = new FormLinkRecipient(company!.ContactName, company.CompanyName, company.ContactEmail);
         var issued = NewInvite(FormSlugs.InsuranceUpdate, recipient, $"Renewal of {document.Kind}", now);
         var link = await SendAsync(issued, url => FormRenewalEmails.ForInsurance(
-            recipient.Company, recipient.PersonName, recipient.Email, document.Kind, expiresOn, url, issued.Invite.ExpiresAt), cancellationToken);
+            recipient.PersonName, recipient.Email, document.Kind, expiresOn, url, issued.Invite.ExpiresAt), cancellationToken);
         if (link is null) return 0;
         document.LastChasedAt = now;
         document.ChaseCount += 1;
@@ -56,10 +56,10 @@ public sealed partial class FormRenewalChase
 
     private async Task<int> ChaseTicketAsync(TrainingRecordEntity record, DateTimeOffset now, CancellationToken cancellationToken)
     {
-        var recipient = new FormLinkRecipient((JewelCompany)record.Company, record.PersonName, "", record.Email);
+        var recipient = new FormLinkRecipient(record.PersonName, "", record.Email);
         var issued = NewInvite(FormSlugs.TrainingCertificate, recipient, $"Renewal of {record.Course}", now);
         var link = await SendAsync(issued, url => FormRenewalEmails.ForTraining(
-            recipient.Company, record.PersonName, record.Email, record.Course, record.ExpiresOn!.Value, url, issued.Invite.ExpiresAt), cancellationToken);
+            record.PersonName, record.Email, record.Course, record.ExpiresOn!.Value, url, issued.Invite.ExpiresAt), cancellationToken);
         if (link is null) return 0;
         record.LastChasedAt = now;
         record.ChaseCount += 1;

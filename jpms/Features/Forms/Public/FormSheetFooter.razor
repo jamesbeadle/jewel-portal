@@ -1,57 +1,28 @@
 <footer class="form-sheet-footer">
     <div>@RegistrationLine</div>
-    @if (Company.RegisteredOffice.Length > 0)
-    {
-        <div>Registered office: @Company.RegisteredOffice</div>
-    }
+    <div>Registered office: @JewelBespokeBuild.RegisteredOffice</div>
     <div>
-        @foreach (var contact in Contacts)
-        {
-            @contact.Separator<a href="@contact.Address" target="@contact.Target" rel="noopener">@contact.Label</a>
-        }
+        <a href="@PhoneAddress" rel="noopener">@JewelBespokeBuild.Phone</a>@Between
+        <a href="@EmailAddress" rel="noopener">@JewelBespokeBuild.Email</a>@Between
+        <a href="@JewelBespokeBuild.Website" target="@NewTab" rel="noopener">@WebsiteLabel</a>
     </div>
-    @if (Company.Socials.Count > 0)
-    {
-        <div class="form-sheet-socials">
-            @foreach (var social in Company.Socials)
-            {
-                <a href="@social.Address" target="_blank" rel="noopener">@social.Label</a>
-            }
-        </div>
-    }
-    @if (Company.Family.Length > 0)
-    {
-        <div class="mt-2.5">@Company.Family</div>
-    }
     <div class="mt-2.5"><a href="@PrivacyNoticeLink.Path" target="@NewTab" rel="noopener">How we look after your details</a></div>
 </footer>
 
 @code {
     private const string Between = " · ";
     private const string NewTab = "_blank";
-    private const string SameTab = "_self";
 
-    private sealed record FooterContact(string Separator, string Label, string Address, string Target);
-
-    [Parameter, EditorRequired] public JewelCompanyParticulars Company { get; set; } = default!;
-
-    private string RegistrationLine => string.Join(Between, new[]
+    private static string RegistrationLine => string.Join(Between, new[]
     {
-        Company.LegalName,
-        Company.CompanyNumber.Length > 0 ? "Company no. " + Company.CompanyNumber : "",
-        Company.VatNumber.Length > 0 ? "VAT " + Company.VatNumber : ""
+        JewelBespokeBuild.LegalName,
+        "Company no. " + JewelBespokeBuild.CompanyNumber,
+        JewelBespokeBuild.VatNumber.Length > 0 ? "VAT " + JewelBespokeBuild.VatNumber : ""
     }.Where(part => part.Length > 0));
 
-    private IReadOnlyList<FooterContact> Contacts => new[]
-    {
-        new CompanyLink(Company.Phone, "tel:" + Company.Phone.Replace(" ", "")),
-        new CompanyLink(Company.Email, "mailto:" + Company.Email),
-        new CompanyLink(Company.Website.Replace("https://", "").Replace("http://", ""), Company.Website)
-    }
-        .Where(link => link.Label.Length > 0)
-        .Select((link, position) => new FooterContact(position == 0 ? "" : Between, link.Label, link.Address, TargetFor(link)))
-        .ToList();
+    private static string PhoneAddress => "tel:" + JewelBespokeBuild.Phone.Replace(" ", "");
 
-    private static string TargetFor(CompanyLink link) =>
-        link.Address.StartsWith(Uri.UriSchemeHttp, StringComparison.Ordinal) ? NewTab : SameTab;
+    private static string EmailAddress => "mailto:" + JewelBespokeBuild.Email;
+
+    private static string WebsiteLabel => new Uri(JewelBespokeBuild.Website).Host;
 }

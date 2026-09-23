@@ -11,24 +11,23 @@ public sealed partial class PublicFormService
     /// is sent it belongs to nobody, which is what marks an abandoned upload for the retention sweep.
     /// </summary>
     public async Task<PublicFormUploadReceipt> UploadAsync(
-        string companyCode, string slug, PublicFormUpload upload, string clientHash, CancellationToken cancellationToken)
+        string slug, PublicFormUpload upload, string clientHash, CancellationToken cancellationToken)
     {
-        var (company, form) = Known(companyCode, slug);
+        var form = Known(slug);
         var question = form.QuestionFor(upload.QuestionKey);
         var takesAFile = question is { Kind: FormQuestionKind.Upload or FormQuestionKind.Signature };
         if (!takesAFile) throw new PublicFormRefusal("That question does not take a file.");
         CheckSession(upload.SessionId);
         var bytes = PublicFormFiles.Decoded(upload.Base64);
         await CheckUploadLimitsAsync(upload.SessionId, clientHash, cancellationToken);
-        var entity = NewUpload(form, company, upload, clientHash, bytes.LongLength);
+        var entity = NewUpload(form, upload, clientHash, bytes.LongLength);
         await store.SaveAsync(form.Store, entity.BlobRef, entity.ContentType, bytes, cancellationToken);
         context.FormUploads.Add(entity);
         await context.SaveChangesAsync(cancellationToken);
         return new PublicFormUploadReceipt(entity.FormUploadId, entity.FileName);
     }
 
-    private static FormUploadEntity NewUpload(
-        FormDefinition form, JewelCompany company, PublicFormUpload upload, string clientHash, long size)
+    private static FormUploadEntity NewUpload(FormDefinition form, PublicFormUpload upload, string clientHash, long size)
     {
         var formUploadId = FormIdentifierFactory.NextId();
         var fileName = PublicFormFiles.SafeName(upload.FileName);
@@ -37,7 +36,6 @@ public sealed partial class PublicFormService
             FormUploadId = formUploadId,
             SessionId = upload.SessionId,
             FormSlug = form.Slug,
-            Company = (int)company,
             QuestionKey = upload.QuestionKey,
             Store = (int)form.Store,
             BlobRef = $"{upload.SessionId}/{formUploadId}/{fileName}",

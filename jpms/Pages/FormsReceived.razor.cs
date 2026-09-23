@@ -4,10 +4,9 @@ using Jewel.JPMS.Features.Forms.Office;
 namespace Jewel.JPMS.Pages;
 
 /// <summary>
-/// Every form that came in, newest first — the office's one list of what strangers sent, for both
-/// Jewel companies (the JPS Dashboard's forms inbox). A restricted form is listed here like any
-/// other and opens only for its readers. From a folder (?folder=) it lists that person's or
-/// company's forms alone.
+/// Every form that came in, newest first — the office's one list of what strangers sent (the forms
+/// dashboard's inbox). A restricted form is listed here like any other and opens only for its
+/// readers. From a folder (?folder=) it lists that person's or company's forms alone.
 /// </summary>
 public partial class FormsReceived
 {
@@ -16,10 +15,9 @@ public partial class FormsReceived
     private IReadOnlyList<FormSubmission>? submissions;
     private bool dataFailed;
     private string status = FormSubmissionFilters.ToHandle;
-    private string company = FormSubmissionFilters.BothCompanies;
 
     private IReadOnlyList<FormSubmission> Rows =>
-        FormSubmissionFilters.Apply(submissions ?? Array.Empty<FormSubmission>(), status, company, FormFolderId);
+        FormSubmissionFilters.Apply(submissions ?? Array.Empty<FormSubmission>(), status, FormFolderId);
 
     private IReadOnlyList<TabItem> StatusChips => FormSubmissionFilters.StatusChips(submissions);
 

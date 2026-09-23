@@ -9,9 +9,9 @@ namespace Jewel.JPMS.Api.Features.Forms.Office.Submissions;
 
 /// <summary>
 /// A questionnaire's or insurance update's company documents onto a directory company's compliance
-/// record (api/registers.js op:'formrenewal'), each with the expiry the form collected and the Jewel
-/// company whose form it came in on — the renewal chase asks in that company's name. Nothing about
-/// the person is filed (FormDirectoryFilingPlan.IsFileable). An insurance update is handled once filed.
+/// record (api/registers.js op:'formrenewal'), each with the expiry the form collected and marked as
+/// having come in on a form — the renewal chase asks for those. Nothing about the person is filed
+/// (FormDirectoryFilingPlan.IsFileable). An insurance update is handled once filed.
 /// </summary>
 public sealed class FileFormToDirectoryHandler : ICommandHandler<FileFormToDirectory, FormDirectoryFiling>
 {
@@ -63,7 +63,7 @@ public sealed class FileFormToDirectoryHandler : ICommandHandler<FileFormToDirec
         var blobPath = await complianceStore.UploadAsync(subcontractorId, documentId, upload.FileName, upload.ContentType, content, cancellationToken);
         var kind = file.Kind.Trim();
         var version = new AddComplianceDocumentVersion(documentId, subcontractorId, kind, upload.FileName, FormDates.AsMidnight(file.ExpiresOn), blobPath,
-            upload.ContentType, upload.Size, file.PublicLiabilityCover, (JewelCompany)submission.Company);
+            upload.ContentType, upload.Size, file.PublicLiabilityCover, IsFromAForm: true);
         await addVersion.HandleAsync(version, cancellationToken);
         return kind;
     }

@@ -20,7 +20,7 @@
         </select>
         break;
     case FormQuestionKind.Upload:
-        <FormUploadField Question="Question" Draft="Draft" CompanyCode="@CompanyCode" Slug="@Form.Slug" OnChanged="OnChanged" />
+        <FormUploadField Question="Question" Draft="Draft" Slug="@Form.Slug" OnChanged="OnChanged" />
         break;
     case FormQuestionKind.Signature:
         <FormSignatureField Form="Form" Question="Question" Draft="Draft" OnChanged="OnChanged" />
@@ -35,7 +35,6 @@
     [Parameter, EditorRequired] public FormDefinition Form { get; set; } = default!;
     [Parameter, EditorRequired] public FormQuestion Question { get; set; } = default!;
     [Parameter, EditorRequired] public FormDraft Draft { get; set; } = default!;
-    [Parameter, EditorRequired] public string CompanyCode { get; set; } = "";
     [Parameter, EditorRequired] public string InputId { get; set; } = "";
     [Parameter] public EventCallback OnChanged { get; set; }
 

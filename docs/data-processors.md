@@ -1,8 +1,7 @@
 # Data processors and where personal data goes
 
 The record of processing the portal relies on (UK GDPR Article 30), written from the code on
-21 September 2026. The controller is Jewel Bespoke Build Limited — except for the onboarding forms
-(below), where each form's controller is the Jewel company that asked for it. Every processor below acts on
+21 September 2026. The controller is Jewel Bespoke Build Limited. Every processor below acts on
 Jewel's instructions under its own terms of service and data processing addendum; none is
 permitted to use the data for its own purposes. The public statement of all this is the privacy
 notice at `/privacy` (`jpms/Pages/Privacy.razor`).
@@ -25,7 +24,7 @@ the adequacy regulations is needed. Nothing is hosted outside the EEA and the UK
 |---|---|---|---|
 | **Microsoft** (Azure) | Hosting above | Everything the portal holds | EEA |
 | **Microsoft 365 — Graph** | The shared projects mailbox, read live and written to (drafts, categories): `api/Features/MailboxIntake/Graph/MailboxGraphClient*.cs`, app-only token, scope `https://graph.microsoft.com/.default` | Senders, recipients, subjects, bodies and attachments of every email the projects mailbox sends or receives. The portal reads the mailbox live; it stores message ids and, where a message is filed to a record, its body as a request message | Microsoft 365 tenant (UK) |
-| **Azure Communication Services** | The emails the portal sends: invites and password resets (`api/Auth/AzureEmailInviteNotifier.cs`), the imagine journey's emails to prospects (`api/Features/Sales/Imagine/ImagineNotifier.cs`), the forms' emails (`api/Features/Forms/Mail/AcsFormMailer.cs`: a form's or a pack's one-time link, the person's own copy, the office's alert, the renewal chase, the right-to-work confirmation), from `DoNotReply@mail.jewelbb.co.uk` unless `Forms__Sender__<jbb or jps>` names another | Recipient address and display name, a single-use link, concept and proposal wording; for the forms, the answers a copy or an alert may carry — never a sensitive or health answer, and nothing at all from a right-to-work or starter-checklist form | EEA |
+| **Azure Communication Services** | The emails the portal sends: invites and password resets (`api/Auth/AzureEmailInviteNotifier.cs`), the imagine journey's emails to prospects (`api/Features/Sales/Imagine/ImagineNotifier.cs`), the forms' emails (`api/Features/Forms/Mail/AcsFormMailer.cs`: a form's or a pack's one-time link, the person's own copy, the office's alert, the renewal chase, the right-to-work confirmation), from `DoNotReply@mail.jewelbb.co.uk` unless `Forms__Sender` names another | Recipient address and display name, a single-use link, concept and proposal wording; for the forms, the answers a copy or an alert may carry — never a sensitive or health answer, and nothing at all from a right-to-work or starter-checklist form | EEA |
 | **Azure AI Vision (Read)** | OCR of scanned PDFs the assistant is asked to read: `api/Features/Ai/Scans/AzureVisionOcr.cs`, `POST …/computervision/imageanalysis:analyze?features=read`, the page as a PNG | The content of the scanned page — a contract, a certificate, a letter, whatever the person asked the assistant to read. The recognised text is cached in `DocumentOcrResults` for 180 days | The resource's region: pin it to an EEA region in `infra/` (`DocumentOcr__Endpoint`) — open item on the infrastructure task |
 | **Azure OpenAI (`gpt-image-1`)** | The imagine concepts: `api/Features/Sales/Imagine/AzureImageClient.cs`, image edits at `{AzureImage__Endpoint}` | The prospect's own photographs of their home and the concept prompt written from their brief | The resource's region: EEA |
 | **Anthropic** (Claude API) | The assistant behind the portal's chat and the MCP connector, the imagine concept writer, sales research, bid-package suggestion, local business search: `api/Features/Ai/ClaudeClient.cs` → `https://api.anthropic.com/v1/messages`; models in `api/Features/Ai/AnthropicOptions.cs` | What a member of staff asks it to read: correspondence, documents, drawings' extracted data, records; for imagine, the prospect's photographs and brief. Never a form's health answers or the answers `SensitiveAnswers` names — the connector withholds them (`api/Features/Ai/Tools/AiFormReading.cs`). Anthropic's commercial API terms: inputs are not used to train models and are retained only for abuse monitoring under their retention policy | USA, under Anthropic's UK GDPR data processing addendum and the UK IDTA / EU SCCs it incorporates |
@@ -36,14 +35,11 @@ the adequacy regulations is needed. Nothing is hosted outside the EEA and the UK
 There is no Google Places or Maps API: the only `google` strings in the code are excluded-domain
 lists. The Places feature is Claude web search plus the direct website read above.
 
-## The onboarding forms (moved from the JPS Dashboard, 2026-09-23)
+## The onboarding forms (2026-09-23)
 
-New starters, self-employed individuals and sub-contracting companies of both Jewel companies fill
-their forms in on the portal (`/f/<jbb or jps>/<form>`, no account). The portal is now the system that
-holds them, and the JPS Dashboard's `/forms` addresses redirect to it (`/forms/subcontractor-jbb` to the
-JBB questionnaire). Every form, link, pack and register row
-carries the Jewel company it speaks for, and that company is the controller of what is sent on it:
-Jewel Bespoke Build Ltd for its forms, Jewel Property Serve Ltd for its own, both held in this portal.
+Jewel Bespoke Build's new starters, self-employed individuals and sub-contracting companies fill their
+forms in on the portal (`/f/<form>`, no account), and the portal is the system that holds them. The
+controller is Jewel Bespoke Build Limited, as for everything else in this document.
 
 | What | Where it is kept | Who reads it |
 |---|---|---|
@@ -66,7 +62,7 @@ and the check code from the stored form for good (`RecordDrivingLicenceCheckHand
 or insurance update's company documents may be filed onto the directory company's compliance record,
 which is read far more widely than a form; a photo of someone's ID, a DBS check and a signature never
 are (`FormDirectoryFilingPlan.IsFileable`). Only a certificate that came in on a form is chased for
-renewal (`ComplianceDocuments.FormCompany`), in the name of the Jewel company whose form it was.
+renewal (`ComplianceDocuments.IsFromAForm`).
 
 Retention (`FormRetention` in contracts, Jeremy's periods of 26 Aug 2026 from `lib/retention.js`),
 carried out nightly at 04:15 by `worker/Forms/FormRetentionWorker.cs` — the date is the decision, so
@@ -126,5 +122,5 @@ it and the projects it holds an issued order on. The MCP connector runs the same
 - Pin the Azure AI Vision resource's region in `infra/` and record it above.
 - Set Application Insights retention and stop logging email addresses (`LogClientErrorEndpoint`).
 - Nigel's decisions on the security review task: KPI email monitoring (its notice and retention), absence notes as reason codes, signature images' gate, dropping the six dead CRM tables.
-- The onboarding forms, for Jeremy (on the retention task under the forms goal): whether Jewel Property Serve's forms held in this portal need an intra-group processing agreement between the two companies; whether an erasure request should destroy a person's forms before their retention date (today they go on their date; the right-to-work record must stay two years after the engagement ends); whether the dashboard's three-year archive stage is wanted back; and whether the forms' link emails should point at the privacy notice as the portal's invite emails do.
+- The onboarding forms, for Jeremy (on the retention task under the forms goal): whether an erasure request should destroy a person's forms before their retention date (today they go on their date; the right-to-work record must stay two years after the engagement ends); whether the dashboard's three-year archive stage is wanted back; and whether the forms' link emails should point at the privacy notice as the portal's invite emails do.
 - The privacy contact mailbox is `info@jewelbb.co.uk` (`jpms/Features/Privacy/PrivacyContacts.cs`), confirmed to exist on 2026-09-21. `privacy@jewelbb.co.uk` was never created, so the notice pointed at nothing between the notice going live and that date.

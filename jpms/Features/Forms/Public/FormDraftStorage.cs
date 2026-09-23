@@ -25,8 +25,8 @@ public sealed class FormDraftStorage
         this.js = js;
     }
 
-    public static string KeyFor(string companyCode, string slug, string? token) =>
-        $"{KeyPrefix}.{companyCode}.{slug}.{(string.IsNullOrEmpty(token) ? OpenLink : FingerprintOf(token))}";
+    public static string KeyFor(string slug, string? token) =>
+        $"{KeyPrefix}.{slug}.{(string.IsNullOrEmpty(token) ? OpenLink : FingerprintOf(token))}";
 
     private static string FingerprintOf(string token) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)))[..FingerprintLength];

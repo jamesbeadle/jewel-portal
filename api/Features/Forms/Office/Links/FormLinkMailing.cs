@@ -19,11 +19,10 @@ internal static class FormLinkMailing
         IFormMailer mailer, FormSiteOptions options, FormDefinition form, IssuedInvite issued, CancellationToken cancellationToken)
     {
         var invite = issued.Invite;
-        var company = (JewelCompany)invite.Company;
-        var link = options.FormLink(company, form.Slug, issued.Token);
-        var reason = invite.Reason.Length > 0 ? invite.Reason : FormWording.DefaultReason(form.TitleFor(company));
+        var link = options.FormLink(form.Slug, issued.Token);
+        var reason = invite.Reason.Length > 0 ? invite.Reason : FormWording.DefaultReason(form.Title);
         var email = FormLinkEmails.ForOneForm(
-            company, invite.PersonName, invite.Email, form.TitleFor(company), reason, invite.SentByName, link, invite.ExpiresAt);
+            invite.PersonName, invite.Email, form.Title, reason, invite.SentByName, link, invite.ExpiresAt);
         var problem = await TrySendAsync(mailer, email, cancellationToken);
         return new SentFormLink(invite.ToModel(), problem is null, problem is null ? "" : link, problem ?? "");
     }
@@ -32,11 +31,10 @@ internal static class FormLinkMailing
         IFormMailer mailer, FormSiteOptions options, FormPackEntity pack, IReadOnlyList<FormInviteEntity> invites, string token,
         string sentBy, bool isReminder, CancellationToken cancellationToken)
     {
-        var company = (JewelCompany)pack.Company;
-        var link = options.PackLink(company, token);
+        var link = options.PackLink(token);
         var titles = invites.Where(invite => invite.UsedAt is null && invite.CancelledAt is null)
-            .Select(invite => FormCatalogue.For(invite.FormSlug)?.TitleFor(company) ?? invite.FormSlug).ToList();
-        var email = FormLinkEmails.ForPack(company, pack.PersonName, pack.Email, titles, sentBy, link, pack.ExpiresAt, isReminder);
+            .Select(invite => FormCatalogue.For(invite.FormSlug)?.Title ?? invite.FormSlug).ToList();
+        var email = FormLinkEmails.ForPack(pack.PersonName, pack.Email, titles, sentBy, link, pack.ExpiresAt, isReminder);
         var problem = await TrySendAsync(mailer, email, cancellationToken);
         return new SentFormPack(pack.ToModel(invites), problem is null, problem is null ? "" : link, problem ?? "");
     }

@@ -7,8 +7,6 @@
         <Notice Tone="Tone.Negative" Class="mb-3">@problem</Notice>
     }
     <div class="space-y-3">
-        <FormChoiceSelect TChoice="JewelCompany" Label="Sent for" Required @bind-Value="company" Placeholder="@FormDisplayNames.NotYetChosen"
-                          Describe="choice => choice.DisplayName()" />
         <FormField Label="Their full name" Required Value="@personName" OnChange="typed => personName = typed" />
         <FormField Label="Their email" Required Value="@email" OnChange="typed => email = typed" InputType="email" />
         <FormChoiceSelect TChoice="Engagement" Label="Engaged as" Required @bind-Value="engagedAs" Placeholder="@FormDisplayNames.NotYetChosen"

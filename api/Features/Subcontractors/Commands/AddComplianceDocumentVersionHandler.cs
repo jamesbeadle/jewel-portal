@@ -46,7 +46,7 @@ public sealed class AddComplianceDocumentVersionHandler
         ContentType = command.ContentType,
         FileSize = command.FileSize,
         PublicLiabilityCover = command.PublicLiabilityCover,
-        FormCompany = (int?)command.FormCompany,
+        IsFromAForm = command.IsFromAForm,
         Version = siblings.Count == 0 ? 1 : siblings.Max(row => row.Version) + 1
     };
 }

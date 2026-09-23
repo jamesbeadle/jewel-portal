@@ -7,7 +7,7 @@ using Jewel.JPMS.Contracts.Forms;
 namespace Jewel.JPMS.Api.Features.Forms.Public;
 
 /// <summary>
-/// The public forms behind /f/&lt;company&gt;/&lt;form&gt; — no sign-in, as on the dashboard, because
+/// The public forms behind /f/&lt;form&gt; — no sign-in, as on the dashboard, because
 /// labourers have no accounts. A form opens by its open address, by a one-time link for one named
 /// person (?k=), or through a new starter's pack (?p=). With a link the page knows who it is for, the
 /// office sees it was opened, and what is sent carries an identity rather than a typed name.
@@ -30,26 +30,23 @@ public sealed partial class PublicFormService
         this.logger = logger;
     }
 
-    public async Task<PublicFormView?> OpenAsync(
-        string companyCode, string slug, string? inviteToken, string? packToken, CancellationToken cancellationToken)
+    public async Task<PublicFormView?> OpenAsync(string slug, string? inviteToken, string? packToken, CancellationToken cancellationToken)
     {
-        var company = JewelCompanies.ForCode(companyCode);
         var form = FormCatalogue.For(slug);
-        if (company is null || form is null) return null;
+        if (form is null) return null;
         var hasALink = !string.IsNullOrEmpty(inviteToken) || !string.IsNullOrEmpty(packToken);
-        if (!hasALink) return new PublicFormView(form.Slug, company.Company, null, null);
-        var link = await ResolveAsync(company.Company, form.Slug, inviteToken, packToken, cancellationToken);
-        if (!link.IsOpen) return new PublicFormView(form.Slug, company.Company, null, link.Problem);
+        if (!hasALink) return new PublicFormView(form.Slug, null, null);
+        var link = await ResolveAsync(form.Slug, inviteToken, packToken, cancellationToken);
+        if (!link.IsOpen) return new PublicFormView(form.Slug, null, link.Problem);
         await MarkOpenedAsync(link);
-        var invitation = await InvitationForAsync(form, company.Company, link, cancellationToken);
-        return new PublicFormView(form.Slug, company.Company, invitation, null);
+        var invitation = await InvitationForAsync(form, link, cancellationToken);
+        return new PublicFormView(form.Slug, invitation, null);
     }
 
-    private Task<ResolvedLink> ResolveAsync(
-        JewelCompany company, string formSlug, string? inviteToken, string? packToken, CancellationToken cancellationToken) =>
+    private Task<ResolvedLink> ResolveAsync(string formSlug, string? inviteToken, string? packToken, CancellationToken cancellationToken) =>
         string.IsNullOrEmpty(packToken)
-            ? FormLinkResolution.ForInviteAsync(context, inviteToken, formSlug, company, cancellationToken)
-            : FormLinkResolution.ForPackFormAsync(context, packToken, formSlug, company, cancellationToken);
+            ? FormLinkResolution.ForInviteAsync(context, inviteToken, formSlug, cancellationToken)
+            : FormLinkResolution.ForPackFormAsync(context, packToken, formSlug, cancellationToken);
 
     /// <summary>Best effort: a timestamp that will not write never stops a form being served.</summary>
     private async Task MarkOpenedAsync(ResolvedLink link)

@@ -5,7 +5,7 @@ namespace Jewel.JPMS.Api.Features.Forms.Mapping;
 internal static class FormSubmissionMapping
 {
     public static FormSubmission ToModel(this FormSubmissionEntity entity) => new(
-        entity.FormSubmissionId, entity.FormSlug, (JewelCompany)entity.Company, entity.SubmitterName, entity.FilingName,
+        entity.FormSubmissionId, entity.FormSlug, entity.SubmitterName, entity.FilingName,
         entity.FormFolderId, entity.IsVerifiedLink, entity.SentToEmail, entity.SentByName, entity.FormPackId,
         (FormSubmissionStatus)entity.Status, entity.SubmittedAt, entity.HandledByEmail, entity.HandledAt);
 
@@ -14,6 +14,6 @@ internal static class FormSubmissionMapping
         entity.DeletionReason);
 
     public static FormFolder ToModel(this FormFolderEntity entity, int submissionCount) => new(
-        entity.FormFolderId, entity.Name, (FormFilingKind)entity.Kind, (JewelCompany)entity.Company, entity.EngagementEndedOn,
+        entity.FormFolderId, entity.Name, (FormFilingKind)entity.Kind, entity.EngagementEndedOn,
         entity.VehicleReturnedOn, entity.LastSubmittedAt, submissionCount);
 }

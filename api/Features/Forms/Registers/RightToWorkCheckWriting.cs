@@ -11,7 +11,6 @@ internal static class RightToWorkCheckWriting
     {
         check.PersonName = details.PersonName.Trim();
         check.Email = details.Email?.Trim() ?? "";
-        check.Company = (int)details.Company;
         check.JobRole = details.JobRole?.Trim() ?? "";
         check.EngagedAs = (int)details.EngagedAs;
         check.EngagedSince = details.EngagedSince;

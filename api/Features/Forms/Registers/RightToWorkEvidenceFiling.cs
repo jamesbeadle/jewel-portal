@@ -48,7 +48,6 @@ public sealed class RightToWorkEvidenceFiling
             FormUploadId = formUploadId,
             SessionId = FormUploadFolders.OfficeSession,
             FormSlug = FormSlugs.RightToWork,
-            Company = check.Company,
             QuestionKey = EvidenceKey,
             Store = (int)FormEvidenceStore.RightToWork,
             BlobRef = $"{FormUploadFolders.RightToWorkEvidence(check.RightToWorkCheckId)}{formUploadId}/{fileName}",

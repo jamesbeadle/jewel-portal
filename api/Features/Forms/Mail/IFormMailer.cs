@@ -1,7 +1,7 @@
 namespace Jewel.JPMS.Api.Features.Forms.Mail;
 
-/// <summary>One email the forms send, in the name of the Jewel company the form speaks for.</summary>
-public sealed record FormEmail(JewelCompany Company, IReadOnlyList<string> To, string Subject, string Html, string Text);
+/// <summary>One email the forms send, in Jewel Bespoke Build's name.</summary>
+public sealed record FormEmail(IReadOnlyList<string> To, string Subject, string Html, string Text);
 
 /// <summary>
 /// The forms' emails — the link to a named person, the pack, the person's own copy, the office's

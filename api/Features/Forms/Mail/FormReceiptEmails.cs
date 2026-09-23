@@ -12,35 +12,34 @@ namespace Jewel.JPMS.Api.Features.Forms.Mail;
 internal static class FormReceiptEmails
 {
     public static FormEmail CopyForThePerson(
-        JewelCompany company, FormDefinition form, string personName, string email, IReadOnlyList<FormAnswerLine> lines, IReadOnlyList<string> fileNames)
+        FormDefinition form, string personName, string email, IReadOnlyList<FormAnswerLine> lines, IReadOnlyList<string> fileNames)
     {
-        var particulars = JewelCompanies.For(company);
-        var title = form.TitleFor(company);
-        var html = Wrap(company,
+        var title = form.Title;
+        var html = Wrap(
             Paragraph($"Thank you {Encode(FirstName(personName))}. We have received your {Encode(title)}.")
             + "<p style=\"margin:0 0 8px\"><b>This is what you sent us:</b></p>" + Table(lines) + Files("Files you attached", fileNames)
-            + SmallPrint(Encode(FormWording.CopyLeavesThingsOut(particulars.Phone))));
+            + SmallPrint(Encode(FormWording.CopyLeavesThingsOut)));
         var text = $"Thank you {FirstName(personName)}. We have received your {title}.\n\nThis is what you sent us:\n\n"
             + string.Join("\n", lines.Select(line => $"{line.Label}: {line.Answer}"))
-            + $"\n\n{FormWording.CopyLeavesThingsOut(particulars.Phone)}\n\n{FootLine(particulars)}";
-        return new FormEmail(company, new[] { email }, "Your copy: " + title, html, text);
+            + $"\n\n{FormWording.CopyLeavesThingsOut}\n\n{FootLine}";
+        return new FormEmail(new[] { email }, "Your copy: " + title, html, text);
     }
 
     public static FormEmail AlertForTheOffice(
-        JewelCompany company, FormDefinition form, string who, IReadOnlyList<string> to, IReadOnlyList<FormAnswerLine> lines,
+        FormDefinition form, string who, IReadOnlyList<string> to, IReadOnlyList<FormAnswerLine> lines,
         IReadOnlyList<string> fileNames, string officeLink)
     {
-        var title = form.TitleFor(company);
+        var title = form.Title;
         var isAccident = form.Slug == FormSlugs.AccidentReport;
         var subject = isAccident ? $"Accident reported: {who}" : $"Form in: {title} - {who}";
         var heading = isAccident ? "A vehicle accident has just been reported" : $"{title} - new submission";
-        var html = Wrap(company,
+        var html = Wrap(
             $"<h3 style=\"margin:0 0 8px\">{Encode(heading)}</h3>" + Paragraph($"<b>{Encode(who)}</b>")
             + Table(lines) + Files("Files", fileNames)
             + Paragraph($"<a href=\"{Encode(officeLink)}\">Open it in the portal</a>"));
         var text = $"{heading}\n\n{who}\n\n" + string.Join("\n", lines.Select(line => $"{line.Label}: {line.Answer}"))
             + $"\n\nOpen it in the portal: {officeLink}";
-        return new FormEmail(company, to, subject, html, text);
+        return new FormEmail(to, subject, html, text);
     }
 
     private static string Table(IReadOnlyList<FormAnswerLine> lines)

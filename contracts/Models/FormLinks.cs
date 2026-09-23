@@ -26,7 +26,6 @@ public sealed record FormInvite(
     string FormInviteId,
     string? FormPackId,
     string FormSlug,
-    JewelCompany Company,
     string PersonName,
     string CompanyName,
     string Email,
@@ -57,7 +56,6 @@ public sealed record FormPackAnswers(bool HasP45, bool IsWorkingAtAScreen, bool 
 /// </summary>
 public sealed record FormPack(
     string FormPackId,
-    JewelCompany Company,
     string PersonName,
     string Email,
     Engagement EngagedAs,

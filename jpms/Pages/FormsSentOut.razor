@@ -30,7 +30,6 @@
                 <th>Form</th>
                 <th>Sent to</th>
                 <th>Their company</th>
-                <th>For</th>
                 <th>Sent</th>
                 <th>Link lasts until</th>
                 <th>Standing</th>
@@ -42,10 +41,9 @@
             {
                 var state = invite.StateAt(now);
                 <tr @key="invite.FormInviteId">
-                    <td>@FormCatalogue.TitleOf(invite.FormSlug, invite.Company)</td>
+                    <td>@FormCatalogue.TitleOf(invite.FormSlug)</td>
                     <td>@invite.PersonName<span class="block text-xs text-content-subtle">@invite.Email</span></td>
                     <td>@invite.CompanyName</td>
-                    <td class="whitespace-nowrap">@invite.Company.DisplayName()</td>
                     <td class="whitespace-nowrap">@DateText(invite.SentAt)<span class="block text-xs text-content-subtle">@invite.SentByName</span></td>
                     <td class="whitespace-nowrap">@DateText(invite.ExpiresAt)</td>
                     <td><Pill Tone="@state.ToTone()">@state.DisplayName()</Pill></td>

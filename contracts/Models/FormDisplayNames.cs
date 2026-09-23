@@ -59,5 +59,4 @@ public static class FormDisplayNames
     public static string DisplayName(this Engagement engagement) =>
         engagement == Engagement.Employee ? "Employee" : "Individual subcontractor";
 
-    public static string DisplayName(this JewelCompany company) => JewelCompanies.For(company).ShortName;
 }

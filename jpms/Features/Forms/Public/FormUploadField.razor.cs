@@ -11,7 +11,6 @@ public partial class FormUploadField
 {
     [Parameter, EditorRequired] public FormQuestion Question { get; set; } = default!;
     [Parameter, EditorRequired] public FormDraft Draft { get; set; } = default!;
-    [Parameter, EditorRequired] public string CompanyCode { get; set; } = "";
     [Parameter, EditorRequired] public string Slug { get; set; } = "";
     [Parameter] public EventCallback OnChanged { get; set; }
 
@@ -38,7 +37,7 @@ public partial class FormUploadField
         if (prepared is null) line.Failed(reason);
         if (prepared is null) return;
         var upload = new PublicFormUpload(Draft.SessionId, Question.Key, prepared.FileName, prepared.Base64);
-        var answer = await PublicFormRequests.UploadAsync(Http, CompanyCode, Slug, upload);
+        var answer = await PublicFormRequests.UploadAsync(Http, Slug, upload);
         Record(line, prepared, answer);
         await OnChanged.InvokeAsync();
     }

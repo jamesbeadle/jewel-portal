@@ -45,7 +45,7 @@ public sealed partial class FormRenewalChase
     private async Task<string?> SendAsync(IssuedInvite issued, Func<string, FormEmail> emailFor, CancellationToken cancellationToken)
     {
         var invite = issued.Invite;
-        var link = options.FormLink((JewelCompany)invite.Company, invite.FormSlug, issued.Token);
+        var link = options.FormLink(invite.FormSlug, issued.Token);
         try
         {
             await mailer.SendAsync(emailFor(link), cancellationToken);

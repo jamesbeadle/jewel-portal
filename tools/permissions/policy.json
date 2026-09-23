@@ -72,10 +72,10 @@
     "imagine/{token}/proposal/decline",
     "imagine/{token}/keep-in-touch/stop",
     "work-orders/accept/{token}",
-    "public-forms/{company}/{slug}",
-    "public-forms/{company}/{slug}/uploads",
-    "public-forms/{company}/{slug}/submit",
-    "public-form-packs/{company}/{token}"
+    "public-forms/{slug}",
+    "public-forms/{slug}/uploads",
+    "public-forms/{slug}/submit",
+    "public-form-packs/{token}"
   ],
   "callerIsTheScope": [
     "auth/me",
@@ -107,8 +107,10 @@
     "/projects/{ProjectId}/financials-setup": "legacy address: redirects to /settings; renders nothing",
     "/projects/{ProjectId}/operations-setup": "legacy address: redirects to /settings; renders nothing",
     "/projects/{ProjectId}/setup": "legacy address: redirects to /settings; renders nothing",
-    "/f/{Company}/{Slug}": "a public form: open to anyone as it was on the JPS dashboard, a one-time link its own credential; no session",
-    "/f/{Company}/pack/{Token}": "a new starter's pack: the URL token is the credential, no session"
+    "/f/{Slug}": "a public form: open to anyone as it was on the forms dashboard, a one-time link its own credential; no session",
+    "/f/pack/{Token}": "a new starter's pack: the URL token is the credential, no session",
+    "/f/{Prefix}/{Slug}": "the forms' first-day address: redirects to /f/{Slug} with its link kept; renders nothing",
+    "/f/{Prefix}/pack/{Token}": "the forms' first-day pack address: redirects to /f/pack/{Token}; renders nothing"
   },
   "externalRouteExceptions": {
     "Architect": [

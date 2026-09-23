@@ -4,7 +4,7 @@ using Xunit;
 
 namespace Jewel.JPMS.Tests;
 
-// The forms moved from the JPS Dashboard (2026-09-23): the rules a form, a pack, a right-to-work
+// The forms moved from Jeremy's forms dashboard (2026-09-23): the rules a form, a pack, a right-to-work
 // check and the retention clocks are held to, as the dashboard held them.
 public sealed class FormsRulesTests
 {
@@ -60,7 +60,7 @@ public sealed class FormsRulesTests
         {
             ["full_name"] = "Sam Smith", ["dob"] = "1990-01-01", ["email"] = "sam@example.com", ["mobile"] = "07700 900000",
             ["status"] = RightToWorkForm.BritishOrIrishCitizen, ["engaged_as"] = RightToWorkForm.Employee,
-            ["company"] = "Jewel Bespoke Build (JBB)", ["declaration_name"] = "Sam Smith"
+            ["declaration_name"] = "Sam Smith"
         };
         var unsigned = FormAnswerRules.FirstProblem(form, answers, new Dictionary<string, int>());
         Assert.Equal(FormWording.PleaseSign("Declaration"), unsigned);
@@ -103,11 +103,10 @@ public sealed class FormsRulesTests
     }
 
     [Fact]
-    public void TheJewelBespokeBuildQuestionnaire_isTheOneQuestionnaire_underItsOwnTitle()
+    public void TheQuestionnaire_isJewelBespokeBuilds_amongNineForms()
     {
-        var questionnaire = FormCatalogue.For(FormSlugs.JewelBespokeBuildQuestionnaire)!;
-        Assert.Equal(FormSlugs.SubcontractorQuestionnaire, questionnaire.Slug);
-        Assert.NotEqual(questionnaire.TitleFor(JewelCompany.JewelPropertyServe), questionnaire.TitleFor(JewelCompany.JewelBespokeBuild));
+        var questionnaire = FormCatalogue.For(FormSlugs.SubcontractorQuestionnaire)!;
+        Assert.Equal("Sub Contractor Questionnaire 2025", questionnaire.Title);
         Assert.Equal(9, FormCatalogue.All.Count);
     }
 }

@@ -10,8 +10,6 @@
 <Page OpenTo="FormRoleSets.Office">
     <PageHeader Subtitle="@Subtitle">
         <Actions>
-            <FilterChips Items="FormSubmissionFilters.CompanyChips" Selected="@company" OnSelect="key => company = key"
-                         Disabled="@(submissions is null)" AriaLabel="Company" />
             <FilterChips Items="StatusChips" Selected="@status" OnSelect="key => status = key"
                          Disabled="@(submissions is null)" AriaLabel="Where the office has got to" />
         </Actions>
@@ -34,7 +32,6 @@
                 <th>Form</th>
                 <th>From</th>
                 <th>Filed under</th>
-                <th>Company</th>
                 <th>Came by</th>
                 <th>Status</th>
             </tr>
@@ -44,10 +41,9 @@
             {
                 <tr @key="submission.FormSubmissionId" class="is-clickable" @onclick="() => Open(submission)">
                     <td class="whitespace-nowrap">@DateTimeText(submission.SubmittedAt)</td>
-                    <td>@FormCatalogue.TitleOf(submission.FormSlug, submission.Company)</td>
+                    <td>@FormCatalogue.TitleOf(submission.FormSlug)</td>
                     <td>@submission.SubmitterName</td>
                     <td>@submission.FilingName</td>
-                    <td class="whitespace-nowrap">@submission.Company.DisplayName()</td>
                     <td class="whitespace-nowrap">@FormSubmissionFilters.LinkText(submission)</td>
                     <td><Pill Tone="@submission.Status.ToTone()">@submission.Status.DisplayName()</Pill></td>
                 </tr>

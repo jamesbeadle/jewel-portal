@@ -11,9 +11,6 @@
         <input type="text" class="field" placeholder="e.g. Fire stopping operative" value="@Draft.JobRole"
                @oninput="typed => Draft.JobRole = typed.Value?.ToString() ?? string.Empty" />
     </FormField>
-    <FormChoiceSelect TChoice="JewelCompany" Label="Company" Required Value="Draft.Company" ValueChanged="company => Draft.Company = company"
-                      Placeholder="@FormDisplayNames.NotYetChosen"
-                      Describe="company => company.DisplayName()" />
     <FormChoiceSelect TChoice="Engagement" Label="Engaged as" Required Value="Draft.EngagedAs" ValueChanged="engagement => Draft.EngagedAs = engagement"
                       Placeholder="@FormDisplayNames.NotYetChosen"
                       Describe="engagement => engagement.DisplayName()" />

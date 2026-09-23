@@ -4,9 +4,9 @@ using Azure.Communication.Email;
 namespace Jewel.JPMS.Api.Features.Forms.Mail;
 
 /// <summary>
-/// Sends from the company's sender (the portal's own unless one is configured for it) with the
-/// company's office address as the Reply-To, because every form email says "reply to this email"
-/// when a link has expired, and that reply must reach the office that sent it.
+/// Sends from the forms' sender (the portal's own unless one is configured) with the office
+/// address as the Reply-To, because every form email says "reply to this email" when a link has
+/// expired, and that reply must reach the office that sent it.
 /// </summary>
 public sealed class AcsFormMailer : IFormMailer
 {
@@ -25,18 +25,17 @@ public sealed class AcsFormMailer : IFormMailer
 
     public async Task SendAsync(FormEmail email, CancellationToken cancellationToken)
     {
-        var particulars = JewelCompanies.For(email.Company);
         var recipients = new EmailRecipients(email.To.Select(address => new EmailAddress(address)).ToList());
-        var message = new EmailMessage(options.SenderFor(email.Company), recipients,
+        var message = new EmailMessage(options.Sender, recipients,
             new EmailContent(email.Subject) { Html = email.Html, PlainText = email.Text });
-        message.ReplyTo.Add(new EmailAddress(particulars.Email, particulars.ShortName));
+        message.ReplyTo.Add(new EmailAddress(JewelBespokeBuild.Email, JewelBespokeBuild.ShortName));
         try
         {
             await client.SendAsync(WaitUntil.Started, message, cancellationToken);
         }
         catch (RequestFailedException refusal)
         {
-            logger.LogWarning(refusal, "A {Company} form email was refused by ACS: {Status}.", email.Company, refusal.Status);
+            logger.LogWarning(refusal, "A form email was refused by ACS: {Status}.", refusal.Status);
             throw new InvalidOperationException($"The email couldn't be sent ({refusal.Status}). {refusal.Message}");
         }
     }

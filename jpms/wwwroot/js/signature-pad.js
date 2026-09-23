@@ -1,4 +1,4 @@
-// The drawn signature on the public forms (/f/…), carried from the JPS Dashboard's pad
+// The drawn signature on the public forms (/f/…), carried from the pad in Jeremy's forms dashboard
 // (api/pubforms.js): a canvas signed with a finger or a mouse, drawn at twice the element's width
 // so the line stays crisp, ink the colour of the dashboard's. Blazor asks it four things —
 // attach to a canvas, whether anything has been drawn, the drawing as a PNG, and to clear it.

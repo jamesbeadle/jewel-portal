@@ -12,7 +12,6 @@ public static class RightToWorkRules
     public const int FollowUpDaysBeforeExpiry = 70;
     public const string LateCheck = "Late check, no statutory excuse for the period before this date";
     public const string WhoIsBeingEngaged = "Who is being engaged?";
-    public const string WhichCompany = "Which company, JPS or JBB?";
     public const string HowEngaged = "Engaged as an employee or an individual subcontractor?";
     public const string WhichRoute = "Which route did you use?";
 

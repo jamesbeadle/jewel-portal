@@ -11,13 +11,7 @@ public sealed partial class PublicFormService
     private const int MostUploadsFromOneAddressPerHour = 200;
     private const int MostFormsFromOneAddressPerHour = 30;
 
-    private static (JewelCompany Company, FormDefinition Form) Known(string companyCode, string slug)
-    {
-        var company = JewelCompanies.ForCode(companyCode);
-        var form = FormCatalogue.For(slug);
-        var isKnown = company is not null && form is not null;
-        return isKnown ? (company!.Company, form!) : throw new PublicFormRefusal("Unknown form.");
-    }
+    private static FormDefinition Known(string slug) => FormCatalogue.For(slug) ?? throw new PublicFormRefusal("Unknown form.");
 
     private static void CheckSession(string? sessionId)
     {

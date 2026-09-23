@@ -10,7 +10,6 @@ public sealed class RightToWorkCheckEntity
     [MaxLength(64)]      public string? FormSubmissionId { get; set; }
     [MaxLength(256)]     public string PersonName { get; set; } = "";
     [MaxLength(256)]     public string Email { get; set; } = "";
-    public int Company { get; set; }
     [MaxLength(256)]     public string JobRole { get; set; } = "";
     public int EngagedAs { get; set; }
     public DateOnly? EngagedSince { get; set; }
@@ -42,7 +41,6 @@ public sealed class TrainingRecordEntity
 {
     [Key, MaxLength(64)] public string TrainingRecordId { get; set; } = "";
     [MaxLength(64)]      public string? FormSubmissionId { get; set; }
-    public int Company { get; set; }
     [MaxLength(256)]     public string PersonName { get; set; } = "";
     [MaxLength(256)]     public string Email { get; set; } = "";
     [MaxLength(256)]     public string Course { get; set; } = "";

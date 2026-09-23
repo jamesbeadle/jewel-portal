@@ -1447,8 +1447,8 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<long>("FileSize")
                         .HasColumnType("bigint");
 
-                    b.Property<int?>("FormCompany")
-                        .HasColumnType("int");
+                    b.Property<bool>("IsFromAForm")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Kind")
                         .IsRequired()
@@ -2889,9 +2889,6 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
-                    b.Property<int>("Company")
-                        .HasColumnType("int");
-
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -2933,9 +2930,6 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<DateTimeOffset?>("CancelledAt")
                         .HasColumnType("datetimeoffset");
-
-                    b.Property<int>("Company")
-                        .HasColumnType("int");
 
                     b.Property<string>("CompanyName")
                         .IsRequired()
@@ -3021,9 +3015,6 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<int>("ChaseCount")
                         .HasColumnType("int");
 
-                    b.Property<int>("Company")
-                        .HasColumnType("int");
-
                     b.Property<DateTimeOffset?>("CompletedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -3102,9 +3093,6 @@ namespace Jewel.JPMS.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
-
-                    b.Property<int>("Company")
-                        .HasColumnType("int");
 
                     b.Property<DateTimeOffset?>("DestroyedAt")
                         .HasColumnType("datetimeoffset");
@@ -3197,9 +3185,6 @@ namespace Jewel.JPMS.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
-
-                    b.Property<int>("Company")
-                        .HasColumnType("int");
 
                     b.Property<string>("ContentType")
                         .IsRequired()
@@ -6513,9 +6498,6 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<DateOnly>("CheckedOn")
                         .HasColumnType("date");
 
-                    b.Property<int>("Company")
-                        .HasColumnType("int");
-
                     b.Property<DateOnly?>("ConfirmedOn")
                         .HasColumnType("date");
 
@@ -7821,9 +7803,6 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.Property<int>("ChaseCount")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Company")
                         .HasColumnType("int");
 
                     b.Property<DateOnly>("CompletedOn")
