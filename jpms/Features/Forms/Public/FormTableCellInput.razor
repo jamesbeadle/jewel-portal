@@ -1,0 +1,46 @@
+@using Jewel.JPMS.Contracts.Forms
+
+@*
+    One cell of a register row, in the column's own control: a text box, a date, a choice, or a
+    tick. Every change goes straight back through OnChanged — the row's owner holds the value.
+*@
+
+@switch (Column.Kind)
+{
+    case FormColumnKind.Tick:
+        <label class="form-sheet-tick-row">
+            <input type="checkbox" class="form-sheet-tick" checked="@(Value == FormWording.Yes)" @onchange="TickedAsync" />
+            <span>@Column.Label</span>
+        </label>
+        break;
+    case FormColumnKind.Date:
+        <label class="form-sheet-cell-label" for="@InputId">@Column.Label</label>
+        <input id="@InputId" type="date" class="form-sheet-input" value="@Value" @onchange="ChosenAsync" />
+        break;
+    case FormColumnKind.Choice:
+        <label class="form-sheet-cell-label" for="@InputId">@Column.Label</label>
+        <select id="@InputId" class="form-sheet-input" value="@Value" @onchange="ChosenAsync">
+            <option value="">@FormSheetWording.SelectAnOption</option>
+            @foreach (var choice in Column.Choices)
+            {
+                <option value="@choice">@choice</option>
+            }
+        </select>
+        break;
+    default:
+        <label class="form-sheet-cell-label" for="@InputId">@Column.Label</label>
+        <input id="@InputId" type="text" class="form-sheet-input" maxlength="@FormTableAnswers.LongestCell"
+               value="@Value" @onchange="ChosenAsync" />
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public FormColumn Column { get; set; } = default!;
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter, EditorRequired] public string InputId { get; set; } = "";
+    [Parameter] public EventCallback<string> OnChanged { get; set; }
+
+    private Task ChosenAsync(ChangeEventArgs chosen) => OnChanged.InvokeAsync(chosen.Value?.ToString() ?? "");
+
+    private Task TickedAsync(ChangeEventArgs ticked) => OnChanged.InvokeAsync(ticked.Value is true ? FormWording.Yes : "");
+}

@@ -12,7 +12,8 @@ public enum FormQuestionKind
     Upload = 5,
     Signature = 6,
     Declaration = 7,
-    Section = 8
+    Section = 8,
+    Table = 9
 }
 
 /// <summary>A question asked only while another question holds a given answer ("If yes, give details").</summary>
@@ -22,7 +23,8 @@ public sealed record FormCondition(string QuestionKey, string Answer);
 /// One question on a form, carried from the field definitions in Jeremy's forms dashboard: its key, the words
 /// the person reads, whether it must be answered, its hint, the choices, and when it is shown. A
 /// Section is a heading and never an answer. IsSpecialCategory marks health data under UK GDPR
-/// Article 9 that the office sees only when it is revealed.
+/// Article 9 that the office sees only when it is revealed. A Table is a paper register's ruled rows
+/// (FormTable), answered as one JSON string of rows under the question's key.
 /// </summary>
 public sealed record FormQuestion(
     string Key,
@@ -32,9 +34,12 @@ public sealed record FormQuestion(
     string Hint = "",
     IReadOnlyList<string>? Choices = null,
     FormCondition? ShownWhen = null,
-    bool IsSpecialCategory = false)
+    bool IsSpecialCategory = false,
+    FormTable? Table = null)
 {
     public IReadOnlyList<string> Choices { get; init; } = Choices ?? Array.Empty<string>();
+
+    public bool IsTable => Kind == FormQuestionKind.Table && Table is not null;
 
     public bool IsAsked => Kind != FormQuestionKind.Section;
 
@@ -74,4 +79,7 @@ public static class Ask
 
     public static FormQuestion Section(string key, string label, string hint = "") =>
         new(key, label, FormQuestionKind.Section, Optional, hint);
+
+    public static FormQuestion Table(string key, string label, bool isRequired, FormTable table, string hint = "") =>
+        new(key, label, FormQuestionKind.Table, isRequired, hint, Table: table);
 }

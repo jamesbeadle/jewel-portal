@@ -25,6 +25,9 @@
     case FormQuestionKind.Signature:
         <FormSignatureField Form="Form" Question="Question" Draft="Draft" OnChanged="OnChanged" />
         break;
+    case FormQuestionKind.Table:
+        <FormTableInput Form="Form" Question="Question" Draft="Draft" OnChanged="OnChanged" />
+        break;
     default:
         <input id="@InputId" type="text" class="form-sheet-input" maxlength="@PublicFormLimits.LongestAnswer"
                value="@Answer" @oninput="Typed" @onchange="OnChanged" />

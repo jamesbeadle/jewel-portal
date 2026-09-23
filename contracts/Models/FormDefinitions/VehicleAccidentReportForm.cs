@@ -24,5 +24,6 @@ public static class VehicleAccidentReportForm
             DateAndTime("when", "Date and time of the accident", Required),
             Choice("third_party", "Do you have third party details?", Required, new[] { "No", "Yes" }),
             LongText("third_party_detail", "If yes: their name, contact details, registration and insurer", Optional)
-        });
+        },
+        IsAnAccidentReport: true);
 }

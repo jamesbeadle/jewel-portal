@@ -22,5 +22,13 @@
         new TabItem(Training, "Training", "/forms/training"),
         new TabItem(Workstations, "Workstations", "/forms/workstations"),
         new TabItem(Folders, "People & companies", "/forms/folders")
-    }.Where(tab => tab.Key != RightToWork || Entry.Admits(FormRoleSets.RightToWorkReaders)).ToList();
+    }.Where(IsOpenToTheReader).ToList();
+
+    // The office works every tab; a site role, admitted for the health and safety forms alone, sees Received alone.
+    private bool IsOpenToTheReader(TabItem tab)
+    {
+        if (tab.Key == Received) return true;
+        if (tab.Key == RightToWork) return Entry.Admits(FormRoleSets.RightToWorkReaders);
+        return Entry.Admits(FormRoleSets.Office);
+    }
 }

@@ -33,7 +33,7 @@ public partial class FormSubmissionDetail
 
     protected override async Task OnInitializedAsync()
     {
-        var mayRead = await Entry.MayReadAsync(FormRoleSets.Office);
+        var mayRead = await Entry.MayReadAsync(FormRoleSets.AnyReader);
         if (mayRead) await LoadAsync();
     }
 

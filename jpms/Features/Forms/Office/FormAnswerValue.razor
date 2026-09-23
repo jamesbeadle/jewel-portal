@@ -14,6 +14,9 @@
     case FormQuestionKind.Declaration:
         <span>@(Reading.AnswerTo(Question.Key) == FormWording.Yes ? "Ticked" : "Not ticked")</span>
         break;
+    case FormQuestionKind.Table:
+        <FormTableAnswerView Table="Question.Table!" Json="@Reading.AnswerTo(Question.Key)" />
+        break;
     default:
         @if (Reading.IsWithheld(Question.Key))
         {

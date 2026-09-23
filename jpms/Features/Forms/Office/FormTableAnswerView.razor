@@ -1,0 +1,49 @@
+@*
+    A register question read back in the office: the rows as a small table in the question's own
+    columns, a tick shown as a tick, a row nobody wrote on left out.
+*@
+
+@if (Rows.Count == 0)
+{
+    <span>—</span>
+}
+@if (Rows.Count > 0)
+{
+    <table class="data-table data-table-dense">
+        <thead>
+            <tr>
+                @foreach (var column in Table.Columns)
+                {
+                    <th @key="column.Key">@column.Label</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var (row, index) in Rows.Select((row, index) => (row, index)))
+            {
+                <tr @key="index">
+                    @foreach (var column in Table.Columns)
+                    {
+                        <td @key="column.Key" class="whitespace-pre-line">@CellText(row, column)</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private const string Tick = "✓";
+
+    [Parameter, EditorRequired] public FormTable Table { get; set; } = default!;
+    [Parameter] public string Json { get; set; } = "";
+
+    private IReadOnlyList<IReadOnlyDictionary<string, string>> Rows => FormTableAnswers.Read(Json);
+
+    private static string CellText(IReadOnlyDictionary<string, string> row, FormColumn column)
+    {
+        var cell = row.GetValueOrDefault(column.Key, "");
+        if (column.Kind == FormColumnKind.Tick) return cell == FormWording.Yes ? Tick : "";
+        return cell;
+    }
+}

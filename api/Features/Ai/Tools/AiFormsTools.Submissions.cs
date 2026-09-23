@@ -11,12 +11,14 @@ internal static partial class AiFormsTools
         "Every form that came in, newest first — the office's Received list: formSubmissionId, "
         + "formSlug and title, who sent it (submitterName, from the one-time link when there was one), the person or "
         + "company it is filed under (filingName, formFolderId), whether it came by a verified link, the pack it belongs to, "
-        + "and status New / InProgress / Handled / Destroyed. No answers: get_form_submission reads one.",
+        + "and status New / InProgress / Handled / Destroyed. No answers: get_form_submission reads one. A site "
+        + "manager or the H&S officer sees the health and safety forms alone — the site checks and incident reports.",
         AiToolSchema.Object(
             ("status", "string", "Narrow to New, InProgress, Handled or Destroyed.", false),
-            ("formSlug", "string", "Narrow to one form: starter, emergency, rtw, dse, vehicle, training, accident, subcontractor, insurance.", false)),
+            ("formSlug", "string", "Narrow to one form: starter, emergency, rtw, dse, vehicle, training, accident, subcontractor, insurance, "
+                + "toolbox-talk, ladder-inspection, equipment-schedule, puwer-inspection, site-incident, personnel-incident, first-aid-kit, fire-extinguishers.", false)),
         AiToolKind.Read,
-        FormRoleSets.Office,
+        FormRoleSets.AnyReader,
         ReceivedFormsAsync);
 
     private static async Task<string> ReceivedFormsAsync(AiToolContext context, JsonElement input, CancellationToken ct)
@@ -24,7 +26,7 @@ internal static partial class AiFormsTools
         var status = AiToolSchema.Text(input, "status");
         var formSlug = AiToolSchema.Text(input, "formSlug");
         var submissions = await Query<ListFormSubmissions, IReadOnlyList<FormSubmission>>(context, new ListFormSubmissions(), ct);
-        var shown = submissions
+        var shown = FormSubmissionReading.VisibleTo(context.User, submissions)
             .Where(submission => status is null || string.Equals(submission.Status.ToString(), status, StringComparison.OrdinalIgnoreCase))
             .Where(submission => formSlug is null || submission.FormSlug == formSlug)
             .Select(AiFormReading.SubmissionRow);
@@ -41,7 +43,7 @@ internal static partial class AiFormsTools
         AiToolSchema.Object(
             ("formSubmissionId", "string", "From list_form_submissions.", true)),
         AiToolKind.Read,
-        FormRoleSets.Office,
+        FormRoleSets.AnyReader,
         OneFormAsync);
 
     private static async Task<string> OneFormAsync(AiToolContext context, JsonElement input, CancellationToken ct)

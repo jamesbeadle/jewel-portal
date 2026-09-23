@@ -638,6 +638,13 @@
 .form-sheet-file-problem { @apply text-paper-error; }
 .form-sheet-error { @apply mt-1.5 text-[13px] text-paper-error; }
 .form-sheet-signature-pad { @apply block h-40 w-full touch-none rounded-[10px] border-[1.5px] border-dashed border-paper-dashed bg-paper-card; }
+.form-sheet-rows { @apply mt-1; }
+.form-sheet-row { @apply mt-2.5 rounded-[10px] border border-paper-line bg-paper px-3 pb-3 pt-2; }
+.form-sheet-row-head { @apply mb-1 flex items-center justify-between gap-3; }
+.form-sheet-row-title { @apply text-[14px] font-semibold; color: var(--form-accent); }
+.form-sheet-row-remove { @apply cursor-pointer border-0 bg-transparent p-0 text-[13px] text-paper-hint underline underline-offset-2; }
+.form-sheet-cell { @apply mt-2; }
+.form-sheet-cell-label { @apply mb-0.5 block text-[13px] font-medium text-paper-hint; }
 .form-sheet-problem { @apply mx-4 mb-3.5 text-sm text-paper-error; }
 .form-sheet-privacy { @apply mx-4 mt-[18px] text-xs leading-normal text-paper-hint; }
 .form-sheet-done { @apply mx-4 mt-10 rounded-[14px] border border-paper-line bg-paper-card p-[26px] text-center; }

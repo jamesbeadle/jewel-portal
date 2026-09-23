@@ -15,6 +15,13 @@ public static class FormDisplayNames
         _ => "Replaced"
     };
 
+    public static string DisplayName(this FormFilingKind kind) => kind switch
+    {
+        FormFilingKind.Company => "Company",
+        FormFilingKind.Site => "Site",
+        _ => "Person"
+    };
+
     public static string DisplayName(this FormSubmissionStatus status) => status switch
     {
         FormSubmissionStatus.New => "New",

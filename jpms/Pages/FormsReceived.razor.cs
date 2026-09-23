@@ -33,7 +33,7 @@ public partial class FormsReceived
     protected override async Task OnInitializedAsync()
     {
         if (FormFolderId is not null) status = FormSubmissionFilters.Everything;
-        var mayRead = await Entry.MayReadAsync(FormRoleSets.Office);
+        var mayRead = await Entry.MayReadAsync(FormRoleSets.AnyReader);
         if (mayRead) await LoadAsync();
     }
 

@@ -30,9 +30,9 @@ internal static class FormReceiptEmails
         IReadOnlyList<string> fileNames, string officeLink)
     {
         var title = form.Title;
-        var isAccident = form.Slug == FormSlugs.AccidentReport;
+        var isAccident = form.IsAnAccidentReport;
         var subject = isAccident ? $"Accident reported: {who}" : $"Form in: {title} - {who}";
-        var heading = isAccident ? "A vehicle accident has just been reported" : $"{title} - new submission";
+        var heading = isAccident ? $"An accident has just been reported - {title}" : $"{title} - new submission";
         var html = Wrap(
             $"<h3 style=\"margin:0 0 8px\">{Encode(heading)}</h3>" + Paragraph($"<b>{Encode(who)}</b>")
             + Table(lines) + Files("Files", fileNames)
