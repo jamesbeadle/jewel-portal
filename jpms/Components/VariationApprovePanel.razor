@@ -337,7 +337,7 @@
         var total = built.Sum(line => line.Quantity * line.Rate);
         if (total == 0m)
         {
-            error = "The total can't be zero — enter the agreed values (negative rate for an omit).";
+            error = VariationLineTotals.ZeroTotalMessage;
             StateHasChanged();
             return null;
         }
