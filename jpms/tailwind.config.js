@@ -21,6 +21,17 @@ module.exports = {
           'Segoe UI',
           'system-ui',
           'sans-serif'
+        ],
+        // Jewel Property Serve's type on its public forms, carried from the JPS Dashboard:
+        // Outfit, self-hosted under the OFL (wwwroot/fonts), Jeremy's choice of 16 Aug 2026.
+        outfit: [
+          'Outfit',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'Arial',
+          'sans-serif'
         ]
       },
       // The Figma type scale: eight sizes, each with a FIXED leading tighter than Tailwind's
@@ -102,7 +113,32 @@ module.exports = {
         // amber-* Tailwind colours that used to be typed into views.
         warning: '#F2B544',
         // Brand/Main — the logo / brand mark only. It is NOT the action colour.
-        brand: '#4CDBEE'
+        brand: '#4CDBEE',
+        // The public forms a new starter or a sub-contractor fills in on a phone (/f/…). They
+        // are the company's own paper, not the portal's dark workspace: a light page that reads
+        // outdoors, carried from the JPS Dashboard's forms. `jps` is Jewel Property Serve's blue;
+        // `jewel.gold` is the gold both companies' logos share; `paper` is the rest of the sheet.
+        jps: {
+          blue: '#135EAA',
+          'blue-deep': '#0E4880',
+          soft: '#EEF4FA',
+          'soft-line': '#CFE0EF'
+        },
+        jewel: {
+          gold: '#C09A51'
+        },
+        paper: {
+          DEFAULT: '#F3F5F8',
+          card: '#FFFFFF',
+          ink: '#1A2733',
+          strong: '#1F1F1F',
+          hint: '#5C6B7A',
+          line: '#E3E8EE',
+          dashed: '#B9C6D2',
+          done: '#1C7A4E',
+          error: '#B3261E',
+          filed: '#2A6B2A'
+        }
       }
     }
   },

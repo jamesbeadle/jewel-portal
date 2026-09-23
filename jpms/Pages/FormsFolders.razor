@@ -1,0 +1,85 @@
+@page "/forms/folders"
+@using Jewel.JPMS.Contracts.Forms
+@using Jewel.JPMS.Features.Forms.Office
+@inject IQueryClient Queries
+@inject FormsPageEntry Entry
+
+<PageTitle>People & companies · JPMS</PageTitle>
+
+<Page OpenTo="FormRoleSets.Office">
+    <PageHeader Subtitle="Everything a person or a company sends is filed under them, across every form.">
+        <Actions>
+            <SearchInput Value="@search" ValueChanged="typed => search = typed" Placeholder="Find a person or company" />
+        </Actions>
+    </PageHeader>
+
+    <FormsTabs ActiveKey="@FormsTabs.Folders" />
+    <TableNote IsLead="true" Class="mb-4">
+        Record the day someone's engagement ended, and the day a company vehicle came back: those dates start the clocks after which
+        their forms and files are destroyed. Nothing is destroyed for a leaver with no date.
+    </TableNote>
+
+    <RecordsTable Dense="true" MaxHeight="" IsLoading="@(folders is null && !dataFailed)" IsEmpty="@(Rows.Count == 0)" EmptyMessage="@EmptyMessage">
+        <thead>
+            <tr>
+                <th>Filed under</th>
+                <th>Kind</th>
+                <th>Company</th>
+                <th class="num">Forms</th>
+                <th>Last form</th>
+                <th>Engagement ended</th>
+                <th>Vehicle returned</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var folder in Rows)
+            {
+                <tr @key="folder.FormFolderId" class="is-clickable" @onclick="() => editing = folder">
+                    <td>
+                        <a class="text-info underline underline-offset-2" href="@($"/forms?folder={folder.FormFolderId}")"
+                           @onclick:stopPropagation="true">@folder.Name</a>
+                    </td>
+                    <td>@(folder.Kind == FormFilingKind.Company ? "Company" : "Person")</td>
+                    <td class="whitespace-nowrap">@folder.Company.DisplayName()</td>
+                    <td class="num">@folder.SubmissionCount</td>
+                    <td class="whitespace-nowrap">@DateText(folder.LastSubmittedAt)</td>
+                    <td class="whitespace-nowrap">@DateText(folder.EngagementEndedOn)</td>
+                    <td class="whitespace-nowrap">@DateText(folder.VehicleReturnedOn)</td>
+                </tr>
+            }
+        </tbody>
+    </RecordsTable>
+
+    <FormFolderDatesModal Folder="editing" OnSaved="SavedAsync" OnClose="() => editing = null" />
+</Page>
+
+@code {
+    private IReadOnlyList<FormFolder>? folders;
+    private bool dataFailed;
+    private string search = "";
+    private FormFolder? editing;
+
+    private IReadOnlyList<FormFolder> Rows => (folders ?? Array.Empty<FormFolder>())
+        .Where(folder => folder.Name.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    private string EmptyMessage => dataFailed ? "Couldn't load the folders — refresh to try again." : "Nobody has sent a form yet.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var mayRead = await Entry.MayReadAsync(FormRoleSets.Office);
+        if (mayRead) await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try { folders = await Queries.AskAsync(new ListFormFolders(), CancellationToken.None); }
+        catch { dataFailed = true; }
+    }
+
+    private async Task SavedAsync()
+    {
+        editing = null;
+        await LoadAsync();
+    }
+}

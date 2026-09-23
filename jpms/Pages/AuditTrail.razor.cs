@@ -61,7 +61,11 @@ public partial class AuditTrail
         (AuditEventType.LabourApprovalReversed,  "Labour approval reversed"),
         (AuditEventType.LabourDayMoved,          "Labour day moved"),
         (AuditEventType.DirectoryRecordXeroLinkChanged, "Directory Xero link changed"),
-        (AuditEventType.SiteCredentialRevealed,  "Site credential revealed")
+        (AuditEventType.SiteCredentialRevealed,  "Site credential revealed"),
+        (AuditEventType.FormHealthAnswersRevealed, "Form health answers revealed"),
+        (AuditEventType.FormRecordsDestroyed,    "Form records destroyed"),
+        (AuditEventType.RightToWorkConfirmationSent, "Right to work confirmation sent"),
+        (AuditEventType.FormFolderDatesRecorded, "Form retention dates recorded")
     };
 
     // Mirrors the API's TriageRoles.AllowedToTriage — the audit trail is a triage-side tool.
@@ -203,6 +207,10 @@ public partial class AuditTrail
         AuditEventType.LabourDayMoved         => "Labour day moved",
         AuditEventType.DirectoryRecordXeroLinkChanged => "Directory Xero link changed",
         AuditEventType.SiteCredentialRevealed => "Site credential revealed",
+        AuditEventType.FormHealthAnswersRevealed => "Form health answers revealed",
+        AuditEventType.FormRecordsDestroyed   => "Form records destroyed",
+        AuditEventType.RightToWorkConfirmationSent => "Right to work confirmation sent",
+        AuditEventType.FormFolderDatesRecorded => "Form retention dates recorded",
         _                                     => type.ToString()
     };
 

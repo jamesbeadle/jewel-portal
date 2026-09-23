@@ -24,6 +24,16 @@ public static class DirectoryComplianceFilter
     public const string BelowPublicLiabilityRequirementTitle =
         "Public liability cover recorded under the £5m Jewel's insurer requires of subcontractors on big jobs";
 
+    /// <summary>The register's own chip (the insurance form's task): the companies working on site
+    /// today — a released work order on a live project — whose insurance certificate has expired. An
+    /// uninsured company on site is a live exposure on the day the certificate lapses.</summary>
+    public const string LapsedCoverOnSite = "LapsedCoverOnSite";
+
+    public const string LapsedCoverOnSiteLabel = "On site, insurance lapsed";
+
+    public const string LapsedCoverOnSiteTitle =
+        "Working on a live project under a released work order, with an insurance certificate past its expiry";
+
     public static IReadOnlyList<TabItem> CompanyChips(
         IReadOnlyList<Subcontractor> companies, ComplianceOverviewReadModel compliance, bool isLoaded) =>
         Chips(status => isLoaded ? companies.Count(company => StandingOf(company, compliance) == status) : null,
@@ -32,13 +42,16 @@ public static class DirectoryComplianceFilter
     /// <summary>All, then one chip per standing in reading order, then Below £5m PL; each countFor
     /// answers null until the data has landed so no chip ever shows a zero that becomes real a
     /// second later.</summary>
-    public static IReadOnlyList<TabItem> Chips(Func<ComplianceStatus, int?> countFor, Func<int?> belowRequirementCount)
+    public static IReadOnlyList<TabItem> Chips(
+        Func<ComplianceStatus, int?> countFor, Func<int?> belowRequirementCount, Func<int?>? lapsedOnSiteCount = null)
     {
         var chips = new List<TabItem> { new(All, "All") };
         foreach (var status in ComplianceStatusExtensions.ReadingOrder)
             chips.Add(new TabItem(KeyFor(status), status.DisplayName(), Count: countFor(status), Title: TitleFor(status)));
         chips.Add(new TabItem(BelowPublicLiabilityRequirement, BelowPublicLiabilityRequirementLabel,
             Count: belowRequirementCount(), Title: BelowPublicLiabilityRequirementTitle));
+        if (lapsedOnSiteCount is not null)
+            chips.Add(new TabItem(LapsedCoverOnSite, LapsedCoverOnSiteLabel, Count: lapsedOnSiteCount(), Title: LapsedCoverOnSiteTitle));
         return chips;
     }
 
@@ -53,6 +66,9 @@ public static class DirectoryComplianceFilter
 
     public static bool Passes(ComplianceStatus status, bool isBelowPublicLiabilityRequirement, string filter) =>
         filter == BelowPublicLiabilityRequirement ? isBelowPublicLiabilityRequirement : Passes(status, filter);
+
+    public static bool Passes(ComplianceRegisterRow row, string filter) =>
+        filter == LapsedCoverOnSite ? row.IsLapsedCoverOnSite : Passes(row.Status, row.IsBelowPublicLiabilityRequirement, filter);
 
     private static ComplianceStatus StandingOf(Subcontractor company, ComplianceOverviewReadModel compliance) =>
         compliance.WorstStatusFor(company.SubcontractorId);

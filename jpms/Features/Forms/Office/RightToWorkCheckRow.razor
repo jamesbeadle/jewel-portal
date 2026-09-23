@@ -1,0 +1,81 @@
+<tr class="is-clickable" @onclick="OnOpen">
+    <td>
+        <span class="font-semibold">@Details.PersonName</span>
+        <Pill Class="ml-1">@Details.Company.DisplayName()</Pill>
+        @if (Details.JobRole.Length > 0)
+        {
+            <span class="block text-xs text-content-subtle">@Details.JobRole</span>
+        }
+    </td>
+    <td>
+        @Details.EngagedAs.DisplayName()
+        @if (Details.EngagedSince is { } since)
+        {
+            <span class="block text-xs text-content-subtle">engaged since @DateText(since)</span>
+        }
+    </td>
+    <td>
+        @Details.Route.DisplayName() <span class="text-xs text-content-subtle">@Details.Reference @Provider</span>
+        <span class="block text-xs text-content-subtle">@CheckLine</span>
+        @if (Check.IsLate)
+        {
+            <Pill Tone="Tone.Negative" Class="mt-1">@RightToWorkRules.LateCheck</Pill>
+        }
+        @if (Gaps.Count > 0)
+        {
+            <span class="block text-xs text-warning mt-1">@(string.Join(", ", Gaps))</span>
+        }
+    </td>
+    <td>
+        <Pill Tone="@Expiry.Tone">@Expiry.Label</Pill>
+        @if (Details.FollowUpOn is { } followUp)
+        {
+            <span class="block text-xs text-content-subtle mt-1">follow up @DateText(followUp)</span>
+        }
+    </td>
+    <td>
+        <Pill Tone="@Outcome.Tone">@Outcome.Label</Pill>
+        @if (Check.EvidenceUploadId is { } evidence)
+        {
+            <a class="block text-xs text-info underline underline-offset-2 mt-1" href="@($"/api/form-uploads/{evidence}/file")"
+               target="_blank" rel="noopener" @onclick:stopPropagation="true">Evidence</a>
+        }
+        @if (Check.ConfirmedOn is { } confirmed)
+        {
+            <span class="block text-xs text-content-subtle mt-1">confirmed @DateText(confirmed)</span>
+        }
+        @if (Check.IsCleared && Check.ConfirmedOn is null)
+        {
+            <button type="button" class="btn-secondary mt-1" @onclick="OnConfirm" @onclick:stopPropagation="true">Send confirmation</button>
+        }
+    </td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public RightToWorkCheck Check { get; set; } = default!;
+    [Parameter, EditorRequired] public DateOnly Today { get; set; }
+    [Parameter] public EventCallback OnOpen { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+
+    private RightToWorkCheckDetails Details => Check.Details;
+
+    private (string Label, Tone Tone) Expiry => RightToWorkStanding.ExpiryOf(Details, Today);
+
+    private (string Label, Tone Tone) Outcome => RightToWorkStanding.OutcomeOf(Details);
+
+    private IReadOnlyList<string> Gaps =>
+        RightToWorkRules.IsDoNotStart(Details) ? Array.Empty<string>() : RightToWorkRules.GapsIn(Details);
+
+    private string Provider => Details.IdspProvider.Length > 0 ? $"({Details.IdspProvider})" : "";
+
+    private string CheckLine
+    {
+        get
+        {
+            var checkedBy = Details.CheckedByName.Length > 0 ? $" by {Details.CheckedByName}" : "";
+            var recorded = DateOnly.FromDateTime(Check.RecordedAt.LocalDateTime);
+            var entered = recorded != Details.CheckedOn ? $", entered {DateText(recorded)}" : "";
+            return $"{DateText(Details.CheckedOn)}{checkedBy}, {Details.SeenVia.DisplayName().ToLowerInvariant()}{entered}";
+        }
+    }
+}

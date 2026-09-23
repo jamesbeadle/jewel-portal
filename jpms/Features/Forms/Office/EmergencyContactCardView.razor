@@ -1,0 +1,56 @@
+@inject IQueryClient Queries
+
+<div class="flex flex-col gap-1 border border-line bg-surface p-4">
+    <div class="flex items-start justify-between gap-2">
+        <span class="text-base font-semibold text-content">@Card.PersonName</span>
+        <Pill>@Card.Company.DisplayName()</Pill>
+    </div>
+    <span class="text-sm text-content-muted">@Card.ContactName@(Card.Relationship.Length > 0 ? $" · {Card.Relationship}" : "")</span>
+    @if (Card.ContactPhone.Length > 0)
+    {
+        <a class="text-lg font-semibold text-info" href="@($"tel:{Card.ContactPhone.Replace(" ", "")}")">@Card.ContactPhone</a>
+    }
+    @if (Card.ContactEmail.Length > 0)
+    {
+        <a class="text-sm text-info underline underline-offset-2" href="@($"mailto:{Card.ContactEmail}")">@Card.ContactEmail</a>
+    }
+    @if (Card.ContactAddress.Length > 0)
+    {
+        <span class="text-sm text-content-muted whitespace-pre-line">@Card.ContactAddress</span>
+    }
+    <span class="text-xs text-content-subtle">Given @DateText(Card.SubmittedAt)@(Card.IsVerifiedLink ? "" : NotFromTheirLink)</span>
+    @if (Card.HasHealthAnswers && health is null)
+    {
+        <button type="button" class="btn-secondary mt-2 self-start" disabled="@isRevealing" @onclick="RevealAsync"
+                title="Each look is written to the audit trail.">Show health answers</button>
+    }
+    @if (health is { } answers)
+    {
+        <div class="mt-2 border-t border-line pt-2 space-y-1">
+            @foreach (var (key, answer) in answers)
+            {
+                <span class="block text-xs text-content-subtle">@LabelFor(key)</span>
+                <span class="block text-sm text-content whitespace-pre-line">@answer</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EmergencyContactCard Card { get; set; } = default!;
+
+    private IReadOnlyDictionary<string, string>? health;
+    private bool isRevealing;
+
+    private const string NotFromTheirLink = " · sent from the open form, not their own link";
+
+    private static string LabelFor(string key) => EmergencyContactForm.Definition.QuestionFor(key)?.Label ?? key;
+
+    private async Task RevealAsync()
+    {
+        isRevealing = true;
+        try { health = await Queries.AskAsync(new RevealHealthAnswers(Card.FormSubmissionId), CancellationToken.None); }
+        catch (Exception unreadable) when (unreadable is not OperationCanceledException) { health = null; }
+        isRevealing = false;
+    }
+}

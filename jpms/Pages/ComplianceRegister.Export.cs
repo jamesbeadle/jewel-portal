@@ -15,7 +15,8 @@ public partial class ComplianceRegister
             new ExcelColumn("Expires", ExcelFormat.Date),
             new ExcelColumn("PL cover (£)", ExcelFormat.Currency),
             new ExcelColumn("Below £5m PL"),
-            new ExcelColumn("Compliance"));
+            new ExcelColumn("Compliance"),
+            new ExcelColumn("On site at"));
 
         foreach (var row in rows)
         {
@@ -26,7 +27,8 @@ public partial class ComplianceRegister
                 row.ExpiresAt,
                 row.PublicLiabilityCover,
                 row.IsBelowPublicLiabilityRequirement ? "Yes" : "",
-                row.Status.DisplayName());
+                row.Status.DisplayName(),
+                string.Join(", ", row.OnSiteAt));
         }
         return workbook;
     }

@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.Subcontractors;
 
 namespace Jewel.JPMS.Api.Features.Subcontractors.Commands;
@@ -22,9 +23,18 @@ public sealed class SetComplianceDocumentDetailsHandler
         if (entity.SupersededAt is not null)
             throw new InvalidOperationException("That version has been superseded — the current version is the one to correct.");
 
+        var isANewExpiry = entity.ExpiresAt != command.ExpiresAt;
         entity.ExpiresAt = command.ExpiresAt;
         entity.PublicLiabilityCover = command.PublicLiabilityCover;
+        if (isANewExpiry) RestartTheRenewalChase(entity);
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();
+    }
+
+    /// <summary>A corrected expiry is a renewal the forms' chase has not asked for yet, so it starts again.</summary>
+    private static void RestartTheRenewalChase(ComplianceDocumentEntity entity)
+    {
+        entity.LastChasedAt = null;
+        entity.ChaseCount = 0;
     }
 }

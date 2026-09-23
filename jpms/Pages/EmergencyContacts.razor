@@ -1,0 +1,51 @@
+@page "/emergency-contacts"
+@using Jewel.JPMS.Contracts.Forms
+@using Jewel.JPMS.Features.Forms.Office
+@inject IQueryClient Queries
+@inject FormsPageEntry Entry
+
+<PageTitle>Emergency contacts · JPMS</PageTitle>
+
+<Page OpenTo="FormRoleSets.EmergencyContactReaders">
+    <PageHeader Subtitle="Each person's latest emergency contact, for whoever is on site when something happens.">
+        <Actions>
+            <SearchInput Value="@search" ValueChanged="typed => search = typed" Placeholder="Find a person" />
+        </Actions>
+    </PageHeader>
+
+    <LoadGate IsLoading="@(cards is null && !dataFailed)" Prominent="true" Label="Loading the contacts">
+        @if (dataFailed)
+        {
+            <Notice Tone="Tone.Negative">Couldn't load the emergency contacts — refresh to try again.</Notice>
+        }
+        @if (cards is not null && Shown.Count == 0)
+        {
+            <EmptyState Message="No emergency contacts yet. They arrive with each new starter's Emergency Contact Form." />
+        }
+        <div class="grid gap-3 grid-cols-[repeat(auto-fill,minmax(16rem,1fr))]">
+            @foreach (var card in Shown)
+            {
+                <EmergencyContactCardView @key="card.FormSubmissionId" Card="card" />
+            }
+        </div>
+    </LoadGate>
+</Page>
+
+@code {
+    private IReadOnlyList<EmergencyContactCard>? cards;
+    private bool dataFailed;
+    private string search = "";
+
+    private IReadOnlyList<EmergencyContactCard> Shown => (cards ?? Array.Empty<EmergencyContactCard>())
+        .Where(card => card.PersonName.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)
+            || card.ContactName.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var mayRead = await Entry.MayReadAsync(FormRoleSets.EmergencyContactReaders);
+        if (!mayRead) return;
+        try { cards = await Queries.AskAsync(new ListEmergencyContacts(), CancellationToken.None); }
+        catch { dataFailed = true; }
+    }
+}

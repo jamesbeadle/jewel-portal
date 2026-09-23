@@ -754,6 +754,64 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   store that names a person gets a period there, or a line in the processors document saying why
   it is kept for good.
 
+## The onboarding forms, for both Jewel companies (contracts + api + jpms + worker)
+
+- **The JPS Dashboard's forms, ported — not redesigned** (2026-09-23, the YBT goal "New starters and
+  sub-contractors complete their forms in the portal"). Nine definitions in
+  `contracts/Models/FormDefinitions` (the JBB questionnaire folded into the one questionnaire, which
+  takes `JewelBespokeBuildTitle` when sent for JBB; `subcontractor-jbb` still answers), their slugs the
+  dashboard's own addresses (`FormSlugs`). **A change to a field, a wording or a declaration is its own
+  YBT task decided by Jeremy — never edit a definition, `FormWording` or `FormSheetWording` in
+  passing.** The office's own words (screens, emails the dashboard did not send) are ours.
+- **The company travels with everything**: `JewelCompany` on every link, pack, submission and register
+  row, `JewelCompanies` its particulars (the footer, the emails' sender, Reply-To and alert addresses).
+  A JBB sub-contractor never signs a JPS document; the company is the controller of what is sent on
+  its forms (`docs/data-processors.md`).
+- **Public pages** `/f/{jbb|jps}/{form}` and `/f/{company}/pack/{token}` (`PublicForm`, `PublicFormPack`;
+  `LandingLayout`, raw `HttpClient`, no sign-in) talk to `api/Features/Forms/Public`. The sheet is the
+  dashboard's paper form (`.form-sheet` recipes: JPS blue + Outfit, JBB canvas + Poppins), so its inputs
+  are hand-written on purpose, as the imagine form's are. A draft lives in the browser
+  (`FormDraftStorage`); files upload one at a time BEFORE the form is sent, under the page's session
+  id, and belong to nobody until the form claims them — an unclaimed upload is the abandoned-form
+  signal the retention sweep clears after 18 months. Sending twice answers with the first receipt.
+- **Links**: a one-time link (`FormInvites`) or a new starter's pack (`FormPacks`, forms decided by
+  `FormPackPlanner`, 14 days kept alive 7 more on each use, 60 at most). Only the SHA-256 of a link's
+  secret is stored. A link is spent by SENDING, never by opening, and one opened while alive is still
+  honoured when sent. The office chases a pack from `/forms/packs`.
+- **Data protection is the code's, not the email's**: right-to-work and starter-checklist files live in
+  their own containers (`form-right-to-work`, `form-payroll-starters`, else `form-uploads`), read only by
+  `FormRoleSets.ReadersOf(store)`; `SensitiveAnswers` (the dashboard's SENSITIVE pattern + special
+  category) is never echoed in the person's copy or the office alert, and a restricted form's alert
+  carries no answers at all; an emergency form's health answers are withheld until revealed, each reveal
+  audited (`FormHealthAnswersRevealed`). **`RevealHealthAnswers` has no connector tool and never gets
+  one**; `get_form_submission` withholds the sensitive answers too. Recording a licence check deletes the
+  licence photograph and withholds the driving record (`RecordDrivingLicenceCheck`).
+- **The registers**: the right-to-work check is recorded against its NAMED checker
+  (`SaveRightToWorkCheck`, `RightToWorkRules` — the statutory excuse is the checker's, not the form's),
+  with the confirmation email (`SendRightToWorkConfirmation`); training certificates are accepted onto
+  the expiry register (`AcceptTrainingCertificate`); every NO on a workstation assessment is an action.
+- **Retention is carried out, not proposed**: `FormRetention` (Jeremy's periods from `lib/retention.js`)
+  run nightly by `worker/Forms/FormRetentionWorker` on linked api source — destroyed on the date, a
+  tombstone and `FormRecordsDestroyed` left behind; a clock starts only on a leaving date the office
+  records (Forms → People & companies, which also dates the person's checks and training records).
+  The renewal chase (`FormRenewalChase`, 07:30) asks for insurance and tickets before they lapse —
+  insurance only where the certificate came in on a form (`ComplianceDocuments.FormCompany`, the
+  company it asks in the name of); the rest of the directory was never promised a reminder.
+  Who is on site with lapsed cover is read, not chased: the compliance register's "On site,
+  insurance lapsed" chip is `ListCompaniesOnSite` (a Released work order on a project that is not
+  Completed) beside `ComplianceInsurance.HasLapsed` (a current certificate whose kind names
+  insurance, past its expiry) — connector `list_lapsed_cover_on_site` — and a company on site says
+  where under its name on every register row.
+  Adding an api file the sweep or chase needs means a `Compile Include` in the worker — run
+  `tools.worker_link_check`.
+- **Settings**: `Forms__Sender__<code>`, `Forms__OfficeAlert__<code>`, `Forms__AccidentAlert__<code>`
+  (semicolon-separated), `FormStorage__ConnectionString` (else DrawingsStorage, else AzureWebJobsStorage).
+  Migration `AddOnboardingForms`, script `add-onboarding-forms.sql`. Connector: 15 actions (the five
+  that email someone confirm-first) and 10 reads, pinned by `FormsConnectorTests`; page guides in
+  `FormsPageGuides`. The dashboard's `/forms/<slug>` addresses redirect to `/f/jps/<slug>` — all but
+  `subcontractor-jbb`, the JBB book's questionnaire, which goes to `/f/jbb/subcontractor` so a JBB
+  sub-contractor signs JBB's documents.
+
 ## An api file the worker compiles may only reach for what the worker compiles
 
 **Run `python3 -m tools.worker_link_check.check .` before committing anything under `api/`.** It

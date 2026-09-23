@@ -1,0 +1,24 @@
+@switch (Reading.Submission.FormSlug)
+{
+    case FormSlugs.TrainingCertificate:
+        <AcceptTrainingPanel Reading="Reading" OnChanged="OnChanged" />
+        break;
+    case FormSlugs.SubcontractorQuestionnaire:
+    case FormSlugs.InsuranceUpdate:
+        <FileToDirectoryPanel Reading="Reading" OnChanged="OnChanged" />
+        break;
+    case FormSlugs.CompanyVehicle:
+        <LicenceCheckPanel Reading="Reading" OnChanged="OnChanged" />
+        break;
+    case FormSlugs.RightToWork:
+        <RightToWorkFromFormPanel Reading="Reading" OnChanged="OnChanged" />
+        break;
+    case FormSlugs.WorkstationAssessment:
+        <WorkstationActionsPanel Reading="Reading" OnChanged="OnChanged" />
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public FormSubmissionReading Reading { get; set; } = default!;
+    [Parameter] public EventCallback OnChanged { get; set; }
+}

@@ -260,4 +260,14 @@ public sealed partial class JpmsContext : DbContext
 
     // Drawings and files attached to a request (site photos, marked-up details, linked revisions).
     public DbSet<RequestAttachmentEntity> RequestAttachments => Set<RequestAttachmentEntity>();
+
+    public DbSet<FormPackEntity> FormPacks => Set<FormPackEntity>();
+    public DbSet<FormInviteEntity> FormInvites => Set<FormInviteEntity>();
+    public DbSet<FormSubmissionEntity> FormSubmissions => Set<FormSubmissionEntity>();
+    public DbSet<FormUploadEntity> FormUploads => Set<FormUploadEntity>();
+    public DbSet<FormFolderEntity> FormFolders => Set<FormFolderEntity>();
+    public DbSet<RightToWorkCheckEntity> RightToWorkChecks => Set<RightToWorkCheckEntity>();
+    public DbSet<TrainingRecordEntity> TrainingRecords => Set<TrainingRecordEntity>();
+    public DbSet<WorkstationActionEntity> WorkstationActions => Set<WorkstationActionEntity>();
+    public DbSet<DrivingLicenceCheckEntity> DrivingLicenceChecks => Set<DrivingLicenceCheckEntity>();
 }

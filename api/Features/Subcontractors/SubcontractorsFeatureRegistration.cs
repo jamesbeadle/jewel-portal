@@ -18,6 +18,7 @@ public static class SubcontractorsFeatureRegistration
         services.AddScoped<IQueryHandler<ListTrades, IReadOnlyList<Trade>>, ListTradesHandler>();
         services.AddScoped<IQueryHandler<ListComplianceDocumentsForSubcontractor, IReadOnlyList<ComplianceDocument>>, ListComplianceDocumentsForSubcontractorHandler>();
         services.AddScoped<IQueryHandler<ListCurrentComplianceDocuments, IReadOnlyList<ComplianceDocument>>, ListCurrentComplianceDocumentsHandler>();
+        services.AddScoped<IQueryHandler<ListCompaniesOnSite, IReadOnlyList<CompanyOnSite>>, ListCompaniesOnSiteHandler>();
         services.AddScoped<IQueryHandler<GetSubcontractorStatement, SubcontractorStatement>, GetSubcontractorStatementHandler>();
 
         // The message itself, shared by the send and the preview so they cannot say two things.

@@ -1,0 +1,85 @@
+@page "/f/{Company}/pack/{Token}"
+@layout LandingLayout
+@using Jewel.JPMS.Contracts.Forms
+@using Jewel.JPMS.Features.Forms.Public
+@inject HttpClient Http
+
+<PageTitle>@PageTitleText</PageTitle>
+
+@if (Particulars is null)
+{
+    <div class="form-sheet">
+        <p class="form-sheet-problem pt-10">@FormSheetWording.NotAvailable</p>
+    </div>
+}
+@if (Particulars is { } company)
+{
+    <FormSheet Company="company" Title="@Title" Intro="@Intro">
+        @if (openProblem is { } unreachable)
+        {
+            <p class="form-sheet-problem mt-4">@unreachable</p>
+            <button type="button" class="btn-form-send" @onclick="OpenAsync">@FormSheetWording.TryAgain</button>
+        }
+        @if (OpenPack is { } pack)
+        {
+            <FormInvitationPanel PersonName="@pack.PersonName" />
+            @if (IsEverythingSent)
+            {
+                <FormDoneSheet Lead="@FormSheetWording.EverythingSent" />
+            }
+            @foreach (var form in pack.Forms)
+            {
+                <div class="form-sheet-card form-sheet-pack-row">
+                    <span class="font-semibold">@TitleOf(form)</span>
+                    @if (form.IsDone)
+                    {
+                        <span class="form-sheet-pack-state">@FormSheetWording.Sent</span>
+                    }
+                    @if (!form.IsDone)
+                    {
+                        <a class="btn-form-choose" href="@AddressOf(form)">@FormSheetWording.OpenThisForm</a>
+                    }
+                </div>
+            }
+        }
+    </FormSheet>
+}
+
+@code {
+    [Parameter] public string Company { get; set; } = "";
+    [Parameter] public string Token { get; set; } = "";
+
+    private PublicPackView? view;
+    private string? openProblem;
+
+    private JewelCompanyParticulars? Particulars => JewelCompanies.ForCode(Company);
+
+    private PublicPackView? OpenPack => view is { Problem: null } ? view : null;
+
+    private FormNotice? DeadLink => view?.Problem is { } problem ? FormWording.DeadLink(problem, Particulars!.Phone) : null;
+
+    private string Title => DeadLink?.Heading ?? FormSheetWording.PackTitle;
+
+    private string Intro => DeadLink?.Body ?? FormSheetWording.PackIntro(Particulars!.ShortName);
+
+    private string PageTitleText => Particulars is { } company ? $"{Title} - {company.ShortName}" : FormSheetWording.NotAvailable;
+
+    private bool IsEverythingSent => OpenPack is { Forms.Count: > 0 } pack && pack.Forms.All(form => form.IsDone);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Particulars is not null) await OpenAsync();
+    }
+
+    private async Task OpenAsync()
+    {
+        openProblem = null;
+        var answer = await PublicFormRequests.OpenPackAsync(Http, Particulars!.Code, Token);
+        openProblem = answer.Problem;
+        view = answer.Value;
+    }
+
+    private string TitleOf(PublicPackForm form) => FormCatalogue.For(form.FormSlug)?.TitleFor(Particulars!.Company) ?? form.FormSlug;
+
+    private string AddressOf(PublicPackForm form) => $"/f/{Particulars!.Code}/{form.FormSlug}?p={Uri.EscapeDataString(Token)}";
+}

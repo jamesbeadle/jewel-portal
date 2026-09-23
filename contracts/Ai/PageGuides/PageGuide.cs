@@ -37,6 +37,7 @@ public static class PageGuideCatalogue
             .Concat(FinancePageGuides.Guides)
             .Concat(SitePageGuides.Guides)
             .Concat(OfficePageGuides.Guides)
+            .Concat(FormsPageGuides.Guides)
             .ToList();
 
     /// <summary>The guide for a route — template or concrete — or null. Query strings ignored.

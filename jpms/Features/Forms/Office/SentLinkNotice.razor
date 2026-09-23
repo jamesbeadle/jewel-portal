@@ -1,0 +1,20 @@
+@if (Sent is { } sent)
+{
+    <Notice Tone="@(sent.IsEmailed ? Tone.Positive : Tone.Warning)" Class="mb-4" Dismissible OnDismiss="OnDismiss">
+        @if (sent.IsEmailed)
+        {
+            <span>Sent to @sent.Email.</span>
+        }
+        @if (!sent.IsEmailed)
+        {
+            <span class="block">@sent.EmailProblem</span>
+            <span class="block mt-1">Send them this link yourself:</span>
+            <span class="block mt-1 break-all select-all">@sent.Link</span>
+        }
+    </Notice>
+}
+
+@code {
+    [Parameter] public SentLinkOutcome? Sent { get; set; }
+    [Parameter] public EventCallback OnDismiss { get; set; }
+}

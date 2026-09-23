@@ -1,0 +1,21 @@
+<ul class="space-y-1">
+    @foreach (var file in Files)
+    {
+        <li>
+            @if (file.DeletedAt is null)
+            {
+                <a class="text-info underline underline-offset-2" href="@($"/api/form-uploads/{file.FormUploadId}/file")"
+                   target="_blank" rel="noopener">@file.FileName</a>
+                <span class="text-xs text-content-subtle">@FormatSize(file.Size)</span>
+            }
+            @if (file.DeletedAt is { } deletedAt)
+            {
+                <span class="text-content-subtle">@file.FileName — deleted @DateText(deletedAt): @file.DeletionReason</span>
+            }
+        </li>
+    }
+</ul>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<FormUploadedFile> Files { get; set; } = Array.Empty<FormUploadedFile>();
+}

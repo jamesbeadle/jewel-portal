@@ -238,7 +238,7 @@ public sealed class McpEndpoint
             actorEmail: user.Email,
             action: name,
             outcome: ok ? AgentOutcome.Ok : AgentOutcome.Failed,
-            summary: Summarise(name, arguments.RootElement),
+            summary: McpCallSummary.Of(name, arguments.RootElement),
             cancellationToken,
             toolsUsed: new[] { name },
             durationMs: (int)stopwatch.ElapsedMilliseconds);
@@ -265,15 +265,6 @@ public sealed class McpEndpoint
             content = new object[] { new { type = "text", text = output } },
             isError = !ok
         });
-    }
-
-    /// <summary>"list_requests {"projectId":"…"} " — enough to reconstruct what was asked without
-    /// storing whole payloads.</summary>
-    private static string Summarise(string toolName, JsonElement arguments)
-    {
-        var raw = arguments.GetRawText();
-        if (raw.Length > 600) raw = raw[..600] + "…";
-        return $"MCP tool call {toolName} {raw}";
     }
 
     // ---- JSON-RPC plumbing ---------------------------------------------------------------------

@@ -1,0 +1,54 @@
+@if (Question.Kind == FormQuestionKind.Section)
+{
+    <div class="form-sheet-section">
+        <div class="form-sheet-section-title"><h2>@Question.Label</h2></div>
+        @if (Question.Hint.Length > 0)
+        {
+            <p class="form-sheet-hint mt-2">@Question.Hint</p>
+        }
+    </div>
+}
+@if (IsAskedNow)
+{
+    <div class="form-sheet-card">
+        @if (Question.Kind == FormQuestionKind.Declaration)
+        {
+            <label class="form-sheet-tick-row @RequiredClass">
+                <input type="checkbox" class="form-sheet-tick" checked="@IsTicked" @onchange="TickedAsync" />
+                <span>@Question.Label</span>
+            </label>
+        }
+        @if (Question.Kind != FormQuestionKind.Declaration)
+        {
+            <label class="form-sheet-label @RequiredClass" for="@InputId">@Question.Label</label>
+            @if (Question.Hint.Length > 0)
+            {
+                <p class="form-sheet-hint">@Question.Hint</p>
+            }
+            <FormAnswerInput Form="Form" Question="Question" Draft="Draft" CompanyCode="@CompanyCode" InputId="@InputId" OnChanged="OnChanged" />
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public FormDefinition Form { get; set; } = default!;
+    [Parameter, EditorRequired] public FormQuestion Question { get; set; } = default!;
+    [Parameter, EditorRequired] public FormDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public string CompanyCode { get; set; } = "";
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool IsAskedNow => Question.IsAsked && Question.IsShownFor(Draft.Answers);
+
+    private bool IsTicked => Draft.AnswerTo(Question.Key) == FormWording.Yes;
+
+    private string RequiredClass => Question.IsRequired ? "form-sheet-label-required" : "";
+
+    private string InputId => "question-" + Question.Key;
+
+    private async Task TickedAsync(ChangeEventArgs ticked)
+    {
+        var isTicked = ticked.Value is true;
+        Draft.Answer(Form, Question.Key, isTicked ? FormWording.Yes : "");
+        await OnChanged.InvokeAsync();
+    }
+}

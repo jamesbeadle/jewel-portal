@@ -1,0 +1,57 @@
+@page "/forms/right-to-work"
+@using Jewel.JPMS.Contracts.Forms
+@using Jewel.JPMS.Features.Forms.Office
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+@inject FormsPageEntry Entry
+@inject AuthService Auth
+
+<PageTitle>Right to work · JPMS</PageTitle>
+
+<Page OpenTo="FormRoleSets.RightToWorkReaders" AccessDeniedMessage="The right to work register is for the people who carry out the checks.">
+    <PageHeader Subtitle="Every individual we engage, before their first day — employees and individual subcontractors, British citizens included.">
+        <Actions>
+            <FilterChips Items="Chips" Selected="@filter" OnSelect="key => filter = key" Disabled="@(checks is null)" AriaLabel="Engagement" />
+        </Actions>
+        <Primary>
+            <button type="button" class="btn-primary" @onclick="RecordNew">Record a check</button>
+        </Primary>
+    </PageHeader>
+
+    <FormsTabs ActiveKey="@FormsTabs.RightToWork" />
+    <TableNote IsLead="true" Class="mb-4">@Explainer</TableNote>
+    @if (NeedsALook is { } summary)
+    {
+        <Notice Tone="Tone.Warning" Class="mb-4">@summary</Notice>
+    }
+    @if (write.Problem is { } problem)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-4" Dismissible OnDismiss="write.Forget">@problem</Notice>
+    }
+
+    <RecordsTable Dense="true" MaxHeight="" IsLoading="@(checks is null && !dataFailed)" IsEmpty="@(Rows.Count == 0)" EmptyMessage="@EmptyMessage">
+        <thead>
+            <tr>
+                <th>Who</th>
+                <th>Engaged</th>
+                <th>Check</th>
+                <th>Expiry</th>
+                <th>Outcome</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var check in Rows)
+            {
+                <RightToWorkCheckRow @key="check.RightToWorkCheckId" Check="check" Today="today"
+                                     OnOpen="() => Correct(check)" OnConfirm="() => confirming = check" />
+            }
+        </tbody>
+    </RecordsTable>
+
+    <RightToWorkCheckModal Draft="editing" OnSaved="ClosedAsync" OnClose="ClosedAsync" />
+    <ConfirmDialog IsOpen="confirming is not null" Title="Send the confirmation?" ConfirmLabel="Send it" Busy="@write.IsBusy"
+                   OnConfirm="ConfirmAsync" OnCancel="() => confirming = null">
+        Email @confirming?.Details.PersonName at @confirming?.Details.Email to confirm the check was completed on
+        @DateText(confirming?.Details.CheckedOn)?
+    </ConfirmDialog>
+</Page>

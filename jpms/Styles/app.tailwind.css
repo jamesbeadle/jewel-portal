@@ -599,3 +599,85 @@
     color: theme('colors.content.faint');
     pointer-events: none;
 }
+
+/* The public forms (/f/{company}/…) — the company's own paper, not the portal's dark workspace.
+   A new starter or a sub-contractor opens one on a phone, often outdoors, so the sheet is light
+   and the controls are large, carried from the JPS Dashboard's forms (api/pubforms.js). The one
+   thing that differs between the two companies is the accent and the type: Jewel Property Serve
+   keeps its blue and Outfit, Jewel Bespoke Build wears the canvas black and Poppins, and both
+   carry the gold their logos share. Written outside @layer so the company class, which the page
+   picks at run time, is never purged. */
+@font-face {
+    font-family: 'Outfit';
+    src: url('/fonts/Outfit-Variable.woff2') format('woff2-variations');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+.form-sheet {
+    @apply min-h-dvh bg-paper text-paper-ink;
+    --form-accent: theme('colors.canvas');
+    --form-accent-deep: theme('colors.surface.DEFAULT');
+}
+
+.form-sheet-jps {
+    font-family: theme('fontFamily.outfit');
+    --form-accent: theme('colors.jps.blue');
+    --form-accent-deep: theme('colors.jps.blue-deep');
+}
+
+.form-sheet-jbb {
+    font-family: theme('fontFamily.sans');
+}
+
+.form-sheet-column { @apply mx-auto max-w-[640px] pb-[70px]; }
+.form-sheet-logo-bar { @apply border-b border-paper-line bg-paper-card px-5 pb-3 pt-4 text-center leading-none; }
+.form-sheet-logo { @apply mx-auto block h-auto max-h-[56px] w-auto max-w-[220px]; }
+.form-sheet-hero { @apply border-b-4 border-jewel-gold px-5 pb-[18px] pt-[22px] text-white; background-color: var(--form-accent); }
+.form-sheet-kicker { @apply text-xs uppercase opacity-85; letter-spacing: 2px; }
+.form-sheet-title { @apply mb-1.5 mt-1 text-2xl font-semibold leading-tight; }
+.form-sheet-intro { @apply text-sm leading-normal opacity-90; }
+.form-sheet-invitation { @apply mx-4 mt-4 rounded-[10px] border border-jps-soft-line bg-jps-soft px-4 py-3.5 text-sm leading-normal; }
+.form-sheet-invitation-note { @apply mt-1 block text-[13px] text-paper-hint; }
+.form-sheet-section { @apply mx-4 mt-[26px]; }
+.form-sheet-section-title { @apply border-b-2 border-jewel-gold pb-1.5 text-base font-semibold; color: var(--form-accent); }
+.form-sheet-card { @apply mx-4 mt-3.5 rounded-[14px] border border-paper-line bg-paper-card p-3.5; }
+.form-sheet-label { @apply mb-0.5 block text-[15px] font-semibold leading-snug; }
+.form-sheet-label-required::after { content: " *"; color: theme('colors.paper.error'); }
+.form-sheet-hint { @apply mb-2 mt-0 text-[13px] leading-snug text-paper-hint; }
+.form-sheet-input {
+    @apply w-full rounded-[10px] border border-paper-line bg-paper-card px-3 py-[11px] text-base text-paper-ink;
+    font-family: inherit;
+}
+.form-sheet-input:focus { outline: 3px solid theme('colors.jps.soft-line'); border-color: var(--form-accent); }
+.form-sheet-tick-row { @apply flex cursor-pointer items-start gap-2.5 text-sm font-medium leading-normal; }
+.form-sheet .form-sheet-tick { @apply m-0 h-[22px] w-[22px] flex-none border-paper-line bg-paper-card; accent-color: var(--form-accent); }
+.form-sheet-drop { @apply rounded-[10px] border-[1.5px] border-dashed border-paper-dashed p-3.5 text-center; }
+.form-sheet-files { @apply mt-2 list-none p-0 text-left text-[13px] text-paper-filed; }
+.form-sheet-file-problem { @apply text-paper-error; }
+.form-sheet-error { @apply mt-1.5 text-[13px] text-paper-error; }
+.form-sheet-signature-pad { @apply block h-40 w-full touch-none rounded-[10px] border-[1.5px] border-dashed border-paper-dashed bg-paper-card; }
+.form-sheet-problem { @apply mx-4 mb-3.5 text-sm text-paper-error; }
+.form-sheet-privacy { @apply mx-4 mt-[18px] text-xs leading-normal text-paper-hint; }
+.form-sheet-done { @apply mx-4 mt-10 rounded-[14px] border border-paper-line bg-paper-card p-[26px] text-center; }
+.form-sheet-done-tick { @apply mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-paper-done text-[32px] text-white; }
+.form-sheet-done-title { @apply mb-1.5 text-2xl font-semibold text-paper-strong; }
+.form-sheet-done-steps { @apply mt-3.5 list-decimal pl-5 text-left text-sm leading-[1.7] text-paper-hint; }
+.form-sheet-pack-row { @apply flex items-center justify-between gap-3; }
+.form-sheet-pack-state { @apply text-[13px] font-semibold text-paper-done; }
+.form-sheet-footer { @apply mx-4 mb-9 mt-7 border-t border-paper-line pt-4 text-center text-xs leading-[1.65] text-paper-hint; }
+.form-sheet-footer a { @apply no-underline; color: var(--form-accent); }
+.form-sheet-socials a { @apply mx-2 mt-2 inline-block font-semibold; }
+
+.btn-form-send {
+    @apply mx-4 my-5 block w-[calc(100%-32px)] cursor-pointer rounded-xl border-0 p-[15px] text-[17px] font-bold text-white disabled:opacity-60;
+    background-color: var(--form-accent);
+}
+.btn-form-send:active { background-color: var(--form-accent-deep); }
+.btn-form-choose {
+    @apply cursor-pointer rounded-[10px] border bg-paper-card px-3.5 py-[9px] text-[15px] font-semibold disabled:opacity-60;
+    border-color: var(--form-accent);
+    color: var(--form-accent);
+}
+.btn-form-clear { @apply mt-1.5 cursor-pointer rounded-lg border border-paper-line bg-paper-card px-3 py-1.5 text-[13px] text-paper-ink; }

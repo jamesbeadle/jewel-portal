@@ -1,0 +1,13 @@
+@implements IDisposable
+@inject IJSRuntime JS
+
+<div>
+    <input type="text" class="form-sheet-input mb-2" placeholder="@FormSheetWording.TypeYourName" autocomplete="name"
+           maxlength="@PublicFormLimits.LongestAnswer" value="@TypedName" @oninput="NameTyped" @onchange="OnChanged" />
+    <canvas @ref="canvas" class="form-sheet-signature-pad"></canvas>
+    <button type="button" class="btn-form-clear" @onclick="ClearAsync">@FormSheetWording.ClearSignature</button>
+    @if (isUnavailable)
+    {
+        <div class="form-sheet-error">@FormSheetWording.SignatureUnavailable</div>
+    }
+</div>

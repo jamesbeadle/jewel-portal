@@ -258,6 +258,32 @@ public static class NavigationRoles
     // user per browser before a single message is sent, and every turn is logged against the
     // sender's name in AgentActivity.
     //
+    /// <summary>Who works the forms — sends them, chases the packs, reads what comes back. Mirrors the API's FormRoleSets.Office.</summary>
+    public static readonly Role[] FormRoles =
+    {
+        Role.ManagingDirector,
+        Role.FinanceDirector,
+        Role.ProjectManager,
+        Role.OfficeComplianceCoordinator,
+        Role.OfficeAdmin,
+        Role.Accounts
+    };
+
+    /// <summary>
+    /// Who reaches the emergency contacts: the office and whoever is on site when something happens.
+    /// Mirrors the API's FormRoleSets.EmergencyContactReaders.
+    /// </summary>
+    public static readonly Role[] EmergencyContactRoles =
+    {
+        Role.ManagingDirector,
+        Role.FinanceDirector,
+        Role.ProjectManager,
+        Role.SiteManager,
+        Role.HealthSafetyOfficer,
+        Role.OfficeComplianceCoordinator,
+        Role.OfficeAdmin
+    };
+
     // Mirrors the API's AiRoles.AllowedToUseAssistant — keep the two lists in step.
     public static readonly Role[] AssistantRoles =
     {

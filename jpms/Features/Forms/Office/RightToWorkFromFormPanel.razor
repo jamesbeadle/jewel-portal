@@ -1,0 +1,35 @@
+@inject FormsPageEntry Entry
+@inject AuthService Auth
+
+@if (Entry.Admits(FormRoleSets.RightToWorkReaders) && Reading.Submission.Status != FormSubmissionStatus.Handled)
+{
+    <Notice Tone="Tone.Info" Class="mb-4">
+        <span>
+            This form collects; it is not the check. Record the check against your own name once the original passport has been seen
+            with them present, or their share code run online.
+        </span>
+        <button type="button" class="btn-secondary ml-2" @onclick="Open">Record the check…</button>
+    </Notice>
+}
+
+<RightToWorkCheckModal Draft="draft" OnSaved="SavedAsync" OnClose="() => draft = null" />
+
+@code {
+    [Parameter, EditorRequired] public FormSubmissionReading Reading { get; set; } = default!;
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private RightToWorkCheckDraft? draft;
+
+    private void Open()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var details = RightToWorkForm.CheckFrom(Reading.Submission, Reading.View.Answers, Auth.CurrentUser?.DisplayName ?? "", today);
+        draft = RightToWorkCheckDraft.Of(details, null, null);
+    }
+
+    private async Task SavedAsync()
+    {
+        draft = null;
+        await OnChanged.InvokeAsync();
+    }
+}

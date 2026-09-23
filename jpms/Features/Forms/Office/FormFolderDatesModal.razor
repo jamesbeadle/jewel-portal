@@ -1,0 +1,61 @@
+@inject ICommandSender Commands
+
+<Modal IsOpen="Folder is not null" Title="@Folder?.Name" ConfirmLabel="@(write.IsBusy ? "Saving…" : "Save")"
+       ConfirmDisabled="@write.IsBusy" OnConfirm="SaveAsync" OnCancel="OnClose" Class="max-w-lg w-full">
+    @if (write.Problem is { } problem)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@problem</Notice>
+    }
+    @if (DueTonight is { } warning)
+    {
+        <Notice Tone="Tone.Warning" Class="mb-3">@warning</Notice>
+    }
+    <div class="space-y-3">
+        <FormField Label="Their engagement ended on"
+                   Hint="Starts the retention clocks: right-to-work evidence two years on, everything else six. A leaver with no date is never destroyed.">
+            <input type="date" class="field" value="@engagementEndedOn" @onchange="chosen => engagementEndedOn = chosen.Value?.ToString() ?? string.Empty" />
+        </FormField>
+        <FormField Label="Company vehicle returned on" Hint="Starts the six years their licence details are kept for the insurer.">
+            <input type="date" class="field" value="@vehicleReturnedOn" @onchange="chosen => vehicleReturnedOn = chosen.Value?.ToString() ?? string.Empty" />
+        </FormField>
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public FormFolder? Folder { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private const string EverythingGoes = "That date is long enough ago that saving it destroys the forms filed here tonight.";
+    private const string RightToWorkGoes = "That date is over two years ago: saving it destroys their right-to-work records tonight.";
+    private readonly FormWrite write = new();
+    private string engagementEndedOn = "";
+    private string vehicleReturnedOn = "";
+    private string? shownFor;
+
+    protected override void OnParametersSet()
+    {
+        var isANewFolder = Folder is not null && Folder.FormFolderId != shownFor;
+        shownFor = Folder?.FormFolderId;
+        if (!isANewFolder) return;
+        engagementEndedOn = FormDates.Write(Folder!.EngagementEndedOn);
+        vehicleReturnedOn = FormDates.Write(Folder.VehicleReturnedOn);
+    }
+
+    private string? DueTonight =>
+        FormDates.Read(engagementEndedOn) is { } endedOn ? WarningFor(endedOn, DateOnly.FromDateTime(DateTime.Today)) : null;
+
+    private static string? WarningFor(DateOnly endedOn, DateOnly today)
+    {
+        var isEverythingDue = endedOn.AddMonths(FormRetention.KeptMonths) <= today;
+        var isRightToWorkDue = endedOn.AddMonths(FormRetention.RightToWorkMonths) <= today;
+        return isEverythingDue ? EverythingGoes : isRightToWorkDue ? RightToWorkGoes : null;
+    }
+
+    private async Task SaveAsync()
+    {
+        var command = new RecordFormFolderDates(Folder!.FormFolderId, FormDates.Read(engagementEndedOn), FormDates.Read(vehicleReturnedOn));
+        var isSaved = await write.RunAsync(() => Commands.SendAsync(command, CancellationToken.None));
+        if (isSaved) await OnSaved.InvokeAsync();
+    }
+}

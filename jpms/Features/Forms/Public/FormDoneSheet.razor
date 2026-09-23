@@ -1,0 +1,21 @@
+<div class="form-sheet-done">
+    <div class="form-sheet-done-tick">✓</div>
+    <div class="form-sheet-done-title"><h2>@FormWording.ThankYou</h2></div>
+    <p>@Lead</p>
+    <ol class="form-sheet-done-steps">
+        @foreach (var step in FormWording.WhatHappensNext)
+        {
+            <li>@step</li>
+        }
+    </ol>
+    <p class="mt-4 text-sm">@FormWording.ChangeByPhone</p>
+    @if (BackAddress is { } address)
+    {
+        <a class="btn-form-choose mt-5 inline-block" href="@address">@FormSheetWording.BackToYourForms</a>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Lead { get; set; } = "";
+    [Parameter] public string? BackAddress { get; set; }
+}

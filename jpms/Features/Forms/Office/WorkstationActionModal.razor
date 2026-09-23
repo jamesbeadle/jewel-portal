@@ -1,0 +1,52 @@
+@inject ICommandSender Commands
+
+<Modal IsOpen="ToClose is not null" Title="Close the action" ConfirmLabel="@(write.IsBusy ? "Saving…" : "Close it")"
+       ConfirmDisabled="@write.IsBusy" OnConfirm="SaveAsync" OnCancel="OnClose" Class="max-w-lg w-full">
+    @if (write.Problem is { } problem)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@problem</Notice>
+    }
+    <p class="text-sm text-content mb-1">@ToClose?.Action</p>
+    <p class="text-xs text-content-subtle mb-3">@ToClose?.PersonName · @ToClose?.Workstation</p>
+    <div class="space-y-3">
+        <FormField Label="Closed as" Required>
+            <select class="field" value="@((int)state)" @onchange="Choose">
+                <option value="@((int)WorkstationActionState.Fixed)">@WorkstationActionState.Fixed.DisplayName()</option>
+                <option value="@((int)WorkstationActionState.Accepted)">@WorkstationActionState.Accepted.DisplayName()</option>
+            </select>
+        </FormField>
+        <FormField Label="What was done, or why it stands" Required="@(state == WorkstationActionState.Accepted)">
+            <textarea class="field" rows="3" maxlength="1000" value="@note" @oninput="typed => note = typed.Value?.ToString() ?? string.Empty"></textarea>
+        </FormField>
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public WorkstationAction? ToClose { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private readonly FormWrite write = new();
+    private WorkstationActionState state = WorkstationActionState.Fixed;
+    private string note = "";
+    private string? shownFor;
+
+    protected override void OnParametersSet()
+    {
+        var isANewAction = ToClose is not null && ToClose.WorkstationActionId != shownFor;
+        shownFor = ToClose?.WorkstationActionId;
+        if (!isANewAction) return;
+        state = WorkstationActionState.Fixed;
+        note = "";
+    }
+
+    private void Choose(ChangeEventArgs chosen) =>
+        state = int.TryParse(chosen.Value?.ToString(), out var picked) ? (WorkstationActionState)picked : state;
+
+    private async Task SaveAsync()
+    {
+        var command = new ResolveWorkstationAction(ToClose!.WorkstationActionId, state, note.Trim());
+        var isSaved = await write.RunAsync(() => Commands.SendAsync(command, CancellationToken.None));
+        if (isSaved) await OnSaved.InvokeAsync();
+    }
+}

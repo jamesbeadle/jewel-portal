@@ -1,0 +1,44 @@
+<SectionHeader Title="What they sent">
+    <Actions>
+        @if (Reading.HasHiddenAnswers && CanReveal)
+        {
+            <button type="button" class="btn-secondary" disabled="@IsRevealing" @onclick="OnReveal"
+                    title="Each look is written to the audit trail.">Show health answers</button>
+        }
+    </Actions>
+</SectionHeader>
+<RecordsTable Dense="true" MaxHeight="" Class="mb-6">
+    <tbody>
+        @foreach (var question in Questions)
+        {
+            @if (question.Kind == FormQuestionKind.Section)
+            {
+                <tr @key="question.Key"><td colspan="2" class="font-semibold text-content">@question.Label</td></tr>
+            }
+            @if (question.IsAsked)
+            {
+                <tr @key="question.Key">
+                    <td class="w-1/3 text-content-subtle">@question.Label</td>
+                    <td><FormAnswerValue Reading="Reading" Question="question" /></td>
+                </tr>
+            }
+        }
+        @if (Reading.OtherFiles.Count > 0)
+        {
+            <tr>
+                <td class="w-1/3 text-content-subtle">Other files</td>
+                <td><FormFileLinks Files="Reading.OtherFiles" /></td>
+            </tr>
+        }
+    </tbody>
+</RecordsTable>
+
+@code {
+    [Parameter, EditorRequired] public FormSubmissionReading Reading { get; set; } = default!;
+    [Parameter] public bool CanReveal { get; set; }
+    [Parameter] public bool IsRevealing { get; set; }
+    [Parameter] public EventCallback OnReveal { get; set; }
+
+    private IEnumerable<FormQuestion> Questions =>
+        (Reading.Form?.Questions ?? Array.Empty<FormQuestion>()).Where(question => !question.IsAsked || Reading.IsWorthShowing(question));
+}

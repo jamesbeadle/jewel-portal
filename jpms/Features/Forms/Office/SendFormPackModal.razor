@@ -1,0 +1,31 @@
+@inject ICommandSender Commands
+
+<Modal IsOpen="IsOpen" Title="Send a new starter pack" ConfirmLabel="@(write.IsBusy ? "Sending…" : "Send the pack")"
+       ConfirmDisabled="@(write.IsBusy || !IsReady)" OnConfirm="SendAsync" OnCancel="OnClose" Class="max-w-lg w-full">
+    @if (write.Problem is { } problem)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@problem</Notice>
+    }
+    <div class="space-y-3">
+        <FormChoiceSelect TChoice="JewelCompany" Label="Sent for" Required @bind-Value="company" Placeholder="@FormDisplayNames.NotYetChosen"
+                          Describe="choice => choice.DisplayName()" />
+        <FormField Label="Their full name" Required Value="@personName" OnChange="typed => personName = typed" />
+        <FormField Label="Their email" Required Value="@email" OnChange="typed => email = typed" InputType="email" />
+        <FormChoiceSelect TChoice="Engagement" Label="Engaged as" Required @bind-Value="engagedAs" Placeholder="@FormDisplayNames.NotYetChosen"
+                          Describe="choice => choice.DisplayName()" />
+        @if (engagedAs == Engagement.Employee)
+        {
+            <Checkbox @bind-Value="hasP45" Label="They have a P45 from their last job" />
+        }
+        <Checkbox @bind-Value="isWorkingAtAScreen" Label="They will work at a screen" />
+        <Checkbox @bind-Value="isGettingAVehicle" Label="They are getting a company vehicle" />
+        <Checkbox @bind-Value="mustHoldATicket" Label="Their role needs a ticket or certificate" />
+        @if (IsPlanned)
+        {
+            <TableNote>
+                One link, one email. The pack asks for: @(string.Join(", ", PlannedTitles)). It lasts fourteen days, a little longer
+                each time they use it, and what they send is kept.
+            </TableNote>
+        }
+    </div>
+</Modal>

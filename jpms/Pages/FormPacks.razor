@@ -1,0 +1,66 @@
+@page "/forms/packs"
+@using Jewel.JPMS.Contracts.Forms
+@using Jewel.JPMS.Features.Forms.Office
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+@inject FormsPageEntry Entry
+
+<PageTitle>New starter packs · JPMS</PageTitle>
+
+<Page OpenTo="FormRoleSets.Office">
+    <PageHeader Subtitle="One link per new starter: every form they owe, done and outstanding, on one line.">
+        <Actions>
+            <FilterChips Items="Chips" Selected="@filter" OnSelect="key => filter = key" Disabled="@(packs is null)" AriaLabel="Packs" />
+        </Actions>
+        <Primary>
+            <button type="button" class="btn-primary" @onclick="() => isSending = true">Send a pack</button>
+        </Primary>
+    </PageHeader>
+
+    <FormsTabs ActiveKey="@FormsTabs.Packs" />
+    <SentLinkNotice Sent="sent" OnDismiss="() => sent = null" />
+    @if (write.Problem is { } problem)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-4" Dismissible OnDismiss="write.Forget">@problem</Notice>
+    }
+
+    <RecordsTable Dense="true" MaxHeight="" IsLoading="@(packs is null && !dataFailed)" IsEmpty="@(Rows.Count == 0)" EmptyMessage="@EmptyMessage">
+        <thead>
+            <tr>
+                <th>New starter</th>
+                <th>Company</th>
+                <th>Engaged as</th>
+                <th>Forms</th>
+                <th>Sent</th>
+                <th>Link lasts until</th>
+                <th>Chased</th>
+                <th>Standing</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var pack in Rows)
+            {
+                var standing = FormPackStanding.Of(pack, now);
+                <tr @key="pack.FormPackId">
+                    <td>@pack.PersonName<span class="block text-xs text-content-subtle">@pack.Email</span></td>
+                    <td class="whitespace-nowrap">@pack.Company.DisplayName()</td>
+                    <td class="whitespace-nowrap">@pack.EngagedAs.DisplayName()</td>
+                    <td><FormPackForms Pack="pack" Now="now" /></td>
+                    <td class="whitespace-nowrap">@DateText(pack.SentAt)<span class="block text-xs text-content-subtle">@pack.SentByName</span></td>
+                    <td class="whitespace-nowrap">@DateText(pack.ExpiresAt)</td>
+                    <td class="whitespace-nowrap">@FormPackStanding.ChaseText(pack)</td>
+                    <td><Pill Tone="@standing.Tone">@standing.Label</Pill></td>
+                    <td class="text-right"><DropdownMenu Items="MenuFor(pack)" Disabled="@write.IsBusy" /></td>
+                </tr>
+            }
+        </tbody>
+    </RecordsTable>
+
+    <SendFormPackModal IsOpen="isSending" OnSent="PackSentAsync" OnClose="() => isSending = false" />
+
+    <ConfirmDialog IsOpen="cancelling is not null" Title="Cancel this pack?" ConfirmLabel="Cancel the pack" Danger="true"
+                   Busy="@write.IsBusy" OnConfirm="CancelAsync" OnCancel="() => cancelling = null">
+        The link stops working. The forms @cancelling?.PersonName has already sent stay on record.
+    </ConfirmDialog>
+</Page>

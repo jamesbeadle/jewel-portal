@@ -59,10 +59,12 @@ public sealed class AzureBlobFileStore
             download.Value.Details.ContentLength);
     }
 
-    public async Task DeleteAsync(string blobRef, CancellationToken cancellationToken)
+    /// <summary>Deletes the file, answering whether there was one there to delete.</summary>
+    public async Task<bool> DeleteAsync(string blobRef, CancellationToken cancellationToken)
     {
         var blob = container.GetBlobClient(blobRef);
-        await blob.DeleteIfExistsAsync(cancellationToken: cancellationToken);
+        var deletion = await blob.DeleteIfExistsAsync(cancellationToken: cancellationToken);
+        return deletion.Value;
     }
 
     /// <summary>A file name safe to put in a blob key: the bare name, with a fallback when blank.</summary>

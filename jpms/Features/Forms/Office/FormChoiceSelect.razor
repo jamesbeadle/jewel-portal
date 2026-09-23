@@ -1,0 +1,34 @@
+@using System.Globalization
+@typeparam TChoice where TChoice : struct, Enum
+
+<FormField Label="@Label" Required="@Required" Hint="@Hint">
+    <select class="field" value="@Selected" @onchange="ChosenAsync">
+        @if (Placeholder is { } placeholder)
+        {
+            <option value="">@placeholder</option>
+        }
+        @foreach (var choice in Enum.GetValues<TChoice>())
+        {
+            <option value="@Convert.ToInt32(choice)">@Describe(choice)</option>
+        }
+    </select>
+</FormField>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter] public bool Required { get; set; }
+    [Parameter] public string? Hint { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public TChoice? Value { get; set; }
+    [Parameter] public EventCallback<TChoice?> ValueChanged { get; set; }
+    [Parameter, EditorRequired] public Func<TChoice, string> Describe { get; set; } = choice => choice.ToString();
+
+    private string Selected => Value is { } chosen ? Convert.ToInt32(chosen).ToString(CultureInfo.InvariantCulture) : "";
+
+    private Task ChosenAsync(ChangeEventArgs chosen)
+    {
+        var isAChoice = int.TryParse(chosen.Value?.ToString(), out var picked);
+        TChoice? choice = isAChoice ? (TChoice)Enum.ToObject(typeof(TChoice), picked) : null;
+        return ValueChanged.InvokeAsync(choice);
+    }
+}

@@ -114,7 +114,9 @@ public static class ProcurementPageGuides
             "Every directory company's current compliance documents in ONE list, worst first — "
             + "Expired, Expiring soon (inside 30 days), Missing (a company with nothing on file is a "
             + "row), then Current — with search (company, trade, document), a status chip row with "
-            + "counts, and an Excel export that can ignore the search and filter. Rows open the "
+            + "counts (the last, \"On site, insurance lapsed\", is the companies on a live project under a "
+            + "released work order whose insurance has expired; a company on site says where under its "
+            + "name), and an Excel export that can ignore the search and filter. Rows open the "
             + "company's record, where the renewal is filed. The Companies tab leads back to "
             + "/directory; the dashboard's \"Documents expiring\" tile lands here. Same gate as the "
             + "Directory (Admin/MD/FD/PM). You can navigate_to here; no dialog is registered."),

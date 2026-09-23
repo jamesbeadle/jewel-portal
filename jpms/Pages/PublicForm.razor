@@ -1,0 +1,53 @@
+@page "/f/{Company}/{Slug}"
+@layout LandingLayout
+@using Jewel.JPMS.Contracts.Forms
+@using Jewel.JPMS.Features.Forms.Public
+@inject HttpClient Http
+@inject FormDraftStorage Drafts
+@inject IJSRuntime JS
+
+<PageTitle>@PageTitleText</PageTitle>
+
+@if (Particulars is null || Form is null)
+{
+    <div class="form-sheet">
+        <p class="form-sheet-problem pt-10">@FormSheetWording.NotAvailable</p>
+    </div>
+}
+@if (Particulars is { } company && Form is { } form)
+{
+    <FormSheet Company="company" Title="@Title" Intro="@Intro">
+        @if (openProblem is { } unreachable)
+        {
+            <p class="form-sheet-problem mt-4">@unreachable</p>
+            <button type="button" class="btn-form-send" @onclick="OpenAsync">@FormSheetWording.TryAgain</button>
+        }
+        @if (receipt is not null)
+        {
+            <FormDoneSheet Lead="@FormWording.SentToTheOffice" BackAddress="@PackAddress" />
+        }
+        @if (IsFillingIn)
+        {
+            @if (view?.Invitation is { } invitation)
+            {
+                <FormInvitationPanel PersonName="@invitation.PersonName" CompanyName="@invitation.CompanyName"
+                                     Note="@FormWording.SentToYou(invitation.Email, invitation.SentByName)" />
+            }
+            <CascadingValue Value="pads" IsFixed="true">
+                @foreach (var question in form.Questions)
+                {
+                    <FormQuestionCard @key="question.Key" Form="form" Question="question" Draft="draft!" CompanyCode="@company.Code"
+                                      OnChanged="KeepDraftAsync" />
+                }
+            </CascadingValue>
+            <p class="form-sheet-privacy">@form.PrivacyFor(company)</p>
+            <button type="button" class="btn-form-send" disabled="@isSending" @onclick="SendAsync">
+                @(isSending ? FormSheetWording.Sending : FormSheetWording.Submit)
+            </button>
+            @if (sendProblem is { } refusal)
+            {
+                <p class="form-sheet-problem">@refusal</p>
+            }
+        }
+    </FormSheet>
+}

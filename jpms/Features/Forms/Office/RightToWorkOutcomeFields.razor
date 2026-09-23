@@ -1,0 +1,44 @@
+<div class="mt-4 space-y-2">
+    <p class="eyebrow">3. Confirmations<span class="text-content-subtle" aria-hidden="true"> *</span></p>
+    <p class="text-xs text-content-subtle">All three are required for a pass to count.</p>
+    <Checkbox @bind-Value="Draft.IsLikenessConfirmed"
+              Label="Likeness checked live: the photo and date of birth match the person, in person or on a live video call" />
+    <Checkbox @bind-Value="Draft.IsDocumentGenuine" Label="The document or online result is genuine, in date and theirs" />
+    <Checkbox @bind-Value="Draft.IsPermittedToDoTheWork" Label="It permits them to do this work" />
+    <Checkbox @bind-Value="Draft.IsEvidenceFiled" Label="Evidence saved to the restricted Right to work folder, dated, with my name" />
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+    <FormField Label="4. Person carrying out the check" Required>
+        <input type="text" class="field" placeholder="Your name" value="@Draft.CheckedByName"
+               @oninput="typed => Draft.CheckedByName = typed.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <FormField Label="Date of the check" Required Hint="The legal date. Today is entered automatically as the date recorded.">
+        <input type="date" class="field" max="@Today" value="@Draft.CheckedOn"
+               @onchange="chosen => Draft.CheckedOn = chosen.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <Checkbox @bind-Value="Draft.IsTimeLimited" Label="5. Time-limited permission?" Class="sm:col-span-2" />
+    <FormField Label="Expires on">
+        <input type="date" class="field" value="@Draft.PermissionExpiresOn"
+               @onchange="chosen => Draft.PermissionExpiresOn = chosen.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <FormField Label="Follow-up check on" Hint="Ten weeks before expiry, filled in for you.">
+        <input type="date" class="field" value="@Draft.FollowUpOn"
+               @onchange="chosen => Draft.FollowUpOn = chosen.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <FormChoiceSelect TChoice="RightToWorkOutcome" Label="6. Outcome" Required Value="Draft.Outcome" ValueChanged="outcome => Draft.Outcome = outcome ?? Draft.Outcome"
+                      Describe="outcome => outcome.DisplayName()" />
+    <FormField Label="Engagement ended on" Hint="Starts the two-year clock after which the check and its evidence are destroyed.">
+        <input type="date" class="field" value="@Draft.EngagementEndedOn"
+               @onchange="chosen => Draft.EngagementEndedOn = chosen.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <FormField Label="Notes" Class="sm:col-span-2">
+        <textarea class="field" rows="2" maxlength="2000" value="@Draft.Notes"
+                  @oninput="typed => Draft.Notes = typed.Value?.ToString() ?? string.Empty"></textarea>
+    </FormField>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public RightToWorkCheckDraft Draft { get; set; } = default!;
+
+    private static string Today => FormDates.Write(DateOnly.FromDateTime(DateTime.Today));
+}

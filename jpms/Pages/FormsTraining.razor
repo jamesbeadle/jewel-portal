@@ -1,0 +1,92 @@
+@page "/forms/training"
+@using Jewel.JPMS.Contracts.Forms
+@using Jewel.JPMS.Features.Forms.Office
+@inject IQueryClient Queries
+@inject FormsPageEntry Entry
+
+<PageTitle>Training · JPMS</PageTitle>
+
+<Page OpenTo="FormRoleSets.Office">
+    <PageHeader Subtitle="Tickets and certificates by their expiry date — the holder is asked for the renewal a month before it lapses.">
+        <Actions>
+            <FilterChips Items="Chips" Selected="@filter" OnSelect="key => filter = key" Disabled="@(records is null)" AriaLabel="Certificates" />
+        </Actions>
+    </PageHeader>
+
+    <FormsTabs ActiveKey="@FormsTabs.Training" />
+    <TableNote IsLead="true" Class="mb-4">
+        A certificate joins the register when its Training Certificate form is accepted from Received.
+    </TableNote>
+
+    <RecordsTable Dense="true" MaxHeight="" IsLoading="@(records is null && !dataFailed)" IsEmpty="@(Rows.Count == 0)" EmptyMessage="@EmptyMessage">
+        <thead>
+            <tr>
+                <th>Who</th>
+                <th>Course</th>
+                <th>Provider</th>
+                <th>Certificate</th>
+                <th>Completed</th>
+                <th>Expires</th>
+                <th>Standing</th>
+                <th>Renewal asked</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var record in Rows)
+            {
+                var standing = record.StandingOn(today);
+                <tr @key="record.TrainingRecordId" class="is-clickable" @onclick="() => editing = record">
+                    <td>@record.PersonName<span class="block text-xs text-content-subtle">@record.Email</span></td>
+                    <td>@record.Course</td>
+                    <td>@record.Provider</td>
+                    <td>
+                        @record.CertificateNumber
+                        @if (record.CertificateUploadId is { } certificate)
+                        {
+                            <a class="block text-xs text-info underline underline-offset-2" href="@($"/api/form-uploads/{certificate}/file")"
+                               target="_blank" rel="noopener" @onclick:stopPropagation="true">Certificate</a>
+                        }
+                    </td>
+                    <td class="whitespace-nowrap">@DateText(record.CompletedOn)</td>
+                    <td class="whitespace-nowrap">@DateText(record.ExpiresOn)</td>
+                    <td><Pill Tone="@standing.ToTone()">@standing.DisplayName()</Pill></td>
+                    <td class="whitespace-nowrap">@TrainingStandingFilters.ChaseText(record)</td>
+                </tr>
+            }
+        </tbody>
+    </RecordsTable>
+
+    <TrainingRecordModal Record="editing" OnSaved="SavedAsync" OnClose="() => editing = null" />
+</Page>
+
+@code {
+    private readonly DateOnly today = DateOnly.FromDateTime(DateTime.Today);
+    private IReadOnlyList<TrainingRecord>? records;
+    private bool dataFailed;
+    private string filter = TrainingStandingFilters.Renewing;
+    private TrainingRecord? editing;
+
+    private IReadOnlyList<TrainingRecord> Rows => TrainingStandingFilters.Apply(records ?? Array.Empty<TrainingRecord>(), filter, today);
+
+    private IReadOnlyList<TabItem> Chips => TrainingStandingFilters.Chips(records, today);
+
+    private string EmptyMessage => dataFailed ? "Couldn't load the register — refresh to try again." : "No certificates here.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var mayRead = await Entry.MayReadAsync(FormRoleSets.Office);
+        if (mayRead) await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try { records = await Queries.AskAsync(new ListTrainingRecords(), CancellationToken.None); }
+        catch { dataFailed = true; }
+    }
+
+    private async Task SavedAsync()
+    {
+        editing = null;
+        await LoadAsync();
+    }
+}

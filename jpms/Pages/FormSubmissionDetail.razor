@@ -1,0 +1,42 @@
+@page "/forms/received/{FormSubmissionId}"
+@using Jewel.JPMS.Contracts.Forms
+@using Jewel.JPMS.Features.Forms.Office
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+@inject FormsPageEntry Entry
+
+<PageTitle>@Title · JPMS</PageTitle>
+
+<Page OpenTo="FormRoleSets.Office">
+    <LoadGate IsLoading="@(reading is null && problem is null)" Prominent="true" Label="Opening the form">
+        @if (problem is { } sentence)
+        {
+            <Notice Tone="Tone.Negative">@sentence</Notice>
+        }
+        @if (reading is { } opened)
+        {
+            <PageHeader Title="@Title" Eyebrow="@opened.Submission.Company.DisplayName()">
+                <SubtitleContent>
+                    From <span class="text-content">@opened.Submission.SubmitterName</span> · filed under
+                    <a class="text-info underline underline-offset-2" href="@FolderAddress">@opened.Submission.FilingName</a>
+                    · received @DateTimeText(opened.Submission.SubmittedAt) · @FormSubmissionFilters.LinkText(opened.Submission)
+                </SubtitleContent>
+                <Actions>
+                    <Toolbar>
+                        <ToolbarButton Icon="download" Label="Download the form as a PDF"
+                                       Href="@($"/api/form-submissions/{FormSubmissionId}/pdf")" Download="true" />
+                    </Toolbar>
+                    <DropdownMenu Label="@opened.Submission.Status.DisplayName()" ToggleClass="@Pill.ClassesFor(opened.Submission.Status.ToTone())"
+                                  Items="StatusMoves" Disabled="@(write.IsBusy || IsDestroyed)" ToggleTitle="Where the office has got to" />
+                </Actions>
+            </PageHeader>
+            @if (write.Problem is { } refusal)
+            {
+                <Notice Tone="Tone.Negative" Class="mb-4" Dismissible OnDismiss="write.Forget">@refusal</Notice>
+            }
+            <FormOfficeActions Reading="opened" OnChanged="LoadAsync" />
+            <FormAnswersPanel Reading="opened" CanReveal="@Entry.Admits(FormRoleSets.EmergencyContactReaders)"
+                              IsRevealing="@isRevealing" OnReveal="RevealAsync" />
+        }
+    </LoadGate>
+</Page>

@@ -1,0 +1,27 @@
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <FormField Label="1. Who is being engaged" Class="sm:col-span-2">
+        <input type="text" class="field" placeholder="Full name, exactly as on their passport or ID" value="@Draft.PersonName"
+               @oninput="typed => Draft.PersonName = typed.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <FormField Label="Their email">
+        <input type="email" class="field" placeholder="For the check-completed confirmation" value="@Draft.Email"
+               @oninput="typed => Draft.Email = typed.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <FormField Label="Trade or role">
+        <input type="text" class="field" placeholder="e.g. Fire stopping operative" value="@Draft.JobRole"
+               @oninput="typed => Draft.JobRole = typed.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <FormChoiceSelect TChoice="JewelCompany" Label="Company" Required Value="Draft.Company" ValueChanged="company => Draft.Company = company"
+                      Placeholder="@FormDisplayNames.NotYetChosen"
+                      Describe="company => company.DisplayName()" />
+    <FormChoiceSelect TChoice="Engagement" Label="Engaged as" Required Value="Draft.EngagedAs" ValueChanged="engagement => Draft.EngagedAs = engagement"
+                      Placeholder="@FormDisplayNames.NotYetChosen"
+                      Describe="engagement => engagement.DisplayName()" />
+    <FormField Label="Engaged since" Hint="Their first day. For an employee the check must be on or before this date.">
+        <input type="date" class="field" value="@Draft.EngagedSince" @onchange="chosen => Draft.EngagedSince = chosen.Value?.ToString() ?? string.Empty" />
+    </FormField>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public RightToWorkCheckDraft Draft { get; set; } = default!;
+}

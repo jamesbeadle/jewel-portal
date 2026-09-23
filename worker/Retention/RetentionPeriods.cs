@@ -4,6 +4,8 @@ namespace Jewel.JPMS.Worker.Retention;
 /// How long the portal keeps what it no longer needs. A spent credential row is a liability
 /// tied to a person's email, not a record of the business; a cached scan can be re-read from
 /// the document it came from. Each period is the grace after the row stopped being useful.
+/// The onboarding forms keep their own clocks — FormRetention in contracts, run nightly by
+/// Worker/Forms/FormRetentionWorker — because each starts on a date the office records.
 /// </summary>
 internal static class RetentionPeriods
 {
