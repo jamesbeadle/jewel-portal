@@ -21,6 +21,11 @@ which is what keeps a property sharing a type's name from reading as a finding.
 Interpolated strings are read, not skipped: `$"…{PrivacyNoticeLink.Path}…"` reaches for a type,
 and an earlier draft that dropped whole string literals missed exactly that break.
 
+The second shape (23 September 2026): a type the worker does compile, named through a global
+using only the api has — `JpmsContext` with no `using Jewel.JPMS.Api.Data;` in the file, which
+`api/GlobalUsings.cs` supplies and `worker/GlobalUsings.cs` does not. The check reads both files
+and reports a linked file that names such a type without the using. The fix is the using.
+
 ## Fixing a finding
 
 Two ways out, and the type decides which:

@@ -892,6 +892,12 @@ nothing to read says it is missing. That broke main three times on 2026-09-21 â€
 `LeadMarketingConsents` through a bare call in `SalesEntityMapping.cs`, which no reading of the
 usings could have caught.
 
+The second shape of the same break (2026-09-23, the H&S digest sweep): a type the worker DOES
+compile, named through a global using only the api has â€” `JpmsContext` with no
+`using Jewel.JPMS.Api.Data;`, because `api/GlobalUsings.cs` supplies it and `worker/GlobalUsings.cs`
+does not. A linked file writes every using it needs itself (`Jewel.JPMS.Api.Data`,
+`Microsoft.EntityFrameworkCore`); the check reads both GlobalUsings files and fails on the gap.
+
 Two ways out, and the type decides which: a fact the api, the worker and the portal all state
 belongs in `contracts/` under `Jewel.JPMS.Models`, which all three global-use (`PrivacyNoticeLink`
 moved there for this reason); a type that is genuinely the api's own earns a new `Compile Include`

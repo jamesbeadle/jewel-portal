@@ -1,6 +1,8 @@
 using Jewel.JPMS.Api.Data.Entities;
-using Jewel.JPMS.Api.Features.Forms;
+using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Forms.Mail;
+using Jewel.JPMS.Api.Features.Forms;
+using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Hs.Notifications;
 
