@@ -103,10 +103,13 @@ public sealed class FormsRulesTests
     }
 
     [Fact]
-    public void TheQuestionnaire_isJewelBespokeBuilds_amongNineForms()
+    public void TheQuestionnaire_isJewelBespokeBuilds_amongTheDashboardsNineForms_andKatyLouisesEight()
     {
         var questionnaire = FormCatalogue.For(FormSlugs.SubcontractorQuestionnaire)!;
         Assert.Equal("Sub Contractor Questionnaire 2025", questionnaire.Title);
-        Assert.Equal(9, FormCatalogue.All.Count);
+        Assert.Equal(17, FormCatalogue.All.Count);
+        Assert.Equal(8, FormCatalogue.HealthAndSafety.Count);
+        Assert.All(FormCatalogue.HealthAndSafety, form => Assert.Equal(FormFilingKind.Site, form.FilingKind));
+        Assert.All(FormCatalogue.HealthAndSafety, form => Assert.Contains("site", form.FilingKeys));
     }
 }
