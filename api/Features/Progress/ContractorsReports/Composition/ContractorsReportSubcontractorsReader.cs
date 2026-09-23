@@ -1,5 +1,4 @@
 using Jewel.JPMS.Api.Data.Entities;
-using Jewel.JPMS.Api.Features.Progress.WhatsApp;
 using Jewel.JPMS.Contracts.Progress;
 
 namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
@@ -11,7 +10,7 @@ internal static class ContractorsReportSubcontractorsReader
     public static async Task<IReadOnlyList<ContractorsReportSubcontractor>> ReadAsync(
         JpmsContext context,
         string projectId,
-        WhatsAppWeek week,
+        ReportingWeek week,
         IReadOnlyList<ContractorsReportAttendance> attendance,
         CancellationToken cancellationToken)
     {
@@ -41,7 +40,7 @@ internal static class ContractorsReportSubcontractorsReader
             .ToList();
     }
 
-    private static bool IsOnSite(WorkOrderEntity order, WhatsAppWeek week) =>
+    private static bool IsOnSite(WorkOrderEntity order, ReportingWeek week) =>
         order.Status == (int)WorkOrderStatus.Released
         || (order.ScheduledCompletion is { } completion && week.Contains(DateOnly.FromDateTime(completion.Date)));
 }

@@ -1,6 +1,5 @@
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
-using Jewel.JPMS.Api.Features.Progress.WhatsApp;
 using Jewel.JPMS.Contracts.Progress;
 
 namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Commands;
@@ -16,7 +15,7 @@ public sealed class CreateContractorsReportHandler : ICommandHandler<CreateContr
 
     public async Task<ContractorsReport> HandleAsync(CreateContractorsReport command, CancellationToken cancellationToken)
     {
-        var week = WhatsAppWeek.EndingOn(command.PeriodEnd);
+        var week = ReportingWeek.EndingOn(command.PeriodEnd);
         var project = await context.Projects.AsNoTracking().FirstOrDefaultAsync(row => row.ProjectId == command.ProjectId, cancellationToken)
             ?? throw new InvalidOperationException("Project not found.");
         if (await context.ContractorsReports.AnyAsync(row => row.ProjectId == project.ProjectId && row.PeriodEnd == week.End, cancellationToken))
@@ -66,7 +65,7 @@ public sealed class CreateContractorsReportHandler : ICommandHandler<CreateContr
                 .Where(item => !item.IsDone)
                 .ToList();
 
-    private async Task<IReadOnlyList<string>> UpdatesInPeriodAsync(string projectId, WhatsAppWeek week, CancellationToken cancellationToken) =>
+    private async Task<IReadOnlyList<string>> UpdatesInPeriodAsync(string projectId, ReportingWeek week, CancellationToken cancellationToken) =>
         (await ContractorsReportProgressReader.UpdatesInPeriodAsync(context, projectId, week, cancellationToken))
             .Select(update => update.ProgressUpdateId)
             .ToList();

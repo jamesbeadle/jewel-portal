@@ -1,6 +1,6 @@
+using Jewel.JPMS.Api.Features.Progress.ContractorsReports;
 using Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
 using Jewel.JPMS.Api.Features.Progress.ContractorsReports.Documents;
-using Jewel.JPMS.Api.Features.Progress.WhatsApp;
 using Jewel.JPMS.Contracts.Progress;
 using Xunit;
 
@@ -10,7 +10,7 @@ namespace Jewel.JPMS.Tests;
 /// wording gate, the Valuation No. default and the file name.</summary>
 public class ContractorsReportTests
 {
-    private static readonly WhatsAppWeek Week = WhatsAppWeek.EndingOn(new DateOnly(2026, 9, 10));
+    private static readonly ReportingWeek Week = ReportingWeek.EndingOn(new DateOnly(2026, 9, 10));
 
     private static ContractorsReportUpdate UpdateOn(DateOnly day, string title = "Site notes") =>
         new("u-" + day.DayNumber, day, title, "", Array.Empty<ContractorsReportPhoto>());

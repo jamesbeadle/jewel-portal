@@ -3,7 +3,7 @@ using Jewel.JPMS.Contracts.Progress;
 namespace Jewel.JPMS.Api.Features.Progress.Commands;
 
 /// <summary>Records a dated site note on the project's progress feed, with no photographs yet —
-/// the connector's create_progress_update and the text-only days of the WhatsApp week intake.</summary>
+/// the connector's create_progress_update.</summary>
 public sealed class CreateProgressUpdateHandler
     : ICommandHandler<CreateProgressUpdate, ProgressUpdate>
 {

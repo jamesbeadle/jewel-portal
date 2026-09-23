@@ -385,27 +385,19 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   document filed on the project, by the `source_id` `list_sources` hands out
   (`AiSourceTools.FetchBytesAsync`). Photographs dropped into the chat never reach the portal —
   the tool description says so and points at emailing them to the projects mailbox or the
-  WhatsApp intake. Never describe the connector as able to take a pasted image.
-- **Import WhatsApp week** (`/projects/{id}/progress/whatsapp-week`, `ProjectProgressWhatsAppWeek`,
-  the door beside "+ Record progress"): WhatsApp's export zip (or the .txt, or pasted text) plus
-  the week-ending Thursday → `PreviewWhatsAppWeekEndpoint` reads and writes nothing;
-  `ApplyWhatsAppWeekEndpoint` writes the ticked days. The parser (`WhatsAppExportParser`, pure)
-  reads both phones' line formats, multi-line messages, `<attached: …>` / `(file attached)` and
-  drops WhatsApp's own notices; `WhatsAppWeek.EndingOn(thursday)` is Friday → Thursday;
-  `WhatsAppWeekPlanner` (pure) sorts by sender against **`Project.SiteNoteSenderNames`** (one name
-  per line, Project settings → Edit details → "Site note senders"; By France lists James Everitt):
-  this project's list keeps, another project's list sets aside (counted, named), no list → the
-  review list, never a guess. One update per day with messages, titled `Site notes — Friday 4
-  September 2026`, the messages VERBATIM as `HH:mm Sender: text` (`WhatsAppDayText`; the report
-  language is written at drafting), that day's photographs on it; a photograph on more than one
-  day is kept on the first (by content) and said so; a day already holding an update arrives
-  unticked and apply refuses it by name — re-running a week never duplicates. Non-photo media
-  (video, voice notes) is counted and left out. `ProgressUpdates.Description` is nvarchar(max)
-  since this migration.
+  site photo pool. Never describe the connector as able to take a pasted image.
+- **Import WhatsApp week is gone** (Nigel, 2026-09-22: dead code). The page, its two endpoints,
+  the parser/planner, the "Site note senders" project setting and their tests were removed; the
+  chat text is the assistant's to read on the person's machine and write through
+  `create_progress_update`, never the portal's to parse. `ReportingWeek.EndingOn(thursday)`
+  (Friday → Thursday, `api/Features/Progress/ContractorsReports`) is the one survivor — it is the
+  Contractor's Report's period. `Projects.SiteNoteSenderNames` stays in the database unread so the
+  schema needs no migration; `ProgressUpdates.Description` is nvarchar(max) since the same
+  migration. Never bring a WhatsApp parser back into the portal.
 - **Change 4 is built: the weekly Contractor's Report** (2026-09-16; `contracts/Progress/
   ContractorsReport*.cs`, `api/Features/Progress/ContractorsReports`, `jpms/Features/Progress/
   ContractorsReports` + `ProjectProgressContractorsReports` / `ProjectProgressContractorsReport`
-  pages, the door "Contractor's Reports…" beside "Import WhatsApp week…"). ONE row per report
+  pages, the door "Contractor's Reports…" beside "+ Record progress"). ONE row per report
   (`ContractorsReports`, unique on project + PeriodEnd, migration `AddContractorsReports`,
   script `add-contractors-reports.sql`) holding only the ENTERED fields — number, the
   Friday-to-Thursday period (`WhatsAppWeek`), Valuation No., programme reference, prepared by,

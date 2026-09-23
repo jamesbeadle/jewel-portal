@@ -41,7 +41,6 @@
                         <StatTile Label="Site address"    Value="@SiteAddress(Project)" />
                         <StatTile Label="Xero site"       Value="@XeroSite(Project)" />
                         <StatTile Label="Xero contact"    Value="@XeroContact(Project)" />
-                        <StatTile Label="Site note senders" Value="@SiteNoteSenderList(Project)" />
                     </div>
                     @* Created is the system's own stamp — a secondary fact here, never a lead date. *@
                     <p class="text-xs text-content-subtle mb-6">Created @DateText(Project.CreatedAt)</p>
@@ -89,13 +88,6 @@
 
     // The project's option in Xero's "Sites" tracking category — "Not set" is worth surfacing
     // because the Xero write-back refuses to run until it is mapped.
-    // Whose WhatsApp messages are this project's site notes — "Not set" is worth surfacing
-    // because Import WhatsApp week sends every message to review until someone is listed.
-    private static string SiteNoteSenderList(Project project) =>
-        string.IsNullOrWhiteSpace(project.SiteNoteSenderNames)
-            ? "Not set"
-            : string.Join(", ", Jewel.JPMS.Contracts.Progress.SiteNoteSenders.Parse(project.SiteNoteSenderNames));
-
     private static string XeroSite(Project project) =>
         string.IsNullOrWhiteSpace(project.XeroSiteName) ? "Not set" : project.XeroSiteName;
 

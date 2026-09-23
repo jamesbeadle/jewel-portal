@@ -5,7 +5,6 @@ using Jewel.JPMS.Api.Features.Progress.ContractorsReports.Documents;
 using Jewel.JPMS.Api.Features.Progress.ContractorsReports.Queries;
 using Jewel.JPMS.Api.Features.Progress.Photos;
 using Jewel.JPMS.Api.Features.Progress.SitePhotos;
-using Jewel.JPMS.Api.Features.Progress.WhatsApp;
 using Jewel.JPMS.Api.Features.Progress.Queries;
 using Jewel.JPMS.Api.Features.Progress.Storage;
 using Jewel.JPMS.Contracts.Progress;
@@ -24,9 +23,6 @@ public static class ProgressFeatureRegistration
         services.AddScoped<IQueryHandler<ListProgressReportsForProject, IReadOnlyList<ProgressReport>>, ListProgressReportsForProjectHandler>();
 
         services.AddScoped<ProgressPhotoIntake>();
-        services.AddScoped<WhatsAppWeekAuthorisation>();
-        services.AddScoped<WhatsAppWeekReader>();
-        services.AddScoped<WhatsAppWeekWriter>();
 
         services.AddScoped<ICommandHandler<CreateProgressUpdate, ProgressUpdate>, CreateProgressUpdateHandler>();
         services.AddScoped<CreateProgressUpdateAuthorisation>();

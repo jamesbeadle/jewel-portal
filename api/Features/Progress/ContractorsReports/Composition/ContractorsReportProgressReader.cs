@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Features.Progress.WhatsApp;
 using Jewel.JPMS.Contracts.Progress;
 
 namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
@@ -15,7 +14,7 @@ public sealed record ContractorsReportUpdate(
 internal static class ContractorsReportProgressReader
 {
     public static async Task<IReadOnlyList<ContractorsReportUpdate>> UpdatesInPeriodAsync(
-        JpmsContext context, string projectId, WhatsAppWeek week, CancellationToken cancellationToken)
+        JpmsContext context, string projectId, ReportingWeek week, CancellationToken cancellationToken)
     {
         var from = new DateTimeOffset(week.Start.AddDays(-1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
         var to = new DateTimeOffset(week.End.AddDays(2).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);

@@ -23,6 +23,5 @@ internal static class ProjectEntityMapping
         NextExpectedValuationDate: entity.NextExpectedValuationDate,
         ExpectedMonthlyValuation: entity.ExpectedMonthlyValuation,
         XeroContactId: entity.XeroContactId,
-        XeroContactName: entity.XeroContactName,
-        SiteNoteSenderNames: entity.SiteNoteSenderNames);
+        XeroContactName: entity.XeroContactName);
 }
