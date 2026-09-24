@@ -7,7 +7,8 @@ public sealed class PostVariationOrderMessageHandler
     : ICommandHandler<PostVariationOrderMessage, VariationOrderMessage>
 {
     private readonly JpmsContext context;
-    public PostVariationOrderMessageHandler(JpmsContext context) { this.context = context; }
+    private readonly SignedInCaller caller;
+    public PostVariationOrderMessageHandler(JpmsContext context, SignedInCaller caller) { this.context = context; this.caller = caller; }
 
     public async Task<VariationOrderMessage> HandleAsync(
         PostVariationOrderMessage command, CancellationToken cancellationToken)
@@ -22,7 +23,7 @@ public sealed class PostVariationOrderMessageHandler
             AuthorEmail = command.AuthorEmail,
             AuthorName = command.AuthorName,
             Body = command.Body,
-            Visibility = (int)command.Visibility,
+            Visibility = (int)VisibilityOf(command),
             PostedAt = DateTimeOffset.UtcNow,
             ParentMessageId = command.ParentMessageId
         };
@@ -43,11 +44,18 @@ public sealed class PostVariationOrderMessageHandler
     private async Task GuardParentAsync(PostVariationOrderMessage command, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(command.ParentMessageId)) return;
+        var mayReplyToAnyMessage = caller.MayReadInternalCorrespondence;
         var parentIsOnThisOrder = await context.VariationOrderMessages
             .AsNoTracking()
             .AnyAsync(row => row.MessageId == command.ParentMessageId
-                && row.VariationOrderId == command.VariationOrderId, cancellationToken);
+                && row.VariationOrderId == command.VariationOrderId
+                && (mayReplyToAnyMessage || (row.Visibility == (int)MessageVisibility.Shared)), cancellationToken);
         if (!parentIsOnThisOrder)
             throw new InvalidOperationException("The message being replied to is not on this variation order.");
     }
+
+    // Whatever a client, architect or subcontractor posts is on the shared thread — an external
+    // party never writes an internal note, whatever the request body asked for.
+    private MessageVisibility VisibilityOf(PostVariationOrderMessage command) =>
+        caller.MayReadInternalCorrespondence ? command.Visibility : MessageVisibility.Shared;
 }

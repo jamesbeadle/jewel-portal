@@ -83,10 +83,19 @@ public partial class ProjectRequestDetail
     // Streams the official PDF from the api, regenerated from SQL on every download.
     private string DocumentHref => $"/api/requests/{RequestId}/document";
 
-    // Mirrors SendRequestEmailAuthorisation server-side (directors, project managers, site
-    // managers and architects; admins carry every role server-side).
+    // Mirrors SendRequestEmailAuthorisation server-side: writing as the business is the team's,
+    // never the project's client or architect (admins carry every role server-side).
     private bool CanDraftEmail => Session.AvailableRoles.Any(role =>
-        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager or Role.Architect);
+        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager);
+
+    // Mirrors UpdateRequestDetailsAuthorisation server-side: the response is recorded (and the
+    // request reopened) by the directors, the project manager, or the architect answering it.
+    private bool CanRecordResponse => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.Architect);
+
+    // Mirrors CloseRequestAuthorisation server-side.
+    private bool CanClose => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.QuantitySurveyor or Role.SiteManager);
 
     // Mirrors DeleteRequestAuthorisation server-side: the Admin role only (master administrators
     // carry every role, so they qualify too).
@@ -138,7 +147,8 @@ public partial class ProjectRequestDetail
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         // Activity dots on the tab bar land in the background — absent until then (never gated).
-        Activity.Refresh(ProjectId);
+        // They read the business's mail, so the project's client or architect goes without.
+        if (Session.IsInternal) Activity.Refresh(ProjectId);
         // Two waves instead of six sequential round-trips. Everything in the first wave is
         // independent — the record, the pickers and the variation all key off the route values,
         // not off each other — so they go out together and the page waits once for the slowest
@@ -215,6 +225,7 @@ public partial class ProjectRequestDetail
     // paths, refreshed whenever the linked party changes. Best-effort: the panel just hides on error.
     private async Task LoadRecipientPreviewAsync()
     {
+        if (!Session.IsInternal) return;
         try { recipientPreview = record is null ? null : await Correspondence.ResolveRequestRecipientsAsync(record.RequestId); }
         catch { recipientPreview = null; }
     }

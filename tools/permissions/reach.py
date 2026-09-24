@@ -15,6 +15,7 @@ HANDLER = re.compile(r"I(?:Query|Command)Handler<\s*(\w+)\s*,")
 DECLARATION_HEADER = re.compile(r"\b(?:class|record|struct)\s+(\w+)([^{;]*)")
 TYPE_NAME = re.compile(r"\b([A-Z]\w+)\b")
 MAXIMUM_DEPTH = 5
+REFUSES_AN_EXTERNAL_CALLER = "MayReadInternalCorrespondence"
 
 
 def handlerOf(repositoryRoot) -> dict[str, str]:
@@ -38,8 +39,10 @@ def referencedTypes(typeBody: str, handlers: dict[str, str], known: set[str]) ->
     return referenced
 
 
-def reaches(start: str, merged: dict[str, str], handlers: dict[str, str], targets: set[str]) -> str | None:
-    """The first target type the start type reaches through its fields, or None."""
+def reaches(start: str, merged: dict[str, str], handlers: dict[str, str], targets: set[str],
+            stopAt: frozenset[str] = frozenset()) -> str | None:
+    """The first target type the start type reaches through its fields, or None. A type in
+    `stopAt` is not followed any further."""
     known = set(merged)
     seen = {start}
     frontier = [start]
@@ -49,7 +52,7 @@ def reaches(start: str, merged: dict[str, str], handlers: dict[str, str], target
             for referenced in referencedTypes(merged.get(typeName, ""), handlers, known | targets):
                 if referenced in targets:
                     return referenced
-                if referenced not in seen:
+                if referenced not in seen and referenced not in stopAt:
                     seen.add(referenced)
                     following.append(referenced)
         frontier = following
@@ -57,19 +60,23 @@ def reaches(start: str, merged: dict[str, str], handlers: dict[str, str], target
 
 
 class MailReaders:
-    """Which mail reader a type or a piece of code reaches: the readers named for any verb, and —
-    for a read — the mailbox client itself."""
+    """Which unguarded mail reader a type or a piece of code reaches: the readers named for any
+    verb, and — for a read — the mailbox client itself. A reader whose own code refuses an
+    external caller is guarded and never reported; one that stops asking is reported again."""
 
     def __init__(self, repositoryRoot, byName: dict, readers: dict):
         from . import endpoints
         self.merged = endpoints.mergedBodies(byName)
         self.handlers = handlerOf(repositoryRoot)
-        self.anyVerb = set(readers["anyVerb"])
+        guarded = {reader for reader in readers["anyVerb"]
+                   if REFUSES_AN_EXTERNAL_CALLER in self.merged.get(reader, "")}
+        self.guarded = frozenset(guarded)
+        self.anyVerb = set(readers["anyVerb"]) - guarded
         self.everyReader = self.anyVerb | set(readers["reads"])
 
     def ofEndpoint(self, typeName: str, verbs: list[str]) -> str | None:
         targets = self.everyReader if "get" in verbs else self.anyVerb
-        return reaches(typeName, self.merged, self.handlers, targets)
+        return reaches(typeName, self.merged, self.handlers, targets, self.guarded)
 
     def ofCode(self, code: str) -> str | None:
         named = set(TYPE_NAME.findall(code))
@@ -77,7 +84,7 @@ class MailReaders:
         if direct:
             return sorted(direct)[0]
         for typeName in sorted(named & set(self.merged)):
-            reader = reaches(typeName, self.merged, self.handlers, self.anyVerb)
+            reader = reaches(typeName, self.merged, self.handlers, self.anyVerb, self.guarded)
             if reader:
                 return reader
         return None

@@ -782,8 +782,11 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   `SignedInUser.ArchitectId` / `AuthenticatedUserResponse.ArchitectId` / `Auth.CurrentArchitectId`,
   and read by `Gates/ArchitectScope.OwnArchitectId`. **An architect's projects are the ones that
   name their practice as the party** — `Project.PartyKind == Architect && PartyId == theirs`
-  (Nigel's decision), never Lead-stage — through `Features/Architects/ArchitectProjects`, the
-  twin of `ClientPortal/ClientProjects`. A Role.Architect login with no link reaches nothing.
+  (Nigel's decision) — **or list one of the practice's people among the project's contacts**
+  (a Project settings → Contacts row linked to the practice's contact book, 2026-09-24: most
+  projects correspond with the client), never Lead-stage — through
+  `Features/Architects/ArchitectProjects`, the twin of `Features/Clients/ClientProjects`. A
+  Role.Architect login with no link reaches nothing, and its project list is empty, not a 403.
 - **Every write an external role may make consults a scope in the endpoint** — the permission
   check's rule, now at zero. `RequestScope` (raise on a project: architect → their projects,
   subcontractor → a project they hold an issued work order on, `Portal/SubcontractorProjects`;
@@ -1230,12 +1233,13 @@ so the first CI build is the compile check, and this tool is what stands in for 
   the page's gate, when none fits) — never a bare role list, never `DirectorRoles` by default.
   `RoleHome` picks its panels by the same reads (a panel whose read the API would refuse for the
   role is not shown — the architect's home carries no cross-project RFI panel for that reason).
-- **External logins.** A Client lands on `/client`, a Subcontractor on `/portal` (`Dashboard`
-  bounces both; `HomeRouteFor` sends Home there), each with Home alone on the rail. An Architect
-  gets a flat rail — RFIs, Variation Orders, Architect's Instructions, Documents — on the projects
-  that name their practice: `ListProjectsVisibleToUser(ArchitectId)` scopes the project list
-  through `ArchitectProjects` for a login whose only reach is Role.Architect (the endpoint fills
-  the id from the login, never the request; declared in `tools/permissions/policy.json`).
+- **External logins.** There is ONE app: a view is the same page for every role, tailored to it,
+  and what is protected is protected by the API — never a sub-site per role (Nigel, 2026-09-24;
+  the client portal's `/client` pages were deleted as dead code the same day). The project's
+  client and architect open the same RFI and Variation Orders views as the team, on the projects
+  that are theirs (the project list is scoped by `ListProjectsVisibleToUser`, the endpoint filling
+  the party from the login, never the request). A Subcontractor still lands on `/portal`
+  (`Dashboard` bounces it; `HomeRouteFor` sends Home there).
 - **The hard rule: no external person reads the mail stored behind a record.**
   `RecordEmailRoles.Readers` (contracts, = AllInternal) is the ONE rule: the record-mail
   endpoints and the connector's `read_record_emails` refuse outside it, and the widgets that
@@ -1250,13 +1254,43 @@ so the first CI build is the compile check, and this tool is what stands in for 
   the invocation runs for; `RequestEmailReader` and `RecordEmailReader` return nothing, and the
   request and variation conversation reads return only the shared typed thread, when
   `MayReadInternalCorrespondence` is false — every client, architect, subcontractor and site
-  operative login. The internal records' reads (requests, RFIs, variations, their documents,
-  the Architect's Instruction register) are `JpmsRoleSets.ProjectDeliveryTeam` — internal only;
+  operative login. The request and variation reads admit the project's client and architect
+  through `PartyReads` (below) — confined to their projects and stripped; the Architect's
+  Instruction register and the other internal registers stay `ProjectDeliveryTeam` / internal;
   `InternalAndArchitect` is for the architect's scoped WRITES and is never a read gate. The
   permission check's rule "mail is reached only by the internal team" follows every endpoint and
   connector tool through the types it is handed (`tools/permissions/reach.py`) and fails any
   that reaches a mail reader while admitting an external role — whatever its route is called.
   An external party's reads come back through its own portal's scoped reads, as the client's do.
+
+## The project's client and architect read the same views, confined and stripped (api + jpms)
+
+- **One rule, `Features/Parties/PartyReads`** (2026-09-24). The RFI and variation reads —
+  `projects`, `projects/{id}/requests`, `projects/{id}/variation-orders`, `requests/{id}` (and its
+  document, messages, voq, attachments), `variation-orders/{id}` (and its document, messages) —
+  are gated by `JpmsRoleSets.DeliveryTeamAndParties` and each asks `PartyReads.MayRead…Async`:
+  the internal team reads every project; a linked client (`ClientProjects`) or architect practice
+  (`ArchitectProjects`) reads its own, and anything else answers 404. A variation in Quoting has
+  not reached a party. What leaves the server for a party is `AsReadBy(user)`: a request without
+  its value or internal notes, a variation without its cost code, subcontractor or tender, a
+  project without its valuation and Xero facts. The conversations give a party the shared typed
+  thread alone and the mail readers give it nothing (`SignedInCaller`). A new field that is
+  internal to Jewel is stripped in `AsReadBy` the day it is added.
+- **The pages are the team's pages.** `ProjectRequests`, `ProjectRequestDetail`,
+  `ProjectVariations`, `ProjectVariationDetail` open to `DeliveryTeamAndParties`, and the sidebar's
+  RFI and Variation Orders rows show for the architect and the client (`NavigationRoles.RequestRoles`).
+  A panel whose read is the team's alone is not rendered for a party — never left to 403.
+- **An external login is made by an invite from its own record, never by hand.** "Invite to
+  portal" on the client, the architect practice (`ArchitectInviteDialog`: the office picks one of
+  the practice's contacts) or the company links the login; each invite refuses an email that is a
+  staff login (`LoginRoles.IncludeStaff`), already linked to another party, or revoked, and drops
+  the cached login after the link is saved. Admin → Users and the admin invite offer
+  `LoginRoles.AssignedByHand` only, and `ScopedRoleGrants` refuses a request that adds Client,
+  Architect or Subcontractor to a login that did not already hold it.
+- **The permission check follows the mail, not the route.** "Mail is reached only by the internal
+  team" (`tools/permissions/reach.py`) fails an endpoint or connector tool that admits an external
+  role and reaches a mail reader — unless the reader itself refuses an external caller (it asks
+  `SignedInCaller.MayReadInternalCorrespondence`); a reader that stops asking is reported again.
 
 ## Record tabs & the in-view toolbar (jpms)
 

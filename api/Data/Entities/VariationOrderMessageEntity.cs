@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Api.Data.Entities;
 // Mirrors RequestMessageEntity's typed-message shape, without the mailbox columns: a variation's
 // email correspondence stays in the live tagged mailbox (the detail page's Communications section),
 // so this table only ever holds messages typed in JPMS — internal notes and the shared thread the
-// client portal reads and writes.
+// project's client and architect read and write.
 public sealed class VariationOrderMessageEntity
 {
     [Key, MaxLength(64)] public string MessageId { get; set; } = "";

@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Auth;
+using Jewel.JPMS.Api.Features.Directory;
 using Jewel.JPMS.Contracts.Auth;
 using Microsoft.Extensions.Configuration;
 
@@ -15,12 +16,15 @@ public sealed class InviteUserEndpoint
     private readonly SignedInUserResolver users;
     private readonly UserInviter inviter;
     private readonly IConfiguration configuration;
+    private readonly ScopedRoleGrants scopedRoles;
 
-    public InviteUserEndpoint(SignedInUserResolver users, UserInviter inviter, IConfiguration configuration)
+    public InviteUserEndpoint(
+        SignedInUserResolver users, UserInviter inviter, IConfiguration configuration, ScopedRoleGrants scopedRoles)
     {
         this.users = users;
         this.inviter = inviter;
         this.configuration = configuration;
+        this.scopedRoles = scopedRoles;
     }
 
     [Function("AuthInviteUser")]
@@ -44,6 +48,8 @@ public sealed class InviteUserEndpoint
 
         var displayName = string.IsNullOrWhiteSpace(body.DisplayName) ? email : body.DisplayName.Trim();
         var roles = (body.Roles ?? Array.Empty<Role>()).Distinct().ToList();
+        var refusal = await scopedRoles.RefusalAsync(email, roles, cancellationToken);
+        if (refusal is not null) return new BadRequestObjectResult(new { error = refusal });
         var baseUrl = SiteBaseUrl.Resolve(configuration, request);
 
         var result = await inviter.InviteAsync(email, displayName, roles, baseUrl, cancellationToken);

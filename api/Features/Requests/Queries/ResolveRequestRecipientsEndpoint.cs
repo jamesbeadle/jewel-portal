@@ -15,7 +15,7 @@ public sealed class ResolveRequestRecipientsEndpoint
         this.handler = handler;
     }
 
-    // Internal only: a request carries the business's notes and mail (2026-09-24).
+    // Internal only: who a request goes to is the office's address book (2026-09-24).
     private static readonly RoleSet RolesThatMayReadRequests = JpmsRoleSets.ProjectDeliveryTeam;
 
     [Function(nameof(ResolveRequestRecipients))]

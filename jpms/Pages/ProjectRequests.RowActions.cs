@@ -14,9 +14,14 @@ public partial class ProjectRequests
     private string? draftBatchError;
     private RequestEmailBatch? draftBatch;
 
-    // Mirrors SendRequestEmailsAuthorisation server-side (directors, project managers,
-    // site managers and architects; admins carry every role server-side).
+    // Mirrors SendRequestEmailsAuthorisation server-side: writing as the business is the team's,
+    // never the project's client or architect (admins carry every role server-side).
     private bool CanDraftEmail => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager);
+
+    // Mirrors RaiseRequestAuthorisation server-side: the architect raises an RFI on their own
+    // project; the client does not.
+    private bool CanRaiseRequests => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager or Role.Architect);
 
     // Mirrors MergeRequestsAuthorisation server-side (admins, directors and project managers).

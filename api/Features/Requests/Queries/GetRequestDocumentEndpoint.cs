@@ -1,22 +1,27 @@
 using Jewel.JPMS.Contracts.Requests;
+using Jewel.JPMS.Api.Features.Parties;
 
 namespace Jewel.JPMS.Api.Features.Requests.Queries;
 
 public sealed class GetRequestDocumentEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly JpmsContext context;
     private readonly IQueryHandler<GetRequestDocument, RequestDocumentFile?> handler;
 
     public GetRequestDocumentEndpoint(
         SignedInUserResolver users,
-        IQueryHandler<GetRequestDocument, RequestDocumentFile?> handler)
+        IQueryHandler<GetRequestDocument, RequestDocumentFile?> handler,
+        JpmsContext context)
     {
+        this.context = context;
         this.users = users;
         this.handler = handler;
     }
 
-    // Internal only: a request carries the business's notes and mail (2026-09-24).
-    private static readonly RoleSet RolesThatMayReadRequests = JpmsRoleSets.ProjectDeliveryTeam;
+    // The delivery team, and the project's client and architect on their own projects with the
+    // internal parts stripped (Parties/PartyReads).
+    private static readonly RoleSet RolesThatMayReadRequests = JpmsRoleSets.DeliveryTeamAndParties;
 
     [Function(nameof(GetRequestDocument))]
     public async Task<IActionResult> Run(
@@ -26,6 +31,7 @@ public sealed class GetRequestDocumentEndpoint
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!RolesThatMayReadRequests.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await PartyReads.MayReadRequestAsync(context, signedInUser, requestId, request.HttpContext.RequestAborted)) return new NotFoundResult();
 
         var file = await handler.HandleAsync(new GetRequestDocument(requestId), request.HttpContext.RequestAborted);
         if (file is null) return new NotFoundResult();

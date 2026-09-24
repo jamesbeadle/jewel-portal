@@ -52,6 +52,24 @@ public static class JpmsRoleSets
         JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing,
         JpmsRoles.Foreman);
 
+    /// <summary>The project delivery team plus the project's parties — its client and its
+    /// architect: the reads behind the RFI and variation views every one of them opens. Each read
+    /// gated by this set confines a party to its own projects and strips what is internal before
+    /// it leaves the server (Features/Parties/PartyReads) — the view is the same page for all of
+    /// them, tailored to the role.</summary>
+    public static readonly RoleSet DeliveryTeamAndParties = RoleSet.Of(
+        JpmsRoles.Director,
+        JpmsRoles.FinanceDirector,
+        JpmsRoles.ProjectManager,
+        JpmsRoles.Estimator,
+        JpmsRoles.SiteManager,
+        JpmsRoles.HealthAndSafetyLead,
+        JpmsRoles.OfficeComplianceCoordinator,
+        JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing,
+        JpmsRoles.Foreman,
+        JpmsRoles.Architect,
+        JpmsRoles.Client);
+
     /// <summary>Internal roles plus the architect — the WRITES the architect makes on RFIs,
     /// submittals and variations per the permissions matrix, each scoped to their own practice's
     /// projects. Never a read gate: see ProjectDeliveryTeam.</summary>
@@ -104,9 +122,9 @@ public static class JpmsRoleSets
     /// by role.</summary>
     public static readonly RoleSet Everyone = RoleSet.Of(Enum.GetValues<Role>());
 
-    /// <summary>The client portal: a Client login, which reads its own client's records and
-    /// nothing else (ClientScope). A Client role without a ClientId reaches nothing.</summary>
-    public static readonly RoleSet ClientPortal = RoleSet.Of(JpmsRoles.Client);
+    /// <summary>A Client login, which reads its own client's records and nothing else
+    /// (ClientScope). A Client role without a ClientId reaches nothing.</summary>
+    public static readonly RoleSet ClientLogins = RoleSet.Of(JpmsRoles.Client);
 
     /// <summary>The subcontractor portal: a Subcontractor login, which reads its own directory
     /// record and its own work orders (SubcontractorScope).</summary>

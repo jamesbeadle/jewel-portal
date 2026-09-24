@@ -7,10 +7,13 @@ public partial class ProjectVariations
 {
     // ---- Issue work order for an approved variation order ----
 
-    private IReadOnlyList<WorkOrder> IssuedWorkOrdersFor(VariationOrder order) =>
-        Procurement.WorkOrdersFor(ProjectId)
+    private IReadOnlyList<WorkOrder> IssuedWorkOrdersFor(VariationOrder order)
+    {
+        if (!Session.IsInternal) return Array.Empty<WorkOrder>();
+        return Procurement.WorkOrdersFor(ProjectId)
             .Where(wo => string.Equals(wo.VariationOrderId, order.VariationOrderId, StringComparison.OrdinalIgnoreCase))
             .ToList();
+    }
 
     // A work order is only instructed after approval — the client's instruction to proceed.
     private bool CanIssueWorkOrder(VariationOrder order) =>

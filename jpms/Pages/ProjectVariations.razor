@@ -23,7 +23,7 @@
     RecordTabBar), and the Request column below links straight through.
 *@
 
-<Page OpenTo="JpmsRoleSets.ProjectDeliveryTeam">
+<Page OpenTo="JpmsRoleSets.DeliveryTeamAndParties">
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="variations">
         <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
             <div>
@@ -261,7 +261,10 @@
                            quoted. The system's Created stamp travels on the export only. *@
                         <th class="hidden lg:table-cell">Issued</th>
                         <th class="hidden lg:table-cell">Approved</th>
-                        <th>Work order</th>
+                        @if (Session.IsInternal)
+                        {
+                            <th>Work order</th>
+                        }
                     </tr>
                 </thead>
                 <tbody>
@@ -331,25 +334,28 @@
                             <td class="text-content-subtle hidden lg:table-cell whitespace-nowrap">
                                 @(order.Status == VariationOrderStatus.Approved ? DateText(order.ApprovedAt?.LocalDateTime) ?? "—" : "—")
                             </td>
-                            <td class="whitespace-nowrap">
-                                @{ var issued = IssuedWorkOrdersFor(order); }
-                                @if (issued.Count > 0)
-                                {
-                                    <span class="text-xs text-content-muted">@string.Join(", ", issued.Select(wo => $"WO-{wo.Number:0000}"))</span>
-                                }
-                                @if (CanIssueWorkOrder(order))
-                                {
-                                    <button type="button" class="@(issued.Count > 0 ?"block " : "")text-xs text-accent underline underline-offset-2 disabled:opacity-60"
-                                            title="@(issued.Count > 0 ? "Issue a further work order for this variation" : "Issue the work order instructing this variation")"
-                                            disabled="@requestBusy" @onclick="() => IssueWorkOrder(order.VariationOrderId)">
-                                        @(issued.Count > 0 ? "Issue another" : "Issue WO")
-                                    </button>
-                                }
-                                else if (issued.Count == 0)
-                                {
-                                    <span class="text-content-subtle">—</span>
-                                }
-                            </td>
+                            @if (Session.IsInternal)
+                            {
+                                <td class="whitespace-nowrap">
+                                    @{ var issued = IssuedWorkOrdersFor(order); }
+                                    @if (issued.Count > 0)
+                                    {
+                                        <span class="text-xs text-content-muted">@string.Join(", ", issued.Select(wo => $"WO-{wo.Number:0000}"))</span>
+                                    }
+                                    @if (CanIssueWorkOrder(order))
+                                    {
+                                        <button type="button" class="@(issued.Count > 0 ?"block " : "")text-xs text-accent underline underline-offset-2 disabled:opacity-60"
+                                                title="@(issued.Count > 0 ? "Issue a further work order for this variation" : "Issue the work order instructing this variation")"
+                                                disabled="@requestBusy" @onclick="() => IssueWorkOrder(order.VariationOrderId)">
+                                            @(issued.Count > 0 ? "Issue another" : "Issue WO")
+                                        </button>
+                                    }
+                                    else if (issued.Count == 0)
+                                    {
+                                        <span class="text-content-subtle">—</span>
+                                    }
+                                </td>
+                            }
                         </tr>
                     }
                 </tbody>

@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Storage;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.Requests;
+using Jewel.JPMS.Api.Features.Parties;
 
 namespace Jewel.JPMS.Api.Features.Requests.Attachments;
 
@@ -15,7 +16,7 @@ public sealed class RequestAttachmentEndpoints
     // Effectively "whatever the Functions host will accept" — phone photos are a few MB.
     private const long MaxAttachmentBytes = 64L * 1024 * 1024;
 
-    private static readonly RoleSet AllowedToRead = JpmsRoleSets.ProjectDeliveryTeam;
+    private static readonly RoleSet AllowedToRead = JpmsRoleSets.DeliveryTeamAndParties;
     private static readonly RoleSet AllowedToAttach = RoleSet.Of(
         Role.Admin,
         JpmsRoles.Director,
@@ -61,6 +62,7 @@ public sealed class RequestAttachmentEndpoints
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!AllowedToRead.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await PartyReads.MayReadRequestAsync(context, signedInUser, requestId, cancellationToken)) return new NotFoundResult();
 
         return new OkObjectResult(await list.HandleAsync(new ListRequestAttachments(requestId), cancellationToken));
     }
@@ -201,6 +203,7 @@ public sealed class RequestAttachmentEndpoints
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!AllowedToRead.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await PartyReads.MayReadRequestAsync(context, signedInUser, requestId, cancellationToken)) return new NotFoundResult();
 
         var entity = await context.RequestAttachments
             .AsNoTracking()

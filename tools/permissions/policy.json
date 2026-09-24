@@ -20,13 +20,12 @@
       "readers": {
         "anyVerb": [
           "RequestEmailReader",
-          "RecordEmailReader",
-          "RequestContextAssembler"
+          "RecordEmailReader"
         ],
         "reads": [
           "IMailboxGraphClient"
         ],
-        "why": "Judged by what an endpoint or connector tool reaches, not by its route: the RFI conversation (requests/{requestId}/messages) merged the tagged mail and admitted the architect until 2026-09-24, because its route never said mail. The readers also refuse an external caller at run time (SignedInCaller)."
+        "why": "Judged by what an endpoint or connector tool reaches, not by its route: the RFI conversation (requests/{requestId}/messages) merged the tagged mail and admitted the architect until 2026-09-24, because its route never said mail. A reader whose own code refuses an external caller (it asks SignedInCaller.MayReadInternalCorrespondence) is guarded, and reaching it is not a finding; the check names any reader that stops asking."
       }
     },
     "send": {
@@ -42,7 +41,6 @@
   },
   "externalSurfaces": {
     "Client": [
-      "client-portal/",
       "auth/"
     ],
     "Subcontractor": [
@@ -95,7 +93,6 @@
     "oauth/approve",
     "oauth/client-info",
     "my/policy-sign-offs",
-    "client-portal/",
     "portal/my/"
   ],
   "dynamicGates": [
@@ -126,20 +123,31 @@
   "externalRouteExceptions": {
     "Architect": [
       {
-        "why": "P08: the architect's instruction is their own instrument, and they sign off RFIs, submittals and variations — the WRITES, each scoped to their practice's projects. Every read of these records is the internal team's since 2026-09-24 (they carry the business's notes and mail); the architect's reads come back through its own portal's scoped reads.",
+        "why": "One app, tailored to the role (Nigel, 2026-09-24): the project's client and architect open the same RFI and variation views as the delivery team. Every one of these reads confines them to their own projects and strips what is internal before it leaves the server (Features/Parties/PartyReads); the conversations drop internal notes and mail for them at the data (SignedInCaller).",
+        "routes": [
+          "projects",
+          "projects/{projectId}/requests",
+          "projects/{projectId}/variation-orders",
+          "requests/{requestId}",
+          "requests/{requestId}/document",
+          "requests/{requestId}/messages",
+          "requests/{requestId}/voq",
+          "requests/{requestId}/attachments",
+          "requests/{requestId}/attachments/{attachmentId}/file",
+          "variation-orders/{voId}",
+          "variation-orders/{voId}/document",
+          "variation-orders/{voId}/messages"
+        ]
+      },
+      {
+        "why": "P08: the architect's instruction is their own instrument, and they sign off RFIs, submittals and variations — the WRITES, each scoped to their practice's projects.",
         "routes": [
           "architect-instructions/{instructionId}",
           "architect-instructions/{instructionId}/variations/{variationOrderId}",
           "projects/{projectId}/architect-instructions",
-          "projects/{projectId}/requests",
-          "requests/{requestId}",
           "requests/{requestId}/form",
-          "requests/{requestId}/messages",
-          "requests/{requestId}/attachments",
           "requests/{requestId}/attachments/drawings",
-          "requests/{requestId}/attachments/{attachmentId}",
-          "variation-orders/{voId}",
-          "variation-orders/{voId}/messages"
+          "requests/{requestId}/attachments/{attachmentId}"
         ]
       },
       {
@@ -147,15 +155,26 @@
         "routes": [
           "projects/{projectId}/defects"
         ]
-      },
-      {
-        "why": "The per-role nav (2026-09-22): an architect's sidebar rows are project-scoped, so the project list admits the architect and answers with the projects that name their practice (ArchitectProjects), never the whole portfolio.",
-        "routes": [
-          "projects"
-        ]
       }
     ],
     "Client": [
+      {
+        "why": "One app, tailored to the role (Nigel, 2026-09-24): the project's client and architect open the same RFI and variation views as the delivery team. Every one of these reads confines them to their own projects and strips what is internal before it leaves the server (Features/Parties/PartyReads); the conversations drop internal notes and mail for them at the data (SignedInCaller).",
+        "routes": [
+          "projects",
+          "projects/{projectId}/requests",
+          "projects/{projectId}/variation-orders",
+          "requests/{requestId}",
+          "requests/{requestId}/document",
+          "requests/{requestId}/messages",
+          "requests/{requestId}/voq",
+          "requests/{requestId}/attachments",
+          "requests/{requestId}/attachments/{attachmentId}/file",
+          "variation-orders/{voId}",
+          "variation-orders/{voId}/document",
+          "variation-orders/{voId}/messages"
+        ]
+      },
       {
         "why": "P09: a variation is ultimately the client's instruction to spend, and defects sign-off is theirs. Scoped to their own projects by VariationOrderScope since 2026-09-19; the defect route is not yet.",
         "routes": [

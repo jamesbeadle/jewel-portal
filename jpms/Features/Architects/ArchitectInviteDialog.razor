@@ -1,0 +1,114 @@
+@*
+    Invites one of a practice's people to sign in. The office picks WHO from the
+    practice's contact book (or the practice's own contact line); the login is linked to the
+    practice, so it reaches only the projects that name the practice — as the party, or among the
+    project's contacts — and never internal notes or email.
+*@
+@inject UserInviteService Invites
+@inject ICorrespondenceStore Correspondence
+
+<Modal IsOpen="Target is not null"
+       Title="Invite to the portal"
+       ConfirmLabel="@(isBusy ? "Inviting…" : result is null ? "Send invite" : "Re-send invite")"
+       OnCancel="OnClosed"
+       OnConfirm="SendAsync"
+       Class="max-w-2xl">
+    <div class="space-y-4">
+        <p class="text-sm text-content-muted">
+            The person signs in to the portal and opens the RFIs and variation orders on the projects
+            that name <span class="font-medium text-content">@Target?.Name</span> — as the party, or among
+            the project's contacts — and joins the shared conversation on each. The login is linked to
+            the practice, so it only ever reaches those projects, and never internal notes, costs or
+            email.
+        </p>
+        <FormField Label="Who" Required Hint="Add people to the practice with Contacts on its row.">
+            <select class="field" disabled="@(people is null)" value="@chosenEmail"
+                    @onchange="args => Choose((string)args.Value!)">
+                @if (people is null)
+                {
+                    <option value="">Loading…</option>
+                }
+                else
+                {
+                    <option value="">Choose a person</option>
+                    @foreach (var person in people)
+                    {
+                        <option value="@person.Email">@person.Name — @person.Email</option>
+                    }
+                }
+            </select>
+        </FormField>
+        @if (error is not null)
+        {
+            <Notice Tone="Tone.Negative">@error</Notice>
+        }
+        @if (result is not null)
+        {
+            <Notice Tone="Tone.Positive">
+                <p class="mb-1">Invite sent to <span class="font-medium">@result.Email</span>. If the email doesn't arrive, share this link (valid until @DateText(result.ExpiresAt)):</p>
+                <code class="block break-all text-xs bg-white/60 rounded px-2 py-1">@result.InviteLink</code>
+            </Notice>
+        }
+    </div>
+</Modal>
+
+@code {
+    /// <summary>The practice being invited from; null keeps the dialog closed.</summary>
+    [Parameter] public Architect? Target { get; set; }
+    [Parameter] public EventCallback OnClosed { get; set; }
+
+    private sealed record Person(string Name, string Email);
+
+    private string? openedFor;
+    private IReadOnlyList<Person>? people;
+    private string chosenEmail = "";
+    private bool isBusy;
+    private string? error;
+    private Contracts.Auth.InviteResult? result;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Target is null || Target.ArchitectId == openedFor) return;
+        openedFor = Target.ArchitectId;
+        people = null;
+        chosenEmail = "";
+        error = null;
+        result = null;
+        people = await PeopleOfAsync(Target);
+        chosenEmail = people.Count == 1 ? people[0].Email : "";
+    }
+
+    private async Task<IReadOnlyList<Person>> PeopleOfAsync(Architect practice)
+    {
+        var contacts = await Correspondence.ListPartyContactsAsync(PartyKind.Architect, practice.ArchitectId);
+        var people = contacts.Select(contact => new Person(contact.Name, contact.Email)).ToList();
+        var practiceLine = practice.ContactEmail;
+        var isPracticeLineListed = people.Any(person => string.Equals(person.Email, practiceLine, StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(practiceLine) && !isPracticeLineListed)
+            people.Add(new Person(practice.ContactName ?? practice.Name, practiceLine));
+        return people;
+    }
+
+    private void Choose(string email)
+    {
+        chosenEmail = email;
+        result = null;
+        error = null;
+    }
+
+    private async Task SendAsync()
+    {
+        if (isBusy || Target is null) return;
+        var person = people?.FirstOrDefault(candidate => candidate.Email == chosenEmail);
+        if (person is null) { error = "Choose who to invite."; return; }
+        error = null;
+        try
+        {
+            isBusy = true;
+            var outcome = await Invites.InviteArchitectAsync(Target.ArchitectId, person.Email, person.Name);
+            result = outcome.Result;
+            error = outcome.Error;
+        }
+        finally { isBusy = false; }
+    }
+}

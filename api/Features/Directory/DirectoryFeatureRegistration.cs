@@ -17,6 +17,7 @@ public static class DirectoryFeatureRegistration
         services.AddScoped<ICommandHandler<UpsertDirectoryUser, DirectoryUser>, UpsertDirectoryUserHandler>();
         services.AddScoped<UpsertDirectoryUserAuthorisation>();
         services.AddScoped<UpsertDirectoryUserValidation>();
+        services.AddScoped<ScopedRoleGrants>();
 
         services.AddScoped<ICommandHandler<RemoveDirectoryUser, Acknowledgement>, RemoveDirectoryUserHandler>();
         services.AddScoped<RemoveDirectoryUserAuthorisation>();

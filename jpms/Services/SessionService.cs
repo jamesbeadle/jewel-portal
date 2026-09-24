@@ -46,6 +46,11 @@ public sealed class SessionService : IDisposable
     /// viewing as an external role still sees it and an external login never does.</summary>
     public bool MayReadRecordEmails => CanOpen(RecordEmailRoles.Readers);
 
+    /// <summary>Whether this person is one of the business's own, judged on the roles they hold as
+    /// the API judges (PartyReads). The project's client and architect open the same views as the
+    /// team; a panel whose read is the team's alone renders, and loads, only when this is true.</summary>
+    public bool IsInternal => CanOpen(JpmsRoleSets.AllInternal);
+
     public bool HasMultipleRoles => AvailableRoles.Count > 1;
 
     /// <summary>True for users opted in to the two-hour default-back (Admin → Users), once their

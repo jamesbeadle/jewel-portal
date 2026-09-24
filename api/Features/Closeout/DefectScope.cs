@@ -1,5 +1,5 @@
 using Jewel.JPMS.Api.Features.Architects;
-using Jewel.JPMS.Api.Features.ClientPortal;
+using Jewel.JPMS.Api.Features.Clients;
 
 namespace Jewel.JPMS.Api.Features.Closeout;
 
@@ -8,8 +8,8 @@ namespace Jewel.JPMS.Api.Features.Closeout;
 /// raise a defect?"; this answers "on whose job?".
 ///
 /// Role.Client is admitted so a homeowner can report a fault on their own house, and admitted for
-/// ANY project id (permission check, 2026-09-19). Ownership is the client portal's own
-/// ClientProjects, so both surfaces decide it the same way.
+/// ANY project id (permission check, 2026-09-19). Ownership is ClientProjects, the same rule every
+/// read a client makes answers by (Parties/PartyReads).
 ///
 /// The architect is admitted by the same gate and confined the same way, to the projects that
 /// name their practice (ArchitectProjects, since the login carries ArchitectId). An external

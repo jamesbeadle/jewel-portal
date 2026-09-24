@@ -1222,43 +1222,6 @@ Modals: none (all forms are inline panels, not dialogs).
 
 Modals: none.
 
-### Your projects — `/client`
-`Pages/ClientPortalHome.razor` (101 lines) — a client's own view of their projects' RFIs and variation orders (Client-portal login).
-
-- Inline 3-branch gate 🔒⚠️ — LoadGate ✅ / RequestAccessView ✅
-- "Not available" text 🔒 (wrong role)
-- "No account linked" text 🔒 (role but no linked client)
-- section 🔒 max-w-5xl
-  - Title "Your projects" · Subtitle 🔒
-  - AlertBanner (negative) ⚠️ — loadError
-  - Sub-header "Requests for information" 🔒 → LoadGate ✅ → ClientRequestList ✅ (Features/ClientPortal)
-  - Sub-header "Variation orders" 🔒 → LoadGate ✅ → ClientVariationList ✅ (Features/ClientPortal)
-
-Modals: none (list items link out to detail pages, not dialogs).
-
-### Client Request View — `/client/requests/{RequestId}`
-`Pages/ClientRequestView.razor` (101 lines) — a client portal user's own request thread.
-
-- AuthGate ⚠️ (manual `!sessionReady` preamble) → RequestAccessView ✅ → not-a-client-account text 🔒 → nested LoadGate ✅ "Loading request"
-- EmptyState 🔒 "Request not found" (record is null after load)
-- "← Your projects" back link 🔒
-- header 🔒 — Eyebrow (Reference · Kind · ProjectName) · Title · Subtitle (Status · raised date · responded date)
-- Panel ✅ "Detail" (conditional, if description present)
-- Panel ✅ "Response" (conditional, if response text present)
-- ClientConversationPanel ✅ (Load/Post callbacks — the client-side message thread)
-- Modals: none
-
-### Client Variation View — `/client/variations/{VariationOrderId}`
-`Pages/ClientVariationView.razor` (93 lines) — client-portal read view of one Variation, with a Q&A thread back to Jewel.
-
-- AuthGate ⚠️ (`!sessionReady` → LoadGate ✅; `!Session.IsApproved` → RequestAccessView ✅; `!CanAccess` → EmptyState 🔒 "for client accounts"; `!loaded` → LoadGate ✅; `record is null` → EmptyState 🔒 "not found")
-- Section (max-w-3xl) 🔒
-  - Back link "← Your projects" 🔒
-  - PageHeader ⚠️ — Eyebrow (ref · "Variation order" · project name) 🔒, Title (variation Title), Subtitle (StatusPill-as-text ⚠️ status · value · approved date)
-  - Panel ✅ "Detail" (conditional on non-empty description)
-  - ClientConversationPanel ✅ (Load/Post callbacks — the Q&A ActivityFeed + composer)
-- Modals: none
-
 ### Sign In — `/` · `/login`
 `Pages/Login.razor` (113 lines, `LandingLayout`) — email/password sign-in with returnUrl handling.
 

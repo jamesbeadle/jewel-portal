@@ -179,8 +179,8 @@
         loadedFor = RequestId;
         loaded = false;
         // Warm the drawing register now, from a lifecycle method rather than from render, so the
-        // picker has something in it the moment it is opened.
-        Drawings.Refresh(ProjectId);
+        // picker has something in it the moment it is opened — only for someone who can open it.
+        if (CanEdit) Drawings.Refresh(ProjectId);
         await LoadAsync();
     }
 

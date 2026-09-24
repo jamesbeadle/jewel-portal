@@ -50,7 +50,8 @@ public partial class ProjectVariations
         try
         {
             orders = await Variations.ListForProjectAsync(ProjectId);
-            variationRequests = await Variations.ListVariationRequestsForProjectAsync(ProjectId);
+            if (Session.IsInternal)
+                variationRequests = await Variations.ListVariationRequestsForProjectAsync(ProjectId);
             Rows = orders.OrderByDescending(order => order.Number).ToList();
             variationsError = null;
         }
@@ -66,9 +67,10 @@ public partial class ProjectVariations
         // Refresh on entry (stale-while-revalidate): cached data renders immediately, then
         // updates when the background reload lands.
         RequestRegister.Refresh(ProjectId); // The Request column + search read the register.
+        await LoadVariationsAsync();
+        if (!Session.IsInternal) return;    // The project's client or architect: the team's reads below are not theirs.
         Procurement.Refresh(ProjectId);     // Background revalidation of work orders (issued-WO column).
         Activity.Refresh(ProjectId);        // Activity badges land in the background — absent until then.
-        await LoadVariationsAsync();
     }
 
     public void Dispose()
