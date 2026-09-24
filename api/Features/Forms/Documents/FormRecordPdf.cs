@@ -31,7 +31,7 @@ public static class FormRecordPdf
         normal.Font.Size = 9;
         normal.Font.Color = Ink;
         var section = A4Page(document);
-        CleanHeader(section, title, submission.SubmitterName, HeaderFacts(submission));
+        CleanHeader(section, title, submission.SubmitterName, HeaderFacts(view));
         AddAnswers(section, form, view);
         AddFiles(section, view);
         HouseFooter(section, $"Form {submission.FormSubmissionId} · generated {DateAndTime(generatedAt)} · from the JPMS register (source of truth)");
@@ -42,10 +42,11 @@ public static class FormRecordPdf
         return stream.ToArray();
     }
 
-    private static HeaderFact[] HeaderFacts(FormSubmission submission) => new[]
+    private static HeaderFact[] HeaderFacts(FormSubmissionView view) => new[]
     {
-        new HeaderFact($"Submitted {DateAndTime(submission.SubmittedAt)}"),
-        new HeaderFact(submission.IsVerifiedLink ? $"Sent through a one-time link to {submission.SentToEmail}" : "")
+        new HeaderFact($"Submitted {DateAndTime(view.Submission.SubmittedAt)}"),
+        new HeaderFact(view.Submission.IsVerifiedLink ? $"Sent through a one-time link to {view.Submission.SentToEmail}" : ""),
+        new HeaderFact(view.QuizScore is { } score ? $"Scored {score.Sentence}" : "")
     };
 
     private static void AddAnswers(Section section, FormDefinition? form, FormSubmissionView view)

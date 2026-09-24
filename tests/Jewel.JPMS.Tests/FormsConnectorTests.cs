@@ -16,7 +16,7 @@ public sealed class FormsConnectorTests
     private static readonly string[] Buttons =
     {
         "send_form_invite", "resend_form_invite", "cancel_form_invite", "send_form_pack", "chase_form_pack", "cancel_form_pack",
-        "set_form_submission_status", "file_form_to_directory", "record_form_folder_dates", "save_right_to_work_check",
+        "set_form_submission_status", "file_form_to_directory", "file_quiz_to_directory", "record_form_folder_dates", "save_right_to_work_check",
         "send_right_to_work_confirmation", "accept_training_certificate", "set_training_record_details",
         "resolve_workstation_action", "record_driving_licence_check"
     };
@@ -115,6 +115,19 @@ public sealed class FormsConnectorTests
         Assert.Contains("Alex Smith", emergency);
         Assert.Contains("a health answer, hidden until revealed", emergency);
         Assert.DoesNotContain(AiToolCatalogue.ForConnector(UserWith(Role.Admin)), tool => tool.Name.Contains("health", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void AQuizReadOverTheConnector_carriesItsMark()
+    {
+        var submission = new FormSubmission("form-2", FormSlugs.CyberQuiz, "Sam Smith", "Acme Ltd", null, true,
+            "sam@example.com", "Jeremy", null, FormSubmissionStatus.New, DateTimeOffset.UtcNow, "", null);
+        var view = new FormSubmissionView(submission, new Dictionary<string, string>(), Array.Empty<FormUploadedFile>(),
+            Array.Empty<string>(), new FormQuizScore(24, 25, 23));
+
+        var read = JsonSerializer.Serialize(AiFormReading.Of(view, DateTimeOffset.UtcNow));
+
+        Assert.Contains("\"quizScore\":{\"Score\":24,\"OutOf\":25,\"PassMark\":23,\"HasPassed\":true}", read);
     }
 
     private static string Read(string formSlug, Dictionary<string, string> answers, params string[] withheldKeys)

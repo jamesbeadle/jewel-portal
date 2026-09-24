@@ -65,6 +65,8 @@ internal static class AiActionScopes
             FormRecordScope.MayActOnFormAsync(context, user, ((SetFormSubmissionStatus)command).FormSubmissionId, cancellationToken),
         [typeof(FileFormToDirectory)] = (context, user, command, cancellationToken) =>
             FormRecordScope.MayActOnFormAsync(context, user, ((FileFormToDirectory)command).FormSubmissionId, cancellationToken),
+        [typeof(FileQuizToDirectory)] = (context, user, command, cancellationToken) =>
+            FormRecordScope.MayActOnFormAsync(context, user, ((FileQuizToDirectory)command).FormSubmissionId, cancellationToken),
         [typeof(RecordFormFolderDates)] = (context, user, command, cancellationToken) =>
             FormRecordScope.MayDateFolderAsync(context, user, ((RecordFormFolderDates)command).FormFolderId, cancellationToken),
         [typeof(UpdateHsRecord)] = (context, user, command, cancellationToken) =>

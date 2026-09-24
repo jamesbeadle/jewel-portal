@@ -24,10 +24,7 @@ public partial class FileToDirectoryPanel
         : "A sub-contractor questionnaire. File its insurance certificates to the company's directory record, with their expiry, "
             + "and the renewal is chased like any other certificate.";
 
-    private IReadOnlyList<SearchSelect.Option> Companies => Directory.All()
-        .OrderBy(company => company.CompanyName)
-        .Select(company => new SearchSelect.Option(company.SubcontractorId, company.CompanyName))
-        .ToList();
+    private IReadOnlyList<SearchSelect.Option> Companies => DirectoryCompanyPicks.Options(Directory);
 
     private bool IsReady => subcontractorId.Length > 0 && rows.Any(row => row.IsIncluded);
 
@@ -36,10 +33,7 @@ public partial class FileToDirectoryPanel
     private void Open()
     {
         rows = FormDirectoryFilingPlan.For(Reading.View).Select(suggestion => new DirectoryFilingRow(suggestion)).ToList();
-        var formCompany = Reading.View.Answers.GetValueOrDefault("company", "").Trim();
-        var match = Directory.All()
-            .FirstOrDefault(company => string.Equals(company.CompanyName.Trim(), formCompany, StringComparison.OrdinalIgnoreCase));
-        subcontractorId = match?.SubcontractorId ?? "";
+        subcontractorId = DirectoryCompanyPicks.NamedBy(Directory, Reading.View.Answers.GetValueOrDefault("company", ""));
         isOpen = true;
     }
 

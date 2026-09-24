@@ -7,6 +7,12 @@
     case FormSlugs.InsuranceUpdate:
         <FileToDirectoryPanel Reading="Reading" OnChanged="OnChanged" />
         break;
+    case FormSlugs.CyberQuiz:
+        if (Reading.View.QuizScore is { } score)
+        {
+            <QuizResultPanel Reading="Reading" Score="score" OnChanged="OnChanged" />
+        }
+        break;
     case FormSlugs.CompanyVehicle:
         <LicenceCheckPanel Reading="Reading" OnChanged="OnChanged" />
         break;

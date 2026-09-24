@@ -24,7 +24,7 @@
         }
         @if (receipt is not null)
         {
-            <FormDoneSheet Lead="@FormWording.SentToTheOffice" BackAddress="@PackAddress" />
+            <FormDoneSheet Lead="@FormWording.SentToTheOffice" BackAddress="@PackAddress" QuizScore="@receipt.QuizScore" />
         }
         @if (IsFillingIn)
         {

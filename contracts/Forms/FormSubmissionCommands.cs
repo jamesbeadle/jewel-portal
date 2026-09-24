@@ -31,3 +31,13 @@ public sealed record FileFormToDirectory(
 
 /// <summary>One file from the form and what it is on the company's record: its kind, expiry and, for public liability, the cover.</summary>
 public sealed record FormUploadToFile(string FormUploadId, string Kind, DateOnly? ExpiresOn, decimal? PublicLiabilityCover);
+
+/// <summary>
+/// Files a marked quiz onto a directory company's compliance record: the quiz's record, with its
+/// score and pass or fail in the file's name, as the current version of the company's quiz.
+/// FiledByEmail is stamped server-side.
+/// </summary>
+public sealed record FileQuizToDirectory(
+    string FormSubmissionId,
+    string SubcontractorId,
+    string FiledByEmail = "") : ICommand<FormDirectoryFiling>;

@@ -1,3 +1,5 @@
+using Jewel.JPMS.Api.Features.Forms.Answers;
+using Jewel.JPMS.Api.Features.Forms.Quizzes;
 using Jewel.JPMS.Contracts.Forms;
 
 namespace Jewel.JPMS.Api.Features.Forms.Public;
@@ -41,6 +43,8 @@ public sealed partial class PublicFormService
     {
         var earlier = await context.FormSubmissions.AsNoTracking()
             .FirstOrDefaultAsync(row => row.SessionId == sessionId && row.FormSlug == formSlug, cancellationToken);
-        return earlier is null ? null : new PublicFormReceipt(earlier.FormSubmissionId, earlier.IsVerifiedLink);
+        if (earlier is null) return null;
+        var quizScore = FormQuizzes.Mark(formSlug, FormAnswersJson.Read(earlier.AnswersJson));
+        return new PublicFormReceipt(earlier.FormSubmissionId, earlier.IsVerifiedLink, quizScore);
     }
 }

@@ -40,14 +40,15 @@ public sealed record FormUploadedFile(
     string DeletionReason);
 
 /// <summary>
-/// A submission's answers by question key, its files, and the keys this reader is not shown until
-/// they reveal them (the emergency form's health answers).
+/// A submission's answers by question key, its files, the keys this reader is not shown until
+/// they reveal them (the emergency form's health answers), and a quiz's mark — null for any other form.
 /// </summary>
 public sealed record FormSubmissionView(
     FormSubmission Submission,
     IReadOnlyDictionary<string, string> Answers,
     IReadOnlyList<FormUploadedFile> Files,
-    IReadOnlyList<string> WithheldKeys);
+    IReadOnlyList<string> WithheldKeys,
+    FormQuizScore? QuizScore = null);
 
 /// <summary>
 /// The person or company everything they send is filed under. The dates start the retention

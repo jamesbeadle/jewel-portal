@@ -37,4 +37,5 @@ public sealed record PublicFormSubmission(
     string? InviteToken,
     string? PackToken);
 
-public sealed record PublicFormReceipt(string FormSubmissionId, bool IsVerified);
+/// <summary>What the person is told once the form is sent: its id, whether it came through their own link, and a quiz's mark.</summary>
+public sealed record PublicFormReceipt(string FormSubmissionId, bool IsVerified, FormQuizScore? QuizScore = null);

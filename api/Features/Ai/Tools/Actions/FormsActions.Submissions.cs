@@ -36,6 +36,23 @@ internal sealed partial class FormsActions
             + "photo has no place on a company's compliance record.",
         RequiresConfirmation: true);
 
+    private static AiAction FileQuizToDirectoryAction() => new AiAction(
+        Name: "file_quiz_to_directory",
+        Area: Area,
+        Description: "Files a marked IT, Cyber & AI quiz onto a directory company's compliance record as due diligence evidence: "
+            + "the quiz's record, named with its score and pass or fail, becomes the company's current quiz. A pass stands for a "
+            + "year; a fail is filed already expired, so the company's standing reads Expired until a retake passes. The quiz is handled once filed.",
+        CommandType: typeof(FileQuizToDirectory),
+        ResultType: typeof(FormDirectoryFiling),
+        AuthorisationType: typeof(FileQuizToDirectoryAuthorisation),
+        ValidationType: typeof(FileQuizToDirectoryValidation),
+        VisibleTo: FormRoleSets.Office,
+        EmailStamps: new[] { "FiledByEmail" },
+        NameStamps: Array.Empty<string>(),
+        Notes: "Read get_form_submission first: quizScore is the mark and the company answer names who took it. subcontractorId "
+            + "comes from search_directory — confirm the company with the user.",
+        RequiresConfirmation: true);
+
     private static AiAction RecordFormFolderDatesAction() => new AiAction(
         Name: "record_form_folder_dates",
         Area: Area,

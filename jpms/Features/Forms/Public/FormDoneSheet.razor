@@ -2,6 +2,10 @@
     <div class="form-sheet-done-tick">✓</div>
     <div class="form-sheet-done-title"><h2>@FormWording.ThankYou</h2></div>
     <p>@Lead</p>
+    @if (QuizScore is { } score)
+    {
+        <p class="form-sheet-done-score">@FormSheetWording.YourScore(score)</p>
+    }
     <ol class="form-sheet-done-steps">
         @foreach (var step in FormWording.WhatHappensNext)
         {
@@ -18,4 +22,5 @@
 @code {
     [Parameter, EditorRequired] public string Lead { get; set; } = "";
     [Parameter] public string? BackAddress { get; set; }
+    [Parameter] public FormQuizScore? QuizScore { get; set; }
 }

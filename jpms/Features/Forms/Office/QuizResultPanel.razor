@@ -1,0 +1,28 @@
+@inject ICommandSender Commands
+@inject ISubcontractorStore Directory
+@implements IDisposable
+
+<Notice Tone="@ScoreTone" Class="mb-4">
+    <span>Scored @Score.Sentence.</span>
+    <button type="button" class="btn-secondary ml-2" @onclick="Open">File to the directory…</button>
+</Notice>
+@if (filed is { } result)
+{
+    <Notice Tone="Tone.Positive" Class="mb-4" Dismissible OnDismiss="() => filed = null">
+        Filed to @result.CompanyName as their current @QuizComplianceRecord.Kind.
+    </Notice>
+}
+
+<Modal IsOpen="isOpen" Title="File the quiz to the directory" ConfirmLabel="@(write.IsBusy ? "Filing…" : "File")"
+       ConfirmDisabled="@(write.IsBusy || subcontractorId.Length == 0)" OnConfirm="FileAsync" OnCancel="() => isOpen = false">
+    @if (write.Problem is { } problem)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@problem</Notice>
+    }
+    <p class="mb-3">@Explanation</p>
+    <FormField Label="Directory company" Required Hint="Not in the directory yet? Add them there first, then come back.">
+        <SearchSelect Options="DirectoryCompanyPicks.Options(Directory)" Value="@subcontractorId" ValueChanged="picked => subcontractorId = picked"
+                      Placeholder="@(Directory.IsLoaded ? "Pick the company" : "Loading…")" WidthClass="w-full" InputClass="field"
+                      Disabled="@(!Directory.IsLoaded)" />
+    </FormField>
+</Modal>

@@ -650,6 +650,7 @@
 .form-sheet-done { @apply mx-4 mt-10 rounded-[14px] border border-paper-line bg-paper-card p-[26px] text-center; }
 .form-sheet-done-tick { @apply mx-auto mb-4 grid h-16 w-16 place-items-center rounded-full bg-paper-done text-[32px] text-white; }
 .form-sheet-done-title { @apply mb-1.5 text-2xl font-semibold text-paper-strong; }
+.form-sheet-done-score { @apply mt-3 text-lg font-semibold text-paper-strong; }
 .form-sheet-done-steps { @apply mt-3.5 list-decimal pl-5 text-left text-sm leading-[1.7] text-paper-hint; }
 .form-sheet-pack-row { @apply flex items-center justify-between gap-3; }
 .form-sheet-pack-state { @apply text-[13px] font-semibold text-paper-done; }
