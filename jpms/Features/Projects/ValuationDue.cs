@@ -12,7 +12,7 @@ public static class ValuationDue
     private const int DueSoonWindowDays = 7;
 
     public static Status Of(Project project) =>
-        project.Stage == ProjectStage.Completed ? Status.NotSet : Of(project.NextExpectedValuationDate);
+        project.Stage == ProjectStage.Completed ? Status.NotSet : Of(project.NextValuationDue);
 
     public static Status Of(DateTimeOffset? date)
     {

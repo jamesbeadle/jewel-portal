@@ -61,6 +61,7 @@ internal static class PartyReads
             : project with
             {
                 ExpectedMonthlyValuation = null, NextExpectedValuationDate = null,
+                ValuationCycle = ValuationCycle.None, LastValuationLockedAt = null,
                 XeroSiteName = null, XeroContactId = null, XeroContactName = null
             };
 

@@ -64,8 +64,8 @@
     private IReadOnlyList<Project> Ordered =>
         (Projects.Current ?? Array.Empty<Project>())
             .Where(project => project.Stage != ProjectStage.Completed)
-            .OrderBy(project => project.NextExpectedValuationDate is null)
-            .ThenBy(project => project.NextExpectedValuationDate)
+            .OrderBy(project => project.NextValuationDue is null)
+            .ThenBy(project => project.NextValuationDue)
             .ThenBy(project => project.Reference, StringComparer.OrdinalIgnoreCase)
             .ToList();
 

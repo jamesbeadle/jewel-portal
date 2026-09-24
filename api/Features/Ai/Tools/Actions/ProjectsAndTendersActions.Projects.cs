@@ -87,7 +87,10 @@ internal sealed partial class ProjectsAndTendersActions
             Name: "set_next_valuation_date",
             Area: "Projects",
             Description: "Sets (or clears, with null) the date the next valuation is expected on a "
-                + "project — the one field, without round-tripping the full project details.",
+                + "project, and optionally its valuation cycle (None, Fortnightly, FourWeekly, Monthly) "
+                + "from the contract terms — without round-tripping the full project details. With a "
+                + "cycle the date is the anchor it counts from: the project's nextValuationDue moves on "
+                + "by itself once a claim is locked (a locked valuation is taken as sent).",
             CommandType: typeof(SetNextValuationDate),
             ResultType: typeof(Project),
             AuthorisationType: typeof(SetNextValuationDateAuthorisation),
@@ -95,7 +98,8 @@ internal sealed partial class ProjectsAndTendersActions
             VisibleTo: ProjectEditors,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "projectId comes from list_projects. The date is ISO 8601."),
+            Notes: "projectId comes from list_projects. The date is ISO 8601. Leave cycle out to keep "
+                + "the project's current cycle."),
 
         new AiAction(
             Name: "set_project_xero_contact",

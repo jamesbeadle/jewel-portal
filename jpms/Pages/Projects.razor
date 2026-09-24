@@ -131,7 +131,7 @@
                 project.ClientName,
                 project.Organisation.ShortCode(),
                 project.Stage.DisplayName(),
-                project.NextExpectedValuationDate?.ToString("d MMM yyyy") ?? "");
+                project.NextValuationDue?.ToString("d MMM yyyy") ?? "");
         }
         return workbook;
     }

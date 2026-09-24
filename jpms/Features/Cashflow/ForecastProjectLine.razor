@@ -17,7 +17,7 @@
         {
             <span class="block mt-1 text-xs text-content-faint whitespace-nowrap">
                 next valuation
-                <input type="date" value="@(Project.NextExpectedValuationDate?.ToString("yyyy-MM-dd"))"
+                <input type="date" value="@(Project.NextValuationDue?.ToString("yyyy-MM-dd"))"
                        @onchange="args => OnNextValuationChanged.InvokeAsync((Project, args))"
                        title="The full date matters: each valuation is paid the contract's payment terms after this day of the month, so cash lands on payment dates"
                        class="field text-xs" />

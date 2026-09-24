@@ -16,7 +16,13 @@
 <article class="panel p-4">
     <p class="eyebrow mb-1">Next Valuation</p>
     <div class="flex items-center justify-between gap-2">
-        <p class="text-content text-sm leading-snug">@(CurrentDate?.ToString("d MMM yyyy") ?? "—")</p>
+        <div>
+            <p class="text-content text-sm leading-snug">@(CurrentDate?.ToString("d MMM yyyy") ?? "—")</p>
+            @if (CurrentCycle != ValuationCycle.None)
+            {
+                <p class="text-xs text-content-subtle">@CurrentCycle.DisplayName() · moves on when a claim is locked</p>
+            }
+        </div>
         @if (CanEdit)
         {
             <button type="button" class="btn-secondary text-xs px-2.5 py-1.5 shrink-0" @onclick="Open">Set date</button>
@@ -31,6 +37,15 @@
         {
             <Notice Tone="Tone.Negative">@error</Notice>
         }
+
+        <FormField Label="Valuation cycle" Hint="From the contract terms. Once a claim is locked the next date moves on by one cycle by itself.">
+            <select class="field" @bind="cycle">
+                @foreach (var option in ValuationCycles.All)
+                {
+                    <option value="@option">@option.DisplayName()</option>
+                }
+            </select>
+        </FormField>
 
         <div>
             <FormField Label="Base date">
@@ -141,7 +156,11 @@
     private int occurrence = 5; // 1..4 = first..fourth, 5 = last
     private DayOfWeek weekday = DayOfWeek.Thursday;
 
-    private DateTimeOffset? CurrentDate => Projects.Find(ProjectId)?.NextExpectedValuationDate;
+    private ValuationCycle cycle;
+
+    private DateTimeOffset? CurrentDate => Projects.Find(ProjectId)?.NextValuationDue;
+
+    private ValuationCycle CurrentCycle => Projects.Find(ProjectId)?.ValuationCycle ?? ValuationCycle.None;
 
     // Mirrors SetNextValuationDateAuthorisation server-side (directors, the finance director and
     // project managers; administrators carry every role).
@@ -199,6 +218,7 @@
         snapToWeekday = true;
         occurrence = 5;
         weekday = DayOfWeek.Thursday;
+        cycle = CurrentCycle;
         error = null;
         open = true;
     }
@@ -220,7 +240,7 @@
         busy = true;
         try
         {
-            await Commands.SendAsync(new SetNextValuationDate(ProjectId, nextExpectedValuationDate), CancellationToken.None);
+            await Commands.SendAsync(new SetNextValuationDate(ProjectId, nextExpectedValuationDate, cycle), CancellationToken.None);
             await Projects.RefreshAsync(CancellationToken.None);
             Close();
         }

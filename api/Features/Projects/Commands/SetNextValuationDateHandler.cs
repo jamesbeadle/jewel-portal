@@ -18,8 +18,10 @@ public sealed class SetNextValuationDateHandler
         entity.NextExpectedValuationDate = command.NextExpectedValuationDate is { } value
             ? new DateTimeOffset(value.Date, TimeSpan.Zero)
             : null;
+        if (command.Cycle is { } cycle) entity.ValuationCycle = (int)cycle;
 
         await context.SaveChangesAsync(cancellationToken);
-        return entity.ToModel();
+        var lastLockedAt = await ProjectValuationLocks.LatestForAsync(context, entity.ProjectId, cancellationToken);
+        return entity.ToModel(lastLockedAt);
     }
 }

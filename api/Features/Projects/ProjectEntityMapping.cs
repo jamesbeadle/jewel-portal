@@ -4,7 +4,7 @@ namespace Jewel.JPMS.Api.Features.Projects;
 
 internal static class ProjectEntityMapping
 {
-    public static Project ToModel(this ProjectEntity entity) => new(
+    public static Project ToModel(this ProjectEntity entity, DateTimeOffset? lastValuationLockedAt = null) => new(
         ProjectId: entity.ProjectId,
         Reference: entity.Reference,
         Name: entity.Name,
@@ -25,5 +25,7 @@ internal static class ProjectEntityMapping
         XeroContactId: entity.XeroContactId,
         XeroContactName: entity.XeroContactName,
         SiteManagerName: entity.SiteManagerName,
-        SiteManagerEmail: entity.SiteManagerEmail);
+        SiteManagerEmail: entity.SiteManagerEmail,
+        ValuationCycle: (ValuationCycle)entity.ValuationCycle,
+        LastValuationLockedAt: lastValuationLockedAt);
 }

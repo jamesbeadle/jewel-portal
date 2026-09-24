@@ -22,7 +22,11 @@ public sealed class ListProjectsVisibleToUserHandler
         var entities = await VisibleProjects(query)
             .OrderByDescending(project => project.CreatedAt)
             .ToListAsync(cancellationToken);
-        return entities.Select(entity => entity.ToModel()).InWorkOrder().ToList().AsReadOnly();
+        var projectIds = entities.Select(entity => entity.ProjectId).ToList();
+        var locks = await ProjectValuationLocks.LatestForAsync(context, projectIds, cancellationToken);
+        return entities
+            .Select(entity => entity.ToModel(locks.TryGetValue(entity.ProjectId, out var lockedAt) ? lockedAt : null))
+            .InWorkOrder().ToList().AsReadOnly();
     }
 
     private IQueryable<ProjectEntity> VisibleProjects(ListProjectsVisibleToUser query)

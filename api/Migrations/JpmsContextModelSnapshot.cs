@@ -5807,6 +5807,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
+                    b.Property<int>("ValuationCycle")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("ValuationInvoicePaidTotal")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
