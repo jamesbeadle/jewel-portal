@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.Progress;
 
 namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
@@ -6,13 +7,6 @@ namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
 /// forward, nothing stored on the report.</summary>
 internal static class ContractorsReportRegisterReader
 {
-    private static readonly int[] VariationStatusesStillOpen =
-    {
-        (int)VariationOrderStatus.Quoting,
-        (int)VariationOrderStatus.Issued,
-        (int)VariationOrderStatus.AwaitingArchitectInstruction
-    };
-
     /// <summary>Section 3: every RFI on the project not yet closed.</summary>
     public static async Task<IReadOnlyList<ContractorsReportDecision>> DecisionsAsync(
         JpmsContext context, string projectId, CancellationToken cancellationToken)
@@ -31,24 +25,37 @@ internal static class ContractorsReportRegisterReader
             .ToList();
     }
 
-    /// <summary>Section 4: every variation not yet approved or rejected, at its estimated value
-    /// (the agreed value once one is staged).</summary>
+    /// <summary>Section 4: every variation Issued and unanswered, with the date it was issued —
+    /// not Quoting (the client has not seen it) and not Awaiting AI or Approved (answered).</summary>
     public static async Task<IReadOnlyList<ContractorsReportVariation>> VariationsAsync(
         JpmsContext context, string projectId, CancellationToken cancellationToken)
     {
         var rows = await context.VariationOrders.AsNoTracking()
-            .Where(row => row.ProjectId == projectId && VariationStatusesStillOpen.Contains(row.Status))
+            .Where(row => row.ProjectId == projectId && row.Status == (int)VariationOrderStatus.Issued)
             .OrderBy(row => row.Number)
             .ToListAsync(cancellationToken);
         return rows
-            .Select(row => new ContractorsReportVariation(
-                row.VariationOrderId,
-                row.Number > 0 ? $"V{row.Number}" : row.Reference,
-                row.Title,
-                ((VariationOrderStatus)row.Status).DisplayName(),
-                row.EstimatedValue ?? row.Value))
+            .Select(row => new ContractorsReportVariation(row.VariationOrderId, DisplayNumberOf(row), row.Title, DayOf(row.IssuedAt)))
             .ToList();
     }
+
+    /// <summary>Section 4's opening line: the variations approved within the report's period.</summary>
+    public static async Task<IReadOnlyList<ContractorsReportApprovedVariation>> ApprovedInPeriodAsync(
+        JpmsContext context, string projectId, ReportingWeek week, CancellationToken cancellationToken)
+    {
+        var rows = await context.VariationOrders.AsNoTracking()
+            .Where(row => row.ProjectId == projectId && row.Status == (int)VariationOrderStatus.Approved && row.ApprovedAt != null)
+            .OrderBy(row => row.Number)
+            .ToListAsync(cancellationToken);
+        return rows
+            .Select(row => new ContractorsReportApprovedVariation(row.VariationOrderId, DisplayNumberOf(row), DayOf(row.ApprovedAt) ?? DateOnly.MinValue))
+            .Where(variation => week.Contains(variation.ApprovedOn))
+            .ToList();
+    }
+
+    private static string DisplayNumberOf(VariationOrderEntity row) => row.Number > 0 ? $"V{row.Number}" : row.Reference;
+
+    private static DateOnly? DayOf(DateTimeOffset? moment) => moment is { } value ? DateOnly.FromDateTime(value.Date) : null;
 
     /// <summary>Section 7: the standing contact on the project's active Building Control case.</summary>
     public static async Task<ContractorsReportBuildingControl> BuildingControlAsync(

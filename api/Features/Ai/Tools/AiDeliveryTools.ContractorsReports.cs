@@ -36,7 +36,8 @@ internal static partial class AiDeliveryTools
             "get_contractors_report",
             "One Contractor's Report with the document it composes to RIGHT NOW — the header, "
             + "Section 1's days with the selected updates, Look Ahead, the open RFIs (Section 3), "
-            + "the variations not yet approved or rejected with their total (Section 4), "
+            + "Section 4 (the variations at Issued, each with the date it was issued — Variation / "
+            + "Position, no value column — and variationsApproved, the ones approved in the period), "
             + "Neighbours, Health & Safety, the Building Control contact and liaison (Section 7), "
             + "Section 8 (only the work orders with attendance entered — a firm that did not "
             + "attend is not in the report, so its wording is never checked), the days with photographs "

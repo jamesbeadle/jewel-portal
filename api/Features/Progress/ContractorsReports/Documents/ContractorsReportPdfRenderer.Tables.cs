@@ -24,17 +24,15 @@ public static partial class ContractorsReportPdfRenderer
     private static void AddVariations(Section section, ContractorsReportDocument model)
     {
         SectionHeading(section, ContractorsReportSections.Variations);
-        if (model.Variations.Count == 0) { MutedLine(section, ContractorsReportText.NoVariations); return; }
+        var nothingOutstanding = ContractorsReportVariationWording.NothingOutstanding(model);
+        if (model.Variations.Count == 0) { MutedLine(section, nothingOutstanding); return; }
 
-        var table = RegisterTable(section, ("No.", 1.8, false), ("Title", 10.0, false), ("Status", 3.0, false), ("Value (ex VAT)", 3.0, true));
+        var opening = section.AddParagraph(ContractorsReportVariationWording.Paragraph(model));
+        opening.Format.Font.Size = 9.5;
+        SpaceAfter(opening, 2.5);
+        var table = RegisterTable(section, ("Variation", 11.4, false), ("Position", 6.4, false));
         foreach (var variation in model.Variations)
-            BodyRow(table, variation.DisplayNumber, variation.Title, variation.Status, ContractorsReportText.Money(variation.Value));
-        var total = table.AddRow();
-        total.Shading.Color = Panel;
-        LabelCell(total.Cells[2], "Total");
-        var totalCell = total.Cells[3];
-        totalCell.Format.Alignment = ParagraphAlignment.Right;
-        LabelCell(totalCell, ContractorsReportText.Money(model.VariationsTotal));
+            BodyRow(table, ContractorsReportVariationWording.Row(variation), ContractorsReportVariationWording.Position(variation));
         SpaceAfterTable(section);
     }
 

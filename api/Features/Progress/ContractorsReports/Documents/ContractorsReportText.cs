@@ -10,7 +10,6 @@ internal static class ContractorsReportText
     public const string NothingToReport = "Nothing to report.";
     public const string NoLookAhead = "No items are planned for the coming week.";
     public const string NoDecisions = "No decisions or instructions are outstanding.";
-    public const string NoVariations = "No variations are outstanding.";
     public const string NoBuildingControlCase = "No Building Control case is open on the project.";
     public const string NoSubcontractors = "No specialist subcontractors were on site this week.";
     public const string Yes = "Yes";

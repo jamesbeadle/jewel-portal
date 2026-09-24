@@ -49,15 +49,15 @@
         <h3 class="font-semibold text-content mb-2">4. Variations</h3>
         @if (Document.Variations.Count == 0)
         {
-            <p class="text-content-subtle italic">No variations are outstanding.</p>
-        }
-        @foreach (var variation in Document.Variations)
-        {
-            <p class="text-content-muted"><span class="font-medium text-content">@variation.DisplayNumber</span> @variation.Title · @variation.Status · @Money(variation.Value)</p>
+            <p class="text-content-subtle italic">@ContractorsReportVariationWording.NothingOutstanding(Document)</p>
         }
         @if (Document.Variations.Count > 0)
         {
-            <p class="font-medium text-content mt-1">Total @Money(Document.VariationsTotal)</p>
+            <p class="text-content-muted mb-1">@ContractorsReportVariationWording.Paragraph(Document)</p>
+        }
+        @foreach (var variation in Document.Variations)
+        {
+            <p class="text-content-muted"><span class="font-medium text-content">@ContractorsReportVariationWording.Row(variation)</span> · @ContractorsReportVariationWording.Position(variation)</p>
         }
     </section>
     <section>

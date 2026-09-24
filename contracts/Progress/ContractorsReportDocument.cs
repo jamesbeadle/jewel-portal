@@ -15,7 +15,7 @@ public sealed record ContractorsReportDocument(
     IReadOnlyList<ContractorsReportLookAheadItem> LookAhead,
     IReadOnlyList<ContractorsReportDecision> Decisions,
     IReadOnlyList<ContractorsReportVariation> Variations,
-    decimal VariationsTotal,
+    IReadOnlyList<ContractorsReportApprovedVariation> VariationsApproved,
     string Neighbours,
     string HealthAndSafety,
     ContractorsReportBuildingControl BuildingControl,
@@ -62,7 +62,13 @@ public sealed record ContractorsReportPhoto(string ProgressPhotoId, string FileN
 public sealed record ContractorsReportDecision(string RequestId, string Reference, string Title, string Status, DateOnly? ResponseDue);
 
 /// <summary>Section 4: a variation not yet approved or rejected, at its value excluding VAT.</summary>
-public sealed record ContractorsReportVariation(string VariationOrderId, string DisplayNumber, string Title, string Status, decimal Value);
+/// <summary>Section 4: a variation Issued and unanswered, printed as Variation / Position with the
+/// date it was issued — no value column, as issued Report 30 (Nigel, 24 Sep 2026).</summary>
+public sealed record ContractorsReportVariation(string VariationOrderId, string DisplayNumber, string Title, DateOnly? IssuedOn);
+
+/// <summary>A variation approved within the report's period — named in Section 4's opening line as
+/// no longer outstanding.</summary>
+public sealed record ContractorsReportApprovedVariation(string VariationOrderId, string DisplayNumber, DateOnly ApprovedOn);
 
 /// <summary>Section 7: the standing Building Control contact from the project's case, plus the
 /// entered liaison line.</summary>

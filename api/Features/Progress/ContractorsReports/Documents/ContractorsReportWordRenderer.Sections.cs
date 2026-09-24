@@ -12,7 +12,7 @@ public static partial class ContractorsReportWordRenderer
     private static readonly RegisterColumn[] DecisionColumns =
         { new("Reference", 2.4), new("Title", 9.4), new("Status", 3.6), new("Response due", 2.4) };
     private static readonly RegisterColumn[] VariationColumns =
-        { new("No.", 1.8), new("Title", 10.0), new("Status", 3.0), new("Value (ex VAT)", 3.0, true) };
+        { new("Variation", 11.4), new("Position", 6.4) };
     private static readonly RegisterColumn[] SubcontractorColumns =
     {
         new("Supplier", 4.2), new("Scope", 8.0), new("Value", 2.4, true),
@@ -56,11 +56,12 @@ public static partial class ContractorsReportWordRenderer
     private static void AddVariations(Body body, ContractorsReportDocument model)
     {
         body.Append(SectionHeading(ContractorsReportSections.Variations));
-        if (model.Variations.Count == 0) { body.Append(MutedLine(ContractorsReportText.NoVariations)); return; }
+        var nothingOutstanding = MutedLine(ContractorsReportVariationWording.NothingOutstanding(model));
+        if (model.Variations.Count == 0) { body.Append(nothingOutstanding); return; }
+        body.Append(Text(ContractorsReportVariationWording.Paragraph(model)));
         var table = Register(VariationColumns);
         foreach (var variation in model.Variations)
-            BodyRow(table, VariationColumns, variation.DisplayNumber, variation.Title, variation.Status, ContractorsReportText.Money(variation.Value));
-        TotalRow(table, VariationColumns, 2, "Total", ContractorsReportText.Money(model.VariationsTotal));
+            BodyRow(table, VariationColumns, ContractorsReportVariationWording.Row(variation), ContractorsReportVariationWording.Position(variation));
         body.Append(table);
         body.Append(new Paragraph());
     }
