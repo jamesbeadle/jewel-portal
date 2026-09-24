@@ -32,17 +32,15 @@ public partial class ProjectRequestDetail
                 items.Add(new(Label: $"Download {record.Kind.DisplayName()} PDF", Href: DocumentHref,
                     Hint: "Regenerated from the register on every download, so it always reflects the request as it stands"));
 
-            // Group 1 — moving the request along.
-            if (record.Status is not RequestStatus.Closed)
-            {
+            // Group 1 — moving the request along, each offered to the roles its command admits.
+            var isOpen = record.Status is not RequestStatus.Closed;
+            if (isOpen && CanRecordResponse)
                 items.Add(new(Label: "Record response…", OnSelect: EventCallback.Factory.Create(this, OpenResponseModal),
                     Hint: "The formal answer recorded on the request — it prints on the official document", Group: 1));
+            if (isOpen && CanClose)
                 items.Add(new(Label: "Close request…", OnSelect: EventCallback.Factory.Create(this, OpenCloseConfirm), Group: 1));
-            }
-            else
-            {
+            if (!isOpen && CanRecordResponse)
                 items.Add(new(Label: "Reopen request", OnSelect: EventCallback.Factory.Create(this, ReopenFromMenu), Group: 1));
-            }
 
             // Promotion also has the primary slot when there is nothing to email yet; it stays here
             // so the menu is a complete list of what can be done, not a list of leftovers.

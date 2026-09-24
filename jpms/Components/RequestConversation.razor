@@ -1,4 +1,5 @@
 @inject AuthService Auth
+@inject SessionService Session
 @inject IRequestRegister RequestRegister
 
 @*
@@ -165,7 +166,7 @@
                             <div class="mt-3 space-y-3 border-l-2 border-line pl-3">
                                 @foreach (var reply in replies)
                                 {
-                                    <ConversationMessageCard Entry="reply" ShowVisibility="true"
+                                    <ConversationMessageCard Entry="reply" ShowVisibility="Session.IsInternal"
                                                              CanReply="true" OnReply="StartReplyEntry" />
                                 }
                             </div>
@@ -243,10 +244,13 @@
             <textarea class="field mb-3" rows="3" value="@draft" @oninput="OnDraftInput"
                       placeholder="@(internalOnly ? "Add an internal note — the client and external parties never see this…" : "Add to the conversation…")"></textarea>
             <div class="flex flex-wrap items-center justify-between gap-3">
-                <label class="inline-flex items-center gap-2 text-sm text-content-muted cursor-pointer">
-                    <input type="checkbox" checked="@internalOnly" @onchange="OnVisibilityChanged" class="rounded border-line-strong" />
-                    Internal only (hide from client &amp; external parties)
-                </label>
+                @if (Session.IsInternal)
+                {
+                    <label class="inline-flex items-center gap-2 text-sm text-content-muted cursor-pointer">
+                        <input type="checkbox" checked="@internalOnly" @onchange="OnVisibilityChanged" class="rounded border-line-strong" />
+                        Internal only (hide from client &amp; external parties)
+                    </label>
+                }
                 <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(draft))" @onclick="Post">
                     @(busy ? "Posting…" : replyToId is not null ? "Post reply" : internalOnly ? "Post internal note" : "Post message")
                 </button>

@@ -32,6 +32,18 @@ internal static class ClientProjects
         await For(context, clientId)
             .AnyAsync(project => project.ProjectId == projectId, cancellationToken);
 
+    // A merged-away request is gone from the client's view everywhere — its surviving twin
+    // carries the conversation on.
+    public static async Task<bool> OwnsRequestAsync(
+        JpmsContext context, string clientId, string requestId, CancellationToken cancellationToken) =>
+        await context.Requests
+            .AsNoTracking()
+            .Where(request => request.RequestId == requestId && request.MergedIntoRequestId == null)
+            .Join(For(context, clientId),
+                request => request.ProjectId, project => project.ProjectId,
+                (request, project) => request.RequestId)
+            .AnyAsync(cancellationToken);
+
     public static async Task<bool> OwnsVariationOrderAsync(
         JpmsContext context, string clientId, string variationOrderId, CancellationToken cancellationToken) =>
         await VisibleVariationOrders(context)

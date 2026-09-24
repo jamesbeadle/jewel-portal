@@ -155,14 +155,14 @@
 
                 <div class="space-y-5">
                     <VariationDetailsCard Order="order"
-                                          DetailsLoaded="Subcontractors.IsLoaded"
+                                          DetailsLoaded="@(!Session.IsInternal || Subcontractors.IsLoaded)"
                                           SelectedSubName="@SelectedSubName()"
                                           CanEditEstimate="CanEditEstimate"
                                           Busy="busy"
                                           @bind-EditingEstimate="editingEstimate"
                                           OnSaved="saved => order = saved" />
 
-                    @if (ApprovedOrder is not null)
+                    @if (ApprovedOrder is not null && Session.IsInternal)
                     {
                         var approved = ApprovedOrder!;
                         <ApprovedFiguresPanel Approved="approved"

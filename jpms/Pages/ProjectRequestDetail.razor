@@ -111,7 +111,7 @@
                     <RequestConversation RequestId="@RequestId" CanDraftReply="false"
                                          RequestReference="@record?.Reference" />
 
-                    @if (!HasOfficialTab)
+                    @if (!HasOfficialTab && Session.IsInternal)
                     {
                     @* The record's own audit slice. Its main job here is answering "did the document go
                        out?" — every draft the portal creates writes a row the moment it lands in the
@@ -125,7 +125,7 @@
                 </div>
 
                 <div class="space-y-5">
-                    @if (ShowContainerPane && HasOfficialTab)
+                    @if (ShowContainerPane && HasOfficialTab && Session.IsInternal)
                     {
                         @* On a promoted record the container pane's rail carries the audit slice; the
                            issue machinery (recipients, variation) lives with the official document. *@

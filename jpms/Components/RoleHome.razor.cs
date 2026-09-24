@@ -264,7 +264,7 @@ public partial class RoleHome
         Role.OfficeAdmin => "The office work waiting on you.",
         Role.SalesMarketing => "The enquiries and bids waiting on you.",
         Role.Accounts => "The accounts work waiting on you.",
-        Role.Architect => "Your projects' RFIs and variations will appear here once Jewel has opened them to you.",
+        Role.Architect => "Your projects' RFIs and variation orders.",
         Role.Client => "Where your project has got to.",
         Role.Foreman or Role.SiteOperative => "Sign in, log your hours, flag anything wrong.",
         _ => "Everything assigned to you, in one place."

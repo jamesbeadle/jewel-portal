@@ -39,7 +39,10 @@
                 @* The view's one act of creation: a manual official RFI — raised outside the
                    Control Centre flow (no email behind it), or back-filling a legacy RFI. The
                    dialog is locked to RFI: General requests are sunset and nothing raises one. *@
-                <button type="button" class="btn-primary" @onclick="OpenRaiseDialog">Raise RFI</button>
+                @if (CanRaiseRequests)
+                {
+                    <button type="button" class="btn-primary" @onclick="OpenRaiseDialog">Raise RFI</button>
+                }
             </div>
         </div>
 

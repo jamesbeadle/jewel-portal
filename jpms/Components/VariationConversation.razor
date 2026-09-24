@@ -1,5 +1,6 @@
 @using Jewel.JPMS.Contracts.Variations
 @inject IVariationStore Variations
+@inject SessionService Session
 
 @*
     The variation order's in-app conversation: internal notes and the shared thread the client
@@ -29,16 +30,16 @@
             <div class="space-y-3 mb-5">
                 @foreach (var entry in ConversationEntry.Tree(entries))
                 {
-                    <ConversationMessageCard Entry="entry" ShowVisibility="true" CanReply="true" OnReply="StartReply" />
+                    <ConversationMessageCard Entry="entry" ShowVisibility="Session.IsInternal" CanReply="true" OnReply="StartReply" />
                 }
             </div>
         }
 
         <ConversationComposer OnPost="PostAsync"
-                              ShowInternalToggle="true"
+                              ShowInternalToggle="Session.IsInternal"
                               ReplyingToAuthor="@ReplyingToAuthor"
                               OnCancelReply="() => replyTo = null"
-                              Placeholder="Add to the conversation — tick Internal only to keep it from the client…" />
+                              Placeholder="@(Session.IsInternal ? "Add to the conversation — tick Internal only to keep it from the client…" : "Add to the conversation…")" />
     </LoadGate>
     </ChildContent>
 </Panel>

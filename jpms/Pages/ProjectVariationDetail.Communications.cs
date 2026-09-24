@@ -29,7 +29,7 @@ public partial class ProjectVariationDetail
     // The approved variation's lines on the valuation report — its priced build-up, newest cost
     // centre split included. Empty until approved (no V-ref) or until the store's lines land.
     private IReadOnlyList<ValuationLineItem> VariationLines =>
-        order?.VariationRef is { Length: > 0 } vref
+        order?.VariationRef is { Length: > 0 } vref && Session.IsInternal
             ? Valuation.LinesFor(ProjectId)
                 .Where(line => line.ElementType == ValuationElementType.Variation && line.VariationRef == vref)
                 .OrderBy(line => line.DisplayOrder)
@@ -40,7 +40,7 @@ public partial class ProjectVariationDetail
     private IReadOnlyList<VariationLineInput> LineItems =>
         ApprovedOrder is not null ? CurrentLineInputs : order?.DraftLines ?? Array.Empty<VariationLineInput>();
 
-    private bool LineItemsLoading => ApprovedOrder is not null && !ValuationLinesReady;
+    private bool LineItemsLoading => ApprovedOrder is not null && Session.IsInternal && !ValuationLinesReady;
 
     private string LineItemsNote =>
         ApprovedOrder is { VariationRef: { Length: > 0 } variationRef }
@@ -73,19 +73,11 @@ public partial class ProjectVariationDetail
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        Subcontractors.OnChange += StateHasChanged;
-        _ = Subcontractors.All(); // warm the directory cache for the tender dropdown
         // Revalidate the request register in the background (stale-while-revalidate) — it feeds
         // the originating-request picker for unlinked (seeded) variation orders.
         RequestRegister.Refresh(ProjectId);
         RequestRegister.OnChange += StateHasChanged;
-        // The approved variation's line breakdown reads from the valuation report store — warm it
-        // and re-render when the lines land (stale-while-revalidate).
-        Valuation.OnChange += StateHasChanged;
-        Valuation.Refresh(ProjectId);
-        // Activity dots on the tab bar land in the background — absent until then (never gated).
-        Activity.OnChanged += StateHasChanged;
-        Activity.Refresh(ProjectId);
+        WarmTheTeamsReads();
         // The project list feeds the reply composer's attachment picker (drawings/photos by
         // project) — revalidated in the background like every other read model here.
         ProjectList.OnChanged += StateHasChanged;
@@ -159,10 +151,28 @@ public partial class ProjectVariationDetail
     private RecordActivitySummary? TabActivity(RecordType type, string recordId) =>
         Activity.For(ProjectId, type, recordId);
 
+    // The directory, the valuation report and the activity dots are the team's reads — the
+    // project's client or architect opens the same page without them.
+    private void WarmTheTeamsReads()
+    {
+        if (!Session.IsInternal) return;
+        Subcontractors.OnChange += StateHasChanged;
+        _ = Subcontractors.All(); // warm the directory cache for the tender dropdown
+        // The approved variation's line breakdown reads from the valuation report store — warm it
+        // and re-render when the lines land (stale-while-revalidate).
+        Valuation.OnChange += StateHasChanged;
+        Valuation.Refresh(ProjectId);
+        // Activity dots on the tab bar land in the background — absent until then (never gated).
+        Activity.OnChanged += StateHasChanged;
+        Activity.Refresh(ProjectId);
+    }
+
     // Best-effort: the instruction register is context on this page, never the point of it, so a
-    // failure (or a role without access to it) leaves the banner off rather than the page broken.
+    // failure leaves the banner off rather than the page broken. It is the team's register, so the
+    // project's client or architect never asks for it.
     private async Task LoadLinkedInstructionsAsync()
     {
+        if (!Session.IsInternal) return;
         try
         {
             var all = await Instructions.ListAsync(ProjectId);

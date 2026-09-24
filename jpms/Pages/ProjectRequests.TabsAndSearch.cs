@@ -223,7 +223,7 @@ public partial class ProjectRequests
         // Refresh on entry: cached requests render immediately, then update when the
         // background reload lands — so navigating back to this tab never shows stale data.
         RequestRegister.Refresh(ProjectId);
-        Activity.Refresh(ProjectId);    // Activity badges land in the background — absent until then.
+        if (Session.IsInternal) Activity.Refresh(ProjectId);    // Activity badges land in the background — absent until then.
     }
 
     public void Dispose()
