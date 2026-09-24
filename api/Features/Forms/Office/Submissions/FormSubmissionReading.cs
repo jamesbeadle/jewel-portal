@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Forms.Answers;
 using Jewel.JPMS.Api.Features.Forms.Mapping;
+using Jewel.JPMS.Api.Features.Forms.Quizzes;
 
 namespace Jewel.JPMS.Api.Features.Forms.Office.Submissions;
 
@@ -29,9 +30,10 @@ internal static class FormSubmissionReading
         var form = FormCatalogue.For(submission.FormSlug);
         var answers = FormAnswersJson.Read(submission.AnswersJson);
         var withheld = HealthKeys(form).Where(answers.ContainsKey).ToList();
+        var quizScore = FormQuizzes.Mark(submission.FormSlug, answers);
         foreach (var key in withheld) answers.Remove(key);
         var files = uploads.OrderBy(upload => upload.UploadedAt).Select(upload => upload.ToModel()).ToList();
-        return new FormSubmissionView(submission.ToModel(), answers, files, withheld);
+        return new FormSubmissionView(submission.ToModel(), answers, files, withheld, quizScore);
     }
 
     public static IReadOnlyDictionary<string, string> HealthAnswersOf(FormSubmissionEntity submission)

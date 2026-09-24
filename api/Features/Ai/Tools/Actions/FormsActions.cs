@@ -17,7 +17,7 @@ internal sealed partial class FormsActions : IAiActionSource
     {
         SendFormInviteAction(), ResendFormInviteAction(), CancelFormInviteAction(),
         SendFormPackAction(), ChaseFormPackAction(), CancelFormPackAction(),
-        SetFormSubmissionStatusAction(), FileFormToDirectoryAction(), RecordFormFolderDatesAction(),
+        SetFormSubmissionStatusAction(), FileFormToDirectoryAction(), FileQuizToDirectoryAction(), RecordFormFolderDatesAction(),
         RecordACheckAction(), ConfirmACheckAction(),
         AcceptTrainingCertificateAction(), SetTrainingRecordDetailsAction(),
         ResolveAWorkstationAction(), RecordDrivingLicenceCheckAction()

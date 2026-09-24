@@ -21,6 +21,7 @@ public static class FormSlugs
     public const string PersonnelIncident = "personnel-incident";
     public const string FirstAidKit = "first-aid-kit";
     public const string FireExtinguishers = "fire-extinguishers";
+    public const string CyberQuiz = "cyber-quiz";
 }
 
 /// <summary>Every form the portal serves.</summary>
@@ -37,6 +38,7 @@ public static class FormCatalogue
         VehicleAccidentReportForm.Definition,
         SubcontractorQuestionnaireForm.Definition,
         InsuranceUpdateForm.Definition,
+        CyberQuizForm.Definition,
         ToolboxTalkRegisterForm.Definition,
         LadderInspectionRecordForm.Definition,
         WorkEquipmentScheduleForm.Definition,

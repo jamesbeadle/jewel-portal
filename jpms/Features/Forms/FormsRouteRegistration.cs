@@ -41,6 +41,8 @@ public static class FormsRouteRegistration
             command => $"/api/form-submissions/{((SetFormSubmissionStatus)command).FormSubmissionId}/status"));
         commands.Register<FileFormToDirectory, FormDirectoryFiling>(new CommandRoute("POST", "/api/form-submissions/{formSubmissionId}/file-to-directory",
             command => $"/api/form-submissions/{((FileFormToDirectory)command).FormSubmissionId}/file-to-directory"));
+        commands.Register<FileQuizToDirectory, FormDirectoryFiling>(new CommandRoute("POST", "/api/form-submissions/{formSubmissionId}/file-quiz-to-directory",
+            command => $"/api/form-submissions/{((FileQuizToDirectory)command).FormSubmissionId}/file-quiz-to-directory"));
         commands.Register<RecordFormFolderDates, FormFolder>(new CommandRoute("PUT", "/api/form-folders/{formFolderId}/dates",
             command => $"/api/form-folders/{((RecordFormFolderDates)command).FormFolderId}/dates"));
     }

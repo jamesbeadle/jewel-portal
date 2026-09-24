@@ -31,4 +31,7 @@ public static class FormSheetWording
     public static string Uploading(string fileName) => $"Uploading {fileName}…";
 
     public static string Uploaded(string fileName) => "✓ " + fileName;
+
+    public static string YourScore(FormQuizScore score) =>
+        $"Your score: {score.Score} out of {score.OutOf}. " + (score.HasPassed ? "You passed" : "You did not pass") + $" - the pass mark is {score.PassMark}.";
 }

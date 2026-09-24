@@ -38,7 +38,8 @@ internal static partial class AiFormsTools
         "One form that came in, read in the form's own order: every question with its answer, the files with the "
         + "formUploadId file_form_to_directory takes, and what the office does next with this kind of form — "
         + "filingSuggestions for a questionnaire or insurance update, trainingSuggestion for a training certificate, "
-        + "checkCodeDaysLeft for a company vehicle form. Health answers and the answers the portal treats as sensitive "
+        + "checkCodeDaysLeft for a company vehicle form, quizScore (score, outOf, passMark, hasPassed) for a quiz, which "
+        + "file_quiz_to_directory files to the company. Health answers and the answers the portal treats as sensitive "
         + "(NI number, UTR, date of birth, driving record) are withheld here and read on the page.",
         AiToolSchema.Object(
             ("formSubmissionId", "string", "From list_form_submissions.", true)),

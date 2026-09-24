@@ -878,6 +878,25 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   until revealed, each reveal audited), its NI number, date of birth and sex sensitive by key.
   Pinned by `FormTableTests` and the site-role case in `FormsConnectorTests`.
 
+## The IT, Cyber, AI & Monitoring Quiz is a marked form (contracts + api + jpms)
+
+- **One quiz, ported from JPS's Microsoft Form for Jewel Bespoke Build** (2026-09-24, Jeremy's due
+  diligence task; the source text is `docs/03-workflows/forms/jps-it-cyber-ai-monitoring-quiz.md`).
+  `CyberQuizForm` (`/f/cyber-quiz`, `FormSlugs.CyberQuiz`) asks name, email, company and date, then
+  the 25 questions (`CyberQuizQuestions`, the form's order); filed under the COMPANY. JPS reads as
+  Jewel Bespoke Build / JBB and nothing else was reworded — a change to a question is Jeremy's task.
+- **The answer key never reaches the browser.** The definition travels to the public page, so the
+  key and the pass mark live in the api (`FormQuizzes`: the index of each right choice, 23 to pass),
+  and `FormQuizzes.Mark` is the ONE rule — a point per right answer — read at every turn from the
+  stored answers, never stored: the receipt (`PublicFormReceipt.QuizScore`, the done sheet), the office
+  view and its PDF (`FormSubmissionView.QuizScore`), both emails (a "Score" line) and the connector's
+  `get_form_submission` (`quizScore`). A corrected key re-marks every quiz already sent.
+- **Recorded against the supplier by `FileQuizToDirectory`** (the quiz page's "File to the
+  directory…", connector `file_quiz_to_directory`, office roles, confirm-first): the quiz's record PDF
+  becomes the company's current compliance document of kind `QuizComplianceRecord.Kind` — one kind,
+  so a retake supersedes — named with the result; a pass stands a year, a fail is filed already
+  expired so the standing reads Expired until a retake passes. Pinned by `CyberQuizTests`.
+
 ## An api file the worker compiles may only reach for what the worker compiles
 
 **Run `python3 -m tools.worker_link_check.check .` before committing anything under `api/`.** It

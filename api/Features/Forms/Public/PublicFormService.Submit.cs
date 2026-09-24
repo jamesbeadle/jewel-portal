@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Forms.Answers;
 using Jewel.JPMS.Api.Features.Forms.Filing;
 using Jewel.JPMS.Api.Features.Forms.Links;
+using Jewel.JPMS.Api.Features.Forms.Quizzes;
 using Jewel.JPMS.Contracts.Forms;
 
 namespace Jewel.JPMS.Api.Features.Forms.Public;
@@ -30,7 +31,7 @@ public sealed partial class PublicFormService
         if (problem is not null) throw new PublicFormRefusal(problem);
         var submission = await RecordAsync(form, answers, uploads, link, posted.SessionId, clientHash, cancellationToken);
         await AnnounceAsync(form, submission, answers, uploads);
-        return new PublicFormReceipt(submission.FormSubmissionId, submission.IsVerifiedLink);
+        return new PublicFormReceipt(submission.FormSubmissionId, submission.IsVerifiedLink, FormQuizzes.Mark(form.Slug, answers));
     }
 
     private async Task<ResolvedLink?> LinkOnSendingAsync(string formSlug, PublicFormSubmission posted, CancellationToken cancellationToken)

@@ -30,6 +30,8 @@ internal static class FormsOfficeRegistration
             RecordFormFolderDatesAuthorisation, RecordFormFolderDatesValidation>();
         services.AddCommand<FileFormToDirectory, FormDirectoryFiling, FileFormToDirectoryHandler,
             FileFormToDirectoryAuthorisation, FileFormToDirectoryValidation>();
+        services.AddCommand<FileQuizToDirectory, FormDirectoryFiling, FileQuizToDirectoryHandler,
+            FileQuizToDirectoryAuthorisation, FileQuizToDirectoryValidation>();
         services.AddScoped<IQueryHandler<ListFormSubmissions, IReadOnlyList<FormSubmission>>, ListFormSubmissionsHandler>();
         services.AddScoped<IQueryHandler<OpenFormSubmission, FormSubmissionView>, OpenFormSubmissionHandler>();
         services.AddScoped<IQueryHandler<RevealHealthAnswers, IReadOnlyDictionary<string, string>>, RevealHealthAnswersHandler>();

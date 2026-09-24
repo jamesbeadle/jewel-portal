@@ -1,11 +1,14 @@
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Forms.Answers;
 using Jewel.JPMS.Api.Features.Forms.Mail;
+using Jewel.JPMS.Api.Features.Forms.Quizzes;
 
 namespace Jewel.JPMS.Api.Features.Forms.Public;
 
 public sealed partial class PublicFormService
 {
+    private const string QuizScoreKey = "quiz_score";
+
     /// <summary>
     /// The office is alerted straight away — an accident report to the people who must hear of it
     /// that hour — and a person who came through a one-time link gets their own copy. Neither email
@@ -15,7 +18,7 @@ public sealed partial class PublicFormService
         FormDefinition form, FormSubmissionEntity submission, IReadOnlyDictionary<string, string> answers,
         IReadOnlyList<FormUploadEntity> uploads)
     {
-        var echoed = FormAnswerLines.SafeToEcho(form, answers);
+        var echoed = WithQuizScore(form, FormAnswerLines.SafeToEcho(form, answers), answers);
         var fileNames = uploads.Where(upload => IsSafeToName(form, upload)).Select(upload => upload.FileName).ToList();
         var alert = AlertFor(form, submission, echoed, fileNames);
         await SendQuietlyAsync(alert);
@@ -34,6 +37,14 @@ public sealed partial class PublicFormService
         var to = form.IsAnAccidentReport ? options.AccidentAlert : options.OfficeAlert;
         var officeLink = options.OfficeLink(submission.FormSubmissionId);
         return FormReceiptEmails.AlertForTheOffice(form, submission.SubmitterName, to, lines, files, officeLink);
+    }
+
+    private static IReadOnlyList<FormAnswerLine> WithQuizScore(
+        FormDefinition form, IReadOnlyList<FormAnswerLine> echoed, IReadOnlyDictionary<string, string> answers)
+    {
+        var score = FormQuizzes.Mark(form.Slug, answers);
+        if (score is null) return echoed;
+        return echoed.Append(new FormAnswerLine(QuizScoreKey, "Score", score.Sentence)).ToList();
     }
 
     private static bool IsSafeToName(FormDefinition form, FormUploadEntity upload)

@@ -22,6 +22,7 @@ internal static class AiFormReading
         {
             ok = true,
             submission = SubmissionRow(view.Submission),
+            quizScore = view.QuizScore is { } score ? new { score.Score, score.OutOf, score.PassMark, score.HasPassed } : null,
             answers = (form?.AskedQuestions ?? Array.Empty<FormQuestion>()).Select(question => AnswerRow(view, question)),
             files = view.Files.Select(FileRow),
             filingSuggestions = isFiledToTheDirectory ? FormDirectoryFilingPlan.For(view) : null,
