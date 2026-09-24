@@ -6,7 +6,7 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
         <div>
             <FormField Label="Title">
-            <input class="field" @bind="editTitle" />
+            <input class="field" @bind="editTitle" maxlength="@StoredTextLengths.Title" />
             </FormField>
         </div>
         <div>

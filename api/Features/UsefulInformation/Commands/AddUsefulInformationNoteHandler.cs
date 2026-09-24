@@ -18,7 +18,7 @@ public sealed class AddUsefulInformationNoteHandler : ICommandHandler<AddUsefulI
             UsefulInformationNoteId = UsefulInformationIdentifierFactory.Next(),
             ProjectId = command.ProjectId,
             Title = Clamp(command.Title.Trim(), 256),
-            Body = Clamp(command.Body.Trim(), 4000),
+            Body = command.Body.Trim(),
             CreatedByEmail = command.CreatedByEmail,
             CreatedAt = DateTimeOffset.UtcNow
         };

@@ -103,7 +103,7 @@ public sealed class LabourSettlementVarianceEntity
     [MaxLength(32)]       public string CostCode { get; set; } = "";
     [MaxLength(64)]       public string SubcontractorId { get; set; } = "";
     public decimal Amount { get; set; }
-    [MaxLength(1024)]     public string Reason { get; set; } = "";
+    public string Reason { get; set; } = "";
     [MaxLength(140)]      public string? XeroLedgerLineId { get; set; }
     [MaxLength(256)]      public string CreatedByEmail { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }

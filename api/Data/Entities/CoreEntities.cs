@@ -28,8 +28,8 @@ public sealed class LeadEntity
     public int Number { get; set; }
     public int ProspectKind { get; set; }
     [MaxLength(16)]      public string Postcode { get; set; } = "";
-    [MaxLength(512)]     public string Summary { get; set; } = "";
-    [MaxLength(4000)]    public string Notes { get; set; } = "";
+    public string Summary { get; set; } = "";
+    public string Notes { get; set; } = "";
     // The strategy that found the lead; null for inbound / referral / manual. No FK — the
     // handlers own the relationship (a retired strategy keeps its leads).
     [MaxLength(64)]      public string? StrategyId { get; set; }
@@ -38,7 +38,7 @@ public sealed class LeadEntity
     [MaxLength(64)]      public string? ClientId { get; set; }
     [MaxLength(64)]      public string? ProjectId { get; set; }
     // Set by MoveLeadStage → Lost; cleared on reopen.
-    [MaxLength(1024)]    public string? LostReason { get; set; }
+    public string? LostReason { get; set; }
 
     // ---- Imagine (2026-09-06, AddImagine) ----
     // The token behind the lead's private /imagine/{token} page (printed as its QR code). Stored
@@ -59,7 +59,7 @@ public sealed class BoqLineItemEntity
 {
     [Key, MaxLength(64)] public string BoqLineItemId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
-    [MaxLength(512)]     public string Description { get; set; } = "";
+    public string Description { get; set; } = "";
     [MaxLength(32)]      public string Unit { get; set; } = "";
     public decimal Quantity { get; set; }
     public decimal RateValue { get; set; }

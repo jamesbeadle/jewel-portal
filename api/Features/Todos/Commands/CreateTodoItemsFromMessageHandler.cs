@@ -135,7 +135,7 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
             ProjectId = projectId,
             Number = nextNumber + index,
             Title = Clamp(item.Draft.Title.Trim(), 256),
-            Notes = Clamp(item.Draft.Notes?.Trim() ?? "", 2048),
+            Notes = item.Draft.Notes?.Trim() ?? "",
             AssigneeRole = (int?)item.AssigneeRole,
             AssigneePersonEmail = TodoAssigneeGuard.NormalisePersonEmail(item.AssigneePersonEmail),
             CreatedByEmail = command.CreatedByEmail,

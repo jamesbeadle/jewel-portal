@@ -55,10 +55,10 @@
 
     @if (kind == RequestType.Rfi)
     {
-        <FormField Label="RFI reference" Value="@reference" OnChange="v => reference = v" Required="true" />
+        <FormField Label="RFI reference" Value="@reference" OnChange="v => reference = v" MaxLength="StoredTextLengths.Reference" Required="true" />
     }
 
-    <FormField Label="Subject" Value="@title" OnChange="v => title = v" Required="true" />
+    <FormField Label="Subject" Value="@title" OnChange="v => title = v" MaxLength="StoredTextLengths.Title" Required="true" />
 
     <div>
         <FormField Label="Detail">

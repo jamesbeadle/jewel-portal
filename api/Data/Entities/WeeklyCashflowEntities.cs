@@ -21,7 +21,7 @@ public sealed class WeeklyCashflowItemEntity
     public int Recurrence { get; set; }
     public DateTimeOffset FirstDueOn { get; set; }
     public DateTimeOffset? LastDueOn { get; set; }
-    [MaxLength(1000)] public string? Notes { get; set; }
+    public string? Notes { get; set; }
     [MaxLength(256)] public string CreatedByEmail { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? ArchivedAt { get; set; }

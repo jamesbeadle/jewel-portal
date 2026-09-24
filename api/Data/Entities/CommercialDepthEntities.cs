@@ -28,7 +28,7 @@ public sealed class QsAccrualEntity
     [Key, MaxLength(64)] public string QsAccrualId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     [MaxLength(128)]     public string Category { get; set; } = "";
-    [MaxLength(1024)]    public string Description { get; set; } = "";
+    public string Description { get; set; } = "";
     public decimal AddAmount { get; set; }
     public decimal OmitAmount { get; set; }
     public decimal LiabilityAmount { get; set; }
@@ -57,7 +57,7 @@ public sealed class EotEntity
 {
     [Key, MaxLength(64)] public string EotId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
-    [MaxLength(1024)]    public string Reason { get; set; } = "";
+    public string Reason { get; set; } = "";
     public int DaysGranted { get; set; }
     public decimal CommercialRecovery { get; set; }
     public DateTimeOffset GrantedAt { get; set; }

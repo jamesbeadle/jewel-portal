@@ -29,7 +29,7 @@ public sealed class SitePhotoEntity
     public DateTimeOffset? FiledAt { get; set; }
     public DateTimeOffset? ArchivedAt { get; set; }
     public SitePhotoArchiveReason? ArchiveReason { get; set; }
-    [MaxLength(1024)]    public string ArchiveNote { get; set; } = "";
+    public string ArchiveNote { get; set; } = "";
     [MaxLength(64)]      public string? ArchivedForProjectId { get; set; }
     public DateOnly? ArchivedForPeriodEnd { get; set; }
     [MaxLength(256)]     public string ArchivedByEmail { get; set; } = "";

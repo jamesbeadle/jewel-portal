@@ -254,7 +254,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Notes")
                         .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Number")
                         .HasColumnType("int");
@@ -599,8 +599,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("SpecificationSummary")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -656,8 +655,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Quantity")
                         .HasPrecision(18, 4)
@@ -778,8 +776,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Discipline")
                         .HasColumnType("int");
@@ -1144,8 +1141,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Comments")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("CostCode")
                         .IsRequired()
@@ -1158,8 +1154,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("int");
@@ -1393,8 +1388,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Notes")
                         .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OwnerEmail")
                         .IsRequired()
@@ -1501,8 +1495,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -1936,8 +1929,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("HourlyRate")
                         .HasPrecision(18, 4)
@@ -1999,8 +1991,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Location")
                         .IsRequired()
@@ -2540,8 +2531,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Notes")
                         .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Source")
                         .IsRequired()
@@ -2805,8 +2795,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Note")
                         .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("PhotosDeleted")
                         .HasColumnType("int");
@@ -2843,8 +2832,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Reason")
                         .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("EotId");
 
@@ -3333,8 +3321,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("FurtherComments")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset>("InspectionDate")
                         .HasColumnType("datetimeoffset");
@@ -3425,8 +3412,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Findings")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("HsAuditId")
                         .IsRequired()
@@ -3650,8 +3636,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Summary")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("HsRecordId");
 
@@ -3709,16 +3694,14 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("LocationDetails")
                         .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Number")
                         .HasColumnType("int");
 
                     b.Property<string>("ProductDetails")
                         .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ProductName")
                         .IsRequired()
@@ -3809,8 +3792,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Note")
                         .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Number")
                         .HasColumnType("int");
@@ -3887,8 +3869,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Reason")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("WorkerId")
                         .IsRequired()
@@ -3934,8 +3915,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Reason")
                         .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SubcontractorId")
                         .IsRequired()
@@ -4005,8 +3985,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Number")
                         .HasColumnType("int");
@@ -4099,12 +4078,11 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("LostReason")
                         .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Notes")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Number")
                         .HasColumnType("int");
@@ -4133,8 +4111,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Summary")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ImagineToken")
                         .HasMaxLength(64)
@@ -4177,8 +4154,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Brief")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ClientHash")
                         .HasMaxLength(64)
@@ -4350,7 +4326,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("DeclineReason")
                         .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset?>("DeclinedAt")
                         .HasColumnType("datetimeoffset");
@@ -4435,8 +4411,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Exclusions")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ExecutiveSummary")
                         .IsRequired()
@@ -4460,8 +4435,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Notes")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Number")
                         .HasColumnType("int");
@@ -4471,8 +4445,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Scope")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -4511,8 +4484,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("EstimateId")
                         .IsRequired()
@@ -4582,8 +4554,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Summary")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("LeadActivityId");
 
@@ -4635,8 +4606,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsComplete")
                         .HasColumnType("bit");
@@ -4862,7 +4832,6 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Summary")
                         .IsRequired()
-                        .HasMaxLength(4096)
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Title")
@@ -5275,8 +5244,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Note")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ProgrammeTaskId")
                         .IsRequired()
@@ -5384,7 +5352,6 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Introduction")
                         .IsRequired()
-                        .HasMaxLength(4096)
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset?>("PeriodEnd")
@@ -5405,12 +5372,10 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("UpcomingWorks")
                         .IsRequired()
-                        .HasMaxLength(4096)
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("WorkCompleted")
                         .IsRequired()
-                        .HasMaxLength(4096)
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ProgressReportId");
@@ -5585,7 +5550,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Notes")
                         .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -5635,7 +5600,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("BespokeDeviations")
                         .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset?>("CompletionDate")
                         .HasColumnType("datetimeoffset");
@@ -5984,8 +5949,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("LiabilityAmount")
                         .HasPrecision(18, 4)
@@ -6056,8 +6020,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Notes")
                         .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset>("ReceivedAt")
                         .HasColumnType("datetimeoffset");
@@ -6091,8 +6054,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Quantity")
                         .HasPrecision(18, 4)
@@ -6227,8 +6189,8 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -6378,7 +6340,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("ClientNotes")
                         .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset?>("ClosedAt")
                         .HasColumnType("datetimeoffset");
@@ -6416,7 +6378,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("InternalNotes")
                         .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset?>("IssuedAt")
                         .HasColumnType("datetimeoffset");
@@ -6469,7 +6431,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("RelatedDrawingSpec")
                         .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("RelatedNodRequestId")
                         .HasMaxLength(64)
@@ -6547,7 +6509,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Response")
                         .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("RequestItemId");
 
@@ -6572,8 +6534,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Body")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ConversationId")
                         .HasMaxLength(998)
@@ -6716,8 +6677,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Notes")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Outcome")
                         .HasColumnType("int");
@@ -6769,8 +6729,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Brief")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Channel")
                         .HasColumnType("int");
@@ -6780,13 +6739,11 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Evidence")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Hypothesis")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -6803,8 +6760,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Proposition")
                         .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset?>("ResearchCompletedAt")
                         .HasColumnType("datetimeoffset");
@@ -6920,8 +6876,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Instruction")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Location")
                         .IsRequired()
@@ -6960,8 +6915,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("ArchiveNote")
                         .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("ArchiveReason")
                         .HasColumnType("int");
@@ -7058,7 +7012,6 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Narrative")
                         .IsRequired()
-                        .HasMaxLength(4096)
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("OpenSnags")
@@ -7532,8 +7485,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("RejectionReason")
                         .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset?>("ReviewedAt")
                         .HasColumnType("datetimeoffset");
@@ -7653,8 +7605,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("DecisionNote")
                         .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Number")
                         .HasColumnType("int");
@@ -7680,8 +7631,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("ScopeSummary")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -7839,8 +7789,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("RejectionReason")
                         .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SiteAttendanceId")
                         .IsRequired()
@@ -7905,8 +7854,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Notes")
                         .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Number")
                         .HasColumnType("int");
@@ -8104,8 +8052,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Body")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
@@ -8564,7 +8511,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("RejectionReason")
                         .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -8611,8 +8558,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Note")
                         .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset>("OccurredAt")
                         .HasColumnType("datetimeoffset");
@@ -8640,8 +8586,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Comments")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("CostCode")
                         .IsRequired()
@@ -8650,8 +8595,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("int");
@@ -8725,7 +8669,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("CommercialBasis")
                         .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("CostCode")
                         .HasMaxLength(32)
@@ -8753,7 +8697,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Exclusions")
                         .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset?>("IssuedAt")
                         .HasColumnType("datetimeoffset");
@@ -8763,7 +8707,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("ProgrammeImpact")
                         .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -8836,8 +8780,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Body")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ParentMessageId")
                         .HasMaxLength(64)
@@ -8876,8 +8819,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Notes")
                         .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -8913,7 +8855,6 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Notes")
                         .IsRequired()
-                        .HasMaxLength(4096)
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("PhotoCount")
@@ -8970,7 +8911,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Recurrence")
                         .HasColumnType("int");
@@ -9212,8 +9153,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("ProgrammeNotes")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset?>("ProgrammeStart")
                         .HasColumnType("datetimeoffset");
@@ -9228,8 +9168,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Scope")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SourceReference")
                         .HasMaxLength(64)
@@ -9290,8 +9229,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("LegacyCostCode")
                         .IsRequired()
@@ -9354,8 +9292,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Note")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset>("RecordedAt")
                         .HasColumnType("datetimeoffset");
@@ -9539,8 +9476,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Note")
                         .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ProjectId")
                         .IsRequired()
@@ -9578,8 +9514,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Note")
                         .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PersonName")
                         .IsRequired()
@@ -9704,8 +9639,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Body")
                         .IsRequired()
-                        .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset>("SentAtUtc")
                         .HasColumnType("datetimeoffset");
@@ -9776,7 +9710,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Description")
                         .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset>("FirstSeenAtUtc")
                         .HasColumnType("datetimeoffset");
@@ -9809,7 +9743,7 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<string>("Note")
                         .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ProjectId")
                         .HasMaxLength(64)

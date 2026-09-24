@@ -34,7 +34,7 @@
                     </select>
                     </FormField>
                 </div>
-                <FormField Label="Edition" Value="@formEdition" OnChange="v => formEdition = v" />
+                <FormField Label="Edition" Value="@formEdition" OnChange="v => formEdition = v" MaxLength="StoredTextLengths.ContractEdition" />
             </div>
             <div class="mt-3">
                 <FormField Label="Amendments and deviations">
@@ -51,11 +51,11 @@
         <section>
             <h4 class="eyebrow mb-2">The parties</h4>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <FormField Label="Employer" Value="@employerName" OnChange="v => employerName = v" />
-                <FormField Label="Contractor" Value="@contractorName" OnChange="v => contractorName = v" />
-                <FormField Label="Contract administrator" Value="@caName" OnChange="v => caName = v" />
+                <FormField Label="Employer" Value="@employerName" OnChange="v => employerName = v" MaxLength="StoredTextLengths.Name" />
+                <FormField Label="Contractor" Value="@contractorName" OnChange="v => contractorName = v" MaxLength="StoredTextLengths.Name" />
+                <FormField Label="Contract administrator" Value="@caName" OnChange="v => caName = v" MaxLength="StoredTextLengths.Name" />
                 <FormField Label="Contract administrator email" Value="@caEmail" OnChange="v => caEmail = v" InputType="email" />
-                <FormField Label="Architect" Value="@architectName" OnChange="v => architectName = v" />
+                <FormField Label="Architect" Value="@architectName" OnChange="v => architectName = v" MaxLength="StoredTextLengths.Name" />
                 <FormField Label="Architect email" Value="@architectEmail" OnChange="v => architectEmail = v" InputType="email" />
             </div>
         </section>

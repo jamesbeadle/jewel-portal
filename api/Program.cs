@@ -68,6 +68,8 @@ var host = new HostBuilder()
         worker.UseMiddleware<VersionStampMiddleware>();
         // The sign-in doors answer 429 to an address that knocks too often — see AuthRateLimit.
         worker.UseMiddleware<AuthRateLimitMiddleware>();
+        // A value its column cannot hold answers 400 with the sentence to fix it, never a 500.
+        worker.UseMiddleware<StoredValueRejectionMiddleware>();
     })
     .ConfigureServices((context, services) =>
     {

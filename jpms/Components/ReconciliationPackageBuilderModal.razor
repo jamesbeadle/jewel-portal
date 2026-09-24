@@ -16,7 +16,7 @@
     <div class="space-y-4">
         <div>
             <FormField Label="Package name">
-            <input type="text" maxlength="128" placeholder="e.g. BVMH groundworks & civils"
+            <input type="text" maxlength="@StoredTextLengths.PackageName" placeholder="e.g. BVMH groundworks & civils"
                    class="field"
                    @bind="name" @bind:event="oninput" />
             </FormField>

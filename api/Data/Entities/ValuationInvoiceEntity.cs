@@ -23,7 +23,7 @@ public sealed class ValuationInvoiceEntity
     public DateTimeOffset? ApprovedAt { get; set; }
     public DateTimeOffset? RejectedAt { get; set; }
     public DateTimeOffset? CancelledAt { get; set; }
-    [MaxLength(1024)]    public string? RejectionReason { get; set; }
+    public string? RejectionReason { get; set; }
     public int AmendmentCount { get; set; }
     public bool IsManual { get; set; }
     // Cash-up-front deposit credit embedded in Amount (stamped from the claim's outstanding
@@ -45,7 +45,7 @@ public sealed class ValuationInvoiceEventEntity
     [MaxLength(64)]      public string ValuationInvoiceId { get; set; } = "";
     public int EventType { get; set; }
     public DateTimeOffset OccurredAt { get; set; }
-    [MaxLength(1024)]    public string Note { get; set; } = "";
+    public string Note { get; set; } = "";
     public decimal? AmountBefore { get; set; }
     public decimal? AmountAfter { get; set; }
 }

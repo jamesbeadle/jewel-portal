@@ -4,17 +4,17 @@
                           Placeholder="@FormDisplayNames.NotYetChosen" Describe="route => route.DisplayName()" Hint="@RouteHint" />
     </div>
     <FormField Label="Share code or IDSP report reference" Required="@Draft.NeedsAReference" Hint="Required unless the route is the original passport.">
-        <input type="text" class="field" placeholder="W12 ABC 34D, or the IDSP reference" value="@Draft.Reference"
+        <input type="text" class="field" placeholder="W12 ABC 34D, or the IDSP reference" maxlength="@StoredTextLengths.Reference" value="@Draft.Reference"
                @oninput="typed => Draft.Reference = typed.Value?.ToString() ?? string.Empty" />
     </FormField>
     <FormField Label="IDSP provider (if used)">
-        <input type="text" class="field" placeholder="e.g. TrustID, Yoti" value="@Draft.IdspProvider"
+        <input type="text" class="field" placeholder="e.g. TrustID, Yoti" maxlength="@StoredTextLengths.ProviderName" value="@Draft.IdspProvider"
                @oninput="typed => Draft.IdspProvider = typed.Value?.ToString() ?? string.Empty" />
     </FormField>
     <FormChoiceSelect TChoice="RightToWorkSeenVia" Label="Seen via" Value="Draft.SeenVia" ValueChanged="seenVia => Draft.SeenVia = seenVia ?? Draft.SeenVia"
                       Describe="seenVia => seenVia.DisplayName()" />
     <FormField Label="Evidence file reference">
-        <input type="text" class="field" placeholder="e.g. Smith_J_PS_190826.pdf" value="@Draft.DocumentReference"
+        <input type="text" class="field" placeholder="e.g. Smith_J_PS_190826.pdf" maxlength="@StoredTextLengths.DocumentReference" value="@Draft.DocumentReference"
                @oninput="typed => Draft.DocumentReference = typed.Value?.ToString() ?? string.Empty" />
     </FormField>
     <FormField Label="Evidence: the document page, or the online check result" Class="sm:col-span-2"

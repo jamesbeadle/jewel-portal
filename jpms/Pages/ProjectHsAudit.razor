@@ -113,7 +113,7 @@
                                       value="@formSummary" @oninput="e => formSummary = e.Value?.ToString() ?? string.Empty"></textarea>
                         </FormField>
                         <FormField Label="Any further comments">
-                            <textarea class="field" rows="3" maxlength="4000" disabled="@(!IsEditable)"
+                            <textarea class="field" rows="3" disabled="@(!IsEditable)"
                                       value="@formFurtherComments" @oninput="e => formFurtherComments = e.Value?.ToString() ?? string.Empty"></textarea>
                         </FormField>
                     </div>
@@ -146,7 +146,7 @@
             <Modal IsOpen="@closeOpen" Title="Close the audit" ConfirmLabel="Close audit" ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(managerName))"
                    OnConfirm="CloseAsync" OnCancel="() => closeOpen = false">
                 <p class="text-sm text-content mb-3">Manager's declaration: I confirm that the actions from the report have been completed to a satisfactory standard.</p>
-                <FormField Label="Name" Required Value="@managerName" OnChange="v => managerName = v" Hint="The audit closes only once every corrective action minted from it is closed on the register." />
+                <FormField Label="Name" Required Value="@managerName" OnChange="v => managerName = v" MaxLength="@StoredTextLengths.Name" Hint="The audit closes only once every corrective action minted from it is closed on the register." />
             </Modal>
         }
         </LoadGate>

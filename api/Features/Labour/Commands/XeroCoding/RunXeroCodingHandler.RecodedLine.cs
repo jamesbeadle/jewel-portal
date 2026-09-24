@@ -25,7 +25,7 @@ public sealed partial class RunXeroCodingHandler
             ContactName = before.ContactName is null ? template?.ContactName : Truncate(before.ContactName, 256),
             Date = before.Date ?? template?.Date,
             InvoiceStatus = Truncate(recode.Status, 32)!,
-            Description = Truncate(line.Description, 1024),
+            Description = line.Description,
             Net = line.LineAmount,
             Tax = line.TaxAmount,
             InvoiceTotal = recode.Total,

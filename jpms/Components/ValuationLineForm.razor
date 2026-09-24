@@ -34,13 +34,13 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             @if (elementType == ValuationElementType.Variation)
             {
-                <FormField Label="Variation ref" Value="@variationRef" OnChange="@(v => variationRef = v)" />
-                <FormField Label="Variation title" Value="@variationTitle" OnChange="@(v => variationTitle = v)" />
+                <FormField Label="Variation ref" Value="@variationRef" OnChange="@(v => variationRef = v)" MaxLength="@StoredTextLengths.Code" />
+                <FormField Label="Variation title" Value="@variationTitle" OnChange="@(v => variationTitle = v)" MaxLength="@StoredTextLengths.Title" />
             }
             else
             {
-                <FormField Label="Section code" Value="@sectionCode" OnChange="@(v => sectionCode = v)" />
-                <FormField Label="Section name" Value="@sectionName" OnChange="@(v => sectionName = v)" />
+                <FormField Label="Section code" Value="@sectionCode" OnChange="@(v => sectionCode = v)" MaxLength="@StoredTextLengths.Code" />
+                <FormField Label="Section name" Value="@sectionName" OnChange="@(v => sectionName = v)" MaxLength="@StoredTextLengths.SectionName" />
             }
         </div>
 
@@ -64,7 +64,7 @@
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <FormField Label="Unit" Value="@unit" OnChange="@(v => unit = v)" />
+            <FormField Label="Unit" Value="@unit" OnChange="@(v => unit = v)" MaxLength="@StoredTextLengths.Unit" />
             <FormField Label="Quantity" InputType="number" Value="@quantity" OnChange="@(v => quantity = v)" />
             <FormField Label="Rate £" InputType="number" Value="@rate" OnChange="@(v => rate = v)" />
             <div>

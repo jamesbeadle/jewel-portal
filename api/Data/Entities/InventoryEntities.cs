@@ -11,9 +11,9 @@ public sealed class InventoryItemEntity
     [Key, MaxLength(64)] public string InventoryItemId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     [MaxLength(256)]     public string ProductName { get; set; } = "";
-    [MaxLength(2048)]    public string ProductDetails { get; set; } = "";
+    public string ProductDetails { get; set; } = "";
     [MaxLength(256)]     public string Location { get; set; } = "";
-    [MaxLength(2048)]    public string LocationDetails { get; set; } = "";
+    public string LocationDetails { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
 
     // Sequential, human-readable item number (rendered as INV-0001). Global — like defect and

@@ -17,7 +17,7 @@
         }
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <FormField Label="Reference" Value="@reference" OnChange="v => reference = v" Required="true" />
+            <FormField Label="Reference" Value="@reference" OnChange="v => reference = v" MaxLength="StoredTextLengths.Reference" Required="true" />
             <div>
                 <FormField Label="Status">
                 <select class="field" value="@((int)status)" @onchange="OnStatusChanged">
@@ -30,7 +30,7 @@
             </div>
         </div>
 
-        <FormField Label="Subject" Value="@title" OnChange="v => title = v" Required="true" />
+        <FormField Label="Subject" Value="@title" OnChange="v => title = v" MaxLength="StoredTextLengths.Title" Required="true" />
 
         @if (status == RequestStatus.Closed)
         {

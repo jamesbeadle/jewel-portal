@@ -131,7 +131,7 @@ public sealed class HsRecordEntity
     [Key, MaxLength(64)] public string HsRecordId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     public int Kind { get; set; }
-    [MaxLength(512)]     public string Summary { get; set; } = "";
+    public string Summary { get; set; } = "";
     public int Severity { get; set; }
     public int Status { get; set; }
     [MaxLength(256)]     public string AssignedToEmail { get; set; } = "";

@@ -10,7 +10,6 @@ namespace Jewel.JPMS.Api.Features.Forms.Registers;
 /// </summary>
 public sealed class ResolveWorkstationActionHandler : ICommandHandler<ResolveWorkstationAction, WorkstationAction>
 {
-    private const int LongestNote = 1000;
     private readonly JpmsContext context;
 
     public ResolveWorkstationActionHandler(JpmsContext context)
@@ -24,7 +23,7 @@ public sealed class ResolveWorkstationActionHandler : ICommandHandler<ResolveWor
             ?? throw new InvalidOperationException("That action no longer exists.");
         var note = command.Note?.Trim() ?? "";
         action.State = (int)command.State;
-        action.Note = note.Length > LongestNote ? note[..LongestNote] : note;
+        action.Note = note;
         action.ResolvedByEmail = command.ResolvedByEmail;
         action.ResolvedAt = DateTimeOffset.UtcNow;
         await FinishAssessmentAsync(action.FormSubmissionId, action.WorkstationActionId, command.ResolvedByEmail, cancellationToken);

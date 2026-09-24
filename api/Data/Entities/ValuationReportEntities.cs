@@ -13,12 +13,12 @@ public sealed class ValuationLineItemEntity
     [MaxLength(256)]     public string VariationTitle { get; set; } = "";
     public int LineType { get; set; }
     [MaxLength(32)]      public string CostCode { get; set; } = "";
-    [MaxLength(512)]     public string Description { get; set; } = "";
+    public string Description { get; set; } = "";
     [MaxLength(16)]      public string Unit { get; set; } = "";
     public decimal Quantity { get; set; }
     public decimal Rate { get; set; }
     public decimal LineAmount { get; set; }
-    [MaxLength(512)]     public string Comments { get; set; } = "";
+    public string Comments { get; set; } = "";
     public int DisplayOrder { get; set; }
     // The client's schedule-of-works item number for THIS line ("1.03"). Line-level: beats the
     // per-cost-centre ClientCostReferences map at snapshot capture; empty falls back to the map.
@@ -83,12 +83,12 @@ public sealed class ClaimLineEntity
     [MaxLength(256)]     public string VariationTitle { get; set; } = "";
     public int LineType { get; set; }
     [MaxLength(32)]      public string CostCode { get; set; } = "";
-    [MaxLength(512)]     public string Description { get; set; } = "";
+    public string Description { get; set; } = "";
     [MaxLength(16)]      public string Unit { get; set; } = "";
     public decimal Quantity { get; set; }
     public decimal Rate { get; set; }
     public decimal LineAmount { get; set; }
-    [MaxLength(512)]     public string Comments { get; set; } = "";
+    public string Comments { get; set; } = "";
     // Statement order at lock (bill order — element, variation number, display order); -1 on a
     // row not yet frozen.
     public int DisplayOrder { get; set; } = -1;

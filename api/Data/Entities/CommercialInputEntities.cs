@@ -8,7 +8,7 @@ public sealed class DayworkEntity
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     public DateTimeOffset WorkedOn { get; set; }
     [MaxLength(256)]     public string SubcontractorReference { get; set; } = "";
-    [MaxLength(512)]     public string Description { get; set; } = "";
+    public string Description { get; set; } = "";
     [MaxLength(256)]     public string InstructedBy { get; set; } = "";
     public decimal Hours { get; set; }
     public decimal HourlyRate { get; set; }
@@ -25,7 +25,7 @@ public sealed class ContraChargeEntity
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     [MaxLength(256)]     public string SubcontractorReference { get; set; } = "";
     public DateTimeOffset RaisedOn { get; set; }
-    [MaxLength(512)]     public string Description { get; set; } = "";
+    public string Description { get; set; } = "";
     [MaxLength(128)]     public string Category { get; set; } = "";
     public decimal Amount { get; set; }
     [MaxLength(32)]      public string Status { get; set; } = "";

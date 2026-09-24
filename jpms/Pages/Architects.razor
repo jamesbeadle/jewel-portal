@@ -115,9 +115,9 @@
             {
                 <Notice Tone="Tone.Negative">@formError</Notice>
             }
-            <FormField Label="Practice name" Value="@formName" OnChange="v => formName = v" Required="true" />
+            <FormField Label="Practice name" Value="@formName" OnChange="v => formName = v" Required="true" MaxLength="@StoredTextLengths.Name" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField Label="Contact name" Value="@formContactName" OnChange="v => formContactName = v" />
+                <FormField Label="Contact name" Value="@formContactName" OnChange="v => formContactName = v" MaxLength="@StoredTextLengths.Name" />
                 <FormField Label="Contact email" Value="@formContactEmail" OnChange="v => formContactEmail = v" />
             </div>
         </div>
@@ -134,9 +134,9 @@
             {
                 <Notice Tone="Tone.Negative">@formError</Notice>
             }
-            <FormField Label="Practice name" Value="@formName" OnChange="v => formName = v" Required="true" />
+            <FormField Label="Practice name" Value="@formName" OnChange="v => formName = v" Required="true" MaxLength="@StoredTextLengths.Name" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField Label="Contact name" Value="@formContactName" OnChange="v => formContactName = v" />
+                <FormField Label="Contact name" Value="@formContactName" OnChange="v => formContactName = v" MaxLength="@StoredTextLengths.Name" />
                 <FormField Label="Contact email" Value="@formContactEmail" OnChange="v => formContactEmail = v" />
             </div>
         </div>

@@ -27,7 +27,7 @@ public sealed class WorkerAbsenceEntity
     // The date (midnight UTC), same convention as SiteAttendanceEntity.WorkDate.
     public DateTimeOffset Date { get; set; }
     public int Kind { get; set; }
-    [MaxLength(512)]     public string Note { get; set; } = "";
+    public string Note { get; set; } = "";
     [MaxLength(256)]     public string RecordedByEmail { get; set; } = "";
     public DateTimeOffset RecordedAt { get; set; }
 }
@@ -81,7 +81,7 @@ public sealed class WorkerSettlementLineEntity
     [MaxLength(32)]      public string CostCode { get; set; } = "";
     public int Nature { get; set; }
     public decimal Amount { get; set; }
-    [MaxLength(512)]     public string Note { get; set; } = "";
+    public string Note { get; set; } = "";
     [MaxLength(256)]     public string CreatedByEmail { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
 }
@@ -148,7 +148,7 @@ public sealed class LabourChaseDismissalEntity
     [MaxLength(64)]      public string WorkerId { get; set; } = "";
     // The date (midnight UTC), same convention as WorkerAbsenceEntity.Date.
     public DateTimeOffset Date { get; set; }
-    [MaxLength(512)]     public string Reason { get; set; } = "";
+    public string Reason { get; set; } = "";
     [MaxLength(256)]     public string DismissedByEmail { get; set; } = "";
     public DateTimeOffset DismissedAt { get; set; }
 }

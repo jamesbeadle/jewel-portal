@@ -45,7 +45,7 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <FormField Label="Location">
-                            <input type="text" class="field" maxlength="256" placeholder="Room, area or feature"
+                            <input type="text" class="field" maxlength="@StoredTextLengths.AddressLine" placeholder="Room, area or feature"
                                    value="@newLocation" @oninput="e => newLocation = e.Value?.ToString() ?? string.Empty" />
                             </FormField>
                         </div>
@@ -70,7 +70,7 @@
                     }
                     <div>
                         <FormField Label="Description" Required>
-                        <textarea class="field" rows="3" maxlength="1024" placeholder="What's wrong and what putting it right needs"
+                        <textarea class="field" rows="3" placeholder="What's wrong and what putting it right needs"
                                   value="@newDescription" @oninput="e => newDescription = e.Value?.ToString() ?? string.Empty"></textarea>
                         </FormField>
                     </div>

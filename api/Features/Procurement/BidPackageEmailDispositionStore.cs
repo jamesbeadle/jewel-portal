@@ -40,7 +40,7 @@ internal static class BidPackageEmailDispositionStore
         row.InternetMessageId = string.IsNullOrWhiteSpace(internetMessageId) ? row.InternetMessageId : internetMessageId;
         row.Outcome = (int)outcome;
         row.QuoteId = quoteId;
-        row.Note = note.Length > 1024 ? note[..1024] : note;
+        row.Note = note;
         row.SetByEmail = setByEmail;
         row.SetAt = DateTimeOffset.UtcNow;
     }

@@ -53,7 +53,7 @@ public sealed class CreateManualWorkOrderHandler
             BidPackageId = null,
             SubcontractorId = command.SubcontractorId,
             Value = command.Lines.Sum(line => line.Amount),
-            Scope = command.Scope.Length > 4000 ? command.Scope[..4000] : command.Scope,
+            Scope = command.Scope,
             AwardedAt = now,
             AwardedByEmail = command.RaisedByEmail,
             Number = nextNumber,
@@ -62,7 +62,7 @@ public sealed class CreateManualWorkOrderHandler
             CreatedAt = now,
             ProgrammeStart = command.ProgrammeStart,
             ScheduledCompletion = command.TargetCompletion,
-            ProgrammeNotes = command.ProgrammeNotes.Length > 2000 ? command.ProgrammeNotes[..2000] : command.ProgrammeNotes,
+            ProgrammeNotes = command.ProgrammeNotes,
             // Percent never survives without the flag — an untick clears it rather than leaving
             // a stale figure that would print the moment the box is ticked again.
             DepositRequired = command.DepositRequired,
@@ -84,7 +84,7 @@ public sealed class CreateManualWorkOrderHandler
                 WorkOrderLineId = ProcurementIdentifierFactory.NextWorkOrderLineId(),
                 WorkOrderId = entity.WorkOrderId,
                 Title = line.Title.Length > 256 ? line.Title[..256] : line.Title,
-                Description = line.Description.Length > 1024 ? line.Description[..1024] : line.Description,
+                Description = line.Description,
                 CostType = "Subcontractor",
                 CostCode = line.CostCode,
                 Quantity = isMeasured ? line.Quantity!.Value : 1m,

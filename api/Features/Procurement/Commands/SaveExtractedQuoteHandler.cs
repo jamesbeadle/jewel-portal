@@ -38,7 +38,7 @@ public sealed class SaveExtractedQuoteHandler : ICommandHandler<SaveExtractedQuo
             BidPackageId = command.BidPackageId,
             SubcontractorId = command.SubcontractorId,
             Value = command.Lines.Sum(line => line.Total),
-            Notes = command.Notes.Length > 1024 ? command.Notes[..1024] : command.Notes,
+            Notes = command.Notes,
             ReceivedAt = DateTimeOffset.UtcNow,
             IsDeclined = false
         };
@@ -51,7 +51,7 @@ public sealed class SaveExtractedQuoteHandler : ICommandHandler<SaveExtractedQuo
                 QuoteLineItemId = Guid.NewGuid().ToString("N"),
                 QuoteId = quote.QuoteId,
                 BidPackageLineItemId = string.IsNullOrWhiteSpace(line.BidPackageLineItemId) ? null : line.BidPackageLineItemId,
-                Description = line.Description.Length > 512 ? line.Description[..512] : line.Description,
+                Description = line.Description,
                 Unit = line.Unit.Length > 32 ? line.Unit[..32] : line.Unit,
                 Quantity = line.Quantity,
                 Rate = line.Rate,

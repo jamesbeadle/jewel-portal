@@ -12,7 +12,7 @@ public sealed class SiteInstructionEntity
     [Key, MaxLength(64)] public string SiteInstructionId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
-    [MaxLength(4000)]    public string Instruction { get; set; } = "";
+    public string Instruction { get; set; } = "";
     [MaxLength(256)]     public string Location { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
 

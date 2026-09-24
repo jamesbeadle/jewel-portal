@@ -88,7 +88,7 @@ public sealed class RecordArchitectInstructionHandler
             Reference = ArchitectInstructionIdentifierFactory.Reference(nextNumber),
             InstructionRef = ClampRequired(command.InstructionRef?.Trim() ?? "", 128),
             Title = ClampRequired(title, 256),
-            Notes = Clamp(command.Notes?.Trim(), 2048),
+            Notes = command.Notes?.Trim(),
             InstructedAt = command.InstructedAt,
             ReceivedAt = DateTimeOffset.UtcNow,
             IssuedByEmail = ClampRequired(command.IssuedByEmail?.Trim() ?? "", 256),
@@ -211,7 +211,7 @@ public sealed class UpdateArchitectInstructionHandler
         entity.InstructionRef = RecordArchitectInstructionHandler.ClampRequired(command.InstructionRef?.Trim() ?? "", 128);
         entity.Title = RecordArchitectInstructionHandler.ClampRequired(
             string.IsNullOrWhiteSpace(command.Title) ? entity.Reference : command.Title.Trim(), 256);
-        entity.Notes = RecordArchitectInstructionHandler.Clamp(command.Notes?.Trim(), 2048);
+        entity.Notes = command.Notes?.Trim();
         entity.InstructedAt = command.InstructedAt;
         await context.SaveChangesAsync(cancellationToken);
 

@@ -11,7 +11,7 @@ public sealed class LadClaimEntity
     [Key, MaxLength(64)] public string LadClaimId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
-    [MaxLength(2048)]    public string Description { get; set; } = "";
+    public string Description { get; set; } = "";
     public DateTimeOffset? PeriodFrom { get; set; }
     public DateTimeOffset? PeriodTo { get; set; }
     public int DaysClaimed { get; set; }

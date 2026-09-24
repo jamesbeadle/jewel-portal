@@ -161,7 +161,7 @@
                     <p class="text-sm text-content font-mono text-[12px]">@string.Join(", ", pendingGroupCodes ?? Array.Empty<string>())</p>
                     <label class="block text-sm text-content-subtle">
                         Name for the rolled-up line
-                        <input type="text" maxlength="128"
+                        <input type="text" maxlength="@StoredTextLengths.GroupName"
                                class="field mt-1"
                                placeholder="e.g. Windows, doors and glazing"
                                @bind="groupName" @bind:event="oninput" />

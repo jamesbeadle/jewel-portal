@@ -21,7 +21,7 @@ public sealed class AddLadClaimHandler : ICommandHandler<AddLadClaim, LadClaim>
             ProjectId = command.ProjectId,
             Number = nextNumber,
             Title = Clamp(command.Title.Trim(), 256),
-            Description = Clamp(command.Description?.Trim() ?? "", 2048),
+            Description = command.Description?.Trim() ?? "",
             PeriodFrom = command.PeriodFrom,
             PeriodTo = command.PeriodTo,
             DaysClaimed = Math.Max(0, command.DaysClaimed),
