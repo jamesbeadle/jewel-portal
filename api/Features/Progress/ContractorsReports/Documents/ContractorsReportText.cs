@@ -12,16 +12,25 @@ internal static class ContractorsReportText
     public const string NoDecisions = "No decisions or instructions are outstanding.";
     public const string NoBuildingControlCase = "No Building Control case is open on the project.";
     public const string NoSubcontractors = "No specialist subcontractors were on site this week.";
-    public const string Yes = "Yes";
+    public const string SubcontractorsOpening =
+        "Works during the period were undertaken by Jewel Bespoke Build's site team and general building trades, "
+        + "supported by the specialist subcontractors set out below.";
     public const string Dash = "—";
 
     public static string Date(DateOnly value) => value.ToString("d MMM yyyy", JewelDocumentStyle.Uk);
     public static string Date(DateOnly? value) => value is { } date ? Date(date) : Dash;
-    public static string Money(decimal value) => JewelDocumentStyle.Money(value);
     public static string Period(ContractorsReportHeader header) => $"{Date(header.PeriodStart)} – {Date(header.PeriodEnd)}";
     public static string OrDash(string? text) => string.IsNullOrWhiteSpace(text) ? Dash : text.Trim();
     public static string OrNothingToReport(string text) => string.IsNullOrWhiteSpace(text) ? NothingToReport : text.Trim();
-    public static string Days(int? days) => days is { } count ? count.ToString(JewelDocumentStyle.Uk) : Dash;
+
+    public static string BuildingControlContact(string contact) => $"Building Control Contact: {contact}";
+
+    public static string PhotographCount(IReadOnlyList<ContractorsReportDay> days)
+    {
+        var total = days.Sum(day => day.Photos.Count);
+        var dayWord = days.Count == 1 ? "day" : "days";
+        return total == 1 ? "1 photograph." : $"{total} photographs across {days.Count} {dayWord}.";
+    }
 
     public static string DecisionsCount(int count) => count == 1
         ? "1 RFI is open at the date of issue."

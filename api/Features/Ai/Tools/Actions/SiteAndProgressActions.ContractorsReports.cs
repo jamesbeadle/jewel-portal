@@ -37,9 +37,13 @@ internal sealed partial class SiteAndProgressActions
             Description: "Writes the ENTERED fields of a Contractor's Report: Valuation No., "
                 + "programme reference, prepared by, issued to, date of issue, the Look Ahead "
                 + "items (text + isDone — a done item is struck and not carried to next week), "
-                + "Neighbours, Health & Safety, the Building Control liaison line, the Section 8 "
-                + "attendance per work order (workOrderId, attendanceDays, isClientNominated) and "
-                + "which progress updates are selected. Everything else in the document is read "
+                + "Neighbours, Health & Safety, the Building Control liaison line and — for a project "
+                + "with no Building Control case — its contact line (buildingControlContact), the "
+                + "Section 8 attendance per work order (workOrderId, attendanceDays, "
+                + "isClientNominated, scope: what they did this week, as the report words it), which "
+                + "progress updates are selected, and the photographs Section 9 leaves out "
+                + "(excludedPhotoIds — progressPhotoIds from photosOnSelectedUpdates[]; about twelve "
+                + "a day go in). Everything else in the document is read "
                 + "from the register at build time and cannot be edited here.",
             CommandType: typeof(UpdateContractorsReport),
             ResultType: typeof(ContractorsReport),
@@ -51,7 +55,8 @@ internal sealed partial class SiteAndProgressActions
             Notes: "Every field is written as posted — read the record with get_contractors_report "
                 + "first and carry forward what should not change. workOrderId values come from "
                 + "get_contractors_report's workOrdersOnSite[] (or list_work_orders); only orders "
-                + "with attendanceDays above 0 print in Section 8; progress update ids from "
+                + "with attendanceDays above 0 print in Section 8; buildingControlContact and "
+                + "excludedPhotoIds keep their stored value when left out; progress update ids from "
                 + "updatesInPeriod[]. The report is never emailed by the portal: a person "
                 + "downloads the Word or PDF from the page and sends it."),
 

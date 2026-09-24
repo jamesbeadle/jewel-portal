@@ -71,15 +71,19 @@ public sealed record ContractorsReportVariation(string VariationOrderId, string 
 public sealed record ContractorsReportApprovedVariation(string VariationOrderId, string DisplayNumber, DateOnly ApprovedOn);
 
 /// <summary>Section 7: the standing Building Control contact from the project's case, plus the
-/// entered liaison line.</summary>
+/// entered liaison line. A project with no case prints the report's entered contact line
+/// (<see cref="EnteredContact"/>) instead — "Bromley Building Control —
+/// buildingcontrol@bromley.gov.uk", as Report 30.</summary>
 public sealed record ContractorsReportBuildingControl(
     string? BodyName,
     string? ContactName,
     string? ContactEmail,
     string? ContactPhone,
-    string Liaison);
+    string Liaison,
+    string? EnteredContact = null);
 
-/// <summary>A work order released or active in the period, with the entered attendance. The
+/// <summary>A work order released or active in the period, with the entered attendance and the
+/// Scope Section 8 prints — the week's words entered against it, else the order's title. The
 /// page's attendance table lists every one on site; Section 8 prints only those given days on site
 /// — Nigel, 20 Sep, and Report 30 as issued.</summary>
 public sealed record ContractorsReportSubcontractor(
@@ -87,6 +91,7 @@ public sealed record ContractorsReportSubcontractor(
     string Reference,
     string Supplier,
     string Scope,
+    string WorkOrderTitle,
     decimal Value,
     DateOnly? TargetCompletion,
     int? AttendanceDays,
@@ -94,6 +99,11 @@ public sealed record ContractorsReportSubcontractor(
 
 /// <summary>A line the report may not carry as written — a banned word, named by section and line.</summary>
 public sealed record ContractorsReportFinding(string Section, string Line, string Reason);
+
+/// <summary>A photograph on a selected update, for the page's Section 9 tick list: included unless
+/// the report leaves it out.</summary>
+public sealed record ContractorsReportPhotoChoice(
+    string ProgressPhotoId, string ProgressUpdateId, DateOnly WorkDate, string FileName, bool IsIncluded);
 
 /// <summary>A progress update in the period, for the page's tick list.</summary>
 public sealed record ContractorsReportUpdateChoice(string ProgressUpdateId, DateOnly WorkDate, string Title, int PhotoCount, bool IsSelected);
@@ -105,4 +115,5 @@ public sealed record ContractorsReportView(
     ContractorsReport Report,
     ContractorsReportDocument Document,
     IReadOnlyList<ContractorsReportUpdateChoice> UpdatesInPeriod,
-    IReadOnlyList<ContractorsReportSubcontractor> WorkOrdersOnSite);
+    IReadOnlyList<ContractorsReportSubcontractor> WorkOrdersOnSite,
+    IReadOnlyList<ContractorsReportPhotoChoice> PhotosOnSelectedUpdates);

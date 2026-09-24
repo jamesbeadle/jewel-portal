@@ -41,14 +41,12 @@ public static partial class ContractorsReportPdfRenderer
         SectionHeading(section, ContractorsReportSections.Subcontractors);
         if (model.Subcontractors.Count == 0) { MutedLine(section, ContractorsReportText.NoSubcontractors); return; }
 
-        var table = RegisterTable(section,
-            ("Supplier", 4.2, false), ("Scope", 8.0, false), ("Value", 2.4, true),
-            ("Days on site", 1.6, true), ("Client nominated", 1.6, false));
+        var opening = section.AddParagraph(ContractorsReportText.SubcontractorsOpening);
+        opening.Format.Font.Size = 9.5;
+        SpaceAfter(opening, 2.5);
+        var table = RegisterTable(section, ("Subcontractor", 5.4, false), ("Scope", 12.4, false));
         foreach (var subcontractor in model.Subcontractors)
-            BodyRow(table,
-                subcontractor.Supplier, subcontractor.Scope, ContractorsReportText.Money(subcontractor.Value),
-                ContractorsReportText.Days(subcontractor.AttendanceDays),
-                subcontractor.IsClientNominated ? ContractorsReportText.Yes : ContractorsReportText.Dash);
+            BodyRow(table, subcontractor.Supplier, subcontractor.Scope);
         SpaceAfterTable(section);
     }
 }

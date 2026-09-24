@@ -23,10 +23,14 @@ public sealed class UpdateContractorsReportHandler : ICommandHandler<UpdateContr
         entity.BuildingControlLiaison = command.BuildingControlLiaison.Trim();
         entity.AttendanceJson = ContractorsReportJson.Write(command.Attendance);
         entity.SelectedUpdateIdsJson = ContractorsReportJson.Write(command.SelectedUpdateIds.Distinct().ToList());
+        if (command.BuildingControlContact is { } contact) entity.BuildingControlContact = contact.Trim();
+        if (command.ExcludedPhotoIds is { } excluded) entity.ExcludedPhotoIdsJson = ExcludedJson(excluded);
         entity.UpdatedAt = DateTimeOffset.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();
     }
+
+    private static string ExcludedJson(IReadOnlyList<string> photoIds) => ContractorsReportJson.Write(photoIds.Distinct().ToList());
 
     private static IReadOnlyList<ContractorsReportLookAheadItem> KeptLines(IReadOnlyList<ContractorsReportLookAheadItem> lookAhead) =>
         lookAhead

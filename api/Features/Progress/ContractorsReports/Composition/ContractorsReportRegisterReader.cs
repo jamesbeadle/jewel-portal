@@ -57,12 +57,13 @@ internal static class ContractorsReportRegisterReader
 
     private static DateOnly? DayOf(DateTimeOffset? moment) => moment is { } value ? DateOnly.FromDateTime(value.Date) : null;
 
-    /// <summary>Section 7: the standing contact on the project's active Building Control case.</summary>
+    /// <summary>Section 7: the standing contact on the project's active Building Control case, and the
+    /// report's entered contact line for a project with none.</summary>
     public static async Task<ContractorsReportBuildingControl> BuildingControlAsync(
-        JpmsContext context, string projectId, string liaison, CancellationToken cancellationToken)
+        JpmsContext context, ContractorsReport report, CancellationToken cancellationToken)
     {
         var activeCase = await context.BuildingControlCases.AsNoTracking()
-            .Where(row => row.ProjectId == projectId && row.Status != (int)BuildingControlCaseStatus.Lapsed)
+            .Where(row => row.ProjectId == report.ProjectId && row.Status != (int)BuildingControlCaseStatus.Lapsed)
             .OrderByDescending(row => row.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
         return new ContractorsReportBuildingControl(
@@ -70,7 +71,8 @@ internal static class ContractorsReportRegisterReader
             Blank(activeCase?.ContactName),
             Blank(activeCase?.ContactEmail),
             Blank(activeCase?.ContactPhone),
-            liaison);
+            report.BuildingControlLiaison,
+            Blank(report.BuildingControlContact));
     }
 
     private static string? Blank(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();

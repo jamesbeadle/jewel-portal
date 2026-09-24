@@ -1,0 +1,64 @@
+@using Jewel.JPMS.Contracts.Progress
+
+@* Section 9's photographs, day by day: every photograph on the selected updates, ticked to go in
+   the report (the FD's ask, 24 Sep 2026 — issued reports carry about twelve a day). Unticking
+   leaves a photograph out of the report only; its update keeps it. Lists the updates selected at
+   the last save. *@
+
+@if (Photos.Count == 0)
+{
+    <EmptyState Message="No photographs on the selected updates." />
+}
+else
+{
+    <p class="text-xs text-content-subtle mb-3">@IncludedCount of @Photos.Count photographs go in the report.</p>
+    <div class="space-y-4">
+        @foreach (var day in Days)
+        {
+            <div>
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <p class="text-sm font-medium text-content">@DateText(day.Key) · @IncludedOn(day) of @day.Count()</p>
+                    <div class="flex gap-2">
+                        <button type="button" class="btn-secondary" @onclick="() => SetDay(day, isIncluded: true)">Include all</button>
+                        <button type="button" class="btn-secondary" @onclick="() => SetDay(day, isIncluded: false)">Leave all out</button>
+                    </div>
+                </div>
+                <div class="grid gap-2 grid-cols-[repeat(auto-fill,minmax(7rem,1fr))]">
+                    @foreach (var photo in day)
+                    {
+                        var isIncluded = IsIncluded(photo);
+                        <div class="flex flex-col gap-1 @(isIncluded ? "" : "opacity-50")" title="@photo.FileName">
+                            <img src="@($"/api/progress-photos/{photo.ProgressPhotoId}/file?inline=1")" alt="@photo.FileName" loading="lazy"
+                                 class="h-24 w-full object-cover rounded border border-line" />
+                            <Checkbox Value="@isIncluded" ValueChanged="value => Set(photo, value)" Label="In report" />
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public ContractorsReportDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<ContractorsReportPhotoChoice> Photos { get; set; } = Array.Empty<ContractorsReportPhotoChoice>();
+
+    private IEnumerable<IGrouping<DateOnly, ContractorsReportPhotoChoice>> Days => Photos.GroupBy(photo => photo.WorkDate).OrderBy(day => day.Key);
+
+    private int IncludedCount => Photos.Count(IsIncluded);
+
+    private int IncludedOn(IEnumerable<ContractorsReportPhotoChoice> day) => day.Count(IsIncluded);
+
+    private bool IsIncluded(ContractorsReportPhotoChoice photo) => !Draft.ExcludedPhotoIds.Contains(photo.ProgressPhotoId);
+
+    private void Set(ContractorsReportPhotoChoice photo, bool isIncluded)
+    {
+        if (isIncluded) { Draft.ExcludedPhotoIds.Remove(photo.ProgressPhotoId); return; }
+        Draft.ExcludedPhotoIds.Add(photo.ProgressPhotoId);
+    }
+
+    private void SetDay(IEnumerable<ContractorsReportPhotoChoice> day, bool isIncluded)
+    {
+        foreach (var photo in day) Set(photo, isIncluded);
+    }
+}

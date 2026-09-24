@@ -33,13 +33,19 @@ internal static class ContractorsReportSubcontractorsReader
                 order.WorkOrderId,
                 order.Reference,
                 suppliers.TryGetValue(order.SubcontractorId, out var name) ? name : "",
-                string.IsNullOrWhiteSpace(order.Title) ? order.Scope : order.Title,
+                ScopeFor(entered.GetValueOrDefault(order.WorkOrderId), TitleOf(order)),
+                TitleOf(order),
                 order.Value,
                 order.ScheduledCompletion is { } completion ? DateOnly.FromDateTime(completion.Date) : null,
                 entered.TryGetValue(order.WorkOrderId, out var days) ? days.AttendanceDays : null,
                 entered.TryGetValue(order.WorkOrderId, out var nominated) && nominated.IsClientNominated))
             .ToList();
     }
+
+    private static string TitleOf(WorkOrderEntity order) => string.IsNullOrWhiteSpace(order.Title) ? order.Scope : order.Title;
+
+    private static string ScopeFor(ContractorsReportAttendance? attendance, string title) =>
+        attendance is { Scope: { } scope } && !string.IsNullOrWhiteSpace(scope) ? scope.Trim() : title;
 
     private static bool IsOnSite(WorkOrderEntity order, ReportingWeek week) =>
         order.Status == (int)WorkOrderStatus.Released

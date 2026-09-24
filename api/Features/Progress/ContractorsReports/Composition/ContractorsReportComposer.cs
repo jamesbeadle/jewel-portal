@@ -22,14 +22,14 @@ public sealed class ContractorsReportComposer
         var updates = await ContractorsReportProgressReader.UpdatesInPeriodAsync(context, report.ProjectId, week, cancellationToken);
         var onSite = await ContractorsReportSubcontractorsReader.ReadAsync(context, report.ProjectId, week, report.Attendance, cancellationToken);
         var document = await ComposeAsync(report, week, updates, onSite, cancellationToken);
-        return new ContractorsReportView(report, document, Choices(report, updates), onSite);
+        return new ContractorsReportView(report, document, Choices(report, updates), onSite, ContractorsReportPhotoChoices.For(report, updates));
     }
 
     private async Task<ContractorsReportDocument> ComposeAsync(
         ContractorsReport report, ReportingWeek week, IReadOnlyList<ContractorsReportUpdate> updates,
         IReadOnlyList<ContractorsReportSubcontractor> onSite, CancellationToken cancellationToken)
     {
-        var selected = updates.Where(update => report.SelectedUpdateIds.Contains(update.ProgressUpdateId)).ToList();
+        var selected = ContractorsReportPhotoChoices.Printed(report, updates);
         var variations = await ContractorsReportRegisterReader.VariationsAsync(context, report.ProjectId, cancellationToken);
 
         var draft = new ContractorsReportDocument(
@@ -41,7 +41,7 @@ public sealed class ContractorsReportComposer
             VariationsApproved: await ContractorsReportRegisterReader.ApprovedInPeriodAsync(context, report.ProjectId, week, cancellationToken),
             Neighbours: report.Neighbours,
             HealthAndSafety: report.HealthAndSafety,
-            BuildingControl: await ContractorsReportRegisterReader.BuildingControlAsync(context, report.ProjectId, report.BuildingControlLiaison, cancellationToken),
+            BuildingControl: await ContractorsReportRegisterReader.BuildingControlAsync(context, report, cancellationToken),
             Subcontractors: onSite.Where(order => order.AttendanceDays is > 0).ToList(),
             Findings: Array.Empty<ContractorsReportFinding>());
         return draft with { Findings = ContractorsReportWording.Check(ContractorsReportLines.Of(draft)) };

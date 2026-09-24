@@ -67,10 +67,13 @@
                             <Panel Title="8 · Specialist Subcontractors — attendance" BodyClass="p-0">
                                 <ContractorsReportAttendanceTable Draft="@entered" Subcontractors="@report.WorkOrdersOnSite" />
                             </Panel>
+                            <Panel Title="9 · Site Photographs — which go in the report">
+                                <ContractorsReportPhotoPicker Draft="@entered" Photos="@report.PhotosOnSelectedUpdates" />
+                            </Panel>
                         </div>
                         <Panel Title="As it will print" >
                             <p class="text-xs text-content-subtle mb-4">
-                                Sections 3, 4, 7's contact and 8's orders are read from the register every time; the entered sections show what was last saved.
+                                Sections 3, 4 and 7's contact are read from the register every time; the entered sections, 8's firms and 9's photographs show what was last saved.
                             </p>
                             <ContractorsReportPreview Document="@report.Document" />
                         </Panel>
