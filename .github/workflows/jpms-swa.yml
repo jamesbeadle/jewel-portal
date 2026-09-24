@@ -1,4 +1,11 @@
-name: Deploy JPMS to Azure Static Web Apps
+name: JPMS portal
+
+# Each run is named for what it does, so a pull request never reads as a deploy (2026-09-24, the
+# MD): "Build check (nothing deployed)" on a pull request, "Deploy to the live portal" on main.
+run-name: >-
+  ${{ github.event_name == 'push'
+      && format('Deploy to the live portal: {0}', github.event.head_commit.message)
+      || format('Build check (nothing deployed): {0}', github.event.pull_request.title) }}
 
 # Only a push to main deploys (2026-09-24, the MD: a pull request must never put a build
 # anywhere). A pull request is BUILT — the Blazor bundle published and the API compiled — so its
@@ -32,7 +39,7 @@ jobs:
   build_and_deploy:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
-    name: Build and deploy
+    name: ${{ github.event_name == 'push' && 'Build and deploy to the live portal' || 'Build check (nothing deployed)' }}
 
     steps:
       - name: Checkout repository
