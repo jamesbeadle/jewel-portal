@@ -16,6 +16,13 @@ internal static class AiSitePhotoRows
         isFiled = photo.IsFiled,
         filedToProjectId = photo.FiledToProjectId,
         filedToProgressUpdateId = photo.FiledToProgressUpdateId,
+        filedTo = photo.FiledTo is not { } destination ? null : new
+        {
+            projectReference = destination.ProjectReference,
+            projectName = destination.ProjectName,
+            progressUpdateTitle = destination.ProgressUpdateTitle,
+            workDate = destination.WorkDate
+        },
         photo.FiledAt,
         isArchived = photo.IsArchived,
         archive = photo.Archive is not { } archive ? null : new

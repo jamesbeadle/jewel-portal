@@ -13,31 +13,44 @@ public partial class SitePhotos
     private string? changing;
     private string? error;
     private string filter = SitePhotoFilter.Unfiled;
+    private string scope = SitePhotoScope.WholePool;
     private SitePhotoUploadResult? lastUpload;
     private SitePhoto? viewing;
 
-    // The Progress page's own gates: every internal role reads the pool, the site and project
-    // team (and the MD, who helps out) drop into it.
+    // The Progress page's own gates: every internal role reads, the site and project team drop.
     private bool CanRead => Auth.CurrentRoles.Any(role => NavigationRoles.AllInternalRoles.Contains(role));
 
     private bool CanContribute =>
         Auth.CurrentRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager);
 
-    private IReadOnlyList<SitePhoto> Filtered => SitePhotoFilter.Apply(photos ?? Array.Empty<SitePhoto>(), filter);
+    private string? ScopedProjectId => SitePhotoScope.ProjectIdOf(scope);
+    private Project? ScopedProject => ScopedProjectId is { } scopedProjectId ? Projects.Find(scopedProjectId) : null;
 
-    private IReadOnlyList<TabItem> Chips => SitePhotoFilter.Chips(photos);
+    private IReadOnlyList<SitePhoto> Filtered => SitePhotoFilter.Apply(photos ?? Array.Empty<SitePhoto>(), filter, ScopedProjectId);
 
-    private string Summary => SitePhotoText.Summary(photos ?? Array.Empty<SitePhoto>());
+    private IReadOnlyList<TabItem> Chips => SitePhotoFilter.Chips(photos, ScopedProjectId);
 
-    private string EmptyMessage => SitePhotoFilter.EmptyMessage(filter, CanContribute);
+    private IReadOnlyList<TabItem> ScopeChips => SitePhotoScope.Chips(MenuProject);
 
-    private static string UploadSummary(SitePhotoUploadResult upload) => SitePhotoText.UploadSummary(upload);
+    private Project? MenuProject => CurrentProject.ResolveFor(Projects.Current) is { } projectId ? Projects.Find(projectId) : null;
+
+    private string Summary => SitePhotoText.Summary(photos ?? Array.Empty<SitePhoto>(), ScopedProject);
+
+    private string EmptyMessage => SitePhotoFilter.EmptyMessage(filter, CanContribute, ScopedProject?.Reference);
 
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        await LoadAsync();
+        await Task.WhenAll(LoadAsync(), OpenOnMenuProjectAsync());
+    }
+
+    private async Task OpenOnMenuProjectAsync()
+    {
+        await CurrentProject.EnsureLoadedAsync();
+        try { await Projects.RefreshAsync(CancellationToken.None); }
+        catch { }
+        scope = MenuProject?.ProjectId ?? SitePhotoScope.WholePool;
     }
 
     private async Task LoadAsync()
