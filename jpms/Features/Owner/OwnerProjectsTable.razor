@@ -1,0 +1,60 @@
+@namespace Jewel.JPMS.Features.Owner
+@using Jewel.JPMS.Features.Cvr
+@using static Jewel.JPMS.Features.Cvr.ProfitDisplay
+
+@* Every live job on one scale: the forecast profit at completion drawn as a bar, the profit on
+   the work still to do beside it. The figures are the Profit Summary's rows; the bar is the
+   same pound scale for every job, so a small job's bar is honestly small. *@
+@{
+    var scale = Rows is null || Rows.Count == 0
+        ? 1m
+        : Math.Max(1m, Rows.Max(entry => Math.Abs(entry.Row.ForecastedProfit)));
+    string BarWidth(decimal value) =>
+        $"width:{(Math.Abs(value) / scale * 100m).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}%";
+}
+<RecordsTable Dense="true" IsLoading="@(Rows is null)" LoadingLabel="Loading every live job's profit"
+              IsEmpty="@(Rows is { Count: 0 })" EmptyMessage="No live jobs.">
+    <thead>
+        <tr>
+            <th>Project</th>
+            <th>Stage</th>
+            <th class="text-right whitespace-nowrap">Forecast profit</th>
+            <th class="w-1/4">Same scale</th>
+            <th class="text-right whitespace-nowrap">Profit to finish</th>
+            <th class="text-right whitespace-nowrap">Complete</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var (project, row) in Rows ?? Array.Empty<(Project, ProfitRow)>())
+        {
+            <tr>
+                <td class="whitespace-nowrap">
+                    <a href="/projects/@project.ProjectId/financials" class="text-content font-medium hover:underline">@project.Name</a>
+                    <span class="block text-xs text-content-subtle">@project.Reference</span>
+                </td>
+                <td><ProjectStageBadge Stage="project.Stage" /></td>
+                <td class="text-right whitespace-nowrap font-semibold @ProfitClass(row.ForecastedProfit)">
+                    @Money(row.ForecastedProfit)
+                    @if (row.ForecastedMargin is decimal margin)
+                    {
+                        <span class="block text-xs font-normal text-content-subtle">@Pct(margin)</span>
+                    }
+                </td>
+                <td>
+                    <div class="h-2 rounded-full bg-surface-raised overflow-hidden" title="@Money(row.ForecastedProfit)">
+                        <div class="h-2 rounded-full @(row.ForecastedProfit < 0m ?"bg-negative" : "bg-positive")" style="@BarWidth(row.ForecastedProfit)"></div>
+                    </div>
+                </td>
+                <td class="text-right whitespace-nowrap @ProfitClass(row.ToFinishProfit)">@Money(row.ToFinishProfit)</td>
+                <td class="text-right whitespace-nowrap text-content-muted">
+                    @(row.PercentComplete is decimal complete ? Pct(complete) : "—")
+                </td>
+            </tr>
+        }
+    </tbody>
+</RecordsTable>
+
+@code {
+    /// <summary>The Profit Summary's rows for the live jobs — null until every one has landed.</summary>
+    [Parameter] public IReadOnlyList<(Project Project, ProfitRow Row)>? Rows { get; set; }
+}

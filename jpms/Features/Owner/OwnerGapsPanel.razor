@@ -1,0 +1,43 @@
+@namespace Jewel.JPMS.Features.Owner
+
+@*
+    What Nigel's prototype asks for that the portal does not yet calculate. Each is a figure
+    whose definition the business has not made, not a figure waiting to be wired up — so the
+    page names the gap and the decision behind it rather than showing a number it cannot stand
+    behind. When a definition is agreed, the figure earns its tile above and leaves this list.
+*@
+<Panel Title="Not yet calculated" BodyClass="p-0">
+    <p class="px-5 pt-4 pb-2 text-xs text-content-muted">
+        Figures the owner view asks for that no finance page calculates today. Each needs its
+        definition agreeing before it can be shown — a number here would be a guess.
+    </p>
+    <ul class="divide-y divide-line">
+        @foreach (var gap in Gaps)
+        {
+            <li class="px-5 py-3">
+                <p class="text-sm font-medium text-content">@gap.Title</p>
+                <p class="text-xs text-content-muted mt-0.5">@gap.WhyNot</p>
+            </li>
+        }
+    </ul>
+</Panel>
+
+@code {
+    private sealed record Gap(string Title, string WhyNot);
+
+    private static readonly IReadOnlyList<Gap> Gaps = new Gap[]
+    {
+        new("Company operating profit after overhead",
+            "Every profit figure the portal holds is project gross profit — certified against allocated Xero spend. Company overhead is not held against a period anywhere, so there is no period P&L to read it from."),
+        new("One complete cash outlook",
+            "The 13-week plan counts recorded bills and invoices but not valuations yet to be issued; the monthly Cash Forecast counts future valuations but its overhead figure is typed per user, so two directors see two forecasts. Reconciling the two into one dated cash ledger is new logic."),
+        new("An early-warning cash buffer",
+            "The list above flags a week below zero. Flagging a week below an approved minimum balance needs that minimum agreeing first."),
+        new("Pipeline value",
+            "Leads carry an estimated value and a stage, but no probability or margin — a weighted pipeline is a definition the sales team has not made. The open-lead count above is the fact the portal does hold."),
+        new("The five data checks",
+            "The prototype's reconciliation tickets (certified total vs the invoice register, retention across two pages, cost to complete vs cash drawdowns, cost-of-sales scope) compare figures from different pages on different bases. Each bridge is its own piece of logic to define and then automate."),
+        new("Programme days late",
+            "The programme knows which tasks are past their planned finish; it holds no baseline or dependency links, so 'critical-path days late' cannot be computed.")
+    };
+}

@@ -1,0 +1,150 @@
+@page "/owner-overview"
+@using Jewel.JPMS.Contracts.WeeklyCashflow
+@using Jewel.JPMS.Features.Cashflow
+@using Jewel.JPMS.Features.Cvr
+@using Jewel.JPMS.Features.Owner
+@using Jewel.JPMS.Features.Projects
+@using Jewel.JPMS.Features.Sales
+@using Jewel.JPMS.Features.WeeklyCashflow
+@using Jewel.JPMS.Features.Xero
+@using static Jewel.JPMS.Features.Cashflow.CashflowDisplay
+@using static Jewel.JPMS.Features.Cvr.ProfitDisplay
+@inject AuthService Auth
+@inject SessionService Session
+@inject ProjectListReadModel Projects
+@inject ProjectProfitReadModel Profit
+@inject IXeroCashSummaryStore Cash
+@inject IXeroAgedPayablesStore Payables
+@inject IXeroAgedReceivablesStore Receivables
+@inject WeeklyCashflowPlanReadModel Plan
+@inject LeadListReadModel Leads
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Owner Overview · JPMS</PageTitle>
+
+@*
+    The board's one-page reading of the business (Nigel's brief, 2026-09-22). Every figure is one
+    a finance page already calculates, read through the same read models, so this page can never
+    disagree with the page it summarises; what it cannot calculate is named in the last panel.
+*@
+
+@{
+    var weekly = WeeklyView();
+    var profitTotal = ProfitRows is null ? null : ProfitRow.TotalOf(ProfitRows);
+    var decisionsReady = ProfitReady && (WeeklyReady || planFailed) && PayablesSnapshot is not null && ReceivablesSnapshot is not null;
+    var decisions = decisionsReady ? OwnerDecisions.For(ProfitRows, weekly, OverduePayables, OverdueReceivables) : null;
+}
+
+<Page OpenTo="OwnerOverviewRoles.Owners">
+    <PageHeader Title="Owner Overview">
+        <SubtitleContent>
+            Cash, forecast profit and the decisions that protect both — every figure the one its finance page calculates.
+        </SubtitleContent>
+    </PageHeader>
+
+    @if (projectsFailed)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-6">The project list could not be loaded, so the profit figures are not shown.</Notice>
+    }
+    @if (FailedProjects.Count > 0)
+    {
+        <Notice Tone="Tone.Warning" Class="mb-6">
+            @string.Join(", ", FailedProjects.Select(project => project.Name)) could not be loaded — the profit figures leave them out.
+        </Notice>
+    }
+
+    @* ---- Now: the four numbers the owner asked for first ---------------------------- *@
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
+        <StatTile Label="Cash in bank" IsLoading="@(BankSnapshot is null)"
+                  Value="@BankCashText" Caption="@BankCashCaption"
+                  Title="Every Xero bank account's balance added up — the Cash Forecast's and Weekly Cashflow's opening position." />
+        <StatTile Label="Lowest week, 13-week plan" IsLoading="@(!planFailed && weekly is null)"
+                  Title="The Weekly Cashflow's running bank balance at its low point — recorded bills, invoices and manual items only.">
+            @if (weekly?.Closing is null)
+            {
+                <p class="text-sm text-content-muted">Needs the bank position and the weekly plan.</p>
+            }
+            else
+            {
+                var low = weekly.Closing[weekly.MinClosingIndex];
+                <p class="text-2xl font-semibold @(low < 0m ?"text-negative" : "text-content")">@Money(low)</p>
+                <p class="text-xs text-content-subtle mt-1">@WeekLabel(weekly.WeekStarts[weekly.MinClosingIndex], weekly.MinClosingIndex) · before valuations not yet issued</p>
+            }
+        </StatTile>
+        <StatTile Label="Forecast project profit" IsLoading="@(profitTotal is null)"
+                  Title="The Profit Summary's forecast at completion, every live job: revised contract sums less forecast cost of sales. Project gross profit, before company overhead.">
+            <p class="text-2xl font-semibold @ProfitClass(profitTotal!.ForecastedProfit)">@Money(profitTotal.ForecastedProfit)</p>
+            <p class="text-xs text-content-subtle mt-1">
+                @(profitTotal.ForecastedMargin is decimal margin ? $"{Pct(margin)} on " : "")@MoneyCompact(profitTotal.ContractValue) · @(ProfitRows!.Count) live jobs · before overhead
+            </p>
+        </StatTile>
+        <StatTile Label="Company operating profit" Class="opacity-60"
+                  Title="Not yet calculated — see the last panel.">
+            <p class="text-2xl font-semibold text-content-muted">Not yet calculated</p>
+            <p class="text-xs text-content-subtle mt-1">No period P&amp;L with overhead exists in the portal</p>
+        </StatTile>
+    </div>
+
+    @* ---- Ahead: the 13-week line, and what needs a decision ------------------------- *@
+    <div class="grid gap-4 xl:grid-cols-3 mb-6">
+        <Panel Title="Cash ahead — the 13-week plan" Class="xl:col-span-2"
+               IsLoading="@(!planFailed && weekly is null)" LoadingLabel="Loading the weekly plan">
+            @if (weekly?.Closing is null)
+            {
+                <p class="text-sm text-content-muted">
+                    The balance line needs the bank position from Xero and the weekly plan.
+                    <a href="/finance/weekly-cashflow" class="text-accent hover:underline">Open Weekly Cashflow</a>
+                </p>
+            }
+            else
+            {
+                <ForecastBalanceChart Axis="@weekly.WeekStarts.Select(week => week.UtcDateTime).ToArray()"
+                                      Closing="@weekly.Closing.ToArray()"
+                                      MinIndex="@weekly.MinClosingIndex"
+                                      HighReference="@(BankReady ? BankSnapshot!.TotalCash : 0m)"
+                                      LabelFor="WeekAxisLabel"
+                                      AriaLabel="Closing bank balance by week" />
+                <p class="text-xs text-content-muted mt-3">
+                    The Weekly Cashflow's recorded plan: outstanding Xero bills and sales invoices in the week they fall due or were placed,
+                    plus the manual items Xero cannot see. Valuations not yet issued are not in it — the monthly
+                    <a href="/finance/cash-forecast" class="text-accent hover:underline">Cash Forecast</a> holds those.
+                    <a href="/finance/weekly-cashflow" class="text-accent hover:underline">Open the plan</a>
+                </p>
+            }
+        </Panel>
+        <OwnerDecisionsPanel Decisions="decisions" />
+    </div>
+
+    @* ---- The jobs ---------------------------------------------------------------------- *@
+    <SectionHeader Title="Project performance" Subtitle="Forecast profit at completion and the profit still to come, every live job — the Profit Summary's rows." Class="mb-3">
+        <Actions>
+            <a href="/finance/profit-summary" class="text-sm text-accent hover:underline">Open the Profit Summary</a>
+        </Actions>
+    </SectionHeader>
+    <div class="mb-6">
+        <OwnerProjectsTable Rows="ProfitRows" />
+    </div>
+
+    @* ---- Owed each way, and the next work ---------------------------------------------- *@
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
+        <StatTile Label="Owed to suppliers" IsLoading="@(PayablesSnapshot is null)"
+                  Value="@PayablesText" Caption="@PayablesCaption"
+                  Title="Aged Payables' total: every outstanding supplier bill, draft bills still being coded included, net of credits." />
+        <StatTile Label="Owed by clients" IsLoading="@(ReceivablesSnapshot is null)"
+                  Value="@ReceivablesText" Caption="@ReceivablesCaption"
+                  Title="Aged Receivables' total: every outstanding sales invoice, drafts included, net of credits." />
+        <StatTile Label="Left to certify" IsLoading="@(profitTotal is null)"
+                  Title="The Profit Summary's 'to finish' band: revised contract sums less certified to date, every live job. Earned-but-uncertified work and retention are inside it.">
+            <p class="text-2xl font-semibold text-content">@Money(profitTotal!.LeftToCertify)</p>
+            <p class="text-xs text-content-subtle mt-1">against @MoneyCompact(profitTotal.CostToComplete) cost to complete</p>
+        </StatTile>
+        <StatTile Label="Open leads" IsLoading="@(!leadsFailed && Leads.Current is null)"
+                  Title="Leads not yet won, lost or parked in nurture — the Sales register's count.">
+            <p class="text-2xl font-semibold text-content">@OpenLeadCount</p>
+            <p class="text-xs text-content-subtle mt-1">pipeline value not yet calculated · <a href="/sales/leads" class="text-accent hover:underline">Leads</a></p>
+        </StatTile>
+    </div>
+
+    <OwnerGapsPanel />
+</Page>

@@ -1,0 +1,28 @@
+@namespace Jewel.JPMS.Features.Owner
+
+@* The things to look at, most serious first. Empty is an answer: nothing is below zero. *@
+<Panel Title="Needs a decision" IsLoading="@(Decisions is null)" LoadingLabel="Reading the figures" BodyClass="p-0">
+    @if (Decisions!.Count == 0)
+    {
+        <EmptyState Message="Nothing below zero — no forecast loss, no negative week, nothing overdue." />
+    }
+    <ul class="divide-y divide-line">
+        @foreach (var decision in Decisions.OrderByDescending(entry => entry.IsSerious))
+        {
+            <li>
+                <a href="@decision.Href" class="flex items-start gap-3 px-5 py-4 hover:bg-surface-raised transition">
+                    <span class="mt-1.5 w-2 h-2 rounded-full shrink-0 @(decision.IsSerious ?"bg-negative" : "bg-warning")" aria-hidden="true"></span>
+                    <span class="min-w-0">
+                        <span class="block text-sm font-medium text-content">@decision.Title</span>
+                        <span class="block text-xs text-content-muted mt-0.5">@decision.Detail</span>
+                    </span>
+                </a>
+            </li>
+        }
+    </ul>
+</Panel>
+
+@code {
+    /// <summary>Null while any source is still loading.</summary>
+    [Parameter] public IReadOnlyList<OwnerDecision>? Decisions { get; set; }
+}

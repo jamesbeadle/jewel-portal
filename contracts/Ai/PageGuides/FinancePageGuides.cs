@@ -28,6 +28,20 @@ public static class FinancePageGuides
             + "projects; none of this page's dialogs are registered, so allocation itself is the "
             + "user's act."),
 
+        new("/owner-overview", "Owner Overview",
+            "The board's one-page reading of the business (directors only): cash in bank from "
+            + "Xero, the Weekly Cashflow's lowest week, the Profit Summary's forecast project profit "
+            + "across the live jobs, a 'needs a decision' list (a week below zero, a forecast loss, "
+            + "a loss on the work remaining, overdue supplier bills or client invoices), every live "
+            + "job's forecast profit and profit to finish on one bar scale, what is owed each way "
+            + "from the aged reports, left to certify, and the open-lead count. Every figure is the "
+            + "one its finance page calculates, read through the same read models; the closing "
+            + "'Not yet calculated' panel names what the owner view asks for that the portal does "
+            + "not compute (company operating profit after overhead, one reconciled cash outlook, "
+            + "a cash buffer, pipeline value, the reconciliation data checks, programme days late). "
+            + "Read-only — you can navigate_to here; the figures behind each tile are the pages "
+            + "it links to."),
+
         new("/finance/cash-forecast", "Cash Forecast",
             "The company time-phased cash forecast: every known future cash movement placed in its "
             + "expected month, with a directors-only KPI strip and closing-bank-balance row seeded "

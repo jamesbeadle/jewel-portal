@@ -2,7 +2,9 @@
 @using static Jewel.JPMS.Features.Cashflow.CashflowDisplay
 
 @* The balance line, drawn inline — one series, the zero line dashed, the trough flagged.
-   Coordinates are formatted invariant: SVG wants dots regardless of the browser's culture. *@
+   Months by default (the Cash Forecast); the Owner Overview hands it the weekly plan's Mondays
+   with its own labels. Coordinates are formatted invariant: SVG wants dots regardless of the
+   browser's culture. *@
 @{
     const double width = 1000, height = 140, padX = 30, padTop = 18, padBottom = 22;
     var closing = Closing;
@@ -15,7 +17,7 @@
     var path = string.Join(" ", closing.Select((value, index) => $"{(index == 0 ? "M" : "L")}{S(X(index))} {S(Y(value))}"));
 }
 <svg width="100%" height="140" viewBox="0 0 1000 140" preserveAspectRatio="none" role="img"
-     aria-label="Closing bank balance by month">
+     aria-label="@AriaLabel">
     <line x1="@S(padX)" y1="@S(Y(0m))" x2="@S(width - padX)" y2="@S(Y(0m))"
           stroke="#34373B" stroke-width="1" stroke-dasharray="4 4" />
     <path d="@path" fill="none" stroke="#57E08A" stroke-width="2" stroke-linejoin="round" />
@@ -24,12 +26,12 @@
         var isMin = index == MinIndex;
         <circle cx="@S(X(index))" cy="@S(Y(closing[index]))" r="@(isMin ? "5" : "3.5")"
                 fill="@(isMin ? "#FF4D4D" : "#57E08A")" stroke="#161719" stroke-width="2">
-            <title>@MonthLabel(Axis[index]): @Money(closing[index])</title>
+            <title>@LabelFor(Axis[index]): @Money(closing[index])</title>
         </circle>
         @* SVG's <text> element collides with Razor's own <text> literal tag, which may
            not carry attributes (RZ1023) — so the labels are emitted as MarkupString.
            Safe: every interpolated value is numeric or from our own formatters. *@
-        @((MarkupString)($"<text x=\"{S(X(index))}\" y=\"{S(height - 6)}\" text-anchor=\"{(index == 0 ? "start" : index == closing.Length - 1 ? "end" : "middle")}\" font-size=\"10\" fill=\"#8A9099\">{System.Net.WebUtility.HtmlEncode(MonthLabel(Axis[index]))}</text>"))
+        @((MarkupString)($"<text x=\"{S(X(index))}\" y=\"{S(height - 6)}\" text-anchor=\"{(index == 0 ? "start" : index == closing.Length - 1 ? "end" : "middle")}\" font-size=\"10\" fill=\"#8A9099\">{System.Net.WebUtility.HtmlEncode(LabelFor(Axis[index]))}</text>"))
     }
     @((MarkupString)($"<text x=\"{S(X(MinIndex))}\" y=\"{S(Y(closing[MinIndex]) - 10)}\" text-anchor=\"middle\" font-size=\"11\" font-weight=\"600\" fill=\"#FF4D4D\">{System.Net.WebUtility.HtmlEncode(Money(closing[MinIndex]))}</text>"))
 </svg>
@@ -43,4 +45,7 @@
     [Parameter] public int MinIndex { get; set; }
     /// <summary>Today's bank position: the top of the scale never sits below it.</summary>
     [Parameter] public decimal HighReference { get; set; }
+    /// <summary>How each point on the axis is named — months unless the caller says otherwise.</summary>
+    [Parameter] public Func<DateTime, string> LabelFor { get; set; } = MonthLabel;
+    [Parameter] public string AriaLabel { get; set; } = "Closing bank balance by month";
 }
