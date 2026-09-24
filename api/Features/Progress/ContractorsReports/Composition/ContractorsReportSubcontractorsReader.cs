@@ -3,8 +3,9 @@ using Jewel.JPMS.Contracts.Progress;
 
 namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
 
-/// <summary>Section 8: the work orders live on site — Released, or completed within the week —
-/// with the supplier named from the directory and the attendance the report's author entered.</summary>
+/// <summary>The work orders live on site — Released, or completed within the week — with the
+/// supplier named from the directory and the attendance the report's author entered. These are
+/// what attendance is entered against; Section 8 prints the ones that attended.</summary>
 internal static class ContractorsReportSubcontractorsReader
 {
     public static async Task<IReadOnlyList<ContractorsReportSubcontractor>> ReadAsync(

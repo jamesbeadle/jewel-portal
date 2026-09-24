@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Progress.SitePhotos;
 using Jewel.JPMS.Contracts.Progress;
+using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 

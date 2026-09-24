@@ -38,10 +38,13 @@ internal static partial class AiDeliveryTools
             + "Section 1's days with the selected updates, Look Ahead, the open RFIs (Section 3), "
             + "the variations not yet approved or rejected with their total (Section 4), "
             + "Neighbours, Health & Safety, the Building Control contact and liaison (Section 7), "
-            + "the work orders on site with attendance (Section 8 — its reference and target "
-            + "completion are for you to match on and are NEVER written into the report: name "
-            + "the subcontractor and the work, no WO number, no target date), the days with photographs "
-            + "(Section 9) — plus the updates in the period to choose from and the wording "
+            + "Section 8 (only the work orders with attendance entered — a firm that did not "
+            + "attend is not in the report, so its wording is never checked), the days with photographs "
+            + "(Section 9) — plus the updates in the period to choose from, workOrdersOnSite[] "
+            + "(every order on site, with its workOrderId, reference and target completion, to "
+            + "enter attendance against with update_contractors_report — the reference and target "
+            + "are for you to match on and are NEVER written into the report: name the "
+            + "subcontractor and the work, no WO number, no target date) and the wording "
             + "FINDINGS. While findings is non-empty the Word and PDF builds are refused: the "
             + "report goes to the client's side, so a line naming remedial works, making good, "
             + "rectification, snagging, defects or rework is refused by section and line, never "
@@ -68,6 +71,7 @@ internal static partial class AiDeliveryTools
             canBeBuilt = view.Document.CanBeBuilt,
             findings = view.Document.Findings,
             updatesInPeriod = view.UpdatesInPeriod,
+            workOrdersOnSite = view.WorkOrdersOnSite,
             downloads = new
             {
                 pdf = $"contractors-reports/{view.Report.ContractorsReportId}/pdf",

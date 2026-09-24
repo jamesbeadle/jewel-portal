@@ -20,26 +20,20 @@ public sealed class ContractorsReportComposer
         var report = entity.ToModel();
         var week = new ReportingWeek(report.PeriodStart, report.PeriodEnd);
         var updates = await ContractorsReportProgressReader.UpdatesInPeriodAsync(context, report.ProjectId, week, cancellationToken);
-        var document = await ComposeAsync(report, week, updates, cancellationToken);
-        return new ContractorsReportView(report, document, Choices(report, updates));
+        var onSite = await ContractorsReportSubcontractorsReader.ReadAsync(context, report.ProjectId, week, report.Attendance, cancellationToken);
+        var document = await ComposeAsync(report, week, updates, onSite, cancellationToken);
+        return new ContractorsReportView(report, document, Choices(report, updates), onSite);
     }
 
     private async Task<ContractorsReportDocument> ComposeAsync(
-        ContractorsReport report, ReportingWeek week, IReadOnlyList<ContractorsReportUpdate> updates, CancellationToken cancellationToken)
+        ContractorsReport report, ReportingWeek week, IReadOnlyList<ContractorsReportUpdate> updates,
+        IReadOnlyList<ContractorsReportSubcontractor> onSite, CancellationToken cancellationToken)
     {
-        var project = await context.Projects.AsNoTracking()
-            .Where(row => row.ProjectId == report.ProjectId)
-            .Select(row => new { row.Name, row.Reference })
-            .FirstAsync(cancellationToken);
         var selected = updates.Where(update => report.SelectedUpdateIds.Contains(update.ProgressUpdateId)).ToList();
         var variations = await ContractorsReportRegisterReader.VariationsAsync(context, report.ProjectId, cancellationToken);
 
         var draft = new ContractorsReportDocument(
-            Header: new ContractorsReportHeader(
-                project.Name, project.Reference, report.DisplayTitle, report.ValuationNumber,
-                await ContractorsReportCertificates.LastNumberAsync(context, report.ProjectId, cancellationToken),
-                report.ProgrammeReference, report.PeriodStart, report.PeriodEnd,
-                report.PreparedByName, report.IssuedTo, report.DateOfIssue),
+            Header: await HeaderAsync(report, cancellationToken),
             Progress: ContractorsReportDays.Group(week, selected),
             LookAhead: report.LookAhead,
             Decisions: await ContractorsReportRegisterReader.DecisionsAsync(context, report.ProjectId, cancellationToken),
@@ -48,9 +42,22 @@ public sealed class ContractorsReportComposer
             Neighbours: report.Neighbours,
             HealthAndSafety: report.HealthAndSafety,
             BuildingControl: await ContractorsReportRegisterReader.BuildingControlAsync(context, report.ProjectId, report.BuildingControlLiaison, cancellationToken),
-            Subcontractors: await ContractorsReportSubcontractorsReader.ReadAsync(context, report.ProjectId, week, report.Attendance, cancellationToken),
+            Subcontractors: onSite.Where(order => order.AttendanceDays is > 0).ToList(),
             Findings: Array.Empty<ContractorsReportFinding>());
         return draft with { Findings = ContractorsReportWording.Check(ContractorsReportLines.Of(draft)) };
+    }
+
+    private async Task<ContractorsReportHeader> HeaderAsync(ContractorsReport report, CancellationToken cancellationToken)
+    {
+        var project = await context.Projects.AsNoTracking()
+            .Where(row => row.ProjectId == report.ProjectId)
+            .Select(row => new { row.Name, row.Reference })
+            .FirstAsync(cancellationToken);
+        return new ContractorsReportHeader(
+            project.Name, project.Reference, report.DisplayTitle, report.ValuationNumber,
+            await ContractorsReportCertificates.LastNumberAsync(context, report.ProjectId, cancellationToken),
+            report.ProgrammeReference, report.PeriodStart, report.PeriodEnd,
+            report.PreparedByName, report.IssuedTo, report.DateOfIssue);
     }
 
     private static IReadOnlyList<ContractorsReportUpdateChoice> Choices(ContractorsReport report, IReadOnlyList<ContractorsReportUpdate> updates) =>

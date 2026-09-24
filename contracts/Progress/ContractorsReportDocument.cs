@@ -73,7 +73,9 @@ public sealed record ContractorsReportBuildingControl(
     string? ContactPhone,
     string Liaison);
 
-/// <summary>Section 8: a work order released or active in the period, with the entered attendance.</summary>
+/// <summary>A work order released or active in the period, with the entered attendance. The
+/// page's attendance table lists every one on site; Section 8 prints only those given days on site
+/// — Nigel, 20 Sep, and Report 30 as issued.</summary>
 public sealed record ContractorsReportSubcontractor(
     string WorkOrderId,
     string Reference,
@@ -90,9 +92,11 @@ public sealed record ContractorsReportFinding(string Section, string Line, strin
 /// <summary>A progress update in the period, for the page's tick list.</summary>
 public sealed record ContractorsReportUpdateChoice(string ProgressUpdateId, DateOnly WorkDate, string Title, int PhotoCount, bool IsSelected);
 
-/// <summary>The report page's one read: the record, the document it composes to, and the
-/// updates in its period to choose from.</summary>
+/// <summary>The report page's one read: the record, the document it composes to, the updates in
+/// its period to choose from, and the work orders on site to enter attendance against — of which
+/// only those that attended reach the document's Section 8.</summary>
 public sealed record ContractorsReportView(
     ContractorsReport Report,
     ContractorsReportDocument Document,
-    IReadOnlyList<ContractorsReportUpdateChoice> UpdatesInPeriod);
+    IReadOnlyList<ContractorsReportUpdateChoice> UpdatesInPeriod,
+    IReadOnlyList<ContractorsReportSubcontractor> WorkOrdersOnSite);
