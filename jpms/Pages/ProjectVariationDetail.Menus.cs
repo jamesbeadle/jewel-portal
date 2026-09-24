@@ -85,9 +85,9 @@ public partial class ProjectVariationDetail
                     OnSelect: EventCallback.Factory.Create(this, FocusApprovePanel),
                     Hint: "Build the variation up from priced lines — one per cost centre — then approve. Writes the Valuation Report, CVR and cost-centre budgets",
                     Disabled: busy, Group: 1));
-                items.Add(new(Label: order.DraftLines is { Count: > 0 } ? "Edit staged build-up…" : "Stage agreed build-up…",
+                items.Add(new(Label: "Edit line items…",
                     OnSelect: EventCallback.Factory.Create(this, () => { buildUpDialogOpen = true; }),
-                    Hint: "Capture the client-agreed lines now: their total becomes the estimate and approval opens pre-filled",
+                    Hint: "Add, edit or remove the priced lines — their total is the estimate, and approval writes them to the Valuation Report",
                     Disabled: busy, Group: 1));
                 items.Add(new(Label: "Record agreed tender…",
                     OnSelect: EventCallback.Factory.Create(this, () => { recordingTender = true; }),
@@ -102,7 +102,7 @@ public partial class ProjectVariationDetail
                     Disabled: busy, Group: 1));
                 // Held shut until the report lines are in: the dialog seeds itself from them, so
                 // opening it early would offer an empty build-up.
-                items.Add(new(Label: "Edit lines…",
+                items.Add(new(Label: "Edit line items…",
                     OnSelect: EventCallback.Factory.Create(this, OpenEditLines),
                     Hint: ValuationLinesReady
                         ? "Add, edit or remove the priced lines without un-approving — the report, CVR and budgets move by the difference"

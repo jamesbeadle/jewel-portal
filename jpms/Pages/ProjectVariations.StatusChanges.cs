@@ -115,7 +115,7 @@ public partial class ProjectVariations
                 "Approving mints the V-ref and writes the contract figures — opens the variation's approve panel to enter the lines",
                 false, Href: $"{variationHref}?approve=true");
         return new("Approved",
-            "Approves with the staged build-up — mints the V-ref and writes the contract figures",
+            "Approves with its line items — mints the V-ref and writes the contract figures",
             false,
             Action: () => ApproveVariationInline(order, staged));
     }

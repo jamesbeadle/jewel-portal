@@ -1,13 +1,20 @@
 @namespace Jewel.JPMS.Features.Variations
+@using Jewel.JPMS.Contracts.Variations
 
-@* The approved variation's priced lines as they sit on the Valuation Report — the build-up
-   behind the figure in the sidebar. *@
-<div class="panel p-5">
-    <div class="flex items-center justify-between mb-3">
-        <h3 class="eyebrow">Variation lines</h3>
-        <span class="text-xs text-content-subtle">On the Valuation Report as <span class="font-mono">@VariationRef</span></span>
-    </div>
-    <div class="overflow-x-auto">
+@* The variation's line items — one table at every stage. Before approval they are the lines held
+   on the record; once approved, the lines on the Valuation Report under its V-ref. The status says
+   which; the table reads the same either way. *@
+<Panel Title="Line items" IsLoading="IsLoading" Prominent="false" LoadingLabel="Loading line items" BodyClass="overflow-x-auto">
+    <HeaderActions>
+        <span class="text-xs text-content-subtle">@Note</span>
+    </HeaderActions>
+    <ChildContent>
+        @if (Lines.Count == 0)
+        {
+            <EmptyState Message="@EmptyMessage" />
+        }
+        else
+        {
         <table class="data-table data-table-dense">
             <thead>
                 <tr>
@@ -21,12 +28,13 @@
             <tbody>
                 @foreach (var line in Lines)
                 {
+                    var amount = line.Quantity * line.Rate;
                     <tr>
                         <td class="font-mono text-xs whitespace-nowrap">@line.CostCode</td>
                         <td>@line.Description</td>
                         <td class="text-right font-mono">@line.Quantity.ToString("0.##", Gb)</td>
                         <td class="text-right font-mono">@line.Rate.ToString("N2", Gb)</td>
-                        <td class="text-right font-mono @(line.LineAmount < 0m ?"text-negative" : "")">@line.LineAmount.ToString("N2", Gb)</td>
+                        <td class="text-right font-mono @(amount < 0m ? "text-negative" : "")">@amount.ToString("N2", Gb)</td>
                     </tr>
                 }
             </tbody>
@@ -35,18 +43,21 @@
                     <td colspan="4">Total</td>
                     @* whitespace-nowrap: a negative total must never wrap its minus sign onto
                        its own line and read as positive. *@
-                    <td class="text-right font-mono whitespace-nowrap @(Total < 0m ?"text-negative" : "")">@Total.ToString("C2", Gb)</td>
+                    <td class="text-right font-mono whitespace-nowrap @(Total < 0m ? "text-negative" : "")">@Total.ToString("C2", Gb)</td>
                 </tr>
             </tfoot>
         </table>
-    </div>
-</div>
+        }
+    </ChildContent>
+</Panel>
 
 @code {
-    [Parameter, EditorRequired] public IReadOnlyList<ValuationLineItem> Lines { get; set; } = Array.Empty<ValuationLineItem>();
-    /// <summary>The V-ref the lines sit under on the report.</summary>
-    [Parameter] public string? VariationRef { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<VariationLineInput> Lines { get; set; } = Array.Empty<VariationLineInput>();
+    /// <summary>Where the lines stand — on the Valuation Report, or written there on approval.</summary>
+    [Parameter] public string? Note { get; set; }
+    [Parameter] public string EmptyMessage { get; set; } = "No line items yet.";
+    [Parameter] public bool IsLoading { get; set; }
 
     private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
-    private decimal Total => Lines.Sum(line => line.LineAmount);
+    private decimal Total => Lines.Sum(line => line.Quantity * line.Rate);
 }

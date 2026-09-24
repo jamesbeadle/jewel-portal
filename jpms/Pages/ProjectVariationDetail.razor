@@ -123,10 +123,9 @@
                                             @bind-Editing="editingSections"
                                             OnSaved="saved => order = saved" />
 
-                    @if (ApprovedOrder is not null && VariationLines.Count > 0)
-                    {
-                        <VariationLinesTable Lines="VariationLines" VariationRef="@ApprovedOrder!.VariationRef" />
-                    }
+                    <VariationLinesTable Lines="LineItems" Note="@LineItemsNote"
+                                         IsLoading="LineItemsLoading"
+                                         EmptyMessage="@LineItemsEmptyMessage" />
 
                     @* ---- Conversation: the typed record — internal notes plus the shared thread the
                            client portal reads and writes (threaded replies). Distinct from the email
@@ -181,13 +180,13 @@
                                               OnReject="RejectOrder" />
 
                         <Modal IsOpen="editLinesModalOpen"
-                               Title="@($"Edit lines — {order.DisplayNumber}")"
+                               Title="@($"Line items — {order.DisplayNumber}")"
                                ShowFooter="false"
                                OnCancel="CloseEditLines"
                                Class="max-w-3xl">
                             <VariationApprovePanel ShowHeading="false"
                                                    InitialLines="@CurrentLineInputs"
-                                                   SubmitLabel="Save lines"
+                                                   SubmitLabel="Save line items"
                                                    HelpOverride="Editing re-prices these lines on the Valuation Report and moves the CVR and cost-centre budgets by the difference. Nothing else changes."
                                                    Busy="@busy"
                                                    SubmitError="@editLinesError"
@@ -196,11 +195,11 @@
                     }
                     else if (CanManage && order.Status.IsPreApproval())
                     {
-                        @* The staged build-up stays on show (it IS the estimate); its dialog, the
-                           approve modal and the tender dialog open from the bar. *@
-                        <StagedBuildUpPanel @key="VariationOrderId" Order="order" Busy="busy"
-                                            @bind-DialogOpen="buildUpDialogOpen"
-                                            OnStaged="OnBuildUpStaged" />
+                        @* The line items show in the table on the left; their editor, the approve
+                           modal and the tender dialog open from the bar. *@
+                        <LineItemsDialog @key="VariationOrderId" Order="order" Busy="busy"
+                                         @bind-DialogOpen="buildUpDialogOpen"
+                                         OnStaged="OnBuildUpStaged" />
                         <VariationApproveOffer Order="order" Busy="busy"
                                                @bind-ModalOpen="approveModalOpen"
                                                OnApprove="ApproveWithLines" />
