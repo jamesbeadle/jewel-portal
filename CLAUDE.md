@@ -1938,6 +1938,12 @@ finds drift.
 - **Raw SQL inside migrations must survive the column being dropped later.** Wrap data-moving SQL
   in `EXEC sp_executesql N'...'` so it compiles only when the guard actually runs; inline raw SQL
   referencing columns that a later migration drops is what poisoned the full script.
+- **A hand-written `ALTER COLUMN` must clear what depends on the column first.** A column added
+  with a default carries a `DF__…` constraint, and SQL Server refuses to change its type while it
+  does (Msg 5074 — `widen-written-text-columns.sql`, 2026-09-24). EF's own generated script drops
+  the default; a hand-written one must too — drop it, alter, put the same default back under the
+  same name — and drop auto-created statistics on the column the same way. Open such a script
+  with `SET XACT_ABORT ON` so a failure leaves the database untouched, never half-migrated.
 - One-off data fixes (seeds, role grants, remaps) stay as reviewed scripts under `infra/` /
   `scripts/` run via sqlcmd — they are not EF migrations and must never touch schema.
 
