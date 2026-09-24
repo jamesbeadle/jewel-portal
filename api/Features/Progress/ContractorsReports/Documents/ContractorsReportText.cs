@@ -19,7 +19,6 @@ internal static class ContractorsReportText
 
     public static string Date(DateOnly value) => value.ToString("d MMM yyyy", JewelDocumentStyle.Uk);
     public static string Date(DateOnly? value) => value is { } date ? Date(date) : Dash;
-    public static string Period(ContractorsReportHeader header) => $"{Date(header.PeriodStart)} – {Date(header.PeriodEnd)}";
     public static string OrDash(string? text) => string.IsNullOrWhiteSpace(text) ? Dash : text.Trim();
     public static string OrNothingToReport(string text) => string.IsNullOrWhiteSpace(text) ? NothingToReport : text.Trim();
 

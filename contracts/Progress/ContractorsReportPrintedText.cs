@@ -16,12 +16,28 @@ public static class ContractorsReportPrintedText
     public const string AwaitingResponse = "Awaiting response";
 
     private const string LongDateFormat = "d MMMM yyyy";
+    private const string DayAndDateFormat = "dddd d MMMM yyyy";
     private static readonly CultureInfo Uk = CultureInfo.GetCultureInfo("en-GB");
     private static readonly char[] BulletMarks = { '-', '•', '*', '–' };
 
-    /// <summary>"1. Progress Against Programme, PoW Rev 9" — the programme reference beside the title.</summary>
+    /// <summary>"1. Progress Against Programme — PoW Rev 9" — the programme reference beside the title.</summary>
     public static string ProgressHeading(string sectionTitle, string programmeReference) =>
-        string.IsNullOrWhiteSpace(programmeReference) ? sectionTitle : $"{sectionTitle}, {programmeReference.Trim()}";
+        string.IsNullOrWhiteSpace(programmeReference) ? sectionTitle : $"{sectionTitle} — {programmeReference.Trim()}";
+
+    /// <summary>"Leas Green, Chislehurst, BR7 6HD" — the parts of the site address the project holds.</summary>
+    public static string AddressOf(params string[] parts) =>
+        string.Join(", ", parts.Where(part => !string.IsNullOrWhiteSpace(part)).Select(part => part.Trim()));
+
+    /// <summary>"By France, Leas Green, Chislehurst, BR7 6HD", as Report 30's header reads.</summary>
+    public static string ProjectLine(ContractorsReportHeader header) =>
+        string.IsNullOrWhiteSpace(header.SiteAddress) ? header.ProjectName : $"{header.ProjectName}, {header.SiteAddress}";
+
+    /// <summary>"Friday 18 September 2026 – Thursday 24 September 2026".</summary>
+    public static string PeriodLong(ContractorsReportHeader header) =>
+        $"{DayAndDate(header.PeriodStart)} – {DayAndDate(header.PeriodEnd)}";
+
+    /// <summary>"Friday 25 September 2026".</summary>
+    public static string DayAndDate(DateOnly date) => date.ToString(DayAndDateFormat, Uk);
 
     /// <summary>A day's note as the report's bullets: one per line, any bullet mark already typed dropped.</summary>
     public static IReadOnlyList<string> Bullets(string description) =>
