@@ -10,46 +10,7 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProfitSummary
 {
-    private ValuationClaim? LatestClaimFor(string projectId) =>
-        Claims.Current(projectId)
-            .OrderByDescending(claim => claim.ClaimNumber)
-            .FirstOrDefault();
-
-    private ProfitRow RowFor(string projectId)
-    {
-        var latest = LatestClaimFor(projectId);
-        var entries = latest is { Status: ValuationClaimStatus.Draft }
-            ? ClaimEntries.Current(latest.ValuationClaimId)
-            : Array.Empty<ClaimLine>();
-        var certification = invoicedByProject.TryGetValue(projectId, out var totals) ? totals : (0m, 0m);
-        var figures = ValuationSummaryFigures.For(
-            Lines.Current(projectId), entries, latest,
-            certification.Item1, certification.Item2);
-
-        var summaryRows = Summary.Current(projectId);
-        var packages = packagesByProject.TryGetValue(projectId, out var packageRows)
-            ? packageRows
-            : Array.Empty<PackageReconciliationRow>();
-
-        // Actual cost of sales is the gross allocated spend — the Financials tab's total, which
-        // adds packaged invoiced cost back in via the package rows (RowActual + InvoicedToDate).
-        var actualCost = summaryRows.Sum(row => row.ActualCost - row.PackagedActualCost)
-                         + packages.Sum(package => package.InvoicedToDate);
-
-        return new ProfitRow(
-            InitialContractSum: figures.ContractSum,
-            // The same target-cost rule as the Financials tab, applied to the initial sum: what
-            // the contract should cost us with the assumed markup backed out.
-            InitialContractCosts: Math.Round(figures.ContractSum * FinancialSummaryAssumptions.CostFactor, 2),
-            NetVariations: figures.NetVariations,
-            CertifiedToDate: figures.CertifiedToDate,
-            ActualCostOfSales: actualCost,
-            ContractValue: figures.RevisedContractSum,
-            ForecastCostOfSales: ProjectDrawdown.ForecastCostOfSales(
-                summaryRows, ProjectDrawdown.CommittedByCostCode(WorkOrders.Current(projectId)), packages),
-            WorksComplete: figures.TotalWorksComplete,
-            RetentionOutstanding: figures.RetentionOutstanding);
-    }
+    private ProfitRow RowFor(string projectId) => Profit.RowFor(projectId);
 
     // Every region (the strip; the bridge + table + totals together; the export) builds this
     // list once and reads rows from it, rather than each cell calling RowFor for itself.

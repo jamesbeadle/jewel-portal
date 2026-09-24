@@ -433,6 +433,9 @@ public static class SidebarFolders
     /// {project} template it follows the picker like any folder row).</summary>
     public static readonly IReadOnlyList<SidebarRow> Standalone = new[]
     {
+        // The Owner Overview — the board's one-page reading of the business (Nigel, 2026-09-22).
+        new SidebarRow(new NavigationItem("Owner Overview", "/owner-overview"),
+            NavigationRoles.DirectorRoles),
         // The Control Centre (formerly Triage) — the mailbox intake queue and router for ALL
         // correspondence across EVERY project. Mirrors the API's TriageRoles gate on the page.
         new SidebarRow(new NavigationItem("Control Centre", "/control-centre"),

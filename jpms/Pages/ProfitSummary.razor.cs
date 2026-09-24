@@ -29,11 +29,6 @@ public partial class ProfitSummary
     private readonly HashSet<string> failedProjects = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> loadingProjects = new(StringComparer.OrdinalIgnoreCase);
 
-    // Per-project answers to the reads the shared read models don't cache for us.
-    // Certified gross + the deposit credits inside it (see ProjectValuationInvoiceSummary).
-    private readonly Dictionary<string, (decimal Certified, decimal DepositCredited)> invoicedByProject = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, IReadOnlyList<PackageReconciliationRow>> packagesByProject = new(StringComparer.OrdinalIgnoreCase);
-
     // ONE throttle for the page's lifetime, not one per LoadSelectedAsync call — a filter change
     // or retry while the first batch is still in flight must share the same ceiling.
     private readonly SemaphoreSlim throttle = new(ProjectRefreshConcurrency);
@@ -141,24 +136,9 @@ public partial class ProfitSummary
         StateHasChanged();
     }
 
-    private async Task LoadProjectAsync(string projectId)
-    {
-        // Sequential on purpose — see LoadSelectedAsync. Claims must land before the entries
-        // read anyway, because only a Draft latest claim needs its per-line % entries.
-        await Summary.RefreshAsync(projectId, CancellationToken.None);
-        // The summary read model records failure rather than throwing (its page fires it
-        // fire-and-forget); here a silent all-zero row would be a lie, so failure fails the row.
-        if (Summary.LastRefreshFailed(projectId))
-            throw new InvalidOperationException("The financial summary could not be loaded.");
-        await WorkOrders.RefreshAsync(projectId, CancellationToken.None);
-        await Lines.RefreshAsync(projectId, CancellationToken.None);
-        await Claims.RefreshAsync(projectId, CancellationToken.None);
-        var invoiceSummary = await Invoices.GetSummaryAsync(projectId);
-        invoicedByProject[projectId] = (invoiceSummary.TotalCertified, invoiceSummary.TotalDepositCredited);
-        if (LatestClaimFor(projectId) is { Status: ValuationClaimStatus.Draft } draft)
-            await ClaimEntries.RefreshAsync(draft.ValuationClaimId, CancellationToken.None);
-        packagesByProject[projectId] = await Queries.AskAsync(new ListPackageReconciliation(projectId), CancellationToken.None);
-    }
+    /// <summary>On ProjectProfitReadModel, shared with the Owner Overview, so the two pages never build a row differently.</summary>
+    private Task LoadProjectAsync(string projectId) =>
+        Profit.LoadAsync(projectId, CancellationToken.None);
 
     private bool pnlFailed;
 
