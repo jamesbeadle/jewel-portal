@@ -4,7 +4,7 @@
    Reject / Return-to-quoting routes (the status pill and the Actions menu), which scroll here and
    flash the panel (jpmsFocusElement) so the click lands visibly; those two confirms are
    therefore page-bound. The revise-value editor is the panel's own, opened from Actions (bound
-   Revising). Issue work order and Edit lines live on the bar too — this panel carries no button. *@
+   Revising). Issue work order and Edit line items live on the bar too — this panel carries no button. *@
 <div id="variation-order" class="panel p-5 space-y-3">
     <h3 class="eyebrow">Approved figures</h3>
     <div class="text-sm text-content flex items-center">
@@ -20,7 +20,7 @@
     </div>
     @if (LineCount > 1)
     {
-        <p class="text-xs text-content-subtle">@LineCount lines across @CostCentres.Count cost centres — the full build-up is under “Variation lines” on the left.</p>
+        <p class="text-xs text-content-subtle">@LineCount lines across @CostCentres.Count cost centres — every one is under “Line items” on the left.</p>
     }
     else
     {
@@ -29,7 +29,7 @@
     </LoadGate>
     @* Re-pricing against no loaded line would move the CVR and the budget with no line to show
        for it — the menu only offers Revise value once the report lines are in and there is
-       one line at most; more than one goes through Edit lines. *@
+       one line at most; more than one goes through Edit line items. *@
     @if (CanManage && Revising && ValuationLinesReady && LineCount <= 1)
     {
         <div class="pt-3 border-t border-line space-y-3">

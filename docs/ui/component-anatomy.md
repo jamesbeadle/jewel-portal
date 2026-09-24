@@ -120,10 +120,10 @@ inline panel**, and **whether a chip row is links or buttons**.
   - AlertBanner (negative) ⚠️ — page error
   - AI-linked banner 🔒 — shows linked Architect's Instructions or, gated in a LoadGate ✅, "waiting on AI" notice
   - Two-column grid 🔒 (lg:col-span-2 + sidebar):
-    - Left: VariationDocumentPanel ✅ → VariationLinesTable ✅ (once approved) → OriginatingRequestRepair ✅ (seeded records only) → VariationConversation ✅ → RecordCorrespondencePanel ✅ (in a Panel-shaped div 🔒)
-    - Right: VariationDetailsCard ✅ → ApprovedFiguresPanel ✅ (approved) or VariationApproveOffer ✅ + StagedBuildUpPanel ✅ (pre-approval, CanManage) → RecordAgreedTenderPanel ✅ + DeleteVariationPanel ✅ (CanManage, unapproved)
+    - Left: VariationDocumentPanel ✅ → VariationLinesTable ✅ ("Line items" at every stage — the record's lines before approval, the report's after) → OriginatingRequestRepair ✅ (seeded records only) → VariationConversation ✅ → RecordCorrespondencePanel ✅ (in a Panel-shaped div 🔒)
+    - Right: VariationDetailsCard ✅ → ApprovedFiguresPanel ✅ (approved) or VariationApproveOffer ✅ + LineItemsDialog ✅ (pre-approval, CanManage) → RecordAgreedTenderPanel ✅ + DeleteVariationPanel ✅ (CanManage, unapproved)
 - Modals:
-  - Modal ✅ "Edit lines — {ref}" wrapping VariationApprovePanel ✅ (ShowFooter=false)
+  - Modal ✅ "Line items — {ref}" wrapping VariationApprovePanel ✅ (ShowFooter=false)
   - DeclineVariationModal ✅ — bound to `decliningOrder`
 
 ### Architect's Instructions — `/projects/{id}/architect-instructions`

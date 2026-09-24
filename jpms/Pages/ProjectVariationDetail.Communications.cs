@@ -36,6 +36,22 @@ public partial class ProjectVariationDetail
                 .ToList()
             : Array.Empty<ValuationLineItem>();
 
+    // One table at every stage: the record's own lines until approval, the report's after it.
+    private IReadOnlyList<VariationLineInput> LineItems =>
+        ApprovedOrder is not null ? CurrentLineInputs : order?.DraftLines ?? Array.Empty<VariationLineInput>();
+
+    private bool LineItemsLoading => ApprovedOrder is not null && !ValuationLinesReady;
+
+    private string LineItemsNote =>
+        ApprovedOrder is { VariationRef: { Length: > 0 } variationRef }
+            ? $"On the Valuation Report as {variationRef}"
+            : "Written to the Valuation Report on approval";
+
+    private string LineItemsEmptyMessage =>
+        CanManage && ApprovedOrder is null
+            ? "No line items yet — add them from Actions → Edit line items…"
+            : "No line items yet.";
+
     // Distinct cost centres the approved variation touches — from its report lines, falling back to
     // the order's primary code before the lines have loaded.
     private IReadOnlyList<string> ApprovedCostCentres =>

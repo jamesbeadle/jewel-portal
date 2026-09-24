@@ -23,7 +23,7 @@ public partial class ProjectVariationDetail
     private string? PillOptionTitle(VariationOrderStatus status)
     {
         if (status == VariationOrderStatus.Approved && HasStagedBuildUp)
-            return "Approves with the staged build-up — mints the V-ref and writes the contract figures";
+            return "Approves with its line items — mints the V-ref and writes the contract figures";
         if (status == VariationOrderStatus.Approved)
             return "Approving writes the contract figures — opens the approve panel to enter the lines";
         if (order?.Status == VariationOrderStatus.Approved && status == VariationOrderStatus.Quoting)

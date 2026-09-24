@@ -43,7 +43,7 @@ public partial class ProjectVariationDetail
     private bool editingSections;   // VariationDocumentPanel's narrative editor
     private bool editingEstimate;   // VariationDetailsCard's estimate editor
     private bool revisingValue;     // ApprovedFiguresPanel's revise-value editor
-    private bool buildUpDialogOpen; // StagedBuildUpPanel's dialog
+    private bool buildUpDialogOpen; // LineItemsDialog
     private bool recordingTender;   // RecordAgreedTenderPanel (a dialog)
     private bool linkingRequest;    // OriginatingRequestRepair (a dialog)
     private bool deletingOrder;     // DeleteVariationPanel (a confirm dialog)

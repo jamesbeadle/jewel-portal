@@ -2,43 +2,12 @@
 @using Jewel.JPMS.Contracts.Variations
 @inject IVariationStore Variations
 
-@* The agreed build-up, STAGED before approval: the client-agreed priced lines (from the agreed
-   spreadsheet, the client's email — or the assistant reading them) captured now so the estimate
-   reads the agreed figure and approval opens pre-seeded. Nothing reaches the Valuation Report
-   until approval. The dialog, its narrative drafts and its error are the panel's own, but it is
-   OPENED from the page's Actions menu (bound DialogOpen) — the panel carries no button. Key the
-   panel by the record so a different variation gets a fresh one. *@
-<div class="panel p-5 space-y-3">
-    <h3 class="eyebrow">Agreed build-up (staged)</h3>
-    @if (Order.DraftLines is { Count: > 0 } staged)
-    {
-        <div class="space-y-1">
-            @foreach (var line in staged)
-            {
-                <div class="flex justify-between gap-3 text-sm">
-                    <span class="text-content truncate" title="@line.Description">
-                        <span class="font-mono text-content-subtle">@line.CostCode</span> @line.Description
-                    </span>
-                    <span class="font-mono whitespace-nowrap">@Pennies(line.Quantity * line.Rate)</span>
-                </div>
-            }
-            <div class="flex justify-between text-sm pt-1 border-t border-line">
-                <span class="text-content-subtle">Staged total (the estimate)</span>
-                <span class="font-mono font-semibold">@Pennies(staged.Sum(line => line.Quantity * line.Rate))</span>
-            </div>
-        </div>
-    }
-    else
-    {
-        <p class="text-xs text-content-subtle">
-            Nothing staged yet. Capture the client-agreed lines from Actions — the total becomes the
-            estimate and the approve dialog opens with them filled in.
-        </p>
-    }
-</div>
-
+@* Edits a variation's line items before approval: the priced lines held on the record, whose
+   total is the estimate and which approval writes to the Valuation Report. Once approved, the
+   page's "Edit line items…" opens the approved-lines editor instead — the same lines, the same
+   table. Opened from the Actions menu (bound DialogOpen); key it by the record. *@
 <Modal IsOpen="DialogOpen"
-       Title="@($"Agreed build-up — {Order.DisplayNumber}")"
+       Title="@($"Line items — {Order.DisplayNumber}")"
        ShowFooter="false"
        OnCancel="Close"
        Class="max-w-3xl">
@@ -46,8 +15,8 @@
                            InitialLines="@Order.DraftLines"
                            EstimatedValue="Order.EstimatedValue"
                            DefaultDescription="@Order.Title"
-                           SubmitLabel="Stage build-up"
-                           HelpOverride="Stages the client-agreed lines on this variation: their total becomes the estimate and the approve modal opens pre-filled with them. Nothing is written to the Valuation Report until approval."
+                           SubmitLabel="Save line items"
+                           HelpOverride="Their total becomes the estimate, and approval writes them to the Valuation Report. Nothing is written there until then."
                            Busy="@(Busy || staging)"
                            SubmitError="@error"
                            OnApprove="StageAsync" />
@@ -78,14 +47,11 @@
 @code {
     [Parameter, EditorRequired] public VariationOrder Order { get; set; } = default!;
     [Parameter] public bool Busy { get; set; }
-    /// <summary>The record as the server returned it after staging — the page swaps its copy and reloads.</summary>
+    /// <summary>The record as the server returned it after saving — the page swaps its copy and reloads.</summary>
     [Parameter] public EventCallback<VariationOrder> OnStaged { get; set; }
     /// <summary>Bound: the page's Actions menu opens the dialog.</summary>
     [Parameter] public bool DialogOpen { get; set; }
     [Parameter] public EventCallback<bool> DialogOpenChanged { get; set; }
-
-    private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
-    private static string Pennies(decimal value) => value.ToString("C2", Gb);
 
     private bool wasOpen;
     private bool staging;
@@ -131,10 +97,10 @@
             await DialogOpenChanged.InvokeAsync(false);
             await OnStaged.InvokeAsync(staged);
         }
-        // The endpoint answers a refused staging with 400 and its own words (no toast, by
+        // The endpoint answers a refused save with 400 and its own words (no toast, by
         // convention) — so they land in the dialog the user is still standing in.
         catch (CommandFailedException ex) { error = ex.Message; }
-        catch { error = "Couldn't stage the build-up. Please try again."; }
+        catch { error = "Couldn't save the line items. Please try again."; }
         finally { staging = false; }
     }
 }
