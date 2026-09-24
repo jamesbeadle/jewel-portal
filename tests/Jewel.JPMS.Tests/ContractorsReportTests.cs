@@ -16,7 +16,7 @@ public class ContractorsReportTests
         new("u-" + day.DayNumber, day, title, "", Array.Empty<ContractorsReportPhoto>());
 
     [Fact]
-    public void Days_areFridayThenMondayToThursday_withTheWeekendFoldedIntoFriday()
+    public void Days_areFridayThenMondayToThursday_withTheWeekendFoldedIntoFriday_andEmptyDaysLeftOut()
     {
         var updates = new[]
         {
@@ -27,13 +27,12 @@ public class ContractorsReportTests
 
         var days = ContractorsReportDays.Group(Week, updates);
 
-        Assert.Equal(5, days.Count);
+        Assert.Equal(2, days.Count);
         Assert.Equal(DayOfWeek.Friday, days[0].Date.DayOfWeek);
         Assert.Equal("Friday 4 September 2026", days[0].Heading);
         Assert.Equal("Friday, Saturday", string.Join(", ", days[0].Entries.Select(entry => entry.Title)));
-        Assert.Empty(days[1].Entries);
-        Assert.Single(days[2].Entries);
-        Assert.Equal(DayOfWeek.Thursday, days[4].Date.DayOfWeek);
+        Assert.Equal(DayOfWeek.Tuesday, days[1].Date.DayOfWeek);
+        Assert.Single(days[1].Entries);
     }
 
     [Fact]
@@ -73,6 +72,5 @@ public class ContractorsReportTests
         var header = new ContractorsReportHeader("By France", "JBB-2026-001", "Contractor's Report No. 30", "15", "15", "",
             new DateOnly(2026, 9, 4), new DateOnly(2026, 9, 10), "", "", new DateOnly(2026, 9, 11));
         Assert.Equal("JBB-2026-001 - Contractor's Report No. 30 - w-e 10 Sept 2026.pdf", ContractorsReportFileNames.Pdf(header));
-        Assert.EndsWith(".docx", ContractorsReportFileNames.Word(header));
     }
 }

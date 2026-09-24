@@ -40,7 +40,8 @@ internal sealed partial class SiteAndProgressActions
                 + "Neighbours, Health & Safety, the Building Control liaison line and — for a project "
                 + "with no Building Control case — its contact line (buildingControlContact), the "
                 + "Section 8 attendance per work order (workOrderId, attendanceDays, "
-                + "isClientNominated, scope: what they did this week, as the report words it), which "
+                + "isClientNominated, scope: what they did this week, as the report words it, "
+                + "daysOnSite: the dates they were there, printed \"Friday, Monday, Wednesday\"), which "
                 + "progress updates are selected, and the photographs Section 9 leaves out "
                 + "(excludedPhotoIds — progressPhotoIds from photosOnSelectedUpdates[]; about twelve "
                 + "a day go in). Everything else in the document is read "
@@ -58,7 +59,7 @@ internal sealed partial class SiteAndProgressActions
                 + "with attendanceDays above 0 print in Section 8; buildingControlContact and "
                 + "excludedPhotoIds keep their stored value when left out; progress update ids from "
                 + "updatesInPeriod[]. The report is never emailed by the portal: a person "
-                + "downloads the Word or PDF from the page and sends it."),
+                + "downloads the PDF from the page (or export_contractors_report hands a link) and sends it."),
 
         new AiAction(
             Name: "delete_contractors_report",

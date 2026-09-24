@@ -174,7 +174,9 @@ public enum AuditEventType
     /// <summary>A person was emailed that their right-to-work check was completed; the row names the check and who sent it.</summary>
     RightToWorkConfirmationSent = 52,
     /// <summary>A forms folder's leaving or vehicle-returned date was recorded or changed, old and new — the dates retention runs from.</summary>
-    FormFolderDatesRecorded = 53
+    FormFolderDatesRecorded = 53,
+    /// <summary>A Contractor's Report PDF was exported over the connector as a download link; the row names the report and who asked.</summary>
+    ContractorsReportExported = 54
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

@@ -1,0 +1,72 @@
+@namespace Jewel.JPMS.Features.Variations
+@inject IVariationStore Variations
+
+@* The Issued row of the details card: the official date the client was sent the variation.
+   A manager may correct it to the day that really happened (Jeremy, 24 Sep 2026 — the
+   Contractor's Report's Position line reads it). Only an issued variation has one. *@
+<div class="flex justify-between items-center gap-2">
+    <span class="text-content-subtle">Issued</span>
+    @if (!isEditing)
+    {
+        <span class="flex items-center gap-2">
+            @DateText(Order.IssuedAt?.LocalDateTime)
+            @if (CanEdit)
+            {
+                <button type="button" class="btn-secondary text-xs px-2 py-1" disabled="@Busy" @onclick="Open">Change</button>
+            }
+        </span>
+    }
+</div>
+@if (isEditing)
+{
+    <div class="space-y-2">
+        <FormField Label="Date sent to the client" Error="@error">
+            <input type="date" class="field" value="@issuedOn.ToString(DateInputFormat)" @onchange="Choose" />
+        </FormField>
+        <div class="flex gap-2">
+            <button type="button" class="btn-primary text-xs px-2 py-1" disabled="@(Busy || isSaving)" @onclick="SaveAsync">Save date</button>
+            <button type="button" class="btn-secondary text-xs px-2 py-1" disabled="@(Busy || isSaving)" @onclick="() => isEditing = false">Cancel</button>
+        </div>
+    </div>
+}
+
+@code {
+    private const string DateInputFormat = "yyyy-MM-dd";
+
+    [Parameter, EditorRequired] public VariationOrder Order { get; set; } = default!;
+    [Parameter] public bool CanEdit { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback<VariationOrder> OnSaved { get; set; }
+
+    private bool isEditing;
+    private bool isSaving;
+    private DateOnly issuedOn;
+    private string? error;
+
+    private void Open()
+    {
+        var stamp = Order.IssuedAt ?? DateTimeOffset.UtcNow;
+        issuedOn = DateOnly.FromDateTime(stamp.LocalDateTime);
+        error = null;
+        isEditing = true;
+    }
+
+    private void Choose(ChangeEventArgs change)
+    {
+        if (DateOnly.TryParse(change.Value?.ToString(), out var chosen)) issuedOn = chosen;
+    }
+
+    private async Task SaveAsync()
+    {
+        error = null;
+        isSaving = true;
+        try
+        {
+            var saved = await Variations.SetIssuedDateAsync(Order.VariationOrderId, issuedOn);
+            isEditing = false;
+            await OnSaved.InvokeAsync(saved);
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { isSaving = false; }
+    }
+}

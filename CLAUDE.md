@@ -440,7 +440,21 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   days' photographs, two-up, less the report's `ExcludedPhotoIds` (the page's per-photo ticks,
   about twelve a day), with a count line. The assistant SEES a photograph with `view_photos`
   (a pool or progress photo id; several come back as one numbered contact sheet,
-  `PhotoContactSheet`). A new report opens on the current valuation — the newest not Confirmed,
+  `PhotoContactSheet`). As Report 30 reads (Jeremy's review of Report 31, 24 Sep 2026): Section 1
+  is headed with the programme reference, prints only days with a note, each note as bullets
+  with no update title, and ends with "Instructions and confirmations received this period"
+  (`ContractorsReportInstructions`: AIs received, variations approved, RFIs raised or closed);
+  Section 3 leaves out RFIs at Needs action and reads RFI / Status ("Awaiting response, response
+  was due …"); Section 8 names the days ticked on site (`ContractorsReportAttendance.DaysOnSite`);
+  Section 9 heads each day with its count and fits six photographs a page; the footer is
+  "Jewel Bespoke Build Ltd · Contractor's Report No. N · Page x of y"
+  (`HouseFooterWithPageNumbers`) — the shared sentences are `ContractorsReportPrintedText`.
+  **The PDF is the only output — the Word renderer was removed** (Nigel, 24 Sep 2026); the
+  connector's `export_contractors_report` builds the same PDF and hands back a seven-day link
+  through `IEmailFileShareStore` (audited `ContractorsReportExported`), because ten megabytes of
+  photographs cannot travel in a tool call. A variation's Issued date is the day the CLIENT was
+  sent it; a manager corrects it with `SetVariationIssuedDate` (the details card's Issued row,
+  connector `set_variation_issued_date`). A new report opens on the current valuation — the newest not Confirmed,
   numbered as its name reads (`ContractorsReportValuations`) — dated the Friday after its week,
   with H&S and Building Control carried forward (migration
   `AddContractorsReportContactAndPhotoChoice`, script `add-contractors-report-contact-and-photo-choice.sql`).

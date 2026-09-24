@@ -3,15 +3,16 @@ using Jewel.JPMS.Contracts.Progress;
 
 namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
 
-/// <summary>Section 1's shape: the five working days of the reporting week in order — Friday
-/// first, carrying anything recorded over the weekend — each with the selected updates that
-/// fall on it. Pure, so the shape is pinned by tests.</summary>
+/// <summary>Section 1's shape: the working days of the reporting week that have a selected update,
+/// in order — Friday first, carrying anything recorded over the weekend. A day with nothing
+/// recorded is left out, as issued Report 30 does. Pure, so the shape is pinned by tests.</summary>
 internal static class ContractorsReportDays
 {
     public static IReadOnlyList<ContractorsReportDay> Group(ReportingWeek week, IReadOnlyList<ContractorsReportUpdate> updates) =>
         week.Days()
             .Where(IsWorkingDay)
             .Select(day => new ContractorsReportDay(day, Heading(day), EntriesOn(day, updates)))
+            .Where(day => day.Entries.Count > 0)
             .ToList();
 
     public static string Heading(DateOnly day) => day.ToString("dddd d MMMM yyyy", JewelDocumentStyle.Uk);

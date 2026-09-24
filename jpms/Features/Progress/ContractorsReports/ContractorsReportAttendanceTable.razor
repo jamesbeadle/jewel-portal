@@ -26,9 +26,17 @@
                     <input class="field" maxlength="1000" value="@line.Scope" placeholder="@subcontractor.WorkOrderTitle" title="@subcontractor.WorkOrderTitle"
                            @onchange="e => line.Scope = e.Value?.ToString() ?? string.Empty" />
                 </td>
-                <td class="text-right">
-                    <input type="number" min="0" max="7" class="field text-right" value="@line.AttendanceDays"
-                           @onchange="e => line.AttendanceDays = int.TryParse(e.Value?.ToString(), out var days) ? days : null" />
+                <td>
+                    <div class="flex flex-wrap gap-2">
+                        @foreach (var day in WorkingDays)
+                        {
+                            <Checkbox Value="@line.DaysOnSite.Contains(day)" ValueChanged="value => line.SetOnSite(day, value)" Label="@day.ToString(ShortDayFormat)" />
+                        }
+                    </div>
+                    @if (line.DaysOnSite.Count == 0 && line.AttendanceDays is > 0)
+                    {
+                        <p class="text-xs text-content-subtle mt-1">@line.AttendanceDays days recorded — tick which.</p>
+                    }
                 </td>
                 <td><Checkbox Value="@line.IsClientNominated" ValueChanged="value => line.IsClientNominated = value" /></td>
             </tr>
@@ -37,6 +45,9 @@
 </RecordsTable>
 
 @code {
+    private const string ShortDayFormat = "ddd";
+
     [Parameter, EditorRequired] public ContractorsReportDraft Draft { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<DateOnly> WorkingDays { get; set; } = Array.Empty<DateOnly>();
     [Parameter, EditorRequired] public IReadOnlyList<ContractorsReportSubcontractor> Subcontractors { get; set; } = Array.Empty<ContractorsReportSubcontractor>();
 }

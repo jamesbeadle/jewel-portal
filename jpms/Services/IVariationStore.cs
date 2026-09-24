@@ -68,6 +68,9 @@ public interface IVariationStore
     /// already written to the valuation report and CVR keep the wording they were issued with.</summary>
     Task<VariationOrder> RenameAsync(string variationOrderId, string title, CancellationToken cancellationToken = default);
 
+    /// <summary>Sets the day the client was sent an issued variation — the Issued stamp.</summary>
+    Task<VariationOrder> SetIssuedDateAsync(string variationOrderId, DateOnly issuedOn, CancellationToken cancellationToken = default);
+
     /// <summary>Re-states a PRE-approval variation's estimate. Null or zero says the order is
     /// currently unpriced — the valuation export's Pending tab then leaves it out. Refused once a
     /// build-up is staged (the staged total is the estimate) and on approved/rejected orders.</summary>

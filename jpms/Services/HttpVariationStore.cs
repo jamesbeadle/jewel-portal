@@ -113,6 +113,13 @@ public sealed class HttpVariationStore : IVariationStore
         return order;
     }
 
+    public async Task<VariationOrder> SetIssuedDateAsync(string variationOrderId, DateOnly issuedOn, CancellationToken cancellationToken = default)
+    {
+        var order = await commands.SendAsync(new SetVariationIssuedDate(variationOrderId, issuedOn), cancellationToken);
+        OnChange?.Invoke();
+        return order;
+    }
+
     public async Task<VariationOrder> SetEstimateAsync(string variationOrderId, decimal? estimatedValue, CancellationToken cancellationToken = default)
     {
         var order = await commands.SendAsync(new SetVariationOrderEstimate(variationOrderId, estimatedValue), cancellationToken);

@@ -14,11 +14,12 @@ public static partial class ContractorsReportPdfRenderer
         SectionHeading(section, ContractorsReportSections.Decisions);
         if (model.Decisions.Count == 0) { MutedLine(section, ContractorsReportText.NoDecisions); return; }
 
-        var table = RegisterTable(section, ("Reference", 2.4, false), ("Title", 9.4, false), ("Status", 3.6, false), ("Response due", 2.4, false));
+        BodyLine(section, ContractorsReportPrintedText.DecisionsOpening);
+        var dateOfIssue = model.Header.DateOfIssue;
+        var table = RegisterTable(section, ("RFI", 11.4, false), ("Status", 6.4, false));
         foreach (var decision in model.Decisions)
-            BodyRow(table, decision.Reference, decision.Title, decision.Status, ContractorsReportText.Date(decision.ResponseDue));
+            BodyRow(table, ContractorsReportPrintedText.DecisionRow(decision), ContractorsReportPrintedText.DecisionStatus(decision, dateOfIssue));
         SpaceAfterTable(section);
-        MutedLine(section, ContractorsReportText.DecisionsCount(model.Decisions.Count));
     }
 
     private static void AddVariations(Section section, ContractorsReportDocument model)
@@ -27,9 +28,7 @@ public static partial class ContractorsReportPdfRenderer
         var nothingOutstanding = ContractorsReportVariationWording.NothingOutstanding(model);
         if (model.Variations.Count == 0) { MutedLine(section, nothingOutstanding); return; }
 
-        var opening = section.AddParagraph(ContractorsReportVariationWording.Paragraph(model));
-        opening.Format.Font.Size = 9.5;
-        SpaceAfter(opening, 2.5);
+        BodyLine(section, ContractorsReportVariationWording.Paragraph(model));
         var table = RegisterTable(section, ("Variation", 11.4, false), ("Position", 6.4, false));
         foreach (var variation in model.Variations)
             BodyRow(table, ContractorsReportVariationWording.Row(variation), ContractorsReportVariationWording.Position(variation));
@@ -41,12 +40,10 @@ public static partial class ContractorsReportPdfRenderer
         SectionHeading(section, ContractorsReportSections.Subcontractors);
         if (model.Subcontractors.Count == 0) { MutedLine(section, ContractorsReportText.NoSubcontractors); return; }
 
-        var opening = section.AddParagraph(ContractorsReportText.SubcontractorsOpening);
-        opening.Format.Font.Size = 9.5;
-        SpaceAfter(opening, 2.5);
-        var table = RegisterTable(section, ("Subcontractor", 5.4, false), ("Scope", 12.4, false));
+        BodyLine(section, ContractorsReportText.SubcontractorsOpening);
+        var table = RegisterTable(section, ("Subcontractor", 4.6, false), ("Scope", 9.4, false), ("On site", 3.8, false));
         foreach (var subcontractor in model.Subcontractors)
-            BodyRow(table, subcontractor.Supplier, subcontractor.Scope);
+            BodyRow(table, subcontractor.Supplier, subcontractor.Scope, ContractorsReportPrintedText.DaysOnSite(subcontractor));
         SpaceAfterTable(section);
     }
 }

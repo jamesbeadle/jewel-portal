@@ -37,9 +37,19 @@ internal static class ContractorsReportSubcontractorsReader
                 TitleOf(order),
                 order.Value,
                 order.ScheduledCompletion is { } completion ? DateOnly.FromDateTime(completion.Date) : null,
-                entered.TryGetValue(order.WorkOrderId, out var days) ? days.AttendanceDays : null,
-                entered.TryGetValue(order.WorkOrderId, out var nominated) && nominated.IsClientNominated))
+                AttendanceDaysOf(entered.GetValueOrDefault(order.WorkOrderId)),
+                entered.TryGetValue(order.WorkOrderId, out var nominated) && nominated.IsClientNominated,
+                DaysOnSiteOf(entered.GetValueOrDefault(order.WorkOrderId))))
             .ToList();
+    }
+
+    private static IReadOnlyList<DateOnly> DaysOnSiteOf(ContractorsReportAttendance? attendance) =>
+        attendance?.DaysOnSite ?? Array.Empty<DateOnly>();
+
+    private static int? AttendanceDaysOf(ContractorsReportAttendance? attendance)
+    {
+        var ticked = DaysOnSiteOf(attendance).Count;
+        return ticked > 0 ? ticked : attendance?.AttendanceDays;
     }
 
     private static string TitleOf(WorkOrderEntity order) => string.IsNullOrWhiteSpace(order.Title) ? order.Scope : order.Title;

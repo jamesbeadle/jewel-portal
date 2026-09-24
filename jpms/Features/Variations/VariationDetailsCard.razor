@@ -35,7 +35,7 @@
     @* Issued is the official date the client was notified (stamped when the status
        enters Issued); Created is the system's own stamp for when the record was
        raised. Both shown here — the register lists lead with Issued. *@
-    <div class="flex justify-between"><span class="text-content-subtle">Issued</span><span>@Day(Order.IssuedAt)</span></div>
+    <VariationIssuedDateRow Order="Order" CanEdit="@(CanEditIssuedDate && Order.IssuedAt is not null)" Busy="Busy" OnSaved="OnSaved" />
     @if (Order.ApprovedAt is not null)
     {
         <div class="flex justify-between"><span class="text-content-subtle">Approved</span><span>@Day(Order.ApprovedAt)</span></div>
@@ -55,6 +55,8 @@
     [Parameter] public string SelectedSubName { get; set; } = "—";
     /// <summary>Pre-approval, manager, and no staged build-up owning the figure.</summary>
     [Parameter] public bool CanEditEstimate { get; set; }
+    /// <summary>A manager may correct the day the client was sent it.</summary>
+    [Parameter] public bool CanEditIssuedDate { get; set; }
     [Parameter] public bool Busy { get; set; }
     /// <summary>Bound: the page's Actions menu opens the estimate editor.</summary>
     [Parameter] public bool EditingEstimate { get; set; }

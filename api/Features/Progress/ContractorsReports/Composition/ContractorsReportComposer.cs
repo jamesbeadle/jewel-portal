@@ -35,6 +35,7 @@ public sealed class ContractorsReportComposer
         var draft = new ContractorsReportDocument(
             Header: await HeaderAsync(report, cancellationToken),
             Progress: ContractorsReportDays.Group(week, selected),
+            InstructionsReceived: await ContractorsReportInstructions.ReceivedAsync(context, report.ProjectId, week, cancellationToken),
             LookAhead: report.LookAhead,
             Decisions: await ContractorsReportRegisterReader.DecisionsAsync(context, report.ProjectId, cancellationToken),
             Variations: variations,

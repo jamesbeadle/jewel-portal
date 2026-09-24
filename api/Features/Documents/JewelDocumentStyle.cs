@@ -97,19 +97,39 @@ internal static class JewelDocumentStyle
     /// </summary>
     public static void HouseFooter(Section section, string note)
     {
-        // The provenance line sits just above the band, quietly: brand on the left, the note on
-        // the right (a right tab stop at the usable width, 21 cm − 2 × 1.6 cm).
+        var footer = FooterLine(section);
+        footer.AddFormattedText(note, FooterNoteFont());
+        OrangeBand(section);
+    }
+
+    /// <summary>The house footer for a document that goes to the client: "Jewel Bespoke Build Ltd ·
+    /// Contractor's Report No. 31 · Page 2 of 17" on the right instead of a provenance note.</summary>
+    public static void HouseFooterWithPageNumbers(Section section, string lead)
+    {
+        var footer = FooterLine(section);
+        footer.AddFormattedText($"{lead} · Page ", FooterNoteFont());
+        footer.AddPageField();
+        footer.AddFormattedText(" of ", FooterNoteFont());
+        footer.AddNumPagesField();
+        OrangeBand(section);
+    }
+
+    // The footer line sits just above the band, quietly: brand on the left, the note on the right
+    // (a right tab stop at the usable width, 21 cm − 2 × 1.6 cm).
+    private static Paragraph FooterLine(Section section)
+    {
         var footer = section.Footers.Primary.AddParagraph();
         footer.Format.Font.Size = 7;
+        footer.Format.Font.Color = Muted;
         footer.Format.SpaceAfter = BandGap;   // the gap belongs to the line, not the band (see OrangeBand)
         footer.AddFormattedText("JEWEL BESPOKE BUILD", new Font { Color = Gold, Bold = true, Size = 7 });
         footer.AddFormattedText("   www.jewelbb.co.uk", new Font { Color = Muted, Size = 7 });
         footer.AddTab();
-        footer.AddFormattedText(note, new Font { Color = Muted, Size = 7 });
         footer.Format.TabStops.AddTabStop(Unit.FromCentimeter(17.8), TabAlignment.Right);
-
-        OrangeBand(section);
+        return footer;
     }
+
+    private static Font FooterNoteFont() => new() { Color = Muted, Size = 7 };
 
     /// <summary>
     /// The brand band along the foot of every page (2026-09-15, Nigel: the documents follow the

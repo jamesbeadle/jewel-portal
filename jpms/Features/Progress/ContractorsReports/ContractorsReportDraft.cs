@@ -36,7 +36,7 @@ public sealed class ContractorsReportDraft
         };
         draft.LookAhead.AddRange(report.LookAhead.Select(item => new ContractorsReportLookAheadLine { Text = item.Text, IsDone = item.IsDone }));
         foreach (var item in report.Attendance)
-            draft.Attendance[item.WorkOrderId] = new ContractorsReportAttendanceLine { AttendanceDays = item.AttendanceDays, IsClientNominated = item.IsClientNominated, Scope = item.Scope };
+            draft.Attendance[item.WorkOrderId] = ContractorsReportAttendanceLine.From(item);
         draft.SelectedUpdateIds.UnionWith(report.SelectedUpdateIds);
         draft.ExcludedPhotoIds.UnionWith(report.ExcludedPhotoIds);
         return draft;
@@ -55,7 +55,7 @@ public sealed class ContractorsReportDraft
         BuildingControlLiaison,
         Attendance
             .Where(pair => pair.Value.HasAnything)
-            .Select(pair => new ContractorsReportAttendance(pair.Key, pair.Value.AttendanceDays, pair.Value.IsClientNominated, pair.Value.Scope.Trim()))
+            .Select(pair => pair.Value.ToAttendance(pair.Key))
             .ToList(),
         SelectedUpdateIds.ToList(),
         BuildingControlContact,
@@ -72,13 +72,4 @@ public sealed class ContractorsReportLookAheadLine
 {
     public string Text { get; set; } = "";
     public bool IsDone { get; set; }
-}
-
-public sealed class ContractorsReportAttendanceLine
-{
-    public int? AttendanceDays { get; set; }
-    public bool IsClientNominated { get; set; }
-    public string Scope { get; set; } = "";
-
-    public bool HasAnything => AttendanceDays is not null || IsClientNominated || !string.IsNullOrWhiteSpace(Scope);
 }

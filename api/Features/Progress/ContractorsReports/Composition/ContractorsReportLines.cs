@@ -8,10 +8,9 @@ internal static class ContractorsReportLines
     public static IEnumerable<(string Section, string Line)> Of(ContractorsReportDocument document)
     {
         foreach (var entry in document.Progress.SelectMany(day => day.Entries))
-        {
-            yield return (ContractorsReportSections.Progress, entry.Title);
             yield return (ContractorsReportSections.Progress, entry.Description);
-        }
+        foreach (var instruction in document.InstructionsReceived)
+            yield return (ContractorsReportSections.Progress, instruction);
         foreach (var item in document.LookAhead)
             yield return (ContractorsReportSections.LookAhead, item.Text);
         foreach (var decision in document.Decisions)

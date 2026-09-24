@@ -108,6 +108,10 @@ public static class VariationsRouteRegistration
             new CommandRoute("POST", "/api/variation-orders/{voId}/title",
                 command => $"/api/variation-orders/{((RenameVariationOrder)command).VariationOrderId}/title"));
 
+        commands.Register<SetVariationIssuedDate, VariationOrder>(
+            new CommandRoute("POST", "/api/variation-orders/{voId}/issued-date",
+                command => $"/api/variation-orders/{((SetVariationIssuedDate)command).VariationOrderId}/issued-date"));
+
         // Re-state a pre-approval estimate — null/zero says the order is currently unpriced,
         // which is what takes it off the valuation export's Pending tab.
         commands.Register<SetVariationOrderEstimate, VariationOrder>(
