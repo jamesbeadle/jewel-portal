@@ -44,12 +44,11 @@ public static partial class ContractorsReportPdfRenderer
         if (model.Subcontractors.Count == 0) { MutedLine(section, ContractorsReportText.NoSubcontractors); return; }
 
         var table = RegisterTable(section,
-            ("Order", 1.8, false), ("Supplier", 3.6, false), ("Scope", 4.6, false), ("Value", 2.4, true),
-            ("Target completion", 2.2, false), ("Days on site", 1.6, true), ("Client nominated", 1.6, false));
+            ("Supplier", 4.2, false), ("Scope", 8.0, false), ("Value", 2.4, true),
+            ("Days on site", 1.6, true), ("Client nominated", 1.6, false));
         foreach (var subcontractor in model.Subcontractors)
             BodyRow(table,
-                subcontractor.Reference, subcontractor.Supplier, subcontractor.Scope,
-                ContractorsReportText.Money(subcontractor.Value), ContractorsReportText.Date(subcontractor.TargetCompletion),
+                subcontractor.Supplier, subcontractor.Scope, ContractorsReportText.Money(subcontractor.Value),
                 ContractorsReportText.Days(subcontractor.AttendanceDays),
                 subcontractor.IsClientNominated ? ContractorsReportText.Yes : ContractorsReportText.Dash);
         SpaceAfterTable(section);

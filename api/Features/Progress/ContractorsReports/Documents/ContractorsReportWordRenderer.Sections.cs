@@ -15,8 +15,8 @@ public static partial class ContractorsReportWordRenderer
         { new("No.", 1.8), new("Title", 10.0), new("Status", 3.0), new("Value (ex VAT)", 3.0, true) };
     private static readonly RegisterColumn[] SubcontractorColumns =
     {
-        new("Order", 1.8), new("Supplier", 3.6), new("Scope", 4.6), new("Value", 2.4, true),
-        new("Target completion", 2.2), new("Days on site", 1.6, true), new("Client nominated", 1.6)
+        new("Supplier", 4.2), new("Scope", 8.0), new("Value", 2.4, true),
+        new("Days on site", 1.6, true), new("Client nominated", 1.6)
     };
 
     private static void AddProgress(Body body, ContractorsReportDocument model)
@@ -84,8 +84,7 @@ public static partial class ContractorsReportWordRenderer
         var table = Register(SubcontractorColumns);
         foreach (var subcontractor in model.Subcontractors)
             BodyRow(table, SubcontractorColumns,
-                subcontractor.Reference, subcontractor.Supplier, subcontractor.Scope,
-                ContractorsReportText.Money(subcontractor.Value), ContractorsReportText.Date(subcontractor.TargetCompletion),
+                subcontractor.Supplier, subcontractor.Scope, ContractorsReportText.Money(subcontractor.Value),
                 ContractorsReportText.Days(subcontractor.AttendanceDays),
                 subcontractor.IsClientNominated ? ContractorsReportText.Yes : ContractorsReportText.Dash);
         body.Append(table);

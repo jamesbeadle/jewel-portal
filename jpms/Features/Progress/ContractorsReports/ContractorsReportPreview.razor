@@ -81,7 +81,7 @@
         }
         @foreach (var subcontractor in Document.Subcontractors)
         {
-            <p class="text-content-muted"><span class="font-medium text-content">@subcontractor.Reference</span> @subcontractor.Supplier · @subcontractor.Scope · @Money(subcontractor.Value) · @(subcontractor.AttendanceDays?.ToString() ?? "—") days@(subcontractor.IsClientNominated ? " · client nominated" : "")</p>
+            <p class="text-content-muted"><span class="font-medium text-content">@subcontractor.Supplier</span> · @subcontractor.Scope · @Money(subcontractor.Value) · @(subcontractor.AttendanceDays?.ToString() ?? "—") days@(subcontractor.IsClientNominated ? " · client nominated" : "")</p>
         }
     </section>
     <section>
