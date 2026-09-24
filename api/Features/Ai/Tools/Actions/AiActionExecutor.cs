@@ -55,6 +55,10 @@ internal static class AiActionExecutor
         {
             return Serialise(new { ok = false, error = guard.Message });
         }
+        catch (Exception failure) when (AiStoredValueRefusal.Find(failure) is { } rejection)
+        {
+            return Serialise(AiStoredValueRefusal.AnswerFor(context, rejection));
+        }
 
         var payload = Serialise(new { ok = true, result });
         return payload.Length <= MaxResultChars
