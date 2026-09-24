@@ -22,7 +22,7 @@ public sealed class XeroLedgerLineEntity
     [MaxLength(256)]      public string? ContactName { get; set; }
     public DateTime? Date { get; set; }
     [MaxLength(32)]       public string InvoiceStatus { get; set; } = "";
-    [MaxLength(1024)]     public string? Description { get; set; }
+    public string? Description { get; set; }
     public decimal Net { get; set; }
     public decimal Tax { get; set; }
 
@@ -66,7 +66,7 @@ public sealed class XeroLedgerLineEntity
     [MaxLength(64)]       public string? Bucket { get; set; }
     [MaxLength(256)]      public string? AllocatedBy { get; set; }
     public DateTimeOffset? AllocatedAtUtc { get; set; }
-    [MaxLength(512)]      public string? Note { get; set; }
+    public string? Note { get; set; }
 
     // The work order(s) this purchase line pays against live in XeroLineWorkOrderLinks —
     // one row per order with its share of the net, so one bill can pay several orders.

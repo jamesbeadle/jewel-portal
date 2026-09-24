@@ -13,7 +13,7 @@ public sealed class VariationOrderMessageEntity
     [MaxLength(64)]      public string VariationOrderId { get; set; } = "";
     [MaxLength(256)]     public string AuthorEmail { get; set; } = "";
     [MaxLength(256)]     public string AuthorName { get; set; } = "";
-    [MaxLength(4000)]    public string Body { get; set; } = "";
+    public string Body { get; set; } = "";
     public int Visibility { get; set; }
     public DateTimeOffset PostedAt { get; set; }
 

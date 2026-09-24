@@ -12,10 +12,10 @@ public sealed class SalesStrategyEntity
     [MaxLength(256)]     public string Name { get; set; } = "";
     public int Audience { get; set; }
     [MaxLength(512)]     public string TargetArea { get; set; } = "";
-    [MaxLength(4000)]    public string Hypothesis { get; set; } = "";
-    [MaxLength(4000)]    public string Evidence { get; set; } = "";
+    public string Hypothesis { get; set; } = "";
+    public string Evidence { get; set; } = "";
     public int Channel { get; set; }
-    [MaxLength(1024)]    public string Proposition { get; set; } = "";
+    public string Proposition { get; set; } = "";
     // Markdown; nvarchar(max) — a plan can run to a few pages.
     public string ApproachPlan { get; set; } = "";
     public DateTimeOffset? PlanGeneratedAt { get; set; }
@@ -26,7 +26,7 @@ public sealed class SalesStrategyEntity
 
     // ---- The brief + AI research (added the same day, AddSalesStrategyResearch) ----
     // The idea in the team's own words; the research reads this first.
-    [MaxLength(4000)]    public string Brief { get; set; } = "";
+    public string Brief { get; set; } = "";
     public int ResearchStatus { get; set; }
     public DateTimeOffset? ResearchRequestedAt { get; set; }
     public DateTimeOffset? ResearchCompletedAt { get; set; }
@@ -42,7 +42,7 @@ public sealed class LeadActivityEntity
     [Key, MaxLength(64)] public string LeadActivityId { get; set; } = "";
     [MaxLength(64)]      public string LeadId { get; set; } = "";
     public int Kind { get; set; }
-    [MaxLength(4000)]    public string Summary { get; set; } = "";
+    public string Summary { get; set; } = "";
     public DateTimeOffset OccurredAt { get; set; }
     [MaxLength(256)]     public string RecordedByEmail { get; set; } = "";
 }
@@ -58,7 +58,7 @@ public sealed class ImagineRoundEntity
     // 1-based per lead.
     public int Number { get; set; }
     public int Kind { get; set; }
-    [MaxLength(4000)]    public string Brief { get; set; } = "";
+    public string Brief { get; set; } = "";
     [MaxLength(64)]      public string? BasedOnImageId { get; set; }
     public int Status { get; set; }
     [MaxLength(2000)]    public string? Error { get; set; }
@@ -106,12 +106,12 @@ public sealed class LeadEstimateEntity
     [Key, MaxLength(64)] public string EstimateId { get; set; } = "";
     [MaxLength(64)]      public string LeadId { get; set; } = "";
     public int Number { get; set; }
-    [MaxLength(4000)]    public string Scope { get; set; } = "";
+    public string Scope { get; set; } = "";
     [MaxLength(256)]     public string ArchitectName { get; set; } = "";
     public DateOnly? PriceDueOn { get; set; }
     public decimal? BudgetMentioned { get; set; }
     public decimal? Total { get; set; }
-    [MaxLength(4000)]    public string Notes { get; set; } = "";
+    public string Notes { get; set; } = "";
     public int Status { get; set; }
     public DateTimeOffset StatusChangedAt { get; set; }
     public DateTimeOffset? SubmittedAt { get; set; }
@@ -120,7 +120,7 @@ public sealed class LeadEstimateEntity
     // The client-facing narrative (2026-09-15): nvarchar(max) — the summary can run to a page.
     public string ExecutiveSummary { get; set; } = "";
     [MaxLength(1024)]    public string BuildTime { get; set; } = "";
-    [MaxLength(4000)]    public string Exclusions { get; set; } = "";
+    public string Exclusions { get; set; } = "";
     public string? HouseModelJson { get; set; }
     [MaxLength(1024)]    public string HouseModelSource { get; set; } = "";
     public DateTimeOffset? HouseModelSetAt { get; set; }
@@ -157,7 +157,7 @@ public sealed class SalesProposalEntity
     // SHA-256 of the accepting IP, with the moment — the acceptance record.
     [MaxLength(64)]      public string? AcceptedClientHash { get; set; }
     public DateTimeOffset? DeclinedAt { get; set; }
-    [MaxLength(1024)]    public string? DeclineReason { get; set; }
+    public string? DeclineReason { get; set; }
 }
 
 // One line of an estimate's priced breakdown (see Jewel.JPMS.Models.EstimateLine, 2026-09-15):
@@ -171,7 +171,7 @@ public sealed class LeadEstimateLineEntity
     public int SectionOrder { get; set; }
     public bool SectionProvisional { get; set; }
     [MaxLength(32)]      public string CostCode { get; set; } = "";
-    [MaxLength(1024)]    public string Description { get; set; } = "";
+    public string Description { get; set; } = "";
     public decimal Quantity { get; set; }
     [MaxLength(32)]      public string Unit { get; set; } = "";
     public decimal UnitPrice { get; set; }

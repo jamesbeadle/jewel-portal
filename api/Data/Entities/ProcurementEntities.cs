@@ -37,7 +37,7 @@ public sealed class BidPackageEntity
 
     // The specification summary printed in the tender documents — the short "what this package
     // covers, to what standard" bullets at the top of the pricing schedule workbook. Optional.
-    [MaxLength(4000)]    public string SpecificationSummary { get; set; } = "";
+    public string SpecificationSummary { get; set; } = "";
 
     // ---- The invite composer's persisted draft (2026-08-16) — the half-written invite email,
     //      saved on the package so anyone on the team can pick it up later. Cleared on send. ----
@@ -72,7 +72,7 @@ public sealed class BidPackageLineItemEntity
 {
     [Key, MaxLength(64)] public string LineItemId { get; set; } = "";
     [MaxLength(64)]      public string BidPackageId { get; set; } = "";
-    [MaxLength(512)]     public string Description { get; set; } = "";
+    public string Description { get; set; } = "";
     [MaxLength(32)]      public string Unit { get; set; } = "";
     public decimal Quantity { get; set; }
     [MaxLength(64)]      public string Trade { get; set; } = "";
@@ -98,7 +98,7 @@ public sealed class QuoteEntity
     [MaxLength(64)]      public string BidPackageId { get; set; } = "";
     [MaxLength(64)]      public string SubcontractorId { get; set; } = "";
     public decimal Value { get; set; }
-    [MaxLength(1024)]    public string Notes { get; set; } = "";
+    public string Notes { get; set; } = "";
     public DateTimeOffset ReceivedAt { get; set; }
     public bool IsDeclined { get; set; }
 }
@@ -144,7 +144,7 @@ public sealed class QuoteLineItemEntity
     // The package line this quoted line prices; null when the subbie quoted outside the package's
     // scope (lump-sum extra, attendance) — such lines still show in the comparison, unaligned.
     [MaxLength(64)]      public string? BidPackageLineItemId { get; set; }
-    [MaxLength(512)]     public string Description { get; set; } = "";
+    public string Description { get; set; } = "";
     [MaxLength(32)]      public string Unit { get; set; } = "";
     public decimal Quantity { get; set; }
     public decimal Rate { get; set; }
@@ -170,7 +170,7 @@ public sealed class WorkOrderEntity
     [MaxLength(64)]      public string? BidPackageId { get; set; }
     [MaxLength(64)]      public string SubcontractorId { get; set; } = "";
     public decimal Value { get; set; }
-    [MaxLength(4000)]    public string Scope { get; set; } = "";
+    public string Scope { get; set; } = "";
     public DateTimeOffset AwardedAt { get; set; }
     [MaxLength(256)]     public string AwardedByEmail { get; set; } = "";
 
@@ -194,7 +194,7 @@ public sealed class WorkOrderEntity
     // target completion date; these add the programme start and free-text notes (e.g. phasing).
     // All optional — the PO's Programme section renders only when at least one is set.
     public DateTimeOffset? ProgrammeStart { get; set; }
-    [MaxLength(2000)]    public string ProgrammeNotes { get; set; } = "";
+    public string ProgrammeNotes { get; set; } = "";
 
     // Electronic acceptance, stamped once: from the subcontractor portal (name/email from the
     // login) or from the acceptance link in the purchase-order email (2026-09-23: the name the
@@ -231,7 +231,7 @@ public sealed class WorkOrderLineEntity
     [Key, MaxLength(64)] public string WorkOrderLineId { get; set; } = "";
     [MaxLength(64)]      public string WorkOrderId { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
-    [MaxLength(1024)]    public string Description { get; set; } = "";
+    public string Description { get; set; } = "";
 
     // As printed on the order, e.g. Subcontractor / Material / Labour.
     [MaxLength(64)]      public string CostType { get; set; } = "";
@@ -278,7 +278,7 @@ public sealed class RequestEntity
     public int Kind { get; set; }
     [MaxLength(64)]      public string Reference { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
-                         public string Description { get; set; } = "";
+    public string Description { get; set; } = "";
     public int Status { get; set; }
     public decimal? Value { get; set; }
     [MaxLength(256)]     public string RaisedByEmail { get; set; } = "";
@@ -290,7 +290,7 @@ public sealed class RequestEntity
     public DateTimeOffset? IssuedAt { get; set; }
 
     public DateTimeOffset? RespondedAt { get; set; }
-                         public string? ResponseText { get; set; }
+    public string? ResponseText { get; set; }
     [MaxLength(256)]     public string? RespondedByEmail { get; set; }
 
     // When the request was closed. Chosen by the user at close time (defaults to today, may be a
@@ -311,9 +311,9 @@ public sealed class RequestEntity
 
     [MaxLength(256)]     public string? DrawingRef { get; set; }
     public DateTimeOffset? ResponseDue { get; set; }
-    [MaxLength(512)]     public string? RelatedDrawingSpec { get; set; }
-    [MaxLength(4000)]    public string? InternalNotes { get; set; }
-    [MaxLength(4000)]    public string? ClientNotes { get; set; }
+    public string? RelatedDrawingSpec { get; set; }
+    public string? InternalNotes { get; set; }
+    public string? ClientNotes { get; set; }
 
     // ---- Official document (RFI sheet) body -----------------------------------------------------
     // The structured sections of the issued RFI document, alongside the itemised queries held in
@@ -326,7 +326,7 @@ public sealed class RequestEntity
     [MaxLength(4000)]    public string? ResponseActionRequired { get; set; }
 
     // Impact if the response is not received by the required-by date (programme / cost consequence).
-                         public string? ImpactIfLate { get; set; }
+    public string? ImpactIfLate { get; set; }
 
     // Sequential, human-readable request number (rendered as REQ-0001). Used as the name of the
     // request's Outlook folder in the projects@ mailbox so triaged emails can be grouped per request.

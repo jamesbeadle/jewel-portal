@@ -48,7 +48,7 @@ public sealed class VatAnalysisEntity
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     public decimal ZeroRatedAmount { get; set; }
     public decimal StandardRatedAmount { get; set; }
-    [MaxLength(2048)]    public string Notes { get; set; } = "";
+    public string Notes { get; set; } = "";
     public bool IsClientConfirmed { get; set; }
     public bool IsArchitectConfirmed { get; set; }
 }

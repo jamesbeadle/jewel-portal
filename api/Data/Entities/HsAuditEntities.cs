@@ -19,7 +19,7 @@ public sealed class HsAuditEntity
     [MaxLength(256)]     public string SafetyOfficerName { get; set; } = "";
     [MaxLength(4000)]    public string SummaryOfWorkActivities { get; set; } = "";
     public int? SiteOperativeCount { get; set; }
-    [MaxLength(4000)]    public string FurtherComments { get; set; } = "";
+    public string FurtherComments { get; set; } = "";
     public decimal? Score { get; set; }
     public decimal? PreviousScore { get; set; }
     [MaxLength(32)]      public string TemplateVersion { get; set; } = "";
@@ -48,7 +48,7 @@ public sealed class HsAuditItemEntity
     public int? Class { get; set; }
     public int Minus { get; set; }
     public int? TimeScale { get; set; }
-    [MaxLength(2000)]    public string Findings { get; set; } = "";
+    public string Findings { get; set; } = "";
     [MaxLength(256)]     public string OwnerName { get; set; } = "";
     public DateTimeOffset? DateRectified { get; set; }
     [MaxLength(64)]      public string? HsRecordId { get; set; }

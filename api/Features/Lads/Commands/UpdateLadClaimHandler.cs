@@ -13,7 +13,7 @@ public sealed class UpdateLadClaimHandler : ICommandHandler<UpdateLadClaim, LadC
             ?? throw new InvalidOperationException($"LADs claim '{command.LadClaimId}' not found.");
 
         entity.Title = Clamp(command.Title.Trim(), 256);
-        entity.Description = Clamp(command.Description?.Trim() ?? "", 2048);
+        entity.Description = command.Description?.Trim() ?? "";
         entity.PeriodFrom = command.PeriodFrom;
         entity.PeriodTo = command.PeriodTo;
         entity.DaysClaimed = Math.Max(0, command.DaysClaimed);

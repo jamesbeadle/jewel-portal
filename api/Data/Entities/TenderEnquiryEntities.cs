@@ -16,7 +16,7 @@ public sealed class TenderEnquiryEntity
     [MaxLength(256)]     public string ArchitectPracticeName { get; set; } = "";
     [MaxLength(256)]     public string ArchitectContactName { get; set; } = "";
     [MaxLength(256)]     public string ArchitectContactEmail { get; set; } = "";
-    [MaxLength(4000)]    public string ScopeSummary { get; set; } = "";
+    public string ScopeSummary { get; set; } = "";
     [MaxLength(256)]     public string ContractForm { get; set; } = "";
     public int Status { get; set; }
     public DateTimeOffset ReceivedAt { get; set; }
@@ -25,7 +25,7 @@ public sealed class TenderEnquiryEntity
     public DateTimeOffset? PqqSubmittedAt { get; set; }
     public DateTimeOffset? TenderSubmittedAt { get; set; }
     public DateTimeOffset? DecidedAt { get; set; }
-    [MaxLength(2048)]    public string DecisionNote { get; set; } = "";
+    public string DecisionNote { get; set; } = "";
     [MaxLength(256)]     public string OwnerEmail { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
     [MaxLength(256)]     public string CreatedByEmail { get; set; } = "";

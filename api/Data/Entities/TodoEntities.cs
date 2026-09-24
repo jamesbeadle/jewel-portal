@@ -10,7 +10,7 @@ public sealed class TodoItemEntity
     [Key, MaxLength(64)] public string TodoItemId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
-    [MaxLength(2048)]    public string Notes { get; set; } = "";
+    public string Notes { get; set; } = "";
 
     // The ROLE the item is assigned to (a Models.Role value stored as int, same convention as
     // DirectoryUserRoleEntity.Role; null = unassigned). Items belong to a role first, so they

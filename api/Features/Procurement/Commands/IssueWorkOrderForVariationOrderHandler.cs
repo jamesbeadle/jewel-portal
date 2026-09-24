@@ -63,7 +63,7 @@ public sealed class IssueWorkOrderForVariationOrderHandler
             WorkOrderLineId = ProcurementIdentifierFactory.NextWorkOrderLineId(),
             WorkOrderId = entity.WorkOrderId,
             Title = entity.Title,
-            Description = scope.Length > 1024 ? scope[..1024] : scope,
+            Description = scope,
             CostType = "Subcontractor",
             CostCode = variationOrder.CostCode,
             Quantity = 1m,

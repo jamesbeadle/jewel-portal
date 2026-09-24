@@ -161,7 +161,7 @@ public sealed class SyncXeroLedgerHandler : ICommandHandler<SyncXeroLedger, Xero
                 entity.ContactName = Truncate(transaction.ContactName, 256);
                 entity.Date = transaction.Date;
                 entity.InvoiceStatus = Truncate(transaction.Status, 32)!;
-                entity.Description = Truncate(line.Description, 1024);
+                entity.Description = line.Description;
                 entity.Net = line.LineAmount;
                 entity.Tax = line.TaxAmount;
                 // Invoice-level payment state, stamped on each of the bill's lines — what the

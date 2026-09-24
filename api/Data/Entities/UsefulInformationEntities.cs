@@ -14,7 +14,7 @@ public sealed class UsefulInformationNoteEntity
     [MaxLength(256)]     public string Title { get; set; } = "";
     // Free text. Same ceiling as RequestMessageEntity.Body — plenty for a door code or a page of
     // site notes, small enough to stay an in-row nvarchar.
-    [MaxLength(4000)]    public string Body { get; set; } = "";
+    public string Body { get; set; } = "";
     [MaxLength(256)]     public string CreatedByEmail { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
     // Last edit, stamped by UpdateUsefulInformationNoteHandler; null = never edited.

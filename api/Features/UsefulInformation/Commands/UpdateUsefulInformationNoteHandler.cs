@@ -13,7 +13,7 @@ public sealed class UpdateUsefulInformationNoteHandler : ICommandHandler<UpdateU
         if (entity is null) throw new InvalidOperationException($"Useful Information note {command.UsefulInformationNoteId} not found.");
 
         entity.Title = Clamp(command.Title.Trim(), 256);
-        entity.Body = Clamp(command.Body.Trim(), 4000);
+        entity.Body = command.Body.Trim();
         entity.UpdatedByEmail = command.UpdatedByEmail;
         entity.UpdatedAt = DateTimeOffset.UtcNow;
 

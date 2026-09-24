@@ -7,7 +7,7 @@ public sealed class SiteReportEntity
     [Key, MaxLength(64)] public string SiteReportId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     public DateTimeOffset PeriodEnd { get; set; }
-    [MaxLength(4096)]    public string Narrative { get; set; } = "";
+    public string Narrative { get; set; } = "";
     public int AttendanceDays { get; set; }
     public int OpenSnags { get; set; }
     public decimal ProgressPercent { get; set; }
@@ -81,7 +81,7 @@ public sealed class ProgrammeVariationEffectEntity
     [MaxLength(64)]      public string VariationOrderId { get; set; } = "";
     [MaxLength(64)]      public string ProgrammeTaskId { get; set; } = "";
     public int DelayDays { get; set; }
-    [MaxLength(512)]     public string Note { get; set; } = "";
+    public string Note { get; set; } = "";
     [MaxLength(256)]     public string RecordedByEmail { get; set; } = "";
     public DateTimeOffset RecordedAt { get; set; }
 }
@@ -188,7 +188,7 @@ public sealed class ReconciliationPackageEntity
 {
     [Key, MaxLength(64)] public string ReconciliationPackageId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
-    [MaxLength(128)]     public string Name { get; set; } = "";
+    [MaxLength(256)]     public string Name { get; set; } = "";
 
     public bool IsLocked { get; set; }
     public DateTimeOffset? LockedAt { get; set; }
@@ -278,14 +278,14 @@ public sealed class TimesheetEntity
     public decimal CostAmount { get; set; }
     [MaxLength(256)]     public string ApprovedByEmail { get; set; } = "";
     public DateTimeOffset? ApprovedAt { get; set; }
-    [MaxLength(1024)]    public string RejectionReason { get; set; } = "";
+    public string RejectionReason { get; set; } = "";
 }
 
 public sealed class DefectEntity
 {
     [Key, MaxLength(64)] public string DefectId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
-    [MaxLength(1024)]    public string Description { get; set; } = "";
+    public string Description { get; set; } = "";
     [MaxLength(256)]     public string Location { get; set; } = "";
     [MaxLength(256)]     public string AssignedToEmail { get; set; } = "";
     public int Status { get; set; }

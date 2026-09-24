@@ -101,7 +101,7 @@ public sealed class UpdateManualWorkOrderHandler
                         $"\"{existing.Title}\" has {existing.PaidToDate:0.00} paid against it — the amount can't drop below that.");
 
                 existing.Title = line.Title.Length > 256 ? line.Title[..256] : line.Title;
-                existing.Description = line.Description.Length > 1024 ? line.Description[..1024] : line.Description;
+                existing.Description = line.Description;
                 existing.CostCode = line.CostCode;
                 // Same measured-line rule as CreateManualWorkOrderHandler: quantity and rate keep
                 // the PO's Qty/Unit and Unit Cost columns honest; without both, "1 item". (This
@@ -123,7 +123,7 @@ public sealed class UpdateManualWorkOrderHandler
                     WorkOrderLineId = ProcurementIdentifierFactory.NextWorkOrderLineId(),
                     WorkOrderId = entity.WorkOrderId,
                     Title = line.Title.Length > 256 ? line.Title[..256] : line.Title,
-                    Description = line.Description.Length > 1024 ? line.Description[..1024] : line.Description,
+                    Description = line.Description,
                     CostType = "Subcontractor",
                     CostCode = line.CostCode,
                     Quantity = isMeasuredNew ? line.Quantity!.Value : 1m,
@@ -138,11 +138,11 @@ public sealed class UpdateManualWorkOrderHandler
 
         entity.SubcontractorId = command.SubcontractorId;
         entity.Title = command.Title.Length > 256 ? command.Title[..256] : command.Title;
-        entity.Scope = command.Scope.Length > 4000 ? command.Scope[..4000] : command.Scope;
+        entity.Scope = command.Scope;
         entity.Value = command.Lines.Sum(line => line.Amount);
         entity.ProgrammeStart = command.ProgrammeStart;
         entity.ScheduledCompletion = command.TargetCompletion;
-        entity.ProgrammeNotes = command.ProgrammeNotes.Length > 2000 ? command.ProgrammeNotes[..2000] : command.ProgrammeNotes;
+        entity.ProgrammeNotes = command.ProgrammeNotes;
         // Percent never survives without the flag — an untick clears it rather than leaving
         // a stale figure that would print the moment the box is ticked again.
         entity.DepositRequired = command.DepositRequired;

@@ -16,6 +16,6 @@ public sealed class XeroDisputeMessageEntity
     [MaxLength(140)]      public string XeroLedgerLineId { get; set; } = "";
     // The signed-in user's email, stamped server-side (same rule as AllocatedBy).
     [MaxLength(256)]      public string Author { get; set; } = "";
-    [MaxLength(2048)]     public string Body { get; set; } = "";
+    public string Body { get; set; } = "";
     public DateTimeOffset SentAtUtc { get; set; }
 }

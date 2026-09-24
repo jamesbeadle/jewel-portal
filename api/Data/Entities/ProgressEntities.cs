@@ -62,9 +62,9 @@ public sealed class ProgressReportEntity
     [MaxLength(256)]     public string Title { get; set; } = "";
     public DateTimeOffset? PeriodStart { get; set; }
     public DateTimeOffset? PeriodEnd { get; set; }
-    [MaxLength(4096)]    public string Introduction { get; set; } = "";
-    [MaxLength(4096)]    public string WorkCompleted { get; set; } = "";
-    [MaxLength(4096)]    public string UpcomingWorks { get; set; } = "";
+    public string Introduction { get; set; } = "";
+    public string WorkCompleted { get; set; } = "";
+    public string UpcomingWorks { get; set; } = "";
     [MaxLength(256)]     public string CreatedByEmail { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
 }

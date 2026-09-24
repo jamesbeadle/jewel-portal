@@ -28,5 +28,5 @@ public sealed class RequestItemEntity
     [MaxLength(4000)]    public string Query { get; set; } = "";
 
     // The architect's / respondent's answer, captured when it comes back. Null until answered.
-    [MaxLength(4000)]    public string? Response { get; set; }
+    public string? Response { get; set; }
 }

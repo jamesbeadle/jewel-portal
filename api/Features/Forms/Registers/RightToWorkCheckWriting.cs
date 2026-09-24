@@ -5,8 +5,6 @@ namespace Jewel.JPMS.Api.Features.Forms.Registers;
 /// <summary>A check's details onto its row. The follow-up date defaults to ten weeks before time-limited permission runs out.</summary>
 internal static class RightToWorkCheckWriting
 {
-    private const int LongestNotes = 2000;
-
     public static void Apply(RightToWorkCheckEntity check, RightToWorkCheckDetails details)
     {
         check.PersonName = details.PersonName.Trim();
@@ -29,9 +27,7 @@ internal static class RightToWorkCheckWriting
         check.PermissionExpiresOn = details.IsTimeLimited ? details.PermissionExpiresOn : null;
         check.FollowUpOn = details.FollowUpOn ?? RightToWorkRules.FollowUpFor(check.PermissionExpiresOn);
         check.Outcome = (int)details.Outcome;
-        check.Notes = Clip(details.Notes ?? "", LongestNotes);
+        check.Notes = details.Notes ?? "";
         check.FormSubmissionId = string.IsNullOrWhiteSpace(details.FormSubmissionId) ? null : details.FormSubmissionId;
     }
-
-    private static string Clip(string value, int longest) => value.Length > longest ? value[..longest] : value;
 }

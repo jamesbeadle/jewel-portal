@@ -17,7 +17,7 @@ public sealed class ArchitectInstructionEntity
     // The architect's own number as written on the document. Free text — practices differ.
     [MaxLength(128)]     public string InstructionRef { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
-    [MaxLength(2048)]    public string? Notes { get; set; }
+    public string? Notes { get; set; }
     public DateTimeOffset? InstructedAt { get; set; }
     public DateTimeOffset ReceivedAt { get; set; }
     [MaxLength(256)]     public string IssuedByEmail { get; set; } = "";

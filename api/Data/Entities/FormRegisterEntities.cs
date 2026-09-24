@@ -28,7 +28,7 @@ public sealed class RightToWorkCheckEntity
     public DateOnly? PermissionExpiresOn { get; set; }
     public DateOnly? FollowUpOn { get; set; }
     public int Outcome { get; set; }
-    [MaxLength(2000)]    public string Notes { get; set; } = "";
+    public string Notes { get; set; } = "";
     [MaxLength(64)]      public string? EvidenceUploadId { get; set; }
     [MaxLength(256)]     public string RecordedByEmail { get; set; } = "";
     public DateTimeOffset RecordedAt { get; set; }
@@ -67,7 +67,7 @@ public sealed class WorkstationActionEntity
     [MaxLength(64)]      public string QuestionKey { get; set; } = "";
     [MaxLength(1024)]    public string Action { get; set; } = "";
     public int State { get; set; }
-    [MaxLength(1000)]    public string Note { get; set; } = "";
+    public string Note { get; set; } = "";
     [MaxLength(256)]     public string ResolvedByEmail { get; set; } = "";
     public DateTimeOffset? ResolvedAt { get; set; }
     public DateTimeOffset RaisedAt { get; set; }
@@ -81,7 +81,7 @@ public sealed class DrivingLicenceCheckEntity
     [MaxLength(64)]      public string FormSubmissionId { get; set; } = "";
     public DateOnly DvlaCheckedOn { get; set; }
     public bool IsWithinInsuranceCriteria { get; set; }
-    [MaxLength(1000)]    public string Note { get; set; } = "";
+    public string Note { get; set; } = "";
     [MaxLength(256)]     public string CheckedByEmail { get; set; } = "";
     public DateTimeOffset CheckedAt { get; set; }
     public int PhotosDeleted { get; set; }

@@ -20,7 +20,7 @@ public sealed class CompanyRegisterItemEntity
     [MaxLength(64)]      public string BillingCycle { get; set; } = "";
     public DateTimeOffset? KeyDate { get; set; }
     public DateTimeOffset? SecondaryDate { get; set; }
-    [MaxLength(2048)]    public string Notes { get; set; } = "";
+    public string Notes { get; set; } = "";
     public bool IsActive { get; set; } = true;
     [MaxLength(256)]     public string CreatedByEmail { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
@@ -33,7 +33,7 @@ public sealed class PolicyDocumentEntity
 {
     [Key, MaxLength(64)] public string PolicyDocumentId { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
-    [MaxLength(4096)]    public string Summary { get; set; } = "";
+    public string Summary { get; set; } = "";
     public int Revision { get; set; } = 1;
     [MaxLength(256)]     public string PublishedByEmail { get; set; } = "";
     public DateTimeOffset PublishedAt { get; set; }

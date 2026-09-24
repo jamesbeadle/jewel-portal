@@ -17,7 +17,7 @@ public sealed class ProjectContractEntity
     // ---- The form ----
     public int Form { get; set; }
     [MaxLength(16)] public string? FormEdition { get; set; }
-    [MaxLength(4000)] public string? BespokeDeviations { get; set; }
+    public string? BespokeDeviations { get; set; }
 
     // ---- The parties ----
     [MaxLength(256)] public string? EmployerName { get; set; }
@@ -87,7 +87,7 @@ public sealed class ProjectContractAmendmentEntity
     // ---- What it is ----
     [MaxLength(256)] public string Title { get; set; } = "";
     public DateTimeOffset? AmendmentDate { get; set; }
-    [MaxLength(4000)] public string? Notes { get; set; }
+    public string? Notes { get; set; }
 
     // ---- The document. Naming follows ProjectContractEntity's document block. ----
     [MaxLength(1024)] public string DocumentBlobRef { get; set; } = "";

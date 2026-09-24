@@ -22,7 +22,7 @@ public sealed class VariationOrderEntity
     public int Number { get; set; }
     [MaxLength(64)]      public string Reference { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
-                         public string Description { get; set; } = "";
+    public string Description { get; set; } = "";
     public int Status { get; set; }
     [MaxLength(64)]      public string? SelectedBidPackageId { get; set; }
     [MaxLength(64)]      public string? SelectedSubcontractorId { get; set; }
@@ -37,9 +37,9 @@ public sealed class VariationOrderEntity
     // Narrative sections of the issued VO document (see Jewel.JPMS.Models.VariationOrder): the
     // commercial basis of the price, the programme impact and the exclusions. Free text, all
     // optional — the same 4000-character allowance as the request document's narrative fields.
-    [MaxLength(4000)]    public string? CommercialBasis { get; set; }
-    [MaxLength(4000)]    public string? ProgrammeImpact { get; set; }
-    [MaxLength(4000)]    public string? Exclusions { get; set; }
+    public string? CommercialBasis { get; set; }
+    public string? ProgrammeImpact { get; set; }
+    public string? Exclusions { get; set; }
 
     // The agreed build-up STAGED before approval (2026-08-25): the client-agreed priced lines,
     // as JSON, captured on an Issued / Awaiting-AI variation so the approve modal opens
@@ -65,13 +65,13 @@ public sealed class SubcontractorVariationRequestEntity
     [MaxLength(64)]      public string WorkOrderId { get; set; } = "";
     [MaxLength(64)]      public string SubcontractorId { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
-                         public string Description { get; set; } = "";
+    public string Description { get; set; } = "";
     public decimal ProposedValue { get; set; }
     public int Status { get; set; }
     public DateTimeOffset SubmittedAt { get; set; }
     public DateTimeOffset? ReviewedAt { get; set; }
     [MaxLength(256)]     public string? ReviewedByEmail { get; set; }
-    [MaxLength(1024)]    public string RejectionReason { get; set; } = "";
+    public string RejectionReason { get; set; } = "";
     [MaxLength(64)]
     [Column("VariationOrderQuoteId")]
     public string? VariationOrderId { get; set; }

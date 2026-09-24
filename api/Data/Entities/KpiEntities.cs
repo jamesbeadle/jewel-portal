@@ -28,7 +28,7 @@ public sealed class KpiEmailEntity
     [MaxLength(256)]     public string FromEmail { get; set; } = "";
     [MaxLength(256)]     public string FromName { get; set; } = "";
     public DateTimeOffset ReceivedAt { get; set; }
-    [MaxLength(2048)]    public string Note { get; set; } = "";
+    public string Note { get; set; } = "";
     [MaxLength(256)]     public string MarkedByEmail { get; set; } = "";
     public DateTimeOffset MarkedAt { get; set; }
 

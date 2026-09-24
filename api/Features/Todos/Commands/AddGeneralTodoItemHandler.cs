@@ -26,7 +26,7 @@ public sealed class AddGeneralTodoItemHandler : ICommandHandler<AddGeneralTodoIt
             ProjectId = "",
             Number = nextNumber,
             Title = Clamp(command.Title.Trim(), 256),
-            Notes = Clamp(command.Notes?.Trim() ?? "", 2048),
+            Notes = command.Notes?.Trim() ?? "",
             AssigneeRole = (int?)command.AssigneeRole,
             AssigneePersonEmail = TodoAssigneeGuard.NormalisePersonEmail(command.AssigneePersonEmail),
             CreatedByEmail = command.CreatedByEmail,
