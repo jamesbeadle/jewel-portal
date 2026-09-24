@@ -125,7 +125,8 @@ name at `/agents/activity`. Reads mirror the pages (a feature is not done until
 the connector can read it — repo `CLAUDE.md`); writes are `perform_action`
 actions mirroring the buttons, confirm-first for anything financial, external or
 irreversible. Team doctrine lives as skills at `/admin/skills` (`list_skills`,
-`load_skill`, `save_skill` — live from the next conversation). Claude renders
+`load_skill`, `save_skill` — live from the next conversation; every version is
+kept — `list_skill_history`, `restore_skill_version`). Claude renders
 the answer (tables, dashboards); never propose a chat widget or page-side AI.
 See `references/assistant-and-data.md` for the tool catalogue.
 

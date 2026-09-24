@@ -7230,6 +7230,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
                     b.HasKey("SkillReferenceId");
 
                     b.HasIndex("SkillKey", "RefKey")
@@ -7237,6 +7240,58 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasDatabaseName("IX_SkillReferences_SkillKey_RefKey");
 
                     b.ToTable("SkillReferences");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.SkillReferenceRevisionEntity", b =>
+                {
+                    b.Property<string>("SkillReferenceRevisionId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("RefKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("ReplacedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("SkillKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("WrittenAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("WrittenByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("SkillReferenceRevisionId");
+
+                    b.HasIndex("SkillKey", "RefKey", "Version")
+                        .HasDatabaseName("IX_SkillReferenceRevisions_SkillKey_RefKey_Version");
+
+                    b.ToTable("SkillReferenceRevisions");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.SkillRevisionEntity", b =>
@@ -7254,6 +7309,17 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
 
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool?>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool?>("IsPinned")
+                        .HasColumnType("bit");
+
                     b.Property<DateTimeOffset>("SavedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -7269,6 +7335,9 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<int>("Version")
                         .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("WrittenAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.HasKey("SkillRevisionId");
 

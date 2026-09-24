@@ -1,0 +1,46 @@
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+
+@*
+    Every version of a skill and of each of its reference documents (2026-09-24, Nigel): who wrote
+    each one and when, its text, any two compared, and Restore to bring an earlier one back as a
+    new version — nothing in the history is ever removed, so a restore can itself be undone.
+    Reloads whenever the skill's version moves (a save on the page above, or a restore here).
+*@
+
+<SectionHeader Title="History" Class="mt-6"
+               Subtitle="Every version is kept. Pick one to read it, compare it with another, or restore it." />
+
+<LoadGate IsLoading="@(history is null && !hasFailed)" Label="Loading the history">
+    @if (hasFailed)
+    {
+        <Notice Tone="Tone.Negative">The history could not be loaded. The error toast carries the reference.</Notice>
+    }
+    else
+    {
+        @if (history!.References.Count > 0)
+        {
+            <FilterChips Items="DocumentChoices" Selected="@documentKey" OnSelect="ShowDocument"
+                         AriaLabel="Document" Class="mb-3" />
+        }
+        <SkillVersionsTable Versions="Versions" Shown="@shownVersion" OnShow="ShowVersion" />
+        @if (Shown is { } shown)
+        {
+            <SkillVersionViewer Shown="shown" Versions="Versions" IsBusy="isRestoring"
+                                OnRestore="() => restoreArmed = shown" />
+        }
+    }
+</LoadGate>
+
+<ConfirmDialog IsOpen="@(restoreArmed is not null)" Title="@RestoreTitle" ConfirmLabel="Restore"
+               BusyLabel="Restoring…" Busy="isRestoring" OnConfirm="RestoreAsync" OnCancel="() => restoreArmed = null">
+    <p class="text-sm text-content-muted">
+        Version @(restoreArmed?.Version)'s name, description and text are saved as a new version and
+        are in force from the next conversation. The version in force now stays in the history, so
+        this can be undone by restoring it.
+    </p>
+    @if (restoreError is not null)
+    {
+        <p class="text-sm text-negative mt-2" role="alert">@restoreError</p>
+    }
+</ConfirmDialog>

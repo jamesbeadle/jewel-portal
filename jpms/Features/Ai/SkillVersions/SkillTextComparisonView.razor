@@ -1,0 +1,41 @@
+@*
+    Two versions' text line by line, the earlier on the left of the comparison: a line taken out
+    reads in negative with a minus, a line put in reads in positive with a plus, and unchanged
+    lines stay plain so the change reads in its context.
+*@
+
+<p class="text-xs text-content-subtle mb-2">
+    From v@(Earlier.Version) to v@(Later.Version): @RemovedCount lines taken out, @AddedCount put in.
+</p>
+<pre class="max-h-[60vh] overflow-auto font-mono text-xs leading-relaxed">@foreach (var line in lines)
+{<span class="block whitespace-pre-wrap @ClassFor(line.Change)">@MarkFor(line.Change)@line.Text</span>}</pre>
+
+@code {
+    [Parameter, EditorRequired] public SkillVersion Earlier { get; set; } = default!;
+    [Parameter, EditorRequired] public SkillVersion Later { get; set; } = default!;
+
+    private IReadOnlyList<SkillTextLine> lines = Array.Empty<SkillTextLine>();
+
+    private int RemovedCount => lines.Count(line => line.Change == SkillTextChange.Removed);
+    private int AddedCount => lines.Count(line => line.Change == SkillTextChange.Added);
+
+    protected override void OnParametersSet() => lines = SkillTextComparison.Between(Earlier.Body, Later.Body);
+
+    private static readonly IReadOnlyDictionary<SkillTextChange, string> Classes = new Dictionary<SkillTextChange, string>
+    {
+        [SkillTextChange.Same] = "text-content-muted",
+        [SkillTextChange.Removed] = "text-negative bg-negative/10 line-through",
+        [SkillTextChange.Added] = "text-positive bg-positive/10"
+    };
+
+    private static readonly IReadOnlyDictionary<SkillTextChange, string> Marks = new Dictionary<SkillTextChange, string>
+    {
+        [SkillTextChange.Same] = "  ",
+        [SkillTextChange.Removed] = "− ",
+        [SkillTextChange.Added] = "+ "
+    };
+
+    private static string ClassFor(SkillTextChange change) => Classes[change];
+
+    private static string MarkFor(SkillTextChange change) => Marks[change];
+}

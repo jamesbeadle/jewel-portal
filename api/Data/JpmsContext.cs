@@ -218,6 +218,7 @@ public sealed partial class JpmsContext : DbContext
     public DbSet<SkillEntity> Skills => Set<SkillEntity>();
     public DbSet<SkillReferenceEntity> SkillReferences => Set<SkillReferenceEntity>();
     public DbSet<SkillRevisionEntity> SkillRevisions => Set<SkillRevisionEntity>();
+    public DbSet<SkillReferenceRevisionEntity> SkillReferenceRevisions => Set<SkillReferenceRevisionEntity>();
 
     // Skills wired to connector actions — the edge describe_action resolves so attached doctrine
     // rides into the model's context with the action's schema (2026-08-31).

@@ -1,5 +1,11 @@
 name: Deploy JPMS to Azure Static Web Apps
 
+# Only a push to main deploys (2026-09-24, the MD: a pull request must never put a build
+# anywhere). A pull request is BUILT — the Blazor bundle published and the API compiled — so its
+# checks say whether it compiles, and nothing is uploaded: Azure's per-PR preview environments
+# share the live site's settings, and so the production database. The close job stays only to
+# tear down any preview left over from before this change.
+
 on:
   push:
     branches:
@@ -55,8 +61,13 @@ jobs:
       - name: Publish Blazor WASM bundle
         run: dotnet publish jpms/Jewel.JPMS.csproj -c Release -o publish --no-restore
 
+      - name: Build the API (pull requests only — the compile check; main is built by the deploy)
+        if: github.event_name == 'pull_request'
+        run: dotnet build api/JpmsApi.csproj -c Release
+
       - name: Deploy to Static Web Apps
         id: deploy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}

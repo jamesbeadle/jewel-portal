@@ -1,0 +1,40 @@
+@* One row per version of the chosen document, newest first; a row press shows that version. *@
+
+<RecordsTable IsEmpty="@(Versions.Count == 0)" EmptyMessage="No versions yet." MaxHeight="max-h-96">
+    <thead>
+        <tr>
+            <th>Version</th>
+            <th>Written</th>
+            <th>By</th>
+            <th>Replaced</th>
+            <th class="text-right">Size</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var version in Versions)
+        {
+            <tr class="is-clickable @(version.Version == Shown ? "is-selected" : "")" @onclick="() => OnShow.InvokeAsync(version.Version)">
+                <td class="whitespace-nowrap">
+                    v@(version.Version)
+                    @if (version.IsCurrent)
+                    {
+                        <Pill Tone="Tone.Positive" Class="ml-2">In force</Pill>
+                    }
+                </td>
+                <td class="whitespace-nowrap">@WrittenText(version)</td>
+                <td class="truncate max-w-[14rem]" title="@version.WrittenByEmail">@version.WrittenByEmail</td>
+                <td class="whitespace-nowrap">@(version.IsCurrent ? "—" : DateTimeText(version.ReplacedAt))</td>
+                <td class="text-right whitespace-nowrap">@version.Characters.ToString("N0") chars</td>
+            </tr>
+        }
+    </tbody>
+</RecordsTable>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<SkillVersion> Versions { get; set; } = Array.Empty<SkillVersion>();
+    [Parameter] public int? Shown { get; set; }
+    [Parameter] public EventCallback<int> OnShow { get; set; }
+
+    private static string WrittenText(SkillVersion version) =>
+        version.WrittenAt is null ? "Not recorded" : DateTimeText(version.WrittenAt);
+}
