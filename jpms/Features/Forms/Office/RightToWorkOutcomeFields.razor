@@ -9,7 +9,7 @@
 </div>
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
     <FormField Label="4. Person carrying out the check" Required>
-        <input type="text" class="field" placeholder="Your name" value="@Draft.CheckedByName"
+        <input type="text" class="field" placeholder="Your name" maxlength="@StoredTextLengths.Name" value="@Draft.CheckedByName"
                @oninput="typed => Draft.CheckedByName = typed.Value?.ToString() ?? string.Empty" />
     </FormField>
     <FormField Label="Date of the check" Required Hint="The legal date. Today is entered automatically as the date recorded.">

@@ -72,7 +72,7 @@
                         </div>
                         <div class="flex flex-wrap items-end gap-2 mt-3">
                             <FormField Label="Type your full name to sign">
-                                <input class="field mt-1 w-64" @bind="TypedNameFor(row.PolicySignOffId).Value" placeholder="Your name, exactly" />
+                                <input class="field mt-1 w-64" @bind="TypedNameFor(row.PolicySignOffId).Value" maxlength="@StoredTextLengths.Name" placeholder="Your name, exactly" />
                             </FormField>
                             <button type="button" class="btn-primary" disabled="@isSigning"
                                     @onclick="() => SignAsync(row)">Sign</button>
@@ -168,7 +168,7 @@
         <p class="text-xs text-content-subtle mb-3">Publishing the same title again supersedes it as a new revision — everyone signs afresh.</p>
         <div class="space-y-3">
             <FormField Label="Title">
-                <input class="field" @bind="publishTitle" placeholder="e.g. Staff Handbook 2026" />
+                <input class="field" @bind="publishTitle" maxlength="@StoredTextLengths.Title" placeholder="e.g. Staff Handbook 2026" />
             </FormField>
             <FormField Label="Summary / body (what they are agreeing to)">
                 <textarea class="field mt-1 min-h-32" @bind="publishSummary"></textarea>

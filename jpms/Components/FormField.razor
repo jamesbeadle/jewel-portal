@@ -27,6 +27,7 @@
                @oninput="HandleInput"
                required="@Required"
                placeholder="@Placeholder"
+               maxlength="@MaxLength"
                disabled="@Disabled"
                class="field" />
     }
@@ -60,6 +61,7 @@
     [Parameter] public string InputType { get; set; } = "text";
     [Parameter] public string? Placeholder { get; set; }
     [Parameter] public bool Disabled { get; set; }
+    [Parameter] public int? MaxLength { get; set; }
 
     private Task HandleInput(ChangeEventArgs args) =>
         OnChange.InvokeAsync(args.Value?.ToString() ?? "");

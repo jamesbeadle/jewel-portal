@@ -88,11 +88,11 @@
                                 </select>
                             </td>
                             <td>
-                                <input type="text" class="field py-1 w-full" maxlength="2000" disabled="@ReadOnly"
+                                <input type="text" class="field py-1 w-full" disabled="@ReadOnly"
                                        value="@draft.Findings" @oninput="e => draft.Findings = e.Value?.ToString() ?? string.Empty" />
                             </td>
                             <td>
-                                <input type="text" class="field py-1 w-full" maxlength="256" disabled="@ReadOnly" placeholder="Name"
+                                <input type="text" class="field py-1 w-full" maxlength="@StoredTextLengths.Name" disabled="@ReadOnly" placeholder="Name"
                                        value="@draft.OwnerName" @oninput="e => draft.OwnerName = e.Value?.ToString() ?? string.Empty" />
                             </td>
                             <td>

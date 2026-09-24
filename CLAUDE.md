@@ -1147,6 +1147,31 @@ so the first CI build is the compile check, and this tool is what stands in for 
   the page's `MaxVariationDescriptionChars` are all gone — never re-add a length on these
   fields. Titles keep their 256.
 
+## A value that does not fit its column is refused with a sentence, never a 500 (api + jpms)
+
+- **Prose has no length limit** (2026-09-24, V33 on Abbot Road, JPMS-4F2116: a 550-character line
+  description met `ValuationLineItems.Description` nvarchar(512) and the approval failed as
+  "Backend call failure"). Migration `WidenWrittenTextColumns` (script
+  `widen-written-text-columns.sql`) took 82 columns people write sentences into — line
+  descriptions (valuation, claim, bid package, quote, work order, BoQ, estimate), notes, reasons,
+  comments, narratives, message bodies — to nvarchar(max), and `ReconciliationPackages.Name` to
+  256 (it is named from a work order's title). The handlers that silently cut those columns
+  (`Clamp`, `Truncate`, `[..N]`) were removed with them. A new column people write sentences into
+  is unbounded from birth; never put a length on it, and never truncate what a person typed.
+- **Every save checks its values first** (`JpmsContext.StoredValues.cs`, `api/Data/StoredValues`,
+  linked into the worker): text no longer than its `[MaxLength]`, a decimal inside its precision,
+  a required string present — read from the EF model, so a column added tomorrow is checked the
+  day it is added. A misfit throws `StoredValuesRejectedException` naming record and field
+  ("Name on the project is 257 characters long; it can hold at most 256"), nothing is saved, and
+  `StoredValueRejectionMiddleware` answers it — and SQL Server's own truncation / overflow /
+  null refusals — as a 400 with the validation array every dialog already shows. The connector
+  answers it as `ok: false, errors` (`AiStoredValueRefusal`). Pinned by `StoredValueChecksTests`.
+- **A short field's form stops the typing at its column**: `StoredTextLengths` (contracts) holds
+  each kind of short field's limit — Name, Title, Reference, AddressLine… — and a form writes
+  `maxlength="@StoredTextLengths.X"` (or `MaxLength` on `FormField`'s shortcut input), never a bare
+  number. `StoredTextLengthsTests` pins every constant to the columns it guards; a new bounded
+  field on a form gets its constant and its pin in the same commit.
+
 ## A Useful Information note may hold one shared site credential (contracts + api + jpms)
 
 - **The credential is masked, encrypted and revealed by the directors alone** (2026-09-22,

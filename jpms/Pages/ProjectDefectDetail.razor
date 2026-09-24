@@ -157,7 +157,7 @@
                     {
                         <Notice Tone="Tone.Negative">@editError</Notice>
                     }
-                    <FormField Label="Location" Value="@editLocation" OnChange="v => editLocation = v" />
+                    <FormField Label="Location" Value="@editLocation" OnChange="v => editLocation = v" MaxLength="@StoredTextLengths.AddressLine" />
                     <div>
                         <FormField Label="Supplier" Hint="The company the defect is raised with — its contact email is where it is sent.">
                         <SearchSelect Options="@SupplierOptions" Value="@editSubcontractorId"
@@ -173,7 +173,7 @@
                     }
                     <div>
                         <FormField Label="Description" Required>
-                        <textarea class="field" rows="4" maxlength="1024" value="@editDescription"
+                        <textarea class="field" rows="4" value="@editDescription"
                                   @oninput="e => editDescription = e.Value?.ToString() ?? string.Empty"></textarea>
                         </FormField>
                     </div>

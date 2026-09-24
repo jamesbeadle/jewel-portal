@@ -34,9 +34,9 @@
                 <Notice Tone="Tone.Negative">@error</Notice>
             }
 
-            <FormField Label="Reference" Value="@reference" OnChange="v => reference = v" Required="true" />
-            <FormField Label="Project name" Value="@name" OnChange="v => name = v" Required="true" />
-            <FormField Label="Client" Value="@clientName" OnChange="v => clientName = v" Required="true" />
+            <FormField Label="Reference" Value="@reference" OnChange="v => reference = v" MaxLength="StoredTextLengths.Reference" Required="true" />
+            <FormField Label="Project name" Value="@name" OnChange="v => name = v" MaxLength="StoredTextLengths.Name" Required="true" />
+            <FormField Label="Client" Value="@clientName" OnChange="v => clientName = v" MaxLength="StoredTextLengths.Name" Required="true" />
 
             <div>
                 <FormField Label="Corresponds with" Hint="The party project emails are addressed to — a client account directly, or an architect acting on the client's behalf. The free-text client above stays the display name on documents.">
@@ -105,20 +105,20 @@
             <FormField Label="Project manager email" Value="@projectManagerEmail" OnChange="v => projectManagerEmail = v" InputType="email" Required="true" />
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField Label="Site manager" Value="@siteManagerName" OnChange="v => siteManagerName = v" Hint="A person, not a login — pre-fills the H&S audit's front sheet." />
+                <FormField Label="Site manager" Value="@siteManagerName" OnChange="v => siteManagerName = v" MaxLength="StoredTextLengths.Name" Hint="A person, not a login — pre-fills the H&S audit's front sheet." />
                 <FormField Label="Site manager email" Value="@siteManagerEmail" OnChange="v => siteManagerEmail = v" InputType="email"
                            Hint="Where the H&S officer's sign-offs and comments on his actions are sent, one email per sitting." />
             </div>
 
-            <FormField Label="Site address" Value="@addressLine" OnChange="v => addressLine = v" />
+            <FormField Label="Site address" Value="@addressLine" OnChange="v => addressLine = v" MaxLength="StoredTextLengths.AddressLine" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField Label="Town" Value="@town" OnChange="v => town = v" />
+                <FormField Label="Town" Value="@town" OnChange="v => town = v" MaxLength="StoredTextLengths.Town" />
                 <FormField Label="Postcode" Value="@postcode" OnChange="v => postcode = v" />
             </div>
             <p class="text-xs text-content-subtle">Town and postcode power "Find subcontractors" on bid packages — local companies are searched near the site.</p>
 
 
-            <FormField Label="Xero site (tracking option)" Value="@xeroSiteName" OnChange="v => xeroSiteName = v" />
+            <FormField Label="Xero site (tracking option)" Value="@xeroSiteName" OnChange="v => xeroSiteName = v" MaxLength="StoredTextLengths.XeroSiteName" />
             <p class="text-xs text-content-subtle">
                 The project's option in Xero's "Sites" tracking category, exactly as named in Xero
                 (e.g. "21 Chetwode Road"). Required before allocated draft invoices can be confirmed

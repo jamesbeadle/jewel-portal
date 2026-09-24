@@ -79,7 +79,7 @@
     </FormField>
 
     <FormField Label="Subject">
-    <input class="field mb-3" @bind="subject" />
+    <input class="field mb-3" @bind="subject" maxlength="@StoredTextLengths.EmailSubject" />
     </FormField>
 
     <div class="flex items-center justify-between mb-1">

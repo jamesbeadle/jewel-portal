@@ -87,9 +87,9 @@
             {
                 <Notice Tone="Tone.Negative">@formError</Notice>
             }
-            <FormField Label="Client name" Value="@formName" OnChange="v => formName = v" Required="true" />
+            <FormField Label="Client name" Value="@formName" OnChange="v => formName = v" Required="true" MaxLength="@StoredTextLengths.Name" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField Label="Primary contact name" Value="@formPrimaryName" OnChange="v => formPrimaryName = v" />
+                <FormField Label="Primary contact name" Value="@formPrimaryName" OnChange="v => formPrimaryName = v" MaxLength="@StoredTextLengths.Name" />
                 <FormField Label="Primary contact email" Value="@formPrimaryEmail" OnChange="v => formPrimaryEmail = v" />
             </div>
             <p class="text-xs text-content-subtle">Working through an architect on this client's behalf? Add the practice on the <a class="underline hover:text-content" href="/architects">Architects</a> page and select it as the party on the project or request.</p>
@@ -134,9 +134,9 @@
             {
                 <Notice Tone="Tone.Negative">@formError</Notice>
             }
-            <FormField Label="Client name" Value="@formName" OnChange="v => formName = v" Required="true" />
+            <FormField Label="Client name" Value="@formName" OnChange="v => formName = v" Required="true" MaxLength="@StoredTextLengths.Name" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField Label="Primary contact name" Value="@formPrimaryName" OnChange="v => formPrimaryName = v" />
+                <FormField Label="Primary contact name" Value="@formPrimaryName" OnChange="v => formPrimaryName = v" MaxLength="@StoredTextLengths.Name" />
                 <FormField Label="Primary contact email" Value="@formPrimaryEmail" OnChange="v => formPrimaryEmail = v" />
             </div>
         </div>

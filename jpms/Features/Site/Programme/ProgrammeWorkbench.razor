@@ -92,7 +92,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div class="md:col-span-1">
                     <FormField Label="Title">
-                    <input class="field" @bind="newTaskTitle" placeholder="e.g. Groundworks — main house" />
+                    <input class="field" @bind="newTaskTitle" maxlength="@StoredTextLengths.Title" placeholder="e.g. Groundworks — main house" />
                     </FormField>
                 </div>
                 <div>

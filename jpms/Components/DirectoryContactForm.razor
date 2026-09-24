@@ -16,7 +16,7 @@
     }
     <div>
         <FormField Label="Company name">
-        <input class="field" @bind="company" />
+        <input class="field" @bind="company" maxlength="@StoredTextLengths.Name" />
         </FormField>
     </div>
     <div class="grid grid-cols-2 gap-3">
@@ -65,7 +65,7 @@
     <div class="grid grid-cols-2 gap-3">
         <div>
             <FormField Label="Contact name">
-            <input class="field" @bind="contact" />
+            <input class="field" @bind="contact" maxlength="@StoredTextLengths.Name" />
             </FormField>
         </div>
         <div>
@@ -88,18 +88,18 @@
     </div>
     <div>
         <FormField Label="Address line">
-        <input class="field" placeholder="Street address, printed on purchase orders" @bind="addressLine" />
+        <input class="field" placeholder="Street address, printed on purchase orders" @bind="addressLine" maxlength="@StoredTextLengths.AddressLine" />
         </FormField>
     </div>
     <div class="grid grid-cols-2 gap-3">
         <div>
             <FormField Label="Town">
-            <input class="field" @bind="town" />
+            <input class="field" @bind="town" maxlength="@StoredTextLengths.Town" />
             </FormField>
         </div>
         <div>
             <FormField Label="County">
-            <input class="field" @bind="county" />
+            <input class="field" @bind="county" maxlength="@StoredTextLengths.County" />
             </FormField>
         </div>
     </div>
@@ -111,7 +111,7 @@
         </div>
         <div>
             <FormField Label="Website">
-            <input class="field" @bind="website" />
+            <input class="field" @bind="website" maxlength="@StoredTextLengths.Website" />
             </FormField>
         </div>
     </div>

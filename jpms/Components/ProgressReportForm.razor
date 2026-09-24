@@ -5,7 +5,7 @@
 
     <div>
         <FormField Label="Report title" Required>
-        <input type="text" @bind="title" required placeholder="Progress report — July 2026"
+        <input type="text" @bind="title" required maxlength="@StoredTextLengths.Title" placeholder="Progress report — July 2026"
                class="field" />
         </FormField>
     </div>

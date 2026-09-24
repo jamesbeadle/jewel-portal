@@ -171,13 +171,13 @@
                         }
                     </select>
                 </FormField>
-                <FormField Label="Owner" Required Value="@logOwner" OnChange="v => logOwner = v" Hint="A person's name — they need no portal login." />
+                <FormField Label="Owner" Required Value="@logOwner" OnChange="v => logOwner = v" MaxLength="@StoredTextLengths.Name" Hint="A person's name — they need no portal login." />
                 <FormField Label="Due">
                     <input type="date" class="field" value="@logDue" @onchange="e => logDue = e.Value?.ToString() ?? string.Empty" />
                 </FormField>
             </div>
             <FormField Label="Summary" Required Class="mt-3">
-                <textarea class="field" rows="3" maxlength="512" value="@logSummary" @oninput="e => logSummary = e.Value?.ToString() ?? string.Empty"></textarea>
+                <textarea class="field" rows="3" value="@logSummary" @oninput="e => logSummary = e.Value?.ToString() ?? string.Empty"></textarea>
             </FormField>
         </Modal>
     </ProjectPageShell>

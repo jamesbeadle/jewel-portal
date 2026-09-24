@@ -321,7 +321,7 @@
             <div class="space-y-3">
                 <div>
                     <FormField Label="Period name">
-                    <input type="text" @bind="newClaimName" placeholder="e.g. June 2026"
+                    <input type="text" @bind="newClaimName" maxlength="@StoredTextLengths.PeriodName" placeholder="e.g. June 2026"
                            class="field" />
                     </FormField>
                 </div>
