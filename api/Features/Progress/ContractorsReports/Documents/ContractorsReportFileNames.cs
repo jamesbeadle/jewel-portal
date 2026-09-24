@@ -6,13 +6,9 @@ namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Documents;
 public static class ContractorsReportFileNames
 {
     public const string PdfContentType = "application/pdf";
-    public const string WordContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-    public static string Pdf(ContractorsReportHeader header) => Named(header, "pdf");
-    public static string Word(ContractorsReportHeader header) => Named(header, "docx");
-
-    private static string Named(ContractorsReportHeader header, string extension) =>
-        Sanitised($"{header.ProjectReference} - {header.DocumentTitle} - w-e {ContractorsReportText.Date(header.PeriodEnd)}.{extension}");
+    public static string Pdf(ContractorsReportHeader header) =>
+        Sanitised($"{header.ProjectReference} - {header.DocumentTitle} - w-e {ContractorsReportText.Date(header.PeriodEnd)}.pdf");
 
     private static string Sanitised(string fileName)
     {

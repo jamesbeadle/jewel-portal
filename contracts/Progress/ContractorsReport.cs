@@ -52,10 +52,11 @@ public sealed record ContractorsReport(
 public sealed record ContractorsReportLookAheadItem(string Text, bool IsDone);
 
 /// <summary>Section 8's entered columns for one work order: days attended in the period, whether
-/// the client nominated the subcontractor, and the scope as the report words it — what they did
-/// this week, "Wall tiling to the first and second floors (Friday)" (Report 30). A blank scope
-/// prints the work order's title.</summary>
-public sealed record ContractorsReportAttendance(string WorkOrderId, int? AttendanceDays, bool IsClientNominated, string Scope = "");
+/// the client nominated the subcontractor, the scope as the report words it — what they did this
+/// week, "Wall tiling to the first and second floors (Friday)" (Report 30), a blank scope printing
+/// the work order's title — and the days they were on site, printed "Friday, Monday, Wednesday".</summary>
+public sealed record ContractorsReportAttendance(
+    string WorkOrderId, int? AttendanceDays, bool IsClientNominated, string Scope = "", IReadOnlyList<DateOnly>? DaysOnSite = null);
 
 public static class ContractorsReportDefaults
 {

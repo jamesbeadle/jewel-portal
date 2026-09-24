@@ -32,7 +32,11 @@ internal static partial class AiDeliveryTools
 
     private const string GetContractorsReportDescription =
         "One Contractor's Report with the document it composes to RIGHT NOW — the header, "
-        + "Section 1's days with the selected updates, Look Ahead, the open RFIs (Section 3), "
+        + "Section 1 (only the days with a selected update, each update's note printed as one bullet "
+        + "per line and its title not printed, then instructionsReceived: the architect's "
+        + "instructions, variations approved and RFIs raised or closed in the period), Look Ahead, "
+        + "the RFIs put to the client and still open (Section 3; an RFI at Needs action is not "
+        + "printed), "
         + "Section 4 (the variations at Issued, each with the date it was issued — Variation / "
         + "Position, no value column — and variationsApproved, the ones approved in the period), "
         + "Neighbours, Health & Safety, the Building Control contact (the project's case, else "
@@ -48,7 +52,7 @@ internal static partial class AiDeliveryTools
         + "enter attendance against with update_contractors_report — the reference and target "
         + "are for you to match on and are NEVER written into the report: name the "
         + "subcontractor and the work, no WO number, no target date) and the wording "
-        + "FINDINGS. While findings is non-empty the Word and PDF builds are refused: the "
+        + "FINDINGS. While findings is non-empty the PDF is refused: the "
         + "report goes to the client's side, so a line naming remedial works, making good, "
         + "rectification, snagging, defects or rework is refused by section and line, never "
         + "reworded silently. Fix the line on the record (update_contractors_report for the "
@@ -82,11 +86,7 @@ internal static partial class AiDeliveryTools
             updatesInPeriod = view.UpdatesInPeriod,
             workOrdersOnSite = view.WorkOrdersOnSite,
             photosOnSelectedUpdates = view.PhotosOnSelectedUpdates,
-            downloads = new
-            {
-                pdf = $"contractors-reports/{view.Report.ContractorsReportId}/pdf",
-                word = $"contractors-reports/{view.Report.ContractorsReportId}/docx"
-            }
+            export = "export_contractors_report builds the PDF and returns a download link"
         });
     }
 

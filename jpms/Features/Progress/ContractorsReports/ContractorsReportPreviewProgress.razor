@@ -1,0 +1,36 @@
+@using Jewel.JPMS.Contracts.Progress
+
+@* Section 1 as it will print: the heading with the programme reference, the opening line, each
+   day that has a note as bullets — no update title, no empty day — and the instructions and
+   confirmations received in the period, read from the registers. *@
+
+<section>
+    <h3 class="font-semibold text-content mb-2">@ContractorsReportPrintedText.ProgressHeading(SectionTitle, Document.Header.ProgrammeReference)</h3>
+    <p class="text-content-muted">@ContractorsReportPrintedText.ProgressOpening</p>
+    @foreach (var day in Document.Progress)
+    {
+        <p class="text-xs font-semibold text-accent mt-2">@day.Heading</p>
+        <ul class="list-disc pl-5 text-content-muted">
+            @foreach (var bullet in day.Entries.SelectMany(entry => ContractorsReportPrintedText.Bullets(entry.Description)))
+            {
+                <li>@bullet</li>
+            }
+        </ul>
+    }
+    @if (Document.InstructionsReceived.Count > 0)
+    {
+        <p class="text-xs font-semibold text-accent mt-2">@ContractorsReportPrintedText.InstructionsHeading</p>
+        <ul class="list-disc pl-5 text-content-muted">
+            @foreach (var instruction in Document.InstructionsReceived)
+            {
+                <li>@instruction</li>
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    private const string SectionTitle = "1. Progress Against Programme";
+
+    [Parameter, EditorRequired] public ContractorsReportDocument Document { get; set; } = default!;
+}

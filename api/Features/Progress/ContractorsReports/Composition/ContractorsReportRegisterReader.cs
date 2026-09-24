@@ -7,12 +7,14 @@ namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
 /// forward, nothing stored on the report.</summary>
 internal static class ContractorsReportRegisterReader
 {
-    /// <summary>Section 3: every RFI on the project not yet closed.</summary>
+    /// <summary>Section 3: every RFI on the project put to the client and not yet closed — an RFI at
+    /// Needs action is still being checked in-house and is not printed.</summary>
     public static async Task<IReadOnlyList<ContractorsReportDecision>> DecisionsAsync(
         JpmsContext context, string projectId, CancellationToken cancellationToken)
     {
         var rows = await context.Requests.AsNoTracking()
-            .Where(row => row.ProjectId == projectId && row.Kind == (int)RequestType.Rfi && row.Status != (int)RequestStatus.Closed)
+            .Where(row => row.ProjectId == projectId && row.Kind == (int)RequestType.Rfi
+                && row.Status != (int)RequestStatus.Closed && row.Status != (int)RequestStatus.NeedsAction)
             .OrderBy(row => row.Number)
             .ToListAsync(cancellationToken);
         return rows

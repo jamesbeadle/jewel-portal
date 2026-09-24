@@ -11,10 +11,9 @@ public sealed record ContractorsReportBuildOutcome(ContractorsReportFile? File, 
     public bool IsRefused => File is null;
 }
 
-public enum ContractorsReportFormat { Pdf, Word }
-
-/// <summary>Composes, gates, loads the photographs and renders — the one path both downloads
-/// take, so a report that the page shows as refused is refused here too.</summary>
+/// <summary>Composes, gates, loads the photographs and renders the PDF — the one path the page's
+/// download and the connector's export take, so a report the page shows as refused is refused
+/// here too. The PDF is the issued document; there is no Word copy (Nigel, 24 Sep 2026).</summary>
 public sealed class ContractorsReportBuilder
 {
     private readonly ContractorsReportComposer composer;
@@ -26,7 +25,7 @@ public sealed class ContractorsReportBuilder
         this.photos = photos;
     }
 
-    public async Task<ContractorsReportBuildOutcome?> BuildAsync(string contractorsReportId, ContractorsReportFormat format, CancellationToken cancellationToken)
+    public async Task<ContractorsReportBuildOutcome?> BuildAsync(string contractorsReportId, CancellationToken cancellationToken)
     {
         var view = await composer.ViewAsync(contractorsReportId, cancellationToken);
         if (view is null) return null;
@@ -34,10 +33,8 @@ public sealed class ContractorsReportBuilder
         if (!document.CanBeBuilt) return new ContractorsReportBuildOutcome(null, document.Findings);
 
         var images = await photos.LoadAsync(document, cancellationToken);
-        var generatedAt = DateTimeOffset.UtcNow;
-        var file = format == ContractorsReportFormat.Pdf
-            ? new ContractorsReportFile(ContractorsReportPdfRenderer.Render(document, images, generatedAt), ContractorsReportFileNames.PdfContentType, ContractorsReportFileNames.Pdf(document.Header))
-            : new ContractorsReportFile(ContractorsReportWordRenderer.Render(document, images, generatedAt), ContractorsReportFileNames.WordContentType, ContractorsReportFileNames.Word(document.Header));
+        var pdf = ContractorsReportPdfRenderer.Render(document, images);
+        var file = new ContractorsReportFile(pdf, ContractorsReportFileNames.PdfContentType, ContractorsReportFileNames.Pdf(document.Header));
         return new ContractorsReportBuildOutcome(file, document.Findings);
     }
 }

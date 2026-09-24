@@ -36,8 +36,8 @@ public partial class ProjectProgressContractorsReport
         catch (Exception ex) { error = ex.Message; }
     }
 
-    private static string DownloadTitle(ContractorsReportView report, string format) => report.Document.CanBeBuilt
-        ? $"Built from the register on every download as {format}"
+    private static string DownloadTitle(ContractorsReportView report) => report.Document.CanBeBuilt
+        ? "Built from the register on every download"
         : "Refused until the findings above are fixed and saved";
 
     private async Task SaveAsync()

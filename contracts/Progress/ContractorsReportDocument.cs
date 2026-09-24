@@ -12,6 +12,7 @@ namespace Jewel.JPMS.Contracts.Progress;
 public sealed record ContractorsReportDocument(
     ContractorsReportHeader Header,
     IReadOnlyList<ContractorsReportDay> Progress,
+    IReadOnlyList<string> InstructionsReceived,
     IReadOnlyList<ContractorsReportLookAheadItem> LookAhead,
     IReadOnlyList<ContractorsReportDecision> Decisions,
     IReadOnlyList<ContractorsReportVariation> Variations,
@@ -40,8 +41,8 @@ public sealed record ContractorsReportHeader(
     DateOnly DateOfIssue);
 
 /// <summary>One working day of Section 1 — Friday first, carrying the weekend, then Monday to
-/// Thursday. A day with no selected update is listed with no entries so the reader sees the
-/// week whole; a day with no photographs is left out of Section 9.</summary>
+/// Thursday. Only a day with a selected update is listed (Report 30 leaves an empty day out); a
+/// day with no photographs is left out of Section 9 too.</summary>
 public sealed record ContractorsReportDay(
     DateOnly Date,
     string Heading,
@@ -95,7 +96,8 @@ public sealed record ContractorsReportSubcontractor(
     decimal Value,
     DateOnly? TargetCompletion,
     int? AttendanceDays,
-    bool IsClientNominated);
+    bool IsClientNominated,
+    IReadOnlyList<DateOnly> DaysOnSite);
 
 /// <summary>A line the report may not carry as written — a banned word, named by section and line.</summary>
 public sealed record ContractorsReportFinding(string Section, string Line, string Reason);

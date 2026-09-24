@@ -1,26 +1,11 @@
 @using Jewel.JPMS.Contracts.Progress
 
-@* The document as it will print, read from the SAME composition the Word and PDF builds use —
+@* The document as it will print, read from the SAME composition the PDF build uses —
    so the page never shows one thing and the file another. Register-read sections are shown as
    read; the entered ones show what was last SAVED. *@
 
 <div class="space-y-5 text-sm">
-    <section>
-        <h3 class="font-semibold text-content mb-2">1. Progress Against Programme</h3>
-        @foreach (var day in Document.Progress)
-        {
-            <p class="text-xs font-semibold text-accent mt-2">@day.Heading</p>
-            @if (day.Entries.Count == 0)
-            {
-                <p class="text-content-subtle italic">No progress recorded.</p>
-            }
-            @foreach (var entry in day.Entries)
-            {
-                <p class="font-medium text-content">@entry.Title <span class="text-content-subtle font-normal">· @entry.Photos.Count photo@(entry.Photos.Count == 1 ? "" : "s")</span></p>
-                <p class="whitespace-pre-line text-content-muted">@entry.Description</p>
-            }
-        }
-    </section>
+    <ContractorsReportPreviewProgress Document="Document" />
     <section>
         <h3 class="font-semibold text-content mb-2">2. Look Ahead</h3>
         @if (!Document.LookAhead.Any(item => !item.IsDone))
@@ -40,9 +25,13 @@
         {
             <p class="text-content-subtle italic">No decisions or instructions are outstanding.</p>
         }
+        @if (Document.Decisions.Count > 0)
+        {
+            <p class="text-content-muted mb-1">@ContractorsReportPrintedText.DecisionsOpening</p>
+        }
         @foreach (var decision in Document.Decisions)
         {
-            <p class="text-content-muted"><span class="font-medium text-content">@decision.Reference</span> @decision.Title · @decision.Status · due @DateText(decision.ResponseDue)</p>
+            <p class="text-content-muted"><span class="font-medium text-content">@ContractorsReportPrintedText.DecisionRow(decision)</span> · @ContractorsReportPrintedText.DecisionStatus(decision, Document.Header.DateOfIssue)</p>
         }
     </section>
     <section>
@@ -88,7 +77,7 @@
         }
         @foreach (var subcontractor in Document.Subcontractors)
         {
-            <p class="text-content-muted"><span class="font-medium text-content">@subcontractor.Supplier</span> · @subcontractor.Scope</p>
+            <p class="text-content-muted"><span class="font-medium text-content">@subcontractor.Supplier</span> · @subcontractor.Scope · @ContractorsReportPrintedText.DaysOnSite(subcontractor)</p>
         }
     </section>
     <section>
@@ -99,7 +88,7 @@
         }
         @foreach (var day in Document.Progress.Where(day => day.Photos.Count > 0))
         {
-            <p class="text-content-muted"><span class="text-xs font-semibold text-accent">@day.Heading</span> · @day.Photos.Count photo@(day.Photos.Count == 1 ? "" : "s")</p>
+            <p class="text-xs font-semibold text-accent">@ContractorsReportPrintedText.PhotoDayHeading(day)</p>
         }
     </section>
 </div>

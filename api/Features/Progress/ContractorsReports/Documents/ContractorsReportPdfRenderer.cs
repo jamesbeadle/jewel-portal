@@ -11,11 +11,12 @@ namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Documents;
 /// <summary>
 /// The Contractor's Report as a PDF in the house style — the nine sections in PLG's order under
 /// the clean header. Built from the composed document and the loaded photographs, nothing else,
-/// so the same document gives the same pages (bar the provenance line).
+/// so the same document gives the same pages. It goes to the client, so its footer is the
+/// company, the report and the page — no provenance note.
 /// </summary>
 public static partial class ContractorsReportPdfRenderer
 {
-    public static byte[] Render(ContractorsReportDocument model, IReadOnlyDictionary<string, ContractorsReportImage> images, DateTimeOffset generatedAt)
+    public static byte[] Render(ContractorsReportDocument model, IReadOnlyDictionary<string, ContractorsReportImage> images)
     {
         EnsureFonts();
 
@@ -40,7 +41,7 @@ public static partial class ContractorsReportPdfRenderer
         AddBuildingControl(section, model.BuildingControl);
         AddSubcontractors(section, model);
         AddPhotographs(section, model, images);
-        HouseFooter(section, ContractorsReportText.Provenance(generatedAt));
+        HouseFooterWithPageNumbers(section, ContractorsReportPrintedText.FooterLead(model.Header));
 
         var renderer = new PdfDocumentRenderer { Document = document };
         renderer.RenderDocument();

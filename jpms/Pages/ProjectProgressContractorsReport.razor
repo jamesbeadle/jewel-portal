@@ -10,7 +10,7 @@
 
 @*
     One Contractor's Report: the entered fields on the left, the document it composes to on the
-    right. Save writes the record and re-reads the composition; Word and PDF are built from the
+    right. Save writes the record and re-reads the composition; the PDF is built from the
     register on every download and refused, by section and line, while the wording gate holds
     a finding. The portal never emails the report — a person downloads it and sends it.
 *@
@@ -23,10 +23,8 @@
                 <a href="@($"/projects/{ProjectId}/progress/contractors-reports")" class="btn-secondary">All reports</a>
                 @if (view is { } ready)
                 {
-                    <a href="@($"/api/contractors-reports/{ReportId}/docx")" class="btn-secondary @(ready.Document.CanBeBuilt ? "" : "pointer-events-none opacity-50")"
-                       title="@DownloadTitle(ready, "Word")">Download Word</a>
                     <a href="@($"/api/contractors-reports/{ReportId}/pdf")" class="btn-secondary @(ready.Document.CanBeBuilt ? "" : "pointer-events-none opacity-50")"
-                       title="@DownloadTitle(ready, "PDF")">Download PDF</a>
+                       title="@DownloadTitle(ready)">Download PDF</a>
                     @if (CanContribute)
                     {
                         <button type="button" class="btn-secondary text-negative" @onclick="() => deleting = true">Delete</button>
@@ -65,7 +63,8 @@
                                 <ContractorsReportNarrativeFields Draft="@entered" BuildingControl="@report.Document.BuildingControl" />
                             </Panel>
                             <Panel Title="8 · Specialist Subcontractors — attendance" BodyClass="p-0">
-                                <ContractorsReportAttendanceTable Draft="@entered" Subcontractors="@report.WorkOrdersOnSite" />
+                                <ContractorsReportAttendanceTable Draft="@entered" Subcontractors="@report.WorkOrdersOnSite"
+                                                                  WorkingDays="@ContractorsReportWeeks.WorkingDays(report.Report.PeriodStart, report.Report.PeriodEnd)" />
                             </Panel>
                             <Panel Title="9 · Site Photographs — which go in the report">
                                 <ContractorsReportPhotoPicker Draft="@entered" Photos="@report.PhotosOnSelectedUpdates" />

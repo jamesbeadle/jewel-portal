@@ -65,7 +65,8 @@ public partial class AuditTrail
         (AuditEventType.FormHealthAnswersRevealed, "Form health answers revealed"),
         (AuditEventType.FormRecordsDestroyed,    "Form records destroyed"),
         (AuditEventType.RightToWorkConfirmationSent, "Right to work confirmation sent"),
-        (AuditEventType.FormFolderDatesRecorded, "Form retention dates recorded")
+        (AuditEventType.FormFolderDatesRecorded, "Form retention dates recorded"),
+        (AuditEventType.ContractorsReportExported, "Contractor's Report exported")
     };
 
     // Mirrors the API's TriageRoles.AllowedToTriage — the audit trail is a triage-side tool.
@@ -211,6 +212,7 @@ public partial class AuditTrail
         AuditEventType.FormRecordsDestroyed   => "Form records destroyed",
         AuditEventType.RightToWorkConfirmationSent => "Right to work confirmation sent",
         AuditEventType.FormFolderDatesRecorded => "Form retention dates recorded",
+        AuditEventType.ContractorsReportExported => "Contractor's Report exported",
         _                                     => type.ToString()
     };
 

@@ -184,6 +184,23 @@ internal sealed partial class VariationsAndValuationsActions
                 + "find_by_reference resolves V72."),
 
         new AiAction(
+            Name: "set_variation_issued_date",
+            Area: "Variations",
+            Description: "Corrects the date an issued variation was sent to the client — the Issued "
+                + "stamp the register lists and the Contractor's Report's Section 4 Position line "
+                + "reads (\"Issued 4 August 2026 — no response received\"). Use it when the portal "
+                + "was moved to Issued after the client already had the variation.",
+            CommandType: typeof(SetVariationIssuedDate),
+            ResultType: typeof(VariationOrder),
+            AuthorisationType: typeof(SetVariationIssuedDateAuthorisation),
+            ValidationType: typeof(SetVariationIssuedDateValidation),
+            VisibleTo: VariationRoles.AllowedToManageVariations,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "issuedOn is yyyy-MM-dd, not in the future. A variation never issued (Quoting) is "
+                + "refused — move it with set_variation_order_status first. find_by_reference resolves V72."),
+
+        new AiAction(
             Name: "update_variation_order_narratives",
             Area: "Variations",
             Description: "Re-states the narrative sections of a variation order's official document "
