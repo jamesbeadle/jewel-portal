@@ -32,6 +32,17 @@ public sealed class PublicFormEndpoints
         return view is null ? new NotFoundObjectResult(FormSheetWording.NotAvailable) : new OkObjectResult(view);
     }
 
+    [Function("PublicFormPolicyFile")]
+    public async Task<IActionResult> PolicyFile(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "public-forms/{slug}/policy-file")] HttpRequest request,
+        string slug)
+    {
+        var inviteToken = request.Query["k"].ToString();
+        var packToken = request.Query["p"].ToString();
+        var file = await forms.OpenPolicyFileAsync(slug, inviteToken, packToken, request.HttpContext.RequestAborted);
+        return file is null ? new NotFoundResult() : new FileStreamResult(file.Content, file.ContentType);
+    }
+
     [Function("PublicFormPack")]
     public async Task<IActionResult> Pack(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "public-form-packs/{token}")] HttpRequest request,

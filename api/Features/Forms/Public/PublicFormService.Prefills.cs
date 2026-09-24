@@ -1,4 +1,6 @@
+using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Forms.Answers;
+using Jewel.JPMS.Api.Features.Registers.Policies;
 using Jewel.JPMS.Api.Features.Forms.Links;
 using Jewel.JPMS.Contracts.Forms;
 
@@ -13,14 +15,22 @@ public sealed partial class PublicFormService
     /// sensitive: a right-to-work or starter-checklist answer stays in its restricted store.
     /// </summary>
     private async Task<PublicFormInvitation> InvitationForAsync(
-        FormDefinition form, ResolvedLink link, CancellationToken cancellationToken)
+        FormDefinition form, ResolvedLink link, PolicyDocumentEntity? policy, CancellationToken cancellationToken)
     {
         var invite = link.Invite!;
         var carried = link.Pack is null
             ? new Dictionary<string, string>()
             : await CarriedAnswersAsync(link.Pack.FormPackId, cancellationToken);
-        var prefills = FormPrefills.For(form, invite.PersonName, invite.CompanyName, invite.Email, carried);
+        var prefills = WithThePolicy(FormPrefills.For(form, invite.PersonName, invite.CompanyName, invite.Email, carried), policy);
         return new PublicFormInvitation(invite.PersonName, invite.CompanyName, invite.Email, invite.SentByName, prefills);
+    }
+
+    private static IReadOnlyDictionary<string, string> WithThePolicy(IReadOnlyDictionary<string, string> prefills, PolicyDocumentEntity? policy)
+    {
+        if (policy is null) return prefills;
+        var withPolicy = new Dictionary<string, string>(prefills);
+        PolicySignOffSigning.StampAnswers(policy, withPolicy);
+        return withPolicy;
     }
 
     private async Task<Dictionary<string, string>> CarriedAnswersAsync(string formPackId, CancellationToken cancellationToken)

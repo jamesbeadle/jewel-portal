@@ -20,7 +20,8 @@ public enum Engagement
 /// <summary>
 /// One form sent to one named person through a link that is theirs alone (lib/invites.js in the
 /// dashboard): who it went to, who sent it and when, when it was opened and when it was used.
-/// The invite row is the evidential record — the name the person typed is only a prefill.
+/// The invite row is the evidential record — the name the person typed is only a prefill. A policy
+/// sign-off's invite carries the policy revision its sender chose.
 /// </summary>
 public sealed record FormInvite(
     string FormInviteId,
@@ -35,7 +36,8 @@ public sealed record FormInvite(
     DateTimeOffset? OpenedAt,
     DateTimeOffset? UsedAt,
     string? FormSubmissionId,
-    DateTimeOffset? CancelledAt)
+    DateTimeOffset? CancelledAt,
+    string? PolicyDocumentId = null)
 {
     public FormLinkState StateAt(DateTimeOffset now) => this switch
     {

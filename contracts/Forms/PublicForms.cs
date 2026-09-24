@@ -10,11 +10,15 @@ public sealed record PublicFormInvitation(
     string SentByName,
     IReadOnlyDictionary<string, string> Prefills);
 
+/// <summary>The policy revision a sign-off link was sent for: what to read, and the declaration signed to.</summary>
+public sealed record PublicPolicy(string Title, int Revision, string Declaration, bool HasFile);
+
 /// <summary>A public form as its page opens it: the form, who it is for when a link names them, or why the link is dead.</summary>
 public sealed record PublicFormView(
     string FormSlug,
     PublicFormInvitation? Invitation,
-    FormLinkProblem? Problem);
+    FormLinkProblem? Problem,
+    PublicPolicy? Policy = null);
 
 public sealed record PublicPackForm(string FormSlug, bool IsDone);
 

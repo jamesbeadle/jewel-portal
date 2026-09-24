@@ -107,7 +107,7 @@ public sealed class FormsRulesTests
     {
         var questionnaire = FormCatalogue.For(FormSlugs.SubcontractorQuestionnaire)!;
         Assert.Equal("Sub Contractor Questionnaire 2025", questionnaire.Title);
-        Assert.Equal(17, FormCatalogue.All.Count);
+        Assert.Equal(19, FormCatalogue.All.Count);
         Assert.Equal(8, FormCatalogue.HealthAndSafety.Count);
         Assert.All(FormCatalogue.HealthAndSafety, form => Assert.Equal(FormFilingKind.Site, form.FilingKind));
         Assert.All(FormCatalogue.HealthAndSafety, form => Assert.Contains("site", form.FilingKeys));

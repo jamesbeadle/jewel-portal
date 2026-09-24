@@ -1,0 +1,12 @@
+@if (Count > 0)
+{
+    <Pill Tone="Tone.Negative">@Count to chase</Pill>
+}
+@if (Count == 0)
+{
+    <Pill Tone="Tone.Positive">All signed</Pill>
+}
+
+@code {
+    [Parameter] public int Count { get; set; }
+}

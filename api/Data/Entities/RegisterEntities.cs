@@ -28,7 +28,8 @@ public sealed class CompanyRegisterItemEntity
 
 /// <summary>A published staff document requiring acknowledgement. A new revision of the same
 /// title is a NEW row (Revision + 1) with fresh sign-off rows — the old revision's evidence
-/// stays intact.</summary>
+/// stays intact. Declaration is what signing agrees to (blank reads as the standard line); the PDF
+/// people read is kept in the form evidence store's general container under FileBlobRef.</summary>
 public sealed class PolicyDocumentEntity
 {
     [Key, MaxLength(64)] public string PolicyDocumentId { get; set; } = "";
@@ -38,10 +39,14 @@ public sealed class PolicyDocumentEntity
     [MaxLength(256)]     public string PublishedByEmail { get; set; } = "";
     public DateTimeOffset PublishedAt { get; set; }
     public bool IsActive { get; set; } = true;
+    public string Declaration { get; set; } = "";
+    [MaxLength(256)]     public string FileName { get; set; } = "";
+    [MaxLength(512)]     public string FileBlobRef { get; set; } = "";
 }
 
 /// <summary>One recipient's acknowledgement of one policy revision: requested, then signed with
-/// a typed name and a server timestamp — the drawing-approval evidential pattern.</summary>
+/// a typed name and a server timestamp — the drawing-approval evidential pattern. Asked by a Policy
+/// sign-off form link, it carries the live invite and, once signed, the company, position and form.</summary>
 public sealed class PolicySignOffEntity
 {
     [Key, MaxLength(64)] public string PolicySignOffId { get; set; } = "";
@@ -50,4 +55,9 @@ public sealed class PolicySignOffEntity
     public DateTimeOffset RequestedAt { get; set; }
     public DateTimeOffset? SignedAt { get; set; }
     [MaxLength(256)]     public string SignedName { get; set; } = "";
+    [MaxLength(256)]     public string RecipientName { get; set; } = "";
+    [MaxLength(256)]     public string CompanyName { get; set; } = "";
+    [MaxLength(256)]     public string Position { get; set; } = "";
+    [MaxLength(64)]      public string? FormInviteId { get; set; }
+    [MaxLength(64)]      public string? FormSubmissionId { get; set; }
 }

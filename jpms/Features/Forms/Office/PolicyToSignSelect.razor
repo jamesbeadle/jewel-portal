@@ -1,0 +1,47 @@
+@using Jewel.JPMS.Contracts.Registers
+@using Jewel.JPMS.Features.Registers
+@inject PolicyDocumentsReadModel Policies
+@implements IDisposable
+
+<FormField Label="Policy to sign" Required Hint="@Hint">
+    <select class="field" value="@Value" disabled="@(!isLoaded)" @onchange="ChosenAsync">
+        @if (!isLoaded)
+        {
+            <option value="">Loading…</option>
+        }
+        @if (isLoaded)
+        {
+            <option value="">@(CurrentPolicies.Count == 0 ? "Nothing published — publish it on the Policies page" : "Choose a policy…")</option>
+            @foreach (var policy in CurrentPolicies)
+            {
+                <option value="@policy.PolicyDocumentId">@PolicyDeclarations.PolicyLine(policy.Title, policy.Revision)</option>
+            }
+        }
+    </select>
+</FormField>
+
+@code {
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    private bool isLoaded;
+
+    private IReadOnlyList<PolicyDocument> CurrentPolicies =>
+        (Policies.Current ?? Array.Empty<PolicyDocument>()).Where(policy => policy.IsActive).OrderBy(policy => policy.Title).ToList();
+
+    private string Hint =>
+        CurrentPolicies.FirstOrDefault(policy => policy.PolicyDocumentId == Value) is { } chosen && !chosen.HasFile
+            ? "This revision has no PDF attached yet — attach it on the Policies page so they can read it."
+            : "They read this revision's PDF and sign its declaration.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Policies.OnChanged += StateHasChanged;
+        try { await Policies.RefreshAsync(CancellationToken.None); }
+        finally { isLoaded = true; }
+    }
+
+    public void Dispose() => Policies.OnChanged -= StateHasChanged;
+
+    private Task ChosenAsync(ChangeEventArgs chosen) => ValueChanged.InvokeAsync(chosen.Value?.ToString() ?? "");
+}

@@ -1,4 +1,6 @@
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Registers.Policies;
+using Jewel.JPMS.Contracts.Forms;
 using Jewel.JPMS.Contracts.Registers;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,7 +23,14 @@ internal static class RegisterMapping
 
     public static PolicySignOff ToModel(this PolicySignOffEntity entity, PolicyDocumentEntity document) =>
         new(entity.PolicySignOffId, entity.PolicyDocumentId, document.Title, document.Summary,
-            document.Revision, entity.RecipientEmail, entity.RequestedAt, entity.SignedAt, entity.SignedName);
+            document.Revision, entity.RecipientEmail, entity.RequestedAt, entity.SignedAt, entity.SignedName,
+            entity.RecipientName, entity.CompanyName, entity.Position, entity.FormInviteId, entity.FormSubmissionId,
+            document.FileBlobRef.Length > 0);
+
+    public static PolicyDocument ToModel(this PolicyDocumentEntity entity, int signedCount, int outstandingCount) =>
+        new(entity.PolicyDocumentId, entity.Title, entity.Summary, entity.Revision, entity.PublishedByEmail,
+            entity.PublishedAt, entity.IsActive, signedCount, outstandingCount,
+            PolicyDeclarations.Of(entity.Declaration), entity.FileName);
 }
 
 public static class RegistersFeatureRegistration
@@ -40,6 +49,9 @@ public static class RegistersFeatureRegistration
             provider => provider.GetRequiredService<PublishPolicyDocumentHandler>());
         services.AddScoped<ListMyPolicySignOffsHandler>();
         services.AddScoped<SignPolicyHandler>();
+        services.AddScoped<ICommandHandler<ChasePolicySignOff, SentFormLink>, ChasePolicySignOffHandler>();
+        services.AddScoped<ChasePolicySignOffAuthorisation>();
+        services.AddScoped<ChasePolicySignOffValidation>();
         return services;
     }
 }

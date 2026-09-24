@@ -20,6 +20,7 @@ internal sealed partial class FormsActions
         EmailStamps: new[] { "SentByEmail" },
         NameStamps: new[] { "SentByName" },
         Notes: "engagedAs is Employee or SelfEmployed. The link lasts fourteen days and a little longer each time it is used. "
+            + "A policy sign-off is NOT in the pack unless policyDocumentId is given (a current revision from list_policy_sign_offs). "
             + "Say which forms the pack will hold before the user confirms.",
         RequiresConfirmation: true);
 

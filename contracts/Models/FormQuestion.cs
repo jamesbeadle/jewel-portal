@@ -13,7 +13,8 @@ public enum FormQuestionKind
     Signature = 6,
     Declaration = 7,
     Section = 8,
-    Table = 9
+    Table = 9,
+    Fixed = 10
 }
 
 /// <summary>A question asked only while another question holds a given answer ("If yes, give details").</summary>
@@ -24,7 +25,8 @@ public sealed record FormCondition(string QuestionKey, string Answer);
 /// the person reads, whether it must be answered, its hint, the choices, and when it is shown. A
 /// Section is a heading and never an answer. IsSpecialCategory marks health data under UK GDPR
 /// Article 9 that the office sees only when it is revealed. A Table is a paper register's ruled rows
-/// (FormTable), answered as one JSON string of rows under the question's key.
+/// (FormTable), answered as one JSON string of rows under the question's key. A Fixed question is
+/// shown, never typed: its answer is set by whoever sent the link and stamped again by the api.
 /// </summary>
 public sealed record FormQuestion(
     string Key,
@@ -79,6 +81,9 @@ public static class Ask
 
     public static FormQuestion Section(string key, string label, string hint = "") =>
         new(key, label, FormQuestionKind.Section, Optional, hint);
+
+    public static FormQuestion Fixed(string key, string label) =>
+        new(key, label, FormQuestionKind.Fixed, Optional);
 
     public static FormQuestion Table(string key, string label, bool isRequired, FormTable table, string hint = "") =>
         new(key, label, FormQuestionKind.Table, isRequired, hint, Table: table);

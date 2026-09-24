@@ -35,7 +35,10 @@ public sealed record RegisterItem(
     string Notes,
     bool IsActive);
 
-/// <summary>A published staff document requiring acknowledgement (NDA, policy, H&S doc).</summary>
+/// <summary>
+/// A published staff document requiring acknowledgement (NDA, policy, H&S doc): the revision's
+/// declaration (the standard line when its publisher wrote none) and the PDF people read, when attached.
+/// </summary>
 public sealed record PolicyDocument(
     string PolicyDocumentId,
     string Title,
@@ -45,9 +48,18 @@ public sealed record PolicyDocument(
     DateTimeOffset PublishedAt,
     bool IsActive,
     int SignedCount,
-    int OutstandingCount);
+    int OutstandingCount,
+    string Declaration = PolicyDeclarations.Standard,
+    string FileName = "")
+{
+    public bool HasFile => FileName.Length > 0;
+}
 
-/// <summary>One recipient's acknowledgement state for one policy revision.</summary>
+/// <summary>
+/// One recipient's acknowledgement state for one policy revision — signed on their own portal login,
+/// or through a Policy sign-off form link (FormInviteId), which also records who they are with and
+/// their position, and the form they sent (FormSubmissionId).
+/// </summary>
 public sealed record PolicySignOff(
     string PolicySignOffId,
     string PolicyDocumentId,
@@ -57,4 +69,15 @@ public sealed record PolicySignOff(
     string RecipientEmail,
     DateTimeOffset RequestedAt,
     DateTimeOffset? SignedAt,
-    string SignedName);
+    string SignedName,
+    string RecipientName = "",
+    string CompanyName = "",
+    string Position = "",
+    string? FormInviteId = null,
+    string? FormSubmissionId = null,
+    bool HasFile = false)
+{
+    public bool IsSigned => SignedAt is not null;
+
+    public bool IsByLink => FormInviteId is not null;
+}

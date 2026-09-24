@@ -15,7 +15,7 @@ public sealed class ListPolicyDocumentsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RegisterRoleSets.ManageRegisters.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!RegisterRoleSets.PolicyReaders.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(new ListPolicyDocuments(), request.HttpContext.RequestAborted));
     }
 }
@@ -41,9 +41,7 @@ public sealed class ListPolicyDocumentsHandler : IQueryHandler<ListPolicyDocumen
         return documents.Select(document =>
         {
             counts.TryGetValue(document.PolicyDocumentId, out var count);
-            return new PolicyDocument(document.PolicyDocumentId, document.Title, document.Summary,
-                document.Revision, document.PublishedByEmail, document.PublishedAt, document.IsActive,
-                count?.Signed ?? 0, count?.Outstanding ?? 0);
+            return document.ToModel(count?.Signed ?? 0, count?.Outstanding ?? 0);
         }).ToList();
     }
 }
@@ -62,7 +60,7 @@ public sealed class ListPolicySignOffsEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!RegisterRoleSets.ManageRegisters.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!RegisterRoleSets.PolicyReaders.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(new ListPolicySignOffs(policyDocumentId), request.HttpContext.RequestAborted));
     }
 }
@@ -101,8 +99,6 @@ public sealed class PublishPolicyDocumentEndpoint
         if (command is null) return new BadRequestResult();
         if (string.IsNullOrWhiteSpace(command.Title))
             return new BadRequestObjectResult(new[] { "Give the document a title." });
-        if (command.RecipientEmails is null || command.RecipientEmails.Count == 0)
-            return new BadRequestObjectResult(new[] { "Name at least one recipient." });
         return new OkObjectResult(await handler.HandleAsync(command, signedInUser.Email, request.HttpContext.RequestAborted));
     }
 }
@@ -130,12 +126,13 @@ public sealed class PublishPolicyDocumentHandler : ICommandHandler<PublishPolicy
             PolicyDocumentId = RegisterIdentifierFactory.NextPolicyDocumentId(),
             Title = command.Title.Trim(),
             Summary = command.Summary ?? "",
+            Declaration = (command.Declaration ?? "").Trim(),
             Revision = (previous?.Revision ?? 0) + 1,
             PublishedByEmail = publishedByEmail,
             PublishedAt = DateTimeOffset.UtcNow,
         };
         context.PolicyDocuments.Add(entity);
-        foreach (var email in command.RecipientEmails
+        foreach (var email in (command.RecipientEmails ?? Array.Empty<string>())
             .Select(email => email.Trim().ToLowerInvariant())
             .Where(email => email != "").Distinct())
         {
@@ -150,7 +147,6 @@ public sealed class PublishPolicyDocumentHandler : ICommandHandler<PublishPolicy
         await context.SaveChangesAsync(cancellationToken);
         var outstanding = await context.PolicySignOffs
             .CountAsync(row => row.PolicyDocumentId == entity.PolicyDocumentId, cancellationToken);
-        return new PolicyDocument(entity.PolicyDocumentId, entity.Title, entity.Summary, entity.Revision,
-            entity.PublishedByEmail, entity.PublishedAt, entity.IsActive, 0, outstanding);
+        return entity.ToModel(0, outstanding);
     }
 }

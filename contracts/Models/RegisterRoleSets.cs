@@ -11,4 +11,10 @@ public static class RegisterRoleSets
     public static readonly RoleSet ManageRegisters = RoleSet.Of(
         Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector,
         JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing, JpmsRoles.OfficeComplianceCoordinator);
+
+    /// <summary>Who reads the published policies and who has signed them: the register's managers, and
+    /// the forms office, who send the Policy sign-off form and chase it.</summary>
+    public static readonly RoleSet PolicyReaders = RoleSet.Of(
+        Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager,
+        JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.Accounts);
 }

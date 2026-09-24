@@ -25,6 +25,9 @@
     case FormQuestionKind.Signature:
         <FormSignatureField Form="Form" Question="Question" Draft="Draft" OnChanged="OnChanged" />
         break;
+    case FormQuestionKind.Fixed:
+        <p id="@InputId" class="form-sheet-fixed">@Answer</p>
+        break;
     case FormQuestionKind.Table:
         <FormTableInput Form="Form" Question="Question" Draft="Draft" OnChanged="OnChanged" />
         break;

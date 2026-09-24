@@ -15,6 +15,10 @@
                 }
             </select>
         </FormField>
+        @if (IsAPolicySignOff)
+        {
+            <PolicyToSignSelect @bind-Value="policyDocumentId" />
+        }
         <FormField Label="Their full name" Required Value="@personName" OnChange="typed => personName = typed" />
         <FormField Label="Their email" Required Value="@email" OnChange="typed => email = typed" InputType="email" />
         <FormField Label="Their company" Value="@companyName" OnChange="typed => companyName = typed"
@@ -37,6 +41,8 @@
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public EventCallback<SentLinkOutcome> OnSent { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
+    /// <summary>Opened from a policy's row: the Policy sign-off form, for that revision.</summary>
+    [Parameter] public string? PresetPolicyDocumentId { get; set; }
 
     private readonly FormWrite write = new();
     private string formSlug = FormCatalogue.All[0].Slug;
@@ -46,14 +52,32 @@
     private int days = FormLinkLifetimes.DefaultInviteDays;
     private string reason = "";
 
-    private bool IsReady => personName.Trim().Length > 0 && email.Trim().Length > 0;
+    private string policyDocumentId = "";
+
+    private bool IsAPolicySignOff => formSlug == FormSlugs.PolicySignOff;
+
+    private bool HasItsPolicy => !IsAPolicySignOff || policyDocumentId.Length > 0;
+
+    private bool IsReady => personName.Trim().Length > 0 && email.Trim().Length > 0 && HasItsPolicy;
+
+    private string? appliedPreset;
+
+    protected override void OnParametersSet()
+    {
+        var isANewPreset = PresetPolicyDocumentId is { Length: > 0 } && PresetPolicyDocumentId != appliedPreset;
+        appliedPreset = PresetPolicyDocumentId;
+        if (!isANewPreset) return;
+        formSlug = FormSlugs.PolicySignOff;
+        policyDocumentId = PresetPolicyDocumentId!;
+    }
 
     private void ChooseDays(ChangeEventArgs chosen) => days = int.TryParse(chosen.Value?.ToString(), out var picked) ? picked : days;
 
     private async Task SendAsync()
     {
         SentFormLink? sent = null;
-        var command = new SendFormInvite(formSlug, personName.Trim(), email.Trim(), companyName.Trim(), days, reason.Trim());
+        var policy = IsAPolicySignOff ? policyDocumentId : null;
+        var command = new SendFormInvite(formSlug, personName.Trim(), email.Trim(), companyName.Trim(), days, reason.Trim(), PolicyDocumentId: policy);
         var isSent = await write.RunAsync(async () => sent = await Commands.SendAsync(command, CancellationToken.None));
         if (!isSent || sent is null) return;
         personName = "";

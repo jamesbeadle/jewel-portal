@@ -51,4 +51,5 @@ public sealed class FormInviteEntity
     [MaxLength(64)]      public string? FormSubmissionId { get; set; }
     public DateTimeOffset? CancelledAt { get; set; }
     [MaxLength(512)]     public string Reason { get; set; } = "";
+    [MaxLength(64)]      public string? PolicyDocumentId { get; set; }
 }

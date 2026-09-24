@@ -35,6 +35,7 @@ internal static partial class AiFormsTools
         TrainingTool(),
         WorkstationsTool(),
         LicenceChecksTool(),
-        EmergencyContactsTool()
+        EmergencyContactsTool(),
+        PolicySignOffsTool()
     };
 }
