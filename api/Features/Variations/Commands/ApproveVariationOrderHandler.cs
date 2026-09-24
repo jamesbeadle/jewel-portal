@@ -41,7 +41,7 @@ public sealed class ApproveVariationOrderHandler : ICommandHandler<ApproveVariat
         if (order.Status == (int)VariationOrderStatus.Approved)
             throw new InvalidOperationException("This variation order is already approved.");
         if (order.Status == (int)VariationOrderStatus.Rejected)
-            throw new InvalidOperationException("A rejected variation order cannot be approved.");
+            throw new InvalidOperationException("A rejected variation order cannot be approved — reinstate it first.");
 
         var lines = command.Lines ?? Array.Empty<VariationLineInput>();
         var hasBreakdown = lines.Count > 0;

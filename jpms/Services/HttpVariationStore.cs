@@ -92,6 +92,13 @@ public sealed class HttpVariationStore : IVariationStore
         return order;
     }
 
+    public async Task<VariationOrder> ReinstateAsync(string variationOrderId, CancellationToken cancellationToken = default)
+    {
+        var order = await commands.SendAsync(new ReinstateVariationOrder(variationOrderId), cancellationToken);
+        OnChange?.Invoke();
+        return order;
+    }
+
     public async Task<VariationOrder> SetStatusAsync(string variationOrderId, VariationOrderStatus status, CancellationToken cancellationToken = default)
     {
         var order = await commands.SendAsync(new SetVariationOrderStatus(variationOrderId, status), cancellationToken);

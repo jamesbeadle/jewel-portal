@@ -27,14 +27,16 @@ public partial class ProjectVariationDetail
 
     private bool IsManualApproval => string.IsNullOrEmpty(order?.SelectedSubcontractorId);
 
-    // Empty (a plain pill renders) when the user can't manage the record or it has reached the
-    // terminal Rejected status. Approved -> Issued is never allowed directly.
+    // Empty (a plain pill renders) when the user can't manage the record; a rejected record offers
+    // only its reinstatement. Approved -> Issued is never allowed directly.
     private List<DropdownMenu.Item> StatusMenuItems
     {
         get
         {
-            if (order is null || !CanManage || order.Status == VariationOrderStatus.Rejected)
+            if (order is null || !CanManage)
                 return new List<DropdownMenu.Item>();
+            if (order.Status == VariationOrderStatus.Rejected)
+                return RejectedStatusMenuItems();
 
             return OrderStatusOptions
                 .Select(status =>
@@ -114,6 +116,10 @@ public partial class ProjectVariationDetail
                         Hint: "Re-prices the line on the Valuation Report and moves the CVR and committed budget by the difference",
                         Disabled: busy, Group: 1));
             }
+
+            var reinstateItem = ReinstateMenuItem();
+            if (CanReinstate)
+                items.Add(reinstateItem);
 
             // Group 2 — editing the record's wording and facts.
             items.Add(new(Label: "Edit title…",

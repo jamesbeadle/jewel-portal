@@ -96,7 +96,7 @@ status, value, dates, work orders), search, Excel export. Ladder: Quoting →
 Issued → Awaiting AI → Approved/Rejected; **only Approved writes value onto the
 valuation report**. Status chip moves side-effect-free stages directly; Approve
 and post-approval transitions link to the variation itself; pre-approval
-Rejected confirms first (terminal). Subcontractor variation requests are
+Rejected confirms first; a rejected variation is reinstated from its pill or Actions menu. Subcontractor variation requests are
 accepted (creating a variation) or rejected here; approved variations with a
 selected sub get "Issue WO". "Add variation manually" (manual_variation) for a
 standalone variation. RFI-led drafting happens on the request page.

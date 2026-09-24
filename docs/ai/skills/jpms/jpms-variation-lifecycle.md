@@ -40,7 +40,8 @@ it has got to: Quoting → Issued → Awaiting AI → Approved / Rejected. Never
   titles only.
 - Pre-approval estimate changes use set_variation_order_estimate; the status ladder's
   side-effect-free moves use set_variation_order_status; rejection and return-to-quoting keep
-  the same document alive.
+  the same document alive, and reinstate_variation_order brings a rejected one back (Issued, or
+  Quoting if never issued — unapproved, so a variation rejected after approval is re-approved).
 
 ## After approval
 

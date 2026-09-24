@@ -55,6 +55,10 @@ public static class VariationsFeatureRegistration
         services.AddScoped<ReturnVariationOrderToQuotingAuthorisation>();
         services.AddScoped<ReturnVariationOrderToQuotingValidation>();
 
+        services.AddScoped<ICommandHandler<ReinstateVariationOrder, VariationOrder>, ReinstateVariationOrderHandler>();
+        services.AddScoped<ReinstateVariationOrderAuthorisation>();
+        services.AddScoped<ReinstateVariationOrderValidation>();
+
         services.AddScoped<ICommandHandler<ReviseVariationOrderValue, VariationOrder>, ReviseVariationOrderValueHandler>();
         services.AddScoped<ReviseVariationOrderValueAuthorisation>();
         services.AddScoped<ReviseVariationOrderValueValidation>();

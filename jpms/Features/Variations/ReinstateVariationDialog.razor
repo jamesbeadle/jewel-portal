@@ -1,0 +1,44 @@
+@namespace Jewel.JPMS.Features.Variations
+
+<ConfirmDialog IsOpen="Order is not null"
+               Title="@($"Reinstate {Order?.DisplayNumber}?")"
+               ConfirmLabel="Reinstate variation"
+               BusyLabel="Reinstating…"
+               CancelLabel="Leave it rejected"
+               Busy="Busy"
+               OnConfirm="OnConfirm"
+               OnCancel="OnCancel">
+    @if (Order is { } order)
+    {
+        <div class="space-y-3">
+            @if (Error is not null)
+            {
+                <Notice Tone="Tone.Negative">@Error</Notice>
+            }
+            <p class="text-content"><span class="font-mono">@order.DisplayNumber</span> — @order.Title</p>
+            <p>Takes the rejection back. The variation returns to <span class="text-content font-medium">@ReturnsTo</span>.</p>
+            @if (WasApproved)
+            {
+                <p>It was approved before it was rejected, so it comes back unapproved: approve it again to put its
+                   lines back on the Valuation Report, CVR and cost-centre budgets.</p>
+            }
+        </div>
+    }
+</ConfirmDialog>
+
+@code {
+    /// <summary>The rejected variation being asked about; null when the dialog is closed.</summary>
+    [Parameter] public VariationOrder? Order { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool WasApproved => !string.IsNullOrWhiteSpace(Order?.VariationRef);
+
+    private bool WasIssued => Order?.IssuedAt is not null;
+
+    private string ReturnsTo => WasIssued
+        ? VariationOrderStatus.Issued.DisplayName()
+        : VariationOrderStatus.Quoting.DisplayName();
+}

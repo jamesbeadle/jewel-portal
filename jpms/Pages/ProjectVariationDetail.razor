@@ -258,6 +258,10 @@
             <DeclineVariationModal Order="order" @bind-IsOpen="decliningOrder" Busy="busy" Error="@error"
                                    OnConfirm="RejectOrder" />
 
+            <ReinstateVariationDialog Order="ReinstateCandidate" Busy="busy" Error="@error"
+                                      OnConfirm="ReinstateOrder"
+                                      OnCancel="() => reinstatingOrder = false" />
+
             <VariationOrderEmailModal Order="emailingOrder"
                                       OnClose="@(() => { emailingOrder = null; })"
                                       OnSent="@(_ => ReloadAsync())" />

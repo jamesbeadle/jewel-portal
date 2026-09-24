@@ -48,7 +48,9 @@ ONE document with one number through every stage — `VariationOrderStatus`:
 - **Approve is the money moment**: the approve modal builds priced lines (one
   per cost centre) and writes them to the Valuation Report, CVR and budgets.
   Reject after approval reverses the writes; "Return to quoting" un-approves.
-  Pre-approval Rejected is terminal (confirmed first).
+  Rejecting is confirmed first. "Reinstate" (reinstate_variation_order) brings a Rejected
+  variation back to Issued (Quoting if never issued); one rejected from Approved comes back
+  unapproved and is re-approved through the approve flow.
 - The 2026-07-23 `UnifyVariationOrders` migration folded VOQ+VO into one row.
   "VOQ" survives only in persisted identifiers: the `VariationOrderQuotes`
   table and `VariationOrderQuoteId` column, `VOQ-0072` references, `JPMS/VOQ-…`
