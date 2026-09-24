@@ -7,14 +7,23 @@ public static class SitePhotoText
 {
     public static string Summary(IReadOnlyList<SitePhoto> photos)
     {
-        var unfiled = photos.Count(photo => !photo.IsFiled);
+        var unfiled = photos.Count(photo => photo.IsWaiting);
         return $"{photos.Count} photograph{Plural(photos.Count)} in the pool · {unfiled} waiting to be filed.";
     }
 
-    public static string Standing(SitePhoto photo) =>
-        photo.IsFiled
-            ? $"Filed {DateText(photo.FiledAt)} onto progress update {photo.FiledToProgressUpdateId} · dropped by {photo.UploadedByEmail} {DateText(photo.UploadedAt)}"
-            : $"Unfiled · dropped by {photo.UploadedByEmail} {DateText(photo.UploadedAt)} · {FormatSize(photo.FileSizeBytes)}";
+    public static string Standing(SitePhoto photo)
+    {
+        var dropped = $"dropped by {photo.UploadedByEmail} {DateText(photo.UploadedAt)}";
+        if (photo.IsFiled) return $"Filed {DateText(photo.FiledAt)} onto progress update {photo.FiledToProgressUpdateId} · {dropped}";
+        if (photo.Archive is { } archive) return $"{ArchiveReading(archive)} · {dropped}";
+        return $"Unfiled · {dropped} · {FormatSize(photo.FileSizeBytes)}";
+    }
+
+    public static string ArchiveReading(SitePhotoArchive archive)
+    {
+        var week = archive.PeriodEnd is { } periodEnd ? $" for the week ending {DateText(periodEnd)}" : "";
+        return $"Archived {DateText(archive.ArchivedAt)}{week} · {archive.Reason.Label()}: {archive.Note}";
+    }
 
     public static string UploadSummary(SitePhotoUploadResult upload)
     {

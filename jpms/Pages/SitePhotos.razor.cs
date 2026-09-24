@@ -10,7 +10,7 @@ public partial class SitePhotos
     private IReadOnlyList<SitePhoto>? photos;
     private bool dataFailed;
     private bool isUploading;
-    private string? deleting;
+    private string? changing;
     private string? error;
     private string filter = SitePhotoFilter.Unfiled;
     private SitePhotoUploadResult? lastUpload;
@@ -65,17 +65,23 @@ public partial class SitePhotos
         isUploading = false;
     }
 
-    private async Task DeleteAsync(string sitePhotoId)
+    private Task DeleteAsync(string sitePhotoId) =>
+        ChangeAsync(sitePhotoId, () => Store.DeleteAsync(sitePhotoId, CancellationToken.None));
+
+    private Task RestoreAsync(string sitePhotoId) =>
+        ChangeAsync(sitePhotoId, () => Store.RestoreAsync(sitePhotoId, CancellationToken.None));
+
+    private async Task ChangeAsync(string sitePhotoId, Func<Task> change)
     {
-        deleting = sitePhotoId;
+        changing = sitePhotoId;
         error = null;
         try
         {
-            await Store.DeleteAsync(sitePhotoId, CancellationToken.None);
+            await change();
             if (viewing?.SitePhotoId == sitePhotoId) viewing = null;
             await LoadAsync();
         }
         catch (Exception ex) { error = ex.Message; }
-        deleting = null;
+        changing = null;
     }
 }

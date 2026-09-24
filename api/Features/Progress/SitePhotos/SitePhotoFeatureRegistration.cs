@@ -18,5 +18,12 @@ internal static class SitePhotoFeatureRegistration
 
         services.AddScoped<ICommandHandler<DeleteSitePhoto, Acknowledgement>, DeleteSitePhotoHandler>();
         services.AddScoped<DeleteSitePhotoAuthorisation>();
+
+        services.AddScoped<ICommandHandler<ArchiveSitePhotos, SitePhotoArchivingResult>, ArchiveSitePhotosHandler>();
+        services.AddScoped<ArchiveSitePhotosAuthorisation>();
+        services.AddScoped<ArchiveSitePhotosValidation>();
+
+        services.AddScoped<ICommandHandler<RestoreSitePhoto, Acknowledgement>, RestoreSitePhotoHandler>();
+        services.AddScoped<RestoreSitePhotoAuthorisation>();
     }
 }

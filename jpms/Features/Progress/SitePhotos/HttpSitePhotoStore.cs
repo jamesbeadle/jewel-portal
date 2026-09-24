@@ -38,6 +38,9 @@ public sealed class HttpSitePhotoStore : ISitePhotoStore
         return (await response.Content.ReadFromJsonAsync<SitePhotoUploadResult>(cancellationToken: cancellationToken))!;
     }
 
+    public Task RestoreAsync(string sitePhotoId, CancellationToken cancellationToken) =>
+        commands.SendAsync(new RestoreSitePhoto(sitePhotoId), cancellationToken);
+
     public Task DeleteAsync(string sitePhotoId, CancellationToken cancellationToken) =>
         commands.SendAsync(new DeleteSitePhoto(sitePhotoId), cancellationToken);
 

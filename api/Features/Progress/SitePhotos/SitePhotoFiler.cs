@@ -37,12 +37,8 @@ internal sealed class SitePhotoFiler
         var poolPhoto = await context.SitePhotos.FirstOrDefaultAsync(row => row.SitePhotoId == sitePhotoId, cancellationToken);
         if (poolPhoto is null)
             return new SitePhotoFilingOutcome(sitePhotoId, SitePhotoFiling.NotFound, null, "No pool photo has this id.");
-        if (poolPhoto.FiledToProgressUpdateId == update.ProgressUpdateId)
-            return new SitePhotoFilingOutcome(sitePhotoId, SitePhotoFiling.AlreadyOnUpdate, poolPhoto.FiledToProgressPhotoId,
-                "Already filed onto this update.");
-        if (poolPhoto.FiledToProgressUpdateId is not null)
-            return new SitePhotoFilingOutcome(sitePhotoId, SitePhotoFiling.AlreadyFiledElsewhere, poolPhoto.FiledToProgressPhotoId,
-                $"Already filed onto progress update {poolPhoto.FiledToProgressUpdateId} — a photo goes onto one update only.");
+        var refusal = SitePhotoFilingRefusals.For(poolPhoto, update.ProgressUpdateId);
+        if (refusal is not null) return refusal;
 
         var sameContent = photos.FirstOrDefault(photo => photo.ContentHash == poolPhoto.ContentHash);
         if (sameContent is not null)
