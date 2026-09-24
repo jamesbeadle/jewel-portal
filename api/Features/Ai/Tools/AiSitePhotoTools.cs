@@ -34,12 +34,15 @@ internal static class AiSitePhotoTools
             "The company-wide site photo pool: every photograph a person has dropped on the Site "
             + "photos page (Projects → Site photos) before anyone said which project or day it "
             + "belongs to, newest first — id, file name, size, its SHA-256 fingerprint, who dropped "
-            + "it and when, and where it has been filed (project + progress update) or null while "
-            + "it is still unfiled. Pass unfiledOnly to see what is waiting. Filing is by "
+            + "it and when, where it has been filed (project + progress update) or null while "
+            + "it is still unfiled, and — for a photo the weekly-report run set aside — its archive "
+            + "(reason, note, project, week). Pass unfiledOnly to see what is waiting (neither "
+            + "filed nor archived), archivedOnly to see the archive. Filing is by "
             + "fingerprint: hash the week's files on the laptop, match_site_photos tells you which "
             + "pool photos they are, file_site_photos puts them on the day's update.",
             AiToolSchema.Object(
-                ("unfiledOnly", "boolean", "Only photos no progress update has claimed yet.", false)),
+                ("unfiledOnly", "boolean", "Only photos still waiting: not filed and not archived.", false),
+                ("archivedOnly", "boolean", "Only photos archived as not for the report.", false)),
             AiToolKind.Read,
             ProgressRoles.Readers,
             ListSitePhotosAsync),
@@ -50,7 +53,8 @@ internal static class AiSitePhotoTools
             + "order asked: the pool photo (id, file name, filed-to update or null) or null when the "
             + "pool does not hold that file. THE STEP BEFORE DRAFTING A WEEKLY REPORT from a "
             + "WhatsApp export folder: hash every image in the folder, call this once with all the "
-            + "hashes, then file_site_photos the found ones onto each day's progress update by "
+            + "hashes, archive_site_photos the ones the jpms-contractors-report skill keeps out of "
+            + "the report, then file_site_photos the rest onto each day's progress update by "
             + "the day the export puts them on. A missing hash means the site manager has not "
             + "dropped that file in the pool yet — say which file names, never re-encode or paste "
             + "the image. " + HashingInstruction,
@@ -64,16 +68,19 @@ internal static class AiSitePhotoTools
     private static async Task<string> ListSitePhotosAsync(AiToolContext context, JsonElement input, CancellationToken ct)
     {
         var unfiledOnly = AiToolSchema.Flag(input, "unfiledOnly") ?? false;
+        var archivedOnly = AiToolSchema.Flag(input, "archivedOnly") ?? false;
         var photos = await context.Services
             .GetRequiredService<IQueryHandler<ListSitePhotos, IReadOnlyList<SitePhoto>>>()
-            .HandleAsync(new ListSitePhotos(unfiledOnly), ct);
+            .HandleAsync(new ListSitePhotos(unfiledOnly, archivedOnly), ct);
         return Serialise(new
         {
             ok = true,
             unfiledOnly,
+            archivedOnly,
             count = photos.Count,
-            unfiled = photos.Count(photo => !photo.IsFiled),
-            photos = photos.Select(Row)
+            unfiled = photos.Count(photo => photo.IsWaiting),
+            archived = photos.Count(photo => photo.IsArchived),
+            photos = photos.Select(AiSitePhotoRows.Row)
         });
     }
 
@@ -93,26 +100,11 @@ internal static class AiSitePhotoTools
             matches = matches.Matches.Select(match => new
             {
                 match.ContentHash,
-                photo = match.Photo is null ? null : Row(match.Photo)
+                photo = match.Photo is null ? null : AiSitePhotoRows.Row(match.Photo)
             }),
             note = matches.MissingCount == 0
                 ? "Every file is in the pool."
                 : "A missing hash is a file nobody has dropped in the pool yet (or a copy that was re-saved): ask for it to be dropped on the Site photos page, then match again."
         });
     }
-
-    private static object Row(SitePhoto photo) => new
-    {
-        photo.SitePhotoId,
-        photo.FileName,
-        photo.ContentType,
-        photo.FileSizeBytes,
-        photo.ContentHash,
-        photo.UploadedByEmail,
-        photo.UploadedAt,
-        isFiled = photo.IsFiled,
-        filedToProjectId = photo.FiledToProjectId,
-        filedToProgressUpdateId = photo.FiledToProgressUpdateId,
-        photo.FiledAt
-    };
 }

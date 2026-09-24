@@ -2,7 +2,7 @@ using Jewel.JPMS.Contracts.Progress;
 
 namespace Jewel.JPMS.Api.Features.Progress.SitePhotos;
 
-/// <summary>GET /api/site-photos[?unfiled=1] — the pool, newest upload first.</summary>
+/// <summary>GET /api/site-photos[?unfiled=1][?archived=1] — the pool, newest upload first.</summary>
 public sealed class ListSitePhotosEndpoint
 {
     private readonly SignedInUserResolver users;
@@ -23,7 +23,8 @@ public sealed class ListSitePhotosEndpoint
         if (!ProgressRoles.Readers.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var photos = await handler.HandleAsync(
-            new ListSitePhotos(QueryFlags.IsSet(request, "unfiled")), request.HttpContext.RequestAborted);
+            new ListSitePhotos(QueryFlags.IsSet(request, "unfiled"), QueryFlags.IsSet(request, "archived")),
+            request.HttpContext.RequestAborted);
         return new OkObjectResult(photos);
     }
 }

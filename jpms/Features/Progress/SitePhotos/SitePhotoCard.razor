@@ -3,11 +3,12 @@
 
 @*
     One pool photograph: the thumbnail (click opens the viewer), the file name, and its standing —
-    an unfiled photo is the working row; a filed one is dimmed and says which update took it.
-    Delete is the two-click InlineConfirm; a filed photo's copy on its update is not touched.
+    an unfiled photo is the working row; a filed one is dimmed and says which update took it; an
+    archived one (left out of the report by the weekly run) is dimmed with its reason and can be
+    restored. Delete is the two-click InlineConfirm; a filed photo's copy on its update is not touched.
 *@
 
-<div class="group flex flex-col rounded border border-line bg-surface @(Photo.IsFiled ? "opacity-70" : "")">
+<div class="group flex flex-col rounded border border-line bg-surface @(Photo.IsWaiting ? "" : "opacity-70")">
     <button type="button" class="block" @onclick="OnOpen" title="@Photo.FileName">
         <img src="@($"/api/site-photos/{Photo.SitePhotoId}/file?inline=1")" alt="@Photo.FileName" loading="lazy"
              class="h-32 w-full object-cover rounded-t" />
@@ -20,12 +21,22 @@
                 <Pill Tone="Tone.Positive">Filed</Pill>
                 <span class="ml-1">@DateText(Photo.FiledAt)</span>
             }
-            else
+            @if (Photo.Archive is { } archive)
+            {
+                <Pill Tone="Tone.Warning" Title="@SitePhotoText.ArchiveReading(archive)">Archived</Pill>
+                <span class="ml-1">@archive.Reason.Label()</span>
+            }
+            @if (Photo.IsWaiting)
             {
                 <Pill Tone="Tone.Muted">Unfiled</Pill>
                 <span class="ml-1">@DateText(Photo.UploadedAt)</span>
             }
         </span>
+        @if (CanDelete && Photo.IsArchived)
+        {
+            <button type="button" class="btn-secondary self-start" disabled="@Busy" @onclick="OnRestore"
+                    title="Bring this photograph back to Unfiled so it can go in the report">Restore</button>
+        }
         @if (CanDelete)
         {
             <InlineConfirm Label="Delete" Question="Delete from the pool? Click again" Ghost="true" Busy="@Busy"
@@ -41,4 +52,5 @@
     [Parameter] public bool Busy { get; set; }
     [Parameter] public EventCallback OnOpen { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }
+    [Parameter] public EventCallback OnRestore { get; set; }
 }

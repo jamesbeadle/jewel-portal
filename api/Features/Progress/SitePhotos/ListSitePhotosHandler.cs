@@ -11,7 +11,8 @@ public sealed class ListSitePhotosHandler : IQueryHandler<ListSitePhotos, IReadO
     public async Task<IReadOnlyList<SitePhoto>> HandleAsync(ListSitePhotos query, CancellationToken cancellationToken)
     {
         var rows = context.SitePhotos.AsNoTracking();
-        if (query.UnfiledOnly) rows = rows.Where(row => row.FiledToProgressUpdateId == null);
+        if (query.UnfiledOnly) rows = rows.Where(row => row.FiledToProgressUpdateId == null && row.ArchivedAt == null);
+        if (query.ArchivedOnly) rows = rows.Where(row => row.ArchivedAt != null);
 
         var entities = await rows
             .OrderByDescending(row => row.UploadedAt)

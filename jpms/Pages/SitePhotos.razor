@@ -15,7 +15,8 @@
     day. The assistant then hashes the export folder, asks the portal which pool photos those
     files are, and files each onto its project and day — so no image ever travels through the
     model. Filed photos stay listed (greyed, with where they went) so the pool always shows what
-    is still waiting.
+    is still waiting; photographs the run left out of the report are Archived, kept with their
+    reason, and can be restored.
 *@
 
 <Page OpenTo="ProgressRoles.Readers" CanAccess="@CanRead" AccessDeniedMessage="Site photos are for the internal team.">
@@ -27,7 +28,7 @@
             }
         </SubtitleContent>
         <Actions>
-            <FilterChips Items="Chips" Selected="@filter" OnSelect="key => filter = key" Disabled="@(photos is null)" AriaLabel="Filed" />
+            <FilterChips Items="Chips" Selected="@filter" OnSelect="key => filter = key" Disabled="@(photos is null)" AriaLabel="Standing" />
         </Actions>
     </PageHeader>
 
@@ -62,8 +63,9 @@
             <div class="grid gap-3 grid-cols-[repeat(auto-fill,minmax(9rem,1fr))]">
                 @foreach (var photo in Filtered)
                 {
-                    <SitePhotoCard Photo="photo" CanDelete="@CanContribute" Busy="@(deleting == photo.SitePhotoId)"
-                                   OnOpen="() => viewing = photo" OnDelete="() => DeleteAsync(photo.SitePhotoId)" />
+                    <SitePhotoCard Photo="photo" CanDelete="@CanContribute" Busy="@(changing == photo.SitePhotoId)"
+                                   OnOpen="() => viewing = photo" OnDelete="() => DeleteAsync(photo.SitePhotoId)"
+                                   OnRestore="() => RestoreAsync(photo.SitePhotoId)" />
                 }
             </div>
         }

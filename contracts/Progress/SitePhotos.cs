@@ -4,8 +4,9 @@ using Jewel.JPMS.Models;
 namespace Jewel.JPMS.Contracts.Progress;
 
 /// <summary>The pool as it stands, newest upload first; <paramref name="UnfiledOnly"/> narrows it
-/// to what no progress update has claimed yet.</summary>
-public sealed record ListSitePhotos(bool UnfiledOnly = false) : IQuery<IReadOnlyList<SitePhoto>>;
+/// to what is still waiting — neither filed nor archived — and <paramref name="ArchivedOnly"/>
+/// to what the weekly-report run set aside.</summary>
+public sealed record ListSitePhotos(bool UnfiledOnly = false, bool ArchivedOnly = false) : IQuery<IReadOnlyList<SitePhoto>>;
 
 /// <summary>Which pool photos a set of fingerprints are. One answer per hash asked, in the order
 /// asked; a hash the pool does not hold answers with a null photo.</summary>
@@ -33,7 +34,8 @@ public enum SitePhotoFiling
     AlreadyOnUpdate = 1,
     AlreadyFiledElsewhere = 2,
     NotFound = 3,
-    Failed = 4
+    Failed = 4,
+    Archived = 5
 }
 
 public sealed record SitePhotoFilingOutcome(

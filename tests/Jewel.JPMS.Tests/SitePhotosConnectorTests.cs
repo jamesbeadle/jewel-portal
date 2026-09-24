@@ -63,4 +63,21 @@ public sealed class SitePhotosConnectorTests
         Assert.True(delete!.RequiresConfirmation);
         Assert.Equal(typeof(DeleteSitePhoto), delete.CommandType);
     }
+
+    [Fact]
+    public void ArchiveSitePhotos_isTheContributorsWrite_readingTheReportSkill_andCanBeRestored()
+    {
+        var archive = AiActionRegistry.Find("archive_site_photos");
+        Assert.NotNull(archive);
+        Assert.Equal(typeof(ArchiveSitePhotos), archive!.CommandType);
+        Assert.Contains("ArchivedByEmail", archive.EmailStamps);
+        Assert.Equal(AiActionRegistry.Find("file_site_photos")!.VisibleTo, archive.VisibleTo);
+        Assert.Contains("jpms-contractors-report", archive.Notes);
+        Assert.Contains("archive_site_photos", AiToolCatalogue.Find(AiSitePhotoTools.MatchSitePhotos)!.Description);
+
+        var restore = AiActionRegistry.Find("restore_site_photo");
+        Assert.NotNull(restore);
+        Assert.Equal(typeof(RestoreSitePhoto), restore!.CommandType);
+        Assert.False(restore.VisibleTo.Includes(Role.Subcontractor));
+    }
 }

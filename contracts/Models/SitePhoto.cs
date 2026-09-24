@@ -7,7 +7,9 @@ namespace Jewel.JPMS.Models;
 /// the day — the export does, and the assistant files each photo onto its day by fingerprint.
 /// <see cref="ContentHash"/> is the SHA-256 (lower-case hex) of the file as received, which is
 /// exactly what <c>shasum -a 256</c> answers for the same file on a laptop. Filed once, to one
-/// progress update; the row stays so the pool can show what is still unfiled.
+/// progress update; the row stays so the pool can show what is still unfiled. A photo the
+/// weekly-report run judged not to be progress is archived instead (<see cref="Archive"/>) —
+/// kept, never filed, out of the waiting view.
 /// </summary>
 public sealed record SitePhoto(
     string SitePhotoId,
@@ -19,7 +21,12 @@ public sealed record SitePhoto(
     DateTimeOffset UploadedAt,
     string? FiledToProjectId,
     string? FiledToProgressUpdateId,
-    DateTimeOffset? FiledAt)
+    DateTimeOffset? FiledAt,
+    SitePhotoArchive? Archive = null)
 {
     public bool IsFiled => !string.IsNullOrEmpty(FiledToProgressUpdateId);
+
+    public bool IsArchived => Archive is not null;
+
+    public bool IsWaiting => !IsFiled && !IsArchived;
 }

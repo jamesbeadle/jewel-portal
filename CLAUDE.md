@@ -463,6 +463,20 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   `delete_site_photo` (confirm-first); pinned by `SitePhotosConnectorTests`, rules by
   `SitePhotoPoolTests`; page guide `/site-photos`; the jpms-operator skill carries the recipe.
   Never build a base64 image door on the connector — it was tried on 2026-09-16 and removed.
+- **The week's dump that is not progress is ARCHIVED, never filed and never deleted** (Nigel,
+  2026-09-24, for Jeremy's run: "identify images that are not going to be in the weekly report …
+  archive the images … keep them in archive just in case"). The criteria are the portal's stored
+  skill `jpms-contractors-report` (not progress, no value, documents/drawings, screenshots, photos
+  drawn over, snags/defects the chat names) — edited over MCP with `save_skill`, never copied into
+  the repo. The assistant looks at the images on the laptop, then `archive_site_photos` (batch,
+  per-photo `SitePhotoArchiveReason` + note, the report's project and `PeriodEnd`, `ArchivedByEmail`
+  stamped; a filed photo is refused per photo) BEFORE `file_site_photos`. Six `SitePhotos` columns
+  (`ArchivedAt`, `ArchiveReason`, `ArchiveNote`, `ArchivedForProjectId`, `ArchivedForPeriodEnd`,
+  `ArchivedByEmail`; migration `AddSitePhotoArchive`, script `add-site-photo-archive.sql`); the
+  model's `SitePhoto.Archive` / `IsWaiting` is the one reading — Unfiled means neither filed nor
+  archived. Filing an archived photo is refused (`SitePhotoFilingRefusals`) until
+  `restore_site_photo` / the card's Restore. The page's Archived chip lists them with the reason.
+  Pinned by `SitePhotoArchiveTests` and `SitePhotosConnectorTests`.
 
 ## The Sales pane: an enquiry tagged to its lead, and the estimate on it (api + jpms)
 

@@ -84,13 +84,17 @@ public static class SitePageGuides
             + "per project. Manually (Admin, Director, PM, Site Manager): drop or pick up to fifty "
             + "JPEG / PNG / HEIC files at a time — each is prepared exactly as a progress photo "
             + "(HEIC → JPEG, upright, 1600px, metadata stripped) and skipped when the pool already "
-            + "holds the same bytes; Unfiled / Filed / All chips; a thumbnail opens the viewer; "
+            + "holds the same bytes; Unfiled / Filed / Archived / All chips; a thumbnail opens the "
+            + "viewer; an Archived photo (left out of the report by the weekly run, with its "
+            + "reason) is kept and has Restore; "
             + "Delete (two-click) removes a pool photo and its file — a copy already filed onto an "
             + "update stays there. Nothing here names a project: filing does. The site manager "
             + "drops the week's files here from the SAME files that go in the WhatsApp export "
             + "folder, so the laptop-side SHA-256 of a file is the pool's key for it. You: "
-            + "list_site_photos (unfiledOnly is the working view), match_site_photos with the "
-            + "folder's hashes, file_site_photos per day onto the progress update, delete_site_photo "
+            + "list_site_photos (unfiledOnly is the working view, archivedOnly the archive), "
+            + "match_site_photos with the folder's hashes, archive_site_photos for what the "
+            + "jpms-contractors-report skill keeps out of the report, file_site_photos per day onto "
+            + "the progress update, restore_site_photo, delete_site_photo "
             + "(confirm first). You never upload here — a tool call carries words, not files."),
 
         new("/projects/{project}/documents", "Document register",

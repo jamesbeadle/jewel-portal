@@ -36,6 +36,48 @@ internal sealed partial class SiteAndProgressActions
                 + "first — the second filing is refused per photo, which is fine."),
 
         new AiAction(
+            Name: "archive_site_photos",
+            Area: SitePhotoArea,
+            Description: "Sets photographs in the site photo pool aside from the weekly "
+                + "Contractor's Report and KEEPS them — the week's dump that is not progress: "
+                + "screenshots, drawings and documents, photos someone has drawn over, snags and "
+                + "defects, and photos with no reason to be in a report. Each photo carries its "
+                + "reason and a note saying why; the batch carries the project and the "
+                + "Friday-to-Thursday week it was dumped for. An archived photo leaves the "
+                + "waiting view, is never filed, and can be restored. One outcome per photo: "
+                + "archived, already archived, already filed (refused — it is on an update), or "
+                + "not found.",
+            CommandType: typeof(ArchiveSitePhotos),
+            ResultType: typeof(SitePhotoArchivingResult),
+            AuthorisationType: typeof(ArchiveSitePhotosAuthorisation),
+            ValidationType: typeof(ArchiveSitePhotosValidation),
+            VisibleTo: ProgressRoles.Contributors,
+            EmailStamps: new[] { "ArchivedByEmail" },
+            NameStamps: Array.Empty<string>(),
+            Notes: "Judge each photo by the jpms-contractors-report skill's criteria for what never "
+                + "goes in the report — load it first. sitePhotoIds are the pool ids "
+                + "match_site_photos returned; the note is one sentence the site manager would "
+                + "recognise (\"screenshot of the kitchen drawing\", \"WhatsApp calls it a snag on "
+                + "the landing\"). projectId and periodEnd (the Thursday that ends the week) are "
+                + "the report's. List what you archived, by file name and reason, before filing "
+                + "the rest. Up to fifty per call."),
+
+        new AiAction(
+            Name: "restore_site_photo",
+            Area: SitePhotoArea,
+            Description: "Brings one archived photograph back into the site photo pool's waiting "
+                + "view so it can be filed onto a progress update — for a photo the weekly-report "
+                + "run set aside that belongs in the report after all.",
+            CommandType: typeof(RestoreSitePhoto),
+            ResultType: typeof(Acknowledgement),
+            AuthorisationType: typeof(RestoreSitePhotoAuthorisation),
+            ValidationType: null,
+            VisibleTo: ProgressRoles.Contributors,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "list_site_photos with archivedOnly lists the archive with each photo's reason."),
+
+        new AiAction(
             Name: "delete_site_photo",
             Area: SitePhotoArea,
             Description: "Deletes one photograph from the site photo pool permanently, with its "
