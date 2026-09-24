@@ -38,6 +38,18 @@ public sealed class ContractorsReportReviewTests
     }
 
     [Fact]
+    public void TheHeader_readsTheSiteAddress_andThePeriodsWeekdays()
+    {
+        var header = new ContractorsReportHeader("By France", ContractorsReportPrintedText.AddressOf("Leas Green", "Chislehurst", " ", "BR7 6HD"),
+            "JBB-2026-001", "Contractor's Report No. 31", "21", null, "PoW Rev 9",
+            new DateOnly(2026, 9, 18), new DateOnly(2026, 9, 24), "", "", new DateOnly(2026, 9, 25));
+
+        Assert.Equal("By France, Leas Green, Chislehurst, BR7 6HD", ContractorsReportPrintedText.ProjectLine(header));
+        Assert.Equal("Friday 18 September 2026 – Thursday 24 September 2026", ContractorsReportPrintedText.PeriodLong(header));
+        Assert.Equal("1. Progress Against Programme — PoW Rev 9", ContractorsReportPrintedText.ProgressHeading("1. Progress Against Programme", header.ProgrammeReference));
+    }
+
+    [Fact]
     public void AFirmsDaysOnSite_readAsTheWeekdays()
     {
         var firm = new ContractorsReportSubcontractor("wo", "WO-0049", "Sussex Tiling", "Tiling", "Tiling", 0m, null, 3, false,

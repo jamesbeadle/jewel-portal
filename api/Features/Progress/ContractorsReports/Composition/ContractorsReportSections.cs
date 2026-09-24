@@ -5,7 +5,7 @@ namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
 public static class ContractorsReportSections
 {
     public const string Progress = "1. Progress Against Programme";
-    public const string LookAhead = "2. Look Ahead";
+    public const string LookAhead = "2. Look Ahead — Next Two Weeks";
     public const string Decisions = "3. Decisions / Instructions Needed";
     public const string Variations = "4. Variations";
     public const string Neighbours = "5. Neighbours";

@@ -28,6 +28,7 @@ public sealed record ContractorsReportDocument(
 
 public sealed record ContractorsReportHeader(
     string ProjectName,
+    string SiteAddress,
     string ProjectReference,
     string DocumentTitle,
     string ValuationNumber,

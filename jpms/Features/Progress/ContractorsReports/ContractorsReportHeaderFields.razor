@@ -20,7 +20,7 @@
         <input type="date" class="field" value="@Draft.DateOfIssue.ToString("yyyy-MM-dd")" @onchange="OnDateChanged" />
     </FormField>
     <FormField Label="Period" Hint="Friday to Thursday — fixed when the report was opened.">
-        <input class="field" disabled value="@($"{DateText(Header.PeriodStart)} – {DateText(Header.PeriodEnd)}")" />
+        <input class="field" disabled value="@ContractorsReportPrintedText.PeriodLong(Header)" />
     </FormField>
 </div>
 

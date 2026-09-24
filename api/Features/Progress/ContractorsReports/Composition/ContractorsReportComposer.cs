@@ -52,10 +52,11 @@ public sealed class ContractorsReportComposer
     {
         var project = await context.Projects.AsNoTracking()
             .Where(row => row.ProjectId == report.ProjectId)
-            .Select(row => new { row.Name, row.Reference })
+            .Select(row => new { row.Name, row.Reference, row.AddressLine, row.Town, row.Postcode })
             .FirstAsync(cancellationToken);
+        var address = ContractorsReportPrintedText.AddressOf(project.AddressLine, project.Town, project.Postcode);
         return new ContractorsReportHeader(
-            project.Name, project.Reference, report.DisplayTitle, report.ValuationNumber,
+            project.Name, address, project.Reference, report.DisplayTitle, report.ValuationNumber,
             await ContractorsReportCertificates.LastNumberAsync(context, report.ProjectId, cancellationToken),
             report.ProgrammeReference, report.PeriodStart, report.PeriodEnd,
             report.PreparedByName, report.IssuedTo, report.DateOfIssue);

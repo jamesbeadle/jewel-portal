@@ -69,7 +69,7 @@ public class ContractorsReportTests
     [Fact]
     public void FileName_carriesTheReferenceNumberAndWeekEnding()
     {
-        var header = new ContractorsReportHeader("By France", "JBB-2026-001", "Contractor's Report No. 30", "15", "15", "",
+        var header = new ContractorsReportHeader("By France", "Leas Green, Chislehurst, BR7 6HD", "JBB-2026-001", "Contractor's Report No. 30", "15", "15", "",
             new DateOnly(2026, 9, 4), new DateOnly(2026, 9, 10), "", "", new DateOnly(2026, 9, 11));
         Assert.Equal("JBB-2026-001 - Contractor's Report No. 30 - w-e 10 Sept 2026.pdf", ContractorsReportFileNames.Pdf(header));
     }

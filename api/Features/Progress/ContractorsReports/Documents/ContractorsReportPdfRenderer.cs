@@ -54,10 +54,10 @@ public static partial class ContractorsReportPdfRenderer
     {
         CleanHeader(section, header.DocumentTitle, header.ProjectName,
             new HeaderFact(header.ProjectReference.ToUpperInvariant()),
-            new HeaderFact($"Period  {ContractorsReportText.Period(header)}"),
-            new HeaderFact($"Date of issue  {ContractorsReportText.Date(header.DateOfIssue)}"));
+            new HeaderFact($"Date of issue  {ContractorsReportPrintedText.DayAndDate(header.DateOfIssue)}"));
 
         var table = GridTable(section);
+        GridRow(table, "Project", ContractorsReportPrintedText.ProjectLine(header), "Reporting period", ContractorsReportPrintedText.PeriodLong(header));
         GridRow(table, "Valuation No.", ContractorsReportText.ValuationNumber(header), "Programme reference", ContractorsReportText.OrDash(header.ProgrammeReference));
         GridRow(table, "Prepared by", ContractorsReportText.OrDash(header.PreparedByName), "Issued to", ContractorsReportText.OrDash(header.IssuedTo));
         SpaceAfterTable(section);
