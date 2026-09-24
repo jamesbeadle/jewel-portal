@@ -6,7 +6,16 @@
 -- ceiling sat on every column people write sentences into, so 82 columns
 -- across 63 tables go to nvarchar(max), and
 -- ReconciliationPackages.Name goes from 128 to 256 to take a work order's title.
--- Widening only: no data changes; no index or constraint touches these columns.
+-- Widening only: no data changes; no index touches these columns.
+--
+-- A column added with a default ("") carries a default constraint, and SQL Server
+-- refuses to change the type of a column a constraint depends on (Msg 5074 — the
+-- first run on 2026-09-24 stopped at DF__BidPackag__Speci…, and rolled back whole).
+-- So each column's default is dropped, the column widened, and the SAME default put
+-- back under the SAME name; auto-created statistics on it (which block the change the
+-- same way) are dropped and SQL Server recreates them when next needed. XACT_ABORT
+-- makes any failure roll back everything: the database is either fully migrated or
+-- untouched.
 --
 -- House-style scoped script (see CLAUDE.md "Database migrations"): applies the
 -- migration directly and records its id in __EFMigrationsHistory so EF never
@@ -18,94 +27,154 @@
 --          -i widen-written-text-columns.sql -b -o widen-written-text-columns.log
 -- ============================================================================
 
+SET XACT_ABORT ON;
+GO
+
 BEGIN TRANSACTION;
 GO
 
 IF NOT EXISTS (SELECT * FROM [__EFMigrationsHistory] WHERE [MigrationId] = N'20260924160000_WidenWrittenTextColumns')
 BEGIN
-    ALTER TABLE [ArchitectInstructions] ALTER COLUMN [Notes] nvarchar(max) NULL;
-    ALTER TABLE [BidPackageLineItems] ALTER COLUMN [Description] nvarchar(max) NOT NULL;
-    ALTER TABLE [BidPackages] ALTER COLUMN [SpecificationSummary] nvarchar(max) NOT NULL;
-    ALTER TABLE [BoqLineItems] ALTER COLUMN [Description] nvarchar(max) NOT NULL;
-    ALTER TABLE [ClaimLines] ALTER COLUMN [Comments] nvarchar(max) NOT NULL;
-    ALTER TABLE [ClaimLines] ALTER COLUMN [Description] nvarchar(max) NOT NULL;
-    ALTER TABLE [CompanyRegisterItems] ALTER COLUMN [Notes] nvarchar(max) NOT NULL;
-    ALTER TABLE [ContraCharges] ALTER COLUMN [Description] nvarchar(max) NOT NULL;
-    ALTER TABLE [Dayworks] ALTER COLUMN [Description] nvarchar(max) NOT NULL;
-    ALTER TABLE [Defects] ALTER COLUMN [Description] nvarchar(max) NOT NULL;
-    ALTER TABLE [DrawingIssueRecords] ALTER COLUMN [Notes] nvarchar(max) NOT NULL;
-    ALTER TABLE [DrivingLicenceChecks] ALTER COLUMN [Note] nvarchar(max) NOT NULL;
-    ALTER TABLE [Eots] ALTER COLUMN [Reason] nvarchar(max) NOT NULL;
-    ALTER TABLE [HsAuditItems] ALTER COLUMN [Findings] nvarchar(max) NOT NULL;
-    ALTER TABLE [HsAudits] ALTER COLUMN [FurtherComments] nvarchar(max) NOT NULL;
-    ALTER TABLE [HsRecords] ALTER COLUMN [Summary] nvarchar(max) NOT NULL;
-    ALTER TABLE [ImagineRounds] ALTER COLUMN [Brief] nvarchar(max) NOT NULL;
-    ALTER TABLE [InventoryItems] ALTER COLUMN [LocationDetails] nvarchar(max) NOT NULL;
-    ALTER TABLE [InventoryItems] ALTER COLUMN [ProductDetails] nvarchar(max) NOT NULL;
-    ALTER TABLE [KpiEmails] ALTER COLUMN [Note] nvarchar(max) NOT NULL;
-    ALTER TABLE [LabourChaseDismissals] ALTER COLUMN [Reason] nvarchar(max) NOT NULL;
-    ALTER TABLE [LabourSettlementVariances] ALTER COLUMN [Reason] nvarchar(max) NOT NULL;
-    ALTER TABLE [LadClaims] ALTER COLUMN [Description] nvarchar(max) NOT NULL;
-    ALTER TABLE [LeadActivities] ALTER COLUMN [Summary] nvarchar(max) NOT NULL;
-    ALTER TABLE [LeadEstimateLines] ALTER COLUMN [Description] nvarchar(max) NOT NULL;
-    ALTER TABLE [LeadEstimates] ALTER COLUMN [Exclusions] nvarchar(max) NOT NULL;
-    ALTER TABLE [LeadEstimates] ALTER COLUMN [Notes] nvarchar(max) NOT NULL;
-    ALTER TABLE [LeadEstimates] ALTER COLUMN [Scope] nvarchar(max) NOT NULL;
-    ALTER TABLE [Leads] ALTER COLUMN [LostReason] nvarchar(max) NULL;
-    ALTER TABLE [Leads] ALTER COLUMN [Notes] nvarchar(max) NOT NULL;
-    ALTER TABLE [Leads] ALTER COLUMN [Summary] nvarchar(max) NOT NULL;
-    ALTER TABLE [MobilisationItems] ALTER COLUMN [Description] nvarchar(max) NOT NULL;
-    ALTER TABLE [PolicyDocuments] ALTER COLUMN [Summary] nvarchar(max) NOT NULL;
-    ALTER TABLE [ProgrammeVariationEffects] ALTER COLUMN [Note] nvarchar(max) NOT NULL;
-    ALTER TABLE [ProgressReports] ALTER COLUMN [Introduction] nvarchar(max) NOT NULL;
-    ALTER TABLE [ProgressReports] ALTER COLUMN [UpcomingWorks] nvarchar(max) NOT NULL;
-    ALTER TABLE [ProgressReports] ALTER COLUMN [WorkCompleted] nvarchar(max) NOT NULL;
-    ALTER TABLE [ProjectContractAmendments] ALTER COLUMN [Notes] nvarchar(max) NULL;
-    ALTER TABLE [ProjectContracts] ALTER COLUMN [BespokeDeviations] nvarchar(max) NULL;
-    ALTER TABLE [QsAccruals] ALTER COLUMN [Description] nvarchar(max) NOT NULL;
-    ALTER TABLE [QuoteLineItems] ALTER COLUMN [Description] nvarchar(max) NOT NULL;
-    ALTER TABLE [Quotes] ALTER COLUMN [Notes] nvarchar(max) NOT NULL;
-    ALTER TABLE [RequestItems] ALTER COLUMN [Response] nvarchar(max) NULL;
-    ALTER TABLE [RequestMessages] ALTER COLUMN [Body] nvarchar(max) NOT NULL;
-    ALTER TABLE [Requests] ALTER COLUMN [ClientNotes] nvarchar(max) NULL;
-    ALTER TABLE [Requests] ALTER COLUMN [InternalNotes] nvarchar(max) NULL;
-    ALTER TABLE [Requests] ALTER COLUMN [RelatedDrawingSpec] nvarchar(max) NULL;
-    ALTER TABLE [RightToWorkChecks] ALTER COLUMN [Notes] nvarchar(max) NOT NULL;
-    ALTER TABLE [SalesProposals] ALTER COLUMN [DeclineReason] nvarchar(max) NULL;
-    ALTER TABLE [SalesStrategies] ALTER COLUMN [Brief] nvarchar(max) NOT NULL;
-    ALTER TABLE [SalesStrategies] ALTER COLUMN [Evidence] nvarchar(max) NOT NULL;
-    ALTER TABLE [SalesStrategies] ALTER COLUMN [Hypothesis] nvarchar(max) NOT NULL;
-    ALTER TABLE [SalesStrategies] ALTER COLUMN [Proposition] nvarchar(max) NOT NULL;
-    ALTER TABLE [SiteInstructions] ALTER COLUMN [Instruction] nvarchar(max) NOT NULL;
-    ALTER TABLE [SitePhotos] ALTER COLUMN [ArchiveNote] nvarchar(max) NOT NULL;
-    ALTER TABLE [SiteReports] ALTER COLUMN [Narrative] nvarchar(max) NOT NULL;
-    ALTER TABLE [SubcontractorVariationRequests] ALTER COLUMN [RejectionReason] nvarchar(max) NOT NULL;
-    ALTER TABLE [TenderEnquiries] ALTER COLUMN [DecisionNote] nvarchar(max) NOT NULL;
-    ALTER TABLE [TenderEnquiries] ALTER COLUMN [ScopeSummary] nvarchar(max) NOT NULL;
-    ALTER TABLE [Timesheets] ALTER COLUMN [RejectionReason] nvarchar(max) NOT NULL;
-    ALTER TABLE [TodoItems] ALTER COLUMN [Notes] nvarchar(max) NOT NULL;
-    ALTER TABLE [UsefulInformationNotes] ALTER COLUMN [Body] nvarchar(max) NOT NULL;
-    ALTER TABLE [ValuationInvoiceEvents] ALTER COLUMN [Note] nvarchar(max) NOT NULL;
-    ALTER TABLE [ValuationInvoices] ALTER COLUMN [RejectionReason] nvarchar(max) NULL;
-    ALTER TABLE [ValuationLineItems] ALTER COLUMN [Comments] nvarchar(max) NOT NULL;
-    ALTER TABLE [ValuationLineItems] ALTER COLUMN [Description] nvarchar(max) NOT NULL;
-    ALTER TABLE [VariationOrderMessages] ALTER COLUMN [Body] nvarchar(max) NOT NULL;
-    ALTER TABLE [VariationOrderQuotes] ALTER COLUMN [CommercialBasis] nvarchar(max) NULL;
-    ALTER TABLE [VariationOrderQuotes] ALTER COLUMN [Exclusions] nvarchar(max) NULL;
-    ALTER TABLE [VariationOrderQuotes] ALTER COLUMN [ProgrammeImpact] nvarchar(max) NULL;
-    ALTER TABLE [VatAnalyses] ALTER COLUMN [Notes] nvarchar(max) NOT NULL;
-    ALTER TABLE [WalkRoundNotes] ALTER COLUMN [Notes] nvarchar(max) NOT NULL;
-    ALTER TABLE [WeeklyCashflowItems] ALTER COLUMN [Notes] nvarchar(max) NULL;
-    ALTER TABLE [WorkOrderLines] ALTER COLUMN [Description] nvarchar(max) NOT NULL;
-    ALTER TABLE [WorkOrders] ALTER COLUMN [ProgrammeNotes] nvarchar(max) NOT NULL;
-    ALTER TABLE [WorkOrders] ALTER COLUMN [Scope] nvarchar(max) NOT NULL;
-    ALTER TABLE [WorkerAbsences] ALTER COLUMN [Note] nvarchar(max) NOT NULL;
-    ALTER TABLE [WorkerSettlementLines] ALTER COLUMN [Note] nvarchar(max) NOT NULL;
-    ALTER TABLE [WorkstationActions] ALTER COLUMN [Note] nvarchar(max) NOT NULL;
-    ALTER TABLE [XeroDisputeMessages] ALTER COLUMN [Body] nvarchar(max) NOT NULL;
-    ALTER TABLE [ReconciliationPackages] ALTER COLUMN [Name] nvarchar(256) NOT NULL;
-    ALTER TABLE [XeroLedgerLines] ALTER COLUMN [Description] nvarchar(max) NULL;
-    ALTER TABLE [XeroLedgerLines] ALTER COLUMN [Note] nvarchar(max) NULL;
+    DECLARE @columns TABLE (TableName sysname, ColumnName sysname, NewType nvarchar(32), Nullability nvarchar(8));
+    INSERT INTO @columns (TableName, ColumnName, NewType, Nullability) VALUES
+    (N'ArchitectInstructions', N'Notes', N'nvarchar(max)', N'NULL'),
+    (N'BidPackageLineItems', N'Description', N'nvarchar(max)', N'NOT NULL'),
+    (N'BidPackages', N'SpecificationSummary', N'nvarchar(max)', N'NOT NULL'),
+    (N'BoqLineItems', N'Description', N'nvarchar(max)', N'NOT NULL'),
+    (N'ClaimLines', N'Comments', N'nvarchar(max)', N'NOT NULL'),
+    (N'ClaimLines', N'Description', N'nvarchar(max)', N'NOT NULL'),
+    (N'CompanyRegisterItems', N'Notes', N'nvarchar(max)', N'NOT NULL'),
+    (N'ContraCharges', N'Description', N'nvarchar(max)', N'NOT NULL'),
+    (N'Dayworks', N'Description', N'nvarchar(max)', N'NOT NULL'),
+    (N'Defects', N'Description', N'nvarchar(max)', N'NOT NULL'),
+    (N'DrawingIssueRecords', N'Notes', N'nvarchar(max)', N'NOT NULL'),
+    (N'DrivingLicenceChecks', N'Note', N'nvarchar(max)', N'NOT NULL'),
+    (N'Eots', N'Reason', N'nvarchar(max)', N'NOT NULL'),
+    (N'HsAuditItems', N'Findings', N'nvarchar(max)', N'NOT NULL'),
+    (N'HsAudits', N'FurtherComments', N'nvarchar(max)', N'NOT NULL'),
+    (N'HsRecords', N'Summary', N'nvarchar(max)', N'NOT NULL'),
+    (N'ImagineRounds', N'Brief', N'nvarchar(max)', N'NOT NULL'),
+    (N'InventoryItems', N'LocationDetails', N'nvarchar(max)', N'NOT NULL'),
+    (N'InventoryItems', N'ProductDetails', N'nvarchar(max)', N'NOT NULL'),
+    (N'KpiEmails', N'Note', N'nvarchar(max)', N'NOT NULL'),
+    (N'LabourChaseDismissals', N'Reason', N'nvarchar(max)', N'NOT NULL'),
+    (N'LabourSettlementVariances', N'Reason', N'nvarchar(max)', N'NOT NULL'),
+    (N'LadClaims', N'Description', N'nvarchar(max)', N'NOT NULL'),
+    (N'LeadActivities', N'Summary', N'nvarchar(max)', N'NOT NULL'),
+    (N'LeadEstimateLines', N'Description', N'nvarchar(max)', N'NOT NULL'),
+    (N'LeadEstimates', N'Exclusions', N'nvarchar(max)', N'NOT NULL'),
+    (N'LeadEstimates', N'Notes', N'nvarchar(max)', N'NOT NULL'),
+    (N'LeadEstimates', N'Scope', N'nvarchar(max)', N'NOT NULL'),
+    (N'Leads', N'LostReason', N'nvarchar(max)', N'NULL'),
+    (N'Leads', N'Notes', N'nvarchar(max)', N'NOT NULL'),
+    (N'Leads', N'Summary', N'nvarchar(max)', N'NOT NULL'),
+    (N'MobilisationItems', N'Description', N'nvarchar(max)', N'NOT NULL'),
+    (N'PolicyDocuments', N'Summary', N'nvarchar(max)', N'NOT NULL'),
+    (N'ProgrammeVariationEffects', N'Note', N'nvarchar(max)', N'NOT NULL'),
+    (N'ProgressReports', N'Introduction', N'nvarchar(max)', N'NOT NULL'),
+    (N'ProgressReports', N'UpcomingWorks', N'nvarchar(max)', N'NOT NULL'),
+    (N'ProgressReports', N'WorkCompleted', N'nvarchar(max)', N'NOT NULL'),
+    (N'ProjectContractAmendments', N'Notes', N'nvarchar(max)', N'NULL'),
+    (N'ProjectContracts', N'BespokeDeviations', N'nvarchar(max)', N'NULL'),
+    (N'QsAccruals', N'Description', N'nvarchar(max)', N'NOT NULL'),
+    (N'QuoteLineItems', N'Description', N'nvarchar(max)', N'NOT NULL'),
+    (N'Quotes', N'Notes', N'nvarchar(max)', N'NOT NULL'),
+    (N'RequestItems', N'Response', N'nvarchar(max)', N'NULL'),
+    (N'RequestMessages', N'Body', N'nvarchar(max)', N'NOT NULL'),
+    (N'Requests', N'ClientNotes', N'nvarchar(max)', N'NULL'),
+    (N'Requests', N'InternalNotes', N'nvarchar(max)', N'NULL'),
+    (N'Requests', N'RelatedDrawingSpec', N'nvarchar(max)', N'NULL'),
+    (N'RightToWorkChecks', N'Notes', N'nvarchar(max)', N'NOT NULL'),
+    (N'SalesProposals', N'DeclineReason', N'nvarchar(max)', N'NULL'),
+    (N'SalesStrategies', N'Brief', N'nvarchar(max)', N'NOT NULL'),
+    (N'SalesStrategies', N'Evidence', N'nvarchar(max)', N'NOT NULL'),
+    (N'SalesStrategies', N'Hypothesis', N'nvarchar(max)', N'NOT NULL'),
+    (N'SalesStrategies', N'Proposition', N'nvarchar(max)', N'NOT NULL'),
+    (N'SiteInstructions', N'Instruction', N'nvarchar(max)', N'NOT NULL'),
+    (N'SitePhotos', N'ArchiveNote', N'nvarchar(max)', N'NOT NULL'),
+    (N'SiteReports', N'Narrative', N'nvarchar(max)', N'NOT NULL'),
+    (N'SubcontractorVariationRequests', N'RejectionReason', N'nvarchar(max)', N'NOT NULL'),
+    (N'TenderEnquiries', N'DecisionNote', N'nvarchar(max)', N'NOT NULL'),
+    (N'TenderEnquiries', N'ScopeSummary', N'nvarchar(max)', N'NOT NULL'),
+    (N'Timesheets', N'RejectionReason', N'nvarchar(max)', N'NOT NULL'),
+    (N'TodoItems', N'Notes', N'nvarchar(max)', N'NOT NULL'),
+    (N'UsefulInformationNotes', N'Body', N'nvarchar(max)', N'NOT NULL'),
+    (N'ValuationInvoiceEvents', N'Note', N'nvarchar(max)', N'NOT NULL'),
+    (N'ValuationInvoices', N'RejectionReason', N'nvarchar(max)', N'NULL'),
+    (N'ValuationLineItems', N'Comments', N'nvarchar(max)', N'NOT NULL'),
+    (N'ValuationLineItems', N'Description', N'nvarchar(max)', N'NOT NULL'),
+    (N'VariationOrderMessages', N'Body', N'nvarchar(max)', N'NOT NULL'),
+    (N'VariationOrderQuotes', N'CommercialBasis', N'nvarchar(max)', N'NULL'),
+    (N'VariationOrderQuotes', N'Exclusions', N'nvarchar(max)', N'NULL'),
+    (N'VariationOrderQuotes', N'ProgrammeImpact', N'nvarchar(max)', N'NULL'),
+    (N'VatAnalyses', N'Notes', N'nvarchar(max)', N'NOT NULL'),
+    (N'WalkRoundNotes', N'Notes', N'nvarchar(max)', N'NOT NULL'),
+    (N'WeeklyCashflowItems', N'Notes', N'nvarchar(max)', N'NULL'),
+    (N'WorkOrderLines', N'Description', N'nvarchar(max)', N'NOT NULL'),
+    (N'WorkOrders', N'ProgrammeNotes', N'nvarchar(max)', N'NOT NULL'),
+    (N'WorkOrders', N'Scope', N'nvarchar(max)', N'NOT NULL'),
+    (N'WorkerAbsences', N'Note', N'nvarchar(max)', N'NOT NULL'),
+    (N'WorkerSettlementLines', N'Note', N'nvarchar(max)', N'NOT NULL'),
+    (N'WorkstationActions', N'Note', N'nvarchar(max)', N'NOT NULL'),
+    (N'XeroDisputeMessages', N'Body', N'nvarchar(max)', N'NOT NULL'),
+    (N'ReconciliationPackages', N'Name', N'nvarchar(256)', N'NOT NULL'),
+    (N'XeroLedgerLines', N'Description', N'nvarchar(max)', N'NULL'),
+    (N'XeroLedgerLines', N'Note', N'nvarchar(max)', N'NULL');
+
+    DECLARE @table sysname, @column sysname, @newType nvarchar(32), @nullability nvarchar(8);
+    DECLARE @defaultName sysname, @defaultDefinition nvarchar(max), @statisticName sysname, @sql nvarchar(max);
+
+    DECLARE widening CURSOR LOCAL FAST_FORWARD FOR
+        SELECT TableName, ColumnName, NewType, Nullability FROM @columns;
+    OPEN widening;
+    FETCH NEXT FROM widening INTO @table, @column, @newType, @nullability;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @defaultName = NULL;
+        SET @defaultDefinition = NULL;
+        SELECT @defaultName = [d].[name], @defaultDefinition = [d].[definition]
+        FROM [sys].[default_constraints] [d]
+        JOIN [sys].[columns] [c] ON [c].[object_id] = [d].[parent_object_id] AND [c].[column_id] = [d].[parent_column_id]
+        WHERE [d].[parent_object_id] = OBJECT_ID(QUOTENAME(@table)) AND [c].[name] = @column;
+
+        IF @defaultName IS NOT NULL
+        BEGIN
+            SET @sql = N'ALTER TABLE ' + QUOTENAME(@table) + N' DROP CONSTRAINT ' + QUOTENAME(@defaultName) + N';';
+            EXEC sp_executesql @sql;
+        END;
+
+        DECLARE statistics_on_column CURSOR LOCAL FAST_FORWARD FOR
+            SELECT [s].[name]
+            FROM [sys].[stats] [s]
+            JOIN [sys].[stats_columns] [sc] ON [sc].[object_id] = [s].[object_id] AND [sc].[stats_id] = [s].[stats_id]
+            JOIN [sys].[columns] [c] ON [c].[object_id] = [sc].[object_id] AND [c].[column_id] = [sc].[column_id]
+            WHERE [s].[object_id] = OBJECT_ID(QUOTENAME(@table)) AND [c].[name] = @column AND [s].[auto_created] = 1;
+        OPEN statistics_on_column;
+        FETCH NEXT FROM statistics_on_column INTO @statisticName;
+        WHILE @@FETCH_STATUS = 0
+        BEGIN
+            SET @sql = N'DROP STATISTICS ' + QUOTENAME(@table) + N'.' + QUOTENAME(@statisticName) + N';';
+            EXEC sp_executesql @sql;
+            FETCH NEXT FROM statistics_on_column INTO @statisticName;
+        END;
+        CLOSE statistics_on_column;
+        DEALLOCATE statistics_on_column;
+
+        SET @sql = N'ALTER TABLE ' + QUOTENAME(@table) + N' ALTER COLUMN ' + QUOTENAME(@column) + N' ' + @newType + N' ' + @nullability + N';';
+        EXEC sp_executesql @sql;
+
+        IF @defaultName IS NOT NULL
+        BEGIN
+            SET @sql = N'ALTER TABLE ' + QUOTENAME(@table) + N' ADD CONSTRAINT ' + QUOTENAME(@defaultName)
+                     + N' DEFAULT ' + @defaultDefinition + N' FOR ' + QUOTENAME(@column) + N';';
+            EXEC sp_executesql @sql;
+        END;
+
+        PRINT N'Widened ' + @table + N'.' + @column + N' to ' + @newType + ISNULL(N' (default ' + @defaultName + N' kept)', N'');
+        FETCH NEXT FROM widening INTO @table, @column, @newType, @nullability;
+    END;
+    CLOSE widening;
+    DEALLOCATE widening;
 END;
 GO
 
@@ -117,4 +186,7 @@ END;
 GO
 
 COMMIT;
+GO
+
+PRINT N'WidenWrittenTextColumns applied.';
 GO
