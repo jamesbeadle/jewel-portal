@@ -31,7 +31,7 @@ public sealed class SetVariationOrderStatusHandler : ICommandHandler<SetVariatio
         if (order.Status == (int)VariationOrderStatus.Approved)
             throw new InvalidOperationException("An approved variation order can only be un-approved by returning it to quoting, which reverses the approval's commercial writes.");
         if (order.Status == (int)VariationOrderStatus.Rejected)
-            throw new InvalidOperationException("A rejected variation order cannot be moved back to quoting or issued directly — re-approve or leave it as the audit record.");
+            throw new InvalidOperationException("A rejected variation order cannot be moved directly — reinstate it, which returns it to Issued or Quoting.");
 
         // Move between the side-effect-free stages (Quoting, Issued, Awaiting AI). Entering Issued
         // stamps the client-issue date; returning to Quoting clears it; entering Awaiting AI leaves

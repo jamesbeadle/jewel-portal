@@ -60,6 +60,10 @@ public interface IVariationStore
     /// freeing its V-ref — for records approved in error (chiefly seeded history).</summary>
     Task<VariationOrder> ReturnToQuotingAsync(string variationOrderId, CancellationToken cancellationToken = default);
 
+    /// <summary>Reinstates a rejected variation order — back to Issued, or Quoting when it was never
+    /// issued. One rejected from Approved comes back unapproved, to be re-approved.</summary>
+    Task<VariationOrder> ReinstateAsync(string variationOrderId, CancellationToken cancellationToken = default);
+
     /// <summary>Retitles a variation order — allowed at every stage. Only the title moves: figures
     /// already written to the valuation report and CVR keep the wording they were issued with.</summary>
     Task<VariationOrder> RenameAsync(string variationOrderId, string title, CancellationToken cancellationToken = default);

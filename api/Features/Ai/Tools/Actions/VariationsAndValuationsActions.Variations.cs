@@ -114,6 +114,24 @@ internal sealed partial class VariationsAndValuationsActions
                 + "reject_variation_order — that records a real client decision."),
 
         new AiAction(
+            Name: "reinstate_variation_order",
+            Area: "Variations",
+            Description: "REINSTATES a rejected variation order — the rejection was made in error "
+                + "or the client has changed their mind. It returns to Issued when it had been "
+                + "issued, else to Quoting. One rejected from Approved comes back unapproved: the "
+                + "approval and its rejection offset leave the CVR and the V-ref is freed, so it is "
+                + "re-approved with approve_variation_order.",
+            CommandType: typeof(ReinstateVariationOrder),
+            ResultType: typeof(VariationOrder),
+            AuthorisationType: typeof(ReinstateVariationOrderAuthorisation),
+            ValidationType: typeof(ReinstateVariationOrderValidation),
+            VisibleTo: VariationRoles.AllowedToManageVariations,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "Confirm with the user before calling. Refused unless the order is Rejected. "
+                + "find_by_reference resolves V72."),
+
+        new AiAction(
             Name: "delete_variation_order",
             Area: "Variations",
             Description: "DELETES a variation order raised in error, permanently, cascading its "

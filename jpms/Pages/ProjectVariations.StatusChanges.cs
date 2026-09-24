@@ -64,8 +64,16 @@ public partial class ProjectVariations
         var choices = new List<VariationStatusChoice>();
         var variationHref = $"/projects/{ProjectId}/variations/{order.VariationOrderId}";
 
-        // Rejected is a terminal audit record — the pill doesn't offer reactivation.
-        if (order.Status == VariationOrderStatus.Rejected) return choices;
+        // Rejected stays on the register as the decision; the pill offers only taking it back.
+        if (order.Status == VariationOrderStatus.Rejected)
+        {
+            choices.Add(new("Rejected", null, true));
+            choices.Add(new("Reinstate…",
+                "Takes the rejection back — the variation returns to Issued, or Quoting if it was never issued",
+                false,
+                Action: () => { reinstatingVariation = order; return Task.CompletedTask; }));
+            return choices;
+        }
 
         if (order.Status == VariationOrderStatus.Approved)
         {
@@ -135,6 +143,17 @@ public partial class ProjectVariations
         // Close only on success — a failure leaves the modal up with the error visible behind it,
         // rather than silently swallowing the attempt.
         if (variationStatusError is null) decliningVariation = null;
+    }
+
+    private VariationOrder? reinstatingVariation;
+
+    private async Task ConfirmReinstateVariation()
+    {
+        if (reinstatingVariation is not { } order) return;
+        await RunInlineStatusMove(order,
+            () => Variations.ReinstateAsync(order.VariationOrderId),
+            $"Couldn't reinstate {RowReference(order)}. Please try again.");
+        if (variationStatusError is null) reinstatingVariation = null;
     }
 
     private Task ChangeVariationStatusInline(VariationOrder order, VariationOrderStatus status) =>

@@ -80,6 +80,10 @@ public static class VariationsRouteRegistration
             new CommandRoute("POST", "/api/variation-orders/{voId}/reject",
                 command => $"/api/variation-orders/{((RejectVariationOrder)command).VariationOrderId}/reject"));
 
+        commands.Register<ReinstateVariationOrder, VariationOrder>(
+            new CommandRoute("POST", "/api/variation-orders/{voId}/reinstate",
+                command => $"/api/variation-orders/{((ReinstateVariationOrder)command).VariationOrderId}/reinstate"));
+
         commands.Register<ReviseVariationOrderValue, VariationOrder>(
             new CommandRoute("POST", "/api/variation-orders/{voId}/revise-value",
                 command => $"/api/variation-orders/{((ReviseVariationOrderValue)command).VariationOrderId}/revise-value"));

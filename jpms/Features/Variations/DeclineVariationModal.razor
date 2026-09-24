@@ -1,9 +1,9 @@
 @namespace Jewel.JPMS.Features.Variations
 
 @* Declining a variation the client never approved is a plain status move — nothing comes off
-   the Valuation Report, no omit is recorded, no budget is released — but it IS terminal:
-   Rejected has no way back, so the pill disappears once it is reached. That deserves a
-   deliberate confirm rather than a one-click move, which is what this modal is. The
+   the Valuation Report, no omit is recorded, no budget is released — and it closes the
+   variation: only a deliberate Reinstate brings it back. That deserves a confirm rather than a
+   one-click move, which is what this modal is. The
    post-approval reject keeps its own inline panel, because it reverses real commercial writes
    and needs to say so next to the figures it will change. *@
 <Modal IsOpen="IsOpen"
@@ -28,8 +28,8 @@
             commercial is written — no line reaches the Valuation Report and no budget is committed.
         </p>
         <p class="text-xs text-content-subtle">
-            Rejected is the end of the road for this variation — it can't be reopened. If the work is
-            still live, leave it where it is instead.
+            If the work is still live, leave it where it is instead. A rejection made in error can be
+            taken back with Reinstate.
         </p>
     </div>
 </Modal>
