@@ -5,9 +5,10 @@ using Jewel.JPMS.Contracts.Progress;
 namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Commands;
 
 // Opens the week's report with everything a person would otherwise copy from last week: the
-// number, the header fields that carry forward, Look Ahead's unstruck items, the last certificate
-// on the register as the Valuation No., Neighbours' default line, and every update in the period
-// selected. Section 4 is deliberately NOT carried — it is read from the register every build.
+// number, the header fields and standing lines that carry forward, Look Ahead's unstruck items,
+// the current valuation as the Valuation No., the Friday after the period as the date of issue,
+// Neighbours' default line, and every update in the period selected. Section 4 is deliberately
+// NOT carried — it is read from the register every build.
 public sealed class CreateContractorsReportHandler : ICommandHandler<CreateContractorsReport, ContractorsReport>
 {
     private readonly JpmsContext context;
@@ -38,15 +39,16 @@ public sealed class CreateContractorsReportHandler : ICommandHandler<CreateContr
             Number = command.Number ?? newestNumber + 1,
             PeriodStart = week.Start,
             PeriodEnd = week.End,
-            ValuationNumber = await ContractorsReportCertificates.LastNumberAsync(context, project.ProjectId, cancellationToken) ?? "",
+            ValuationNumber = await ContractorsReportValuations.CurrentNumberAsync(context, project.ProjectId, cancellationToken) ?? "",
             ProgrammeReference = previous?.ProgrammeReference ?? "",
             PreparedByName = previous?.PreparedByName ?? "",
             IssuedTo = previous?.IssuedTo ?? "",
-            DateOfIssue = DateOnly.FromDateTime(now.UtcDateTime),
+            DateOfIssue = week.End.AddDays(1),
             LookAheadJson = ContractorsReportJson.Write(CarriedForward(previous)),
             Neighbours = ContractorsReportDefaults.Neighbours,
-            HealthAndSafety = "",
-            BuildingControlLiaison = "",
+            HealthAndSafety = previous?.HealthAndSafety ?? "",
+            BuildingControlLiaison = previous?.BuildingControlLiaison ?? "",
+            BuildingControlContact = previous?.BuildingControlContact ?? "",
             AttendanceJson = ContractorsReportJson.Write(Array.Empty<ContractorsReportAttendance>()),
             SelectedUpdateIdsJson = ContractorsReportJson.Write(await UpdatesInPeriodAsync(project.ProjectId, week, cancellationToken)),
             CreatedByEmail = command.CreatedByEmail,

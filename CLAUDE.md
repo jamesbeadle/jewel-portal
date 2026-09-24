@@ -432,9 +432,18 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   4 = variations at Issued only, as issued Report 30 prints them — Variation / Position ("Issued
   4 August 2026 — no response received"), NO value column (Nigel, 24 Sep 2026), opened by the
   variations approved in the period (`ContractorsReportVariationWording`, contracts); 7 = the
-  active `BuildingControlCase` contact; 8 = work orders given days on site (the page's attendance
-  table lists every one Released, or Complete with ScheduledCompletion in the week) with the directory's
-  CompanyName; 9 = the selected days' photographs, two-up, days without photos omitted.
+  active `BuildingControlCase` contact, else the report's entered `BuildingControlContact` line
+  (carried week to week); 8 = Subcontractor / Scope under Report 30's opening line, for the work
+  orders given days on site only — the scope is the attendance line's own words for the week
+  (`ContractorsReportAttendance.Scope`), else the order's title; the page's attendance table
+  lists every order Released, or Complete with ScheduledCompletion in the week; 9 = the selected
+  days' photographs, two-up, less the report's `ExcludedPhotoIds` (the page's per-photo ticks,
+  about twelve a day), with a count line. The assistant SEES a photograph with `view_photos`
+  (a pool or progress photo id; several come back as one numbered contact sheet,
+  `PhotoContactSheet`). A new report opens on the current valuation — the newest not Confirmed,
+  numbered as its name reads (`ContractorsReportValuations`) — dated the Friday after its week,
+  with H&S and Building Control carried forward (migration
+  `AddContractorsReportContactAndPhotoChoice`, script `add-contractors-report-contact-and-photo-choice.sql`).
   `CreateContractorsReport` pre-fills what a person would copy from last week (number = max+1,
   header fields carried, unstruck Look Ahead carried, Valuation No. = the highest payment
   certificate on the register — `ContractorsReportCertificates.Highest`, numeric-aware —

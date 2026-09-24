@@ -52,12 +52,18 @@ public static partial class ContractorsReportPdfRenderer
     private static void AddBuildingControl(Section section, ContractorsReportBuildingControl buildingControl)
     {
         SectionHeading(section, ContractorsReportSections.BuildingControl);
-        if (buildingControl.BodyName is null && buildingControl.ContactName is null)
-            MutedLine(section, ContractorsReportText.NoBuildingControlCase);
-        else
-            AddContactGrid(section, buildingControl);
+        AddContact(section, buildingControl);
         Panelled(section, ContractorsReportText.OrNothingToReport(buildingControl.Liaison));
         SpaceAfterTable(section);
+    }
+
+    private static void AddContact(Section section, ContractorsReportBuildingControl buildingControl)
+    {
+        if (buildingControl.HasCase()) { AddContactGrid(section, buildingControl); return; }
+        if (buildingControl.EnteredContact is not { } contact) { MutedLine(section, ContractorsReportText.NoBuildingControlCase); return; }
+        var line = section.AddParagraph(ContractorsReportText.BuildingControlContact(contact));
+        line.Format.Font.Size = 9.5;
+        SpaceAfter(line, 2.5);
     }
 
     private static void AddContactGrid(Section section, ContractorsReportBuildingControl buildingControl)
@@ -80,6 +86,7 @@ public static partial class ContractorsReportPdfRenderer
             DayHeading(section, day.Heading);
             AddPhotoGrid(section, loaded);
         }
+        MutedLine(section, ContractorsReportText.PhotographCount(days));
     }
 
     private static void AddPhotoGrid(Section section, IReadOnlyList<ContractorsReportImage> photos)

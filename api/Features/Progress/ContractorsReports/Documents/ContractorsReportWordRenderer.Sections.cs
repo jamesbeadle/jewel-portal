@@ -1,3 +1,4 @@
+using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
 using Jewel.JPMS.Contracts.Progress;
@@ -13,11 +14,7 @@ public static partial class ContractorsReportWordRenderer
         { new("Reference", 2.4), new("Title", 9.4), new("Status", 3.6), new("Response due", 2.4) };
     private static readonly RegisterColumn[] VariationColumns =
         { new("Variation", 11.4), new("Position", 6.4) };
-    private static readonly RegisterColumn[] SubcontractorColumns =
-    {
-        new("Supplier", 4.2), new("Scope", 8.0), new("Value", 2.4, true),
-        new("Days on site", 1.6, true), new("Client nominated", 1.6)
-    };
+    private static readonly RegisterColumn[] SubcontractorColumns = { new("Subcontractor", 5.4), new("Scope", 12.4) };
 
     private static void AddProgress(Body body, ContractorsReportDocument model)
     {
@@ -69,25 +66,29 @@ public static partial class ContractorsReportWordRenderer
     private static void AddBuildingControl(Body body, ContractorsReportBuildingControl buildingControl)
     {
         body.Append(SectionHeading(ContractorsReportSections.BuildingControl));
-        if (buildingControl.BodyName is null && buildingControl.ContactName is null)
-            body.Append(MutedLine(ContractorsReportText.NoBuildingControlCase));
-        else
-            body.Append(Grid(
-                ("Body", buildingControl.BodyName ?? ""), ("Contact", buildingControl.ContactName ?? ""),
-                ("Email", buildingControl.ContactEmail ?? ""), ("Phone", buildingControl.ContactPhone ?? "")));
+        body.Append(BuildingControlContact(buildingControl));
         body.Append(Panelled(ContractorsReportText.OrNothingToReport(buildingControl.Liaison)));
+    }
+
+    private static OpenXmlElement BuildingControlContact(ContractorsReportBuildingControl buildingControl)
+    {
+        if (buildingControl.HasCase())
+            return Grid(
+                ("Body", buildingControl.BodyName ?? ""), ("Contact", buildingControl.ContactName ?? ""),
+                ("Email", buildingControl.ContactEmail ?? ""), ("Phone", buildingControl.ContactPhone ?? ""));
+        if (buildingControl.EnteredContact is not { } contact) return MutedLine(ContractorsReportText.NoBuildingControlCase);
+        var line = ContractorsReportText.BuildingControlContact(contact);
+        return Text(line);
     }
 
     private static void AddSubcontractors(Body body, ContractorsReportDocument model)
     {
         body.Append(SectionHeading(ContractorsReportSections.Subcontractors));
         if (model.Subcontractors.Count == 0) { body.Append(MutedLine(ContractorsReportText.NoSubcontractors)); return; }
+        body.Append(Text(ContractorsReportText.SubcontractorsOpening));
         var table = Register(SubcontractorColumns);
         foreach (var subcontractor in model.Subcontractors)
-            BodyRow(table, SubcontractorColumns,
-                subcontractor.Supplier, subcontractor.Scope, ContractorsReportText.Money(subcontractor.Value),
-                ContractorsReportText.Days(subcontractor.AttendanceDays),
-                subcontractor.IsClientNominated ? ContractorsReportText.Yes : ContractorsReportText.Dash);
+            BodyRow(table, SubcontractorColumns, subcontractor.Supplier, subcontractor.Scope);
         body.Append(table);
         body.Append(new Paragraph());
     }
@@ -105,5 +106,6 @@ public static partial class ContractorsReportWordRenderer
             body.Append(pictures.PhotoGrid(loaded));
             body.Append(new Paragraph());
         }
+        body.Append(MutedLine(ContractorsReportText.PhotographCount(days)));
     }
 }

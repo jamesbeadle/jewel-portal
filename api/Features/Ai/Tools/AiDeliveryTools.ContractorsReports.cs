@@ -30,27 +30,35 @@ internal static partial class AiDeliveryTools
         return Serialise(new { ok = true, projectId, reports = reports.Select(ContractorsReportRow) });
     }
 
+    private const string GetContractorsReportDescription =
+        "One Contractor's Report with the document it composes to RIGHT NOW — the header, "
+        + "Section 1's days with the selected updates, Look Ahead, the open RFIs (Section 3), "
+        + "Section 4 (the variations at Issued, each with the date it was issued — Variation / "
+        + "Position, no value column — and variationsApproved, the ones approved in the period), "
+        + "Neighbours, Health & Safety, the Building Control contact (the project's case, else "
+        + "the report's entered buildingControlContact line) and liaison (Section 7), "
+        + "Section 8 (Subcontractor / Scope, only the work orders with attendance entered — a "
+        + "firm that did not attend is not in the report, so its wording is never checked; the "
+        + "scope is the attendance line's own words for the week, else the order's title), the "
+        + "days with photographs "
+        + "(Section 9, without the photographs the report leaves out) — plus "
+        + "photosOnSelectedUpdates[] (every photograph on the selected updates with isIncluded; "
+        + "see one with view_photos), the updates in the period to choose from, workOrdersOnSite[] "
+        + "(every order on site, with its workOrderId, reference and target completion, to "
+        + "enter attendance against with update_contractors_report — the reference and target "
+        + "are for you to match on and are NEVER written into the report: name the "
+        + "subcontractor and the work, no WO number, no target date) and the wording "
+        + "FINDINGS. While findings is non-empty the Word and PDF builds are refused: the "
+        + "report goes to the client's side, so a line naming remedial works, making good, "
+        + "rectification, snagging, defects or rework is refused by section and line, never "
+        + "reworded silently. Fix the line on the record (update_contractors_report for the "
+        + "entered text, update_progress_update for a site note) and read again.";
+
     private static AiTool GetContractorsReport()
     {
         return new(
             "get_contractors_report",
-            "One Contractor's Report with the document it composes to RIGHT NOW — the header, "
-            + "Section 1's days with the selected updates, Look Ahead, the open RFIs (Section 3), "
-            + "Section 4 (the variations at Issued, each with the date it was issued — Variation / "
-            + "Position, no value column — and variationsApproved, the ones approved in the period), "
-            + "Neighbours, Health & Safety, the Building Control contact and liaison (Section 7), "
-            + "Section 8 (only the work orders with attendance entered — a firm that did not "
-            + "attend is not in the report, so its wording is never checked), the days with photographs "
-            + "(Section 9) — plus the updates in the period to choose from, workOrdersOnSite[] "
-            + "(every order on site, with its workOrderId, reference and target completion, to "
-            + "enter attendance against with update_contractors_report — the reference and target "
-            + "are for you to match on and are NEVER written into the report: name the "
-            + "subcontractor and the work, no WO number, no target date) and the wording "
-            + "FINDINGS. While findings is non-empty the Word and PDF builds are refused: the "
-            + "report goes to the client's side, so a line naming remedial works, making good, "
-            + "rectification, snagging, defects or rework is refused by section and line, never "
-            + "reworded silently. Fix the line on the record (update_contractors_report for the "
-            + "entered text, update_progress_update for a site note) and read again.",
+            GetContractorsReportDescription,
             AiToolSchema.Object(
                 ("contractorsReportId", "string", "From list_contractors_reports.", true)),
             AiToolKind.Read,
@@ -73,6 +81,7 @@ internal static partial class AiDeliveryTools
             findings = view.Document.Findings,
             updatesInPeriod = view.UpdatesInPeriod,
             workOrdersOnSite = view.WorkOrdersOnSite,
+            photosOnSelectedUpdates = view.PhotosOnSelectedUpdates,
             downloads = new
             {
                 pdf = $"contractors-reports/{view.Report.ContractorsReportId}/pdf",

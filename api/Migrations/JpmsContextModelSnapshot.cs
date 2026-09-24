@@ -1541,6 +1541,11 @@ namespace Jewel.JPMS.Api.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("BuildingControlContact")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
                     b.Property<string>("BuildingControlLiaison")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -1556,6 +1561,10 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<DateOnly>("DateOfIssue")
                         .HasColumnType("date");
+
+                    b.Property<string>("ExcludedPhotoIdsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("HealthAndSafety")
                         .IsRequired()

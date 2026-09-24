@@ -17,6 +17,8 @@ public sealed class ContractorsReportDraft
     public string BuildingControlLiaison { get; set; } = "";
     public Dictionary<string, ContractorsReportAttendanceLine> Attendance { get; } = new();
     public HashSet<string> SelectedUpdateIds { get; } = new();
+    public string BuildingControlContact { get; set; } = "";
+    public HashSet<string> ExcludedPhotoIds { get; } = new();
 
     public static ContractorsReportDraft From(ContractorsReport report)
     {
@@ -29,12 +31,14 @@ public sealed class ContractorsReportDraft
             DateOfIssue = report.DateOfIssue,
             Neighbours = report.Neighbours,
             HealthAndSafety = report.HealthAndSafety,
-            BuildingControlLiaison = report.BuildingControlLiaison
+            BuildingControlLiaison = report.BuildingControlLiaison,
+            BuildingControlContact = report.BuildingControlContact
         };
         draft.LookAhead.AddRange(report.LookAhead.Select(item => new ContractorsReportLookAheadLine { Text = item.Text, IsDone = item.IsDone }));
         foreach (var item in report.Attendance)
-            draft.Attendance[item.WorkOrderId] = new ContractorsReportAttendanceLine { AttendanceDays = item.AttendanceDays, IsClientNominated = item.IsClientNominated };
+            draft.Attendance[item.WorkOrderId] = new ContractorsReportAttendanceLine { AttendanceDays = item.AttendanceDays, IsClientNominated = item.IsClientNominated, Scope = item.Scope };
         draft.SelectedUpdateIds.UnionWith(report.SelectedUpdateIds);
+        draft.ExcludedPhotoIds.UnionWith(report.ExcludedPhotoIds);
         return draft;
     }
 
@@ -50,10 +54,12 @@ public sealed class ContractorsReportDraft
         HealthAndSafety,
         BuildingControlLiaison,
         Attendance
-            .Where(pair => pair.Value.AttendanceDays is not null || pair.Value.IsClientNominated)
-            .Select(pair => new ContractorsReportAttendance(pair.Key, pair.Value.AttendanceDays, pair.Value.IsClientNominated))
+            .Where(pair => pair.Value.HasAnything)
+            .Select(pair => new ContractorsReportAttendance(pair.Key, pair.Value.AttendanceDays, pair.Value.IsClientNominated, pair.Value.Scope.Trim()))
             .ToList(),
-        SelectedUpdateIds.ToList());
+        SelectedUpdateIds.ToList(),
+        BuildingControlContact,
+        ExcludedPhotoIds.ToList());
 
     public ContractorsReportAttendanceLine AttendanceFor(string workOrderId)
     {
@@ -72,4 +78,7 @@ public sealed class ContractorsReportAttendanceLine
 {
     public int? AttendanceDays { get; set; }
     public bool IsClientNominated { get; set; }
+    public string Scope { get; set; } = "";
+
+    public bool HasAnything => AttendanceDays is not null || IsClientNominated || !string.IsNullOrWhiteSpace(Scope);
 }

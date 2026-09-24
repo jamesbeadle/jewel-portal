@@ -70,7 +70,14 @@
     </section>
     <section>
         <h3 class="font-semibold text-content mb-2">7. Building Control</h3>
-        <p class="text-content-muted">@(Document.BuildingControl.BodyName ?? "—") · @(Document.BuildingControl.ContactName ?? "—") · @(Document.BuildingControl.ContactEmail ?? "—") · @(Document.BuildingControl.ContactPhone ?? "—")</p>
+        @if (Document.BuildingControl.HasCase())
+        {
+            <p class="text-content-muted">@(Document.BuildingControl.BodyName ?? "—") · @(Document.BuildingControl.ContactName ?? "—") · @(Document.BuildingControl.ContactEmail ?? "—") · @(Document.BuildingControl.ContactPhone ?? "—")</p>
+        }
+        @if (!Document.BuildingControl.HasCase())
+        {
+            <p class="text-content-muted">Building Control Contact: @(Document.BuildingControl.EnteredContact ?? "—")</p>
+        }
         <p class="whitespace-pre-line text-content-muted">@Shown(Document.BuildingControl.Liaison)</p>
     </section>
     <section>
@@ -81,7 +88,7 @@
         }
         @foreach (var subcontractor in Document.Subcontractors)
         {
-            <p class="text-content-muted"><span class="font-medium text-content">@subcontractor.Supplier</span> · @subcontractor.Scope · @Money(subcontractor.Value) · @(subcontractor.AttendanceDays?.ToString() ?? "—") days@(subcontractor.IsClientNominated ? " · client nominated" : "")</p>
+            <p class="text-content-muted"><span class="font-medium text-content">@subcontractor.Supplier</span> · @subcontractor.Scope</p>
         }
     </section>
     <section>

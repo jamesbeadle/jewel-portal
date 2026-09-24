@@ -103,6 +103,8 @@ public sealed class ContractorsReportEntity
     [MaxLength(2000)]    public string BuildingControlLiaison { get; set; } = "";
     public string AttendanceJson { get; set; } = "[]";
     public string SelectedUpdateIdsJson { get; set; } = "[]";
+    [MaxLength(512)]     public string BuildingControlContact { get; set; } = "";
+    public string ExcludedPhotoIdsJson { get; set; } = "[]";
     [MaxLength(256)]     public string CreatedByEmail { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }

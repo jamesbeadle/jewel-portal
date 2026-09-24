@@ -8,7 +8,10 @@ namespace Jewel.JPMS.Contracts.Progress;
 /// period's site notes, open RFIs, outstanding variations, the Building Control contact, the
 /// work orders in the period) is READ from the register at build time and never carried
 /// forward — see <see cref="ContractorsReportDocument"/>. The portal never emails it: Word and
-/// PDF are downloaded and issued by a person.
+/// PDF are downloaded and issued by a person. <see cref="BuildingControlContact"/> is Section 7's
+/// contact line for a project with no Building Control case, carried week to week ("Bromley
+/// Building Control — buildingcontrol@bromley.gov.uk", Report 30); <see cref="ExcludedPhotoIds"/>
+/// are the photographs on the selected updates Section 9 leaves out — the updates keep them.
 /// </summary>
 public sealed record ContractorsReport(
     string ContractorsReportId,
@@ -35,6 +38,8 @@ public sealed record ContractorsReport(
     IReadOnlyList<ContractorsReportAttendance> Attendance,
     // The progress updates in the period that Sections 1 and 9 print; all of them on create.
     IReadOnlyList<string> SelectedUpdateIds,
+    string BuildingControlContact,
+    IReadOnlyList<string> ExcludedPhotoIds,
     string CreatedByEmail,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt)
@@ -46,9 +51,11 @@ public sealed record ContractorsReport(
 /// only what is still ahead.</summary>
 public sealed record ContractorsReportLookAheadItem(string Text, bool IsDone);
 
-/// <summary>Section 8's entered columns for one work order: days attended in the period, and
-/// whether the client nominated the subcontractor.</summary>
-public sealed record ContractorsReportAttendance(string WorkOrderId, int? AttendanceDays, bool IsClientNominated);
+/// <summary>Section 8's entered columns for one work order: days attended in the period, whether
+/// the client nominated the subcontractor, and the scope as the report words it — what they did
+/// this week, "Wall tiling to the first and second floors (Friday)" (Report 30). A blank scope
+/// prints the work order's title.</summary>
+public sealed record ContractorsReportAttendance(string WorkOrderId, int? AttendanceDays, bool IsClientNominated, string Scope = "");
 
 public static class ContractorsReportDefaults
 {

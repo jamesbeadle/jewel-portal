@@ -22,6 +22,8 @@ internal static class ContractorsReportMapping
         entity.BuildingControlLiaison,
         ContractorsReportJson.Read<ContractorsReportAttendance>(entity.AttendanceJson),
         ContractorsReportJson.Read<string>(entity.SelectedUpdateIdsJson),
+        entity.BuildingControlContact,
+        ContractorsReportJson.Read<string>(entity.ExcludedPhotoIdsJson),
         entity.CreatedByEmail,
         entity.CreatedAt,
         entity.UpdatedAt);
