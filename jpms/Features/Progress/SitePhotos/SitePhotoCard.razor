@@ -3,7 +3,8 @@
 
 @*
     One pool photograph: the thumbnail (click opens the viewer), the file name, and its standing —
-    an unfiled photo is the working row; a filed one is dimmed and says which update took it; an
+    an unfiled photo is the working row; a filed one is dimmed and names its project and day,
+    linked to that day's update on the project's Progress page; an
     archived one (left out of the report by the weekly run) is dimmed with its reason and can be
     restored. Delete is the two-click InlineConfirm; a filed photo's copy on its update is not touched.
 *@
@@ -19,7 +20,16 @@
             @if (Photo.IsFiled)
             {
                 <Pill Tone="Tone.Positive">Filed</Pill>
-                <span class="ml-1">@DateText(Photo.FiledAt)</span>
+                @if (Photo.FiledTo is { } destination)
+                {
+                    <a href="@SitePhotoText.DestinationHref(Photo)" class="ml-1 text-content hover:underline underline-offset-4" title="@destination.ProjectName — @destination.ProgressUpdateTitle">
+                        @SitePhotoText.Destination(destination)
+                    </a>
+                }
+                @if (Photo.FiledTo is null)
+                {
+                    <span class="ml-1">@DateText(Photo.FiledAt)</span>
+                }
             }
             @if (Photo.Archive is { } archive)
             {

@@ -1,10 +1,13 @@
 @page "/site-photos"
 @using Jewel.JPMS.Contracts.Progress
 @using Jewel.JPMS.Features.Progress.SitePhotos
+@using Jewel.JPMS.Features.Projects
 @inject AuthService Auth
 @inject SessionService Session
 @inject ISitePhotoStore Store
 @inject NavigationManager Nav
+@inject ProjectListReadModel Projects
+@inject CurrentProjectService CurrentProject
 
 <PageTitle>Site photos · JPMS</PageTitle>
 
@@ -16,7 +19,8 @@
     files are, and files each onto its project and day — so no image ever travels through the
     model. Filed photos stay listed (greyed, with where they went) so the pool always shows what
     is still waiting; photographs the run left out of the report are Archived, kept with their
-    reason, and can be restored.
+    reason, and can be restored. It opens on the project selected in the menu — Filed and Archived
+    show that project's photos, each filed card naming its day — and Whole pool shows every site's.
 *@
 
 <Page OpenTo="ProgressRoles.Readers" CanAccess="@CanRead" AccessDeniedMessage="Site photos are for the internal team.">
@@ -28,6 +32,7 @@
             }
         </SubtitleContent>
         <Actions>
+            <FilterChips Items="ScopeChips" Selected="@scope" OnSelect="key => scope = key" Disabled="@(photos is null)" AriaLabel="Whose photographs" />
             <FilterChips Items="Chips" Selected="@filter" OnSelect="key => filter = key" Disabled="@(photos is null)" AriaLabel="Standing" />
         </Actions>
     </PageHeader>
@@ -45,7 +50,7 @@
     @if (lastUpload is { } upload)
     {
         <Notice Tone="@(upload.FailedCount > 0 ? Tone.Warning : Tone.Positive)" Class="mb-4" Dismissible OnDismiss="() => lastUpload = null">
-            @UploadSummary(upload)
+            @SitePhotoText.UploadSummary(upload)
         </Notice>
     }
 

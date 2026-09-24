@@ -22,11 +22,31 @@ public sealed record SitePhoto(
     string? FiledToProjectId,
     string? FiledToProgressUpdateId,
     DateTimeOffset? FiledAt,
-    SitePhotoArchive? Archive = null)
+    SitePhotoArchive? Archive = null,
+    SitePhotoDestination? FiledTo = null)
 {
     public bool IsFiled => !string.IsNullOrEmpty(FiledToProgressUpdateId);
 
     public bool IsArchived => Archive is not null;
 
     public bool IsWaiting => !IsFiled && !IsArchived;
+
+    public bool IsFiledTo(string projectId) =>
+        string.Equals(FiledToProjectId, projectId, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsArchivedFor(string projectId) =>
+        string.Equals(Archive?.ProjectId, projectId, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Whether the photo is one project's: filed onto its update, or archived from its
+    /// week. An unfiled photo is nobody's until the run files it.</summary>
+    public bool BelongsTo(string projectId) => IsFiledTo(projectId) || IsArchivedFor(projectId);
 }
+
+/// <summary>Where a filed photo went, read for a person (2026-09-24, the FD: "show which project
+/// and day each photo is filed to"): the project's reference and name and the update's work day,
+/// which is the day the photograph shows — not the day it was filed.</summary>
+public sealed record SitePhotoDestination(
+    string ProjectReference,
+    string ProjectName,
+    string ProgressUpdateTitle,
+    DateTimeOffset? WorkDate);

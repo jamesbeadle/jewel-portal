@@ -1,0 +1,26 @@
+@inject NavigationManager Nav
+@inject IJSRuntime Js
+
+@*
+    Brings the element a link's #fragment names into view once the region holding it has loaded.
+    The browser scrolls to a fragment only on arrival, before an async register has rendered, so
+    a link such as the Site Photos card's "JBB-2026-001 · Mon 21 Sep 2026" would land at the top
+    of the page. Once IsReady turns true it scrolls to and flashes the element (jpmsFocusElement),
+    once per page.
+*@
+
+@code {
+    [Parameter] public bool IsReady { get; set; }
+
+    private bool hasFocused;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (hasFocused || !IsReady) return;
+        hasFocused = true;
+        var fragment = new Uri(Nav.Uri).Fragment.TrimStart('#');
+        if (fragment.Length == 0) return;
+        try { await Js.InvokeVoidAsync("jpmsFocusElement", Uri.UnescapeDataString(fragment)); }
+        catch (JSException) { }
+    }
+}

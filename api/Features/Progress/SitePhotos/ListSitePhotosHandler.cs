@@ -13,11 +13,15 @@ public sealed class ListSitePhotosHandler : IQueryHandler<ListSitePhotos, IReadO
         var rows = context.SitePhotos.AsNoTracking();
         if (query.UnfiledOnly) rows = rows.Where(row => row.FiledToProgressUpdateId == null && row.ArchivedAt == null);
         if (query.ArchivedOnly) rows = rows.Where(row => row.ArchivedAt != null);
+        if (query.ProjectId is { Length: > 0 } projectId)
+        {
+            rows = rows.Where(row => row.FiledToProjectId == projectId || row.ArchivedForProjectId == projectId);
+        }
 
         var entities = await rows
             .OrderByDescending(row => row.UploadedAt)
             .ThenBy(row => row.FileName)
             .ToListAsync(cancellationToken);
-        return entities.Select(entity => entity.ToModel()).ToList();
+        return await SitePhotoDestinations.ToModelsAsync(context, entities, cancellationToken);
     }
 }
