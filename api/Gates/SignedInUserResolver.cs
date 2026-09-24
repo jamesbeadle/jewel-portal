@@ -12,12 +12,15 @@ public sealed class SignedInUserResolver
     private readonly JpmsContext context;
     private readonly SessionManager sessions;
     private readonly SignedInUserCache cache;
+    private readonly SignedInCaller caller;
 
-    public SignedInUserResolver(JpmsContext context, SessionManager sessions, SignedInUserCache cache)
+    public SignedInUserResolver(
+        JpmsContext context, SessionManager sessions, SignedInUserCache cache, SignedInCaller caller)
     {
         this.context = context;
         this.sessions = sessions;
         this.cache = cache;
+        this.caller = caller;
     }
 
     public async Task<SignedInUser?> ResolveAsync(HttpRequest request, CancellationToken cancellationToken)
@@ -32,11 +35,19 @@ public sealed class SignedInUserResolver
         if (session is null || string.IsNullOrWhiteSpace(session.Email)) return null;
 
         var now = DateTimeOffset.UtcNow;
-        if (cache.Get(session.SessionId, now) is { } cached) return cached;
+        if (cache.Get(session.SessionId, now) is { } cached) return Remember(cached);
 
         var user = await ResolveByEmailAsync(session.Email, cancellationToken);
         if (user is null) return null;
         cache.Set(session.SessionId, user, session.ExpiresAt, now);
+        return user;
+    }
+
+    /// <summary>Records who this invocation runs for (SignedInCaller) — every path that hands out a
+    /// signed-in user passes through here, the cache hits included.</summary>
+    public SignedInUser Remember(SignedInUser user)
+    {
+        caller.Is(user);
         return user;
     }
 
@@ -62,8 +73,8 @@ public sealed class SignedInUserResolver
         var directoryRoles = await UserRoles.DirectoryRolesAsync(context, email, cancellationToken);
         var roles = UserRoles.Expand(directoryRoles);
 
-        return new SignedInUser(email, displayName, roles, directoryUser?.SubcontractorId,
+        return Remember(new SignedInUser(email, displayName, roles, directoryUser?.SubcontractorId,
             HomeRoleSelection.From(directoryRoles), directoryUser?.RevertToOwnRole ?? false,
-            directoryUser?.ClientId, directoryUser?.ArchitectId);
+            directoryUser?.ClientId, directoryUser?.ArchitectId));
     }
 }

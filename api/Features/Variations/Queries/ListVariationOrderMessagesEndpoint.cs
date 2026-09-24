@@ -15,10 +15,10 @@ public sealed class ListVariationOrderMessagesEndpoint
         this.handler = handler;
     }
 
-    // Variation reads are internal plus the architect, same as the order itself. Clients read
+    // Variation reads are the internal team's, same as the order itself. Externals read
     // the shared thread through their own scoped endpoint (Features/ClientPortal), never here —
     // this view includes internal notes.
-    private static readonly RoleSet RolesThatMayReadVariations = JpmsRoleSets.InternalAndArchitect;
+    private static readonly RoleSet RolesThatMayReadVariations = JpmsRoleSets.ProjectDeliveryTeam;
 
     [Function(nameof(ListVariationOrderMessages))]
     public async Task<IActionResult> Run(

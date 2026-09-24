@@ -29,7 +29,7 @@ internal static partial class AiMailboxTools
                 ("recipientOverride", "string",
                     "Preview it addressed to this one address instead of the resolved contacts.", false)),
             AiToolKind.Read,
-            JpmsRoleSets.InternalAndArchitect,
+            JpmsRoleSets.ProjectDeliveryTeam,
             async (context, input, ct) =>
             {
                 var recordName = AiToolSchema.Text(input, "record");

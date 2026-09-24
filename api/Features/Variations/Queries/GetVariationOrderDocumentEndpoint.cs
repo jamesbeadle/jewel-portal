@@ -19,9 +19,9 @@ public sealed class GetVariationOrderDocumentEndpoint
         this.handler = handler;
     }
 
-    // The same read set as the variation record itself: internal plus the architect, who reads and
-    // approves variations per the permissions matrix (see GetVariationOrderByIdEndpoint).
-    private static readonly RoleSet RolesThatMayReadVariations = JpmsRoleSets.InternalAndArchitect;
+    // The same read set as the variation record itself: the internal team alone (see
+    // GetVariationOrderByIdEndpoint).
+    private static readonly RoleSet RolesThatMayReadVariations = JpmsRoleSets.ProjectDeliveryTeam;
 
     [Function(nameof(GetVariationOrderDocument))]
     public async Task<IActionResult> Run(

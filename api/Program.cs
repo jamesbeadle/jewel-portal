@@ -91,6 +91,7 @@ var host = new HostBuilder()
         services.AddSingleton<SignedInUserCache>();
         services.AddSingleton<AuthRateLimit>();
         services.AddScoped<SessionManager>();
+        services.AddScoped<SignedInCaller>();
         services.AddScoped<SignedInUserResolver>();
         services.AddScoped<InviteDirectoryWriter>();
         services.AddScoped<UserInviter>();

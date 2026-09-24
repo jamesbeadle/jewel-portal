@@ -29,7 +29,7 @@ public sealed class ListProjectsVisibleToUserEndpoint
         if (!RolesThatMayListProjects.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         var query = QueryFor(signedInUser);
-        if (query is null) return new StatusCodeResult(403);
+        if (query is null) return new OkObjectResult(Array.Empty<Project>());
 
         var projects = await handler.HandleAsync(query, request.HttpContext.RequestAborted);
         return new OkObjectResult(projects);

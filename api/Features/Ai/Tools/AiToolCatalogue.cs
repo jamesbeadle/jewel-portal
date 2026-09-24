@@ -17,7 +17,7 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools;
 /// <para>These read directly through EF rather than dispatching the CQRS query handlers, so each
 /// tool's <see cref="AiTool.VisibleTo"/> has to carry the gate its backing query would have applied.
 /// Checked against the endpoints when the panel widened to PM/QS on 2026-07-27: requests and
-/// variations gate on <c>InternalAndArchitect</c>, contracts, cost centres and projects on
+/// variations gate on <c>ProjectDeliveryTeam</c>, contracts, cost centres and projects on
 /// <c>AllInternal</c>, and every tool below declares one of those — so the widening granted nothing
 /// those roles could not already read by clicking. <b>A new tool must declare the RoleSet its
 /// backing query uses</b>, and a tool whose query is narrower than the panel's own gate must route

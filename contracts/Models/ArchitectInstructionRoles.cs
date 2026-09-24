@@ -16,7 +16,16 @@ public static class ArchitectInstructionRoles
         JpmsRoles.ProjectManager,
         JpmsRoles.Architect);
 
-    /// <summary>Read the register and download the documents — everyone who works from them.</summary>
+    /// <summary>File an instruction from an email in the projects mailbox — reads the business's
+    /// mail, so the internal team alone.</summary>
+    public static readonly RoleSet AllowedToImportFromMail = RoleSet.Of(
+        Role.Admin,
+        JpmsRoles.Director,
+        JpmsRoles.FinanceDirector,
+        JpmsRoles.ProjectManager);
+
+    /// <summary>Read the register and download the documents — the internal team who work from
+    /// them. The register is not scoped to a practice, so the architect is not on it.</summary>
     public static readonly RoleSet AllowedToRead = RoleSet.Of(
         Role.Admin,
         JpmsRoles.Director,
@@ -24,6 +33,5 @@ public static class ArchitectInstructionRoles
         JpmsRoles.ProjectManager,
         JpmsRoles.Estimator,         // Quantity Surveyor — prices the instructed work
         JpmsRoles.SiteManager,
-        JpmsRoles.Foreman,
-        JpmsRoles.Architect);
+        JpmsRoles.Foreman);
 }

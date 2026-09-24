@@ -157,6 +157,7 @@
         valuationFilter = FilterFromQuery(new Uri(Nav.Uri).Query);
         ProjectsReadModel.OnChanged += StateHasChanged;
         Session.OnChange += StateHasChanged;
+        if (!Session.CanOpen(JpmsRoleSets.AllInternal)) return;
         await ProjectsReadModel.RefreshAsync(CancellationToken.None);
     }
 

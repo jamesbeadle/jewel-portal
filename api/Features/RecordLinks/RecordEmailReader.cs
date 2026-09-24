@@ -16,17 +16,21 @@ public sealed class RecordEmailReader
 {
     private readonly RecordProviderRegistry providers;
     private readonly IMailboxGraphClient graph;
+    private readonly SignedInCaller caller;
 
-    public RecordEmailReader(RecordProviderRegistry providers, IMailboxGraphClient graph)
+    public RecordEmailReader(RecordProviderRegistry providers, IMailboxGraphClient graph, SignedInCaller caller)
     {
         this.providers = providers;
         this.graph = graph;
+        this.caller = caller;
     }
 
     // All emails currently tagged to the record, oldest-first. Empty if the record is gone, has no
     // tagged mail, there's no provider for the type, or Graph isn't configured (null client → nothing).
     public async Task<IReadOnlyList<MailboxMessage>> ForRecordAsync(RecordType type, string recordId, CancellationToken ct)
     {
+        if (!caller.MayReadInternalCorrespondence)
+            return Array.Empty<MailboxMessage>();
         if (!providers.TryGet(type, out var provider))
             return Array.Empty<MailboxMessage>();
 

@@ -28,11 +28,8 @@ public sealed class DownloadRequestEmailAttachmentEndpoint
         this.reader = reader;
     }
 
-    // Request reads are internal plus the architect, who reads/approves RFIs per the permissions matrix.
-    // The request's own mail, not the request: read by the internal team alone (Nigel, 2026-09-19).
-    // The rest of a request is JpmsRoleSets.InternalAndArchitect because the architect answers the
-    // RFI — but the correspondence behind it is the business's, and an architect account reached it
-    // on every project, not only their own.
+    // The request's own mail: read by the internal team alone (Nigel, 2026-09-19) — the
+    // correspondence behind a request is the business's, and no external login ever reads it.
     private static readonly RoleSet RolesThatMayReadRequestMail = JpmsRoleSets.AllInternal;
 
     [Function(nameof(DownloadRequestEmailAttachmentEndpoint))]

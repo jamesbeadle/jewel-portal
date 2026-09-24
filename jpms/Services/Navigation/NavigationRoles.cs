@@ -57,16 +57,15 @@ public static class NavigationRoles
         ProjectRoles.Append(Role.Accounts).ToArray();
 
     // Who sees the Architect's Instruction register. Mirrors the API's ArchitectInstructionRoles:
-    // the project roles that own the commercial consequence of an instruction, plus the architect
-    // who issues them (they can file their own rather than emailing and waiting).
+    // the project roles that own the commercial consequence of an instruction. The register is
+    // internal — an external login never opens it (2026-09-24).
     public static readonly Role[] ArchitectInstructionRoles =
     {
         Role.ManagingDirector,
         Role.FinanceDirector,
         Role.ProjectManager,
         Role.QuantitySurveyor,
-        Role.SiteManager,
-        Role.Architect
+        Role.SiteManager
     };
 
     public static readonly Role[] FinanceRoles =
@@ -125,16 +124,14 @@ public static class NavigationRoles
         Role.SalesMarketing
     };
 
-    // The RFI and Variation Orders rows: the paperwork roles plus the architect, who answers RFIs
-    // and instructs variations on their own projects (the pages' InternalAndArchitect gate).
-    public static readonly Role[] RequestRoles =
-        ProjectPaperworkRoles.Append(Role.Architect).ToArray();
+    // The RFI and Variation Orders rows: the paperwork roles (the pages' ProjectDeliveryTeam gate).
+    // These pages carry the business's notes and mail, so no external login is offered them.
+    public static readonly Role[] RequestRoles = ProjectPaperworkRoles;
 
-    // The Documents row: every project role, the foreman (who builds from them) and the
-    // architect (who issues them) — the pages' DrawingReaders gate, less the subcontractor,
-    // whose drawings reach them through their portal.
+    // The Documents row: every project role and the foreman (who builds from them) — the pages'
+    // DrawingReaders gate, less the subcontractor, whose drawings reach them through their portal.
     public static readonly Role[] DocumentRoles =
-        ProjectRoles.Append(Role.Foreman).Append(Role.Architect).ToArray();
+        ProjectRoles.Append(Role.Foreman).ToArray();
 
     // What is happening on site — programme, calendar, progress, site instructions, the office's
     // site notes: every project role and the foreman.

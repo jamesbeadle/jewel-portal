@@ -19,17 +19,22 @@ public sealed class RequestEmailReader
 {
     private readonly JpmsContext context;
     private readonly IMailboxGraphClient graph;
+    private readonly SignedInCaller caller;
 
-    public RequestEmailReader(JpmsContext context, IMailboxGraphClient graph)
+    public RequestEmailReader(JpmsContext context, IMailboxGraphClient graph, SignedInCaller caller)
     {
         this.context = context;
         this.graph = graph;
+        this.caller = caller;
     }
 
     /// <summary>All emails currently tagged to the request, oldest-first. Empty if the request is gone
-    /// or has no tagged mail (or when Graph isn't configured — the null client returns nothing).</summary>
+    /// or has no tagged mail (or when Graph isn't configured — the null client returns nothing), and
+    /// always empty for an external caller (SignedInCaller).</summary>
     public async Task<IReadOnlyList<MailboxMessage>> ForRequestAsync(string requestId, CancellationToken ct)
     {
+        if (!caller.MayReadInternalCorrespondence)
+            return Array.Empty<MailboxMessage>();
         var request = await context.Requests.AsNoTracking()
             .FirstOrDefaultAsync(r => r.RequestId == requestId, ct);
         if (request is null)

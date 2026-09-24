@@ -8,12 +8,16 @@ public sealed class ListRequestMessagesHandler : IQueryHandler<ListRequestMessag
     private readonly JpmsContext context;
     private readonly RequestEmailReader emails;
     private readonly MailboxIntakeOptions mailboxOptions;
+    private readonly SignedInCaller caller;
     public ListRequestMessagesHandler(
-        JpmsContext context, RequestEmailReader emails, MailboxIntakeOptions mailboxOptions)
-    { this.context = context; this.emails = emails; this.mailboxOptions = mailboxOptions; }
+        JpmsContext context, RequestEmailReader emails, MailboxIntakeOptions mailboxOptions, SignedInCaller caller)
+    { this.context = context; this.emails = emails; this.mailboxOptions = mailboxOptions; this.caller = caller; }
 
     public async Task<IReadOnlyList<RequestMessage>> HandleAsync(ListRequestMessages query, CancellationToken cancellationToken)
     {
+        if (!caller.MayReadInternalCorrespondence)
+            return await SharedThreadAsync(query.RequestId, cancellationToken);
+
         // No catch-up sync here: a reply that joins this request's threads after link time belongs
         // to the triage queue (every new arrival is its own triage decision) and appears in this
         // view only once triaged — tags spread across a thread solely at triage time.
@@ -33,5 +37,16 @@ public sealed class ListRequestMessagesHandler : IQueryHandler<ListRequestMessag
             .OrderBy(m => m.PostedAt)
             .ToList()
             .AsReadOnly();
+    }
+
+    private async Task<IReadOnlyList<RequestMessage>> SharedThreadAsync(string requestId, CancellationToken cancellationToken)
+    {
+        var shared = await context.RequestMessages.AsNoTracking()
+            .Where(m => m.RequestId == requestId
+                && m.Visibility == (int)MessageVisibility.Shared
+                && m.Direction == (int)MessageDirection.System)
+            .OrderBy(m => m.PostedAt)
+            .ToListAsync(cancellationToken);
+        return shared.Select(e => e.ToModel()).ToList().AsReadOnly();
     }
 }
