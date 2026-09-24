@@ -38,7 +38,7 @@ public sealed class ContractorsReportComposer
             LookAhead: report.LookAhead,
             Decisions: await ContractorsReportRegisterReader.DecisionsAsync(context, report.ProjectId, cancellationToken),
             Variations: variations,
-            VariationsTotal: variations.Sum(variation => variation.Value),
+            VariationsApproved: await ContractorsReportRegisterReader.ApprovedInPeriodAsync(context, report.ProjectId, week, cancellationToken),
             Neighbours: report.Neighbours,
             HealthAndSafety: report.HealthAndSafety,
             BuildingControl: await ContractorsReportRegisterReader.BuildingControlAsync(context, report.ProjectId, report.BuildingControlLiaison, cancellationToken),

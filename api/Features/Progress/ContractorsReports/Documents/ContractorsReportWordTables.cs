@@ -30,17 +30,6 @@ internal static class ContractorsReportWordTables
         table.Append(row);
     }
 
-    public static void TotalRow(Table table, IReadOnlyList<RegisterColumn> columns, int labelAt, string label, string total)
-    {
-        var row = new TableRow();
-        for (var index = 0; index < columns.Count; index++)
-        {
-            var text = index == labelAt ? label : index == labelAt + 1 ? total : "";
-            row.Append(Cell(Text(text, SmallSize, true, false, Muted, 0), columns[index], PanelFill));
-        }
-        table.Append(row);
-    }
-
     public static Table Grid(params (string Label, string Value)[] pairs)
     {
         var widths = new[] { 3.3, 5.6, 3.3, 5.6 };

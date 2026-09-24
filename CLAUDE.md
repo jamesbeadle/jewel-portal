@@ -429,9 +429,11 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   read behind the page's preview, `get_contractors_report`, and both downloads): Section 1 =
   the selected updates under Friday (weekend folded in) then Monday–Thursday
   (`ContractorsReportDays`); 3 = RFIs not Closed with ResponseDue and an italic count line;
-  4 = variations Quoting / Issued / Awaiting AI at `EstimatedValue ?? Value`, total = the sum
-  of the rows, NEVER carried forward; 7 = the active `BuildingControlCase` contact; 8 = work
-  orders Released (or Complete with ScheduledCompletion in the week) with the directory's
+  4 = variations at Issued only, as issued Report 30 prints them — Variation / Position ("Issued
+  4 August 2026 — no response received"), NO value column (Nigel, 24 Sep 2026), opened by the
+  variations approved in the period (`ContractorsReportVariationWording`, contracts); 7 = the
+  active `BuildingControlCase` contact; 8 = work orders given days on site (the page's attendance
+  table lists every one Released, or Complete with ScheduledCompletion in the week) with the directory's
   CompanyName; 9 = the selected days' photographs, two-up, days without photos omitted.
   `CreateContractorsReport` pre-fills what a person would copy from last week (number = max+1,
   header fields carried, unstruck Look Ahead carried, Valuation No. = the highest payment
