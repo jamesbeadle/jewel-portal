@@ -85,7 +85,7 @@
                     {
                         <tr class="cursor-pointer hover:bg-surface-raised" @onclick="() => ToggleOrder(summary.WorkOrderId)">
                             <td class="font-mono text-xs text-content-subtle whitespace-nowrap">
-                                <span class="inline-block w-4">@(expandedOrderIds.Contains(summary.WorkOrderId) ? "▾" : "▸")</span>@($"WO-{summary.Number:0000}")
+                                <span class="inline-block w-4">@(expandedOrderIds.Contains(summary.WorkOrderId) ? "▾" : "▸")</span>@summary.Reference
                             </td>
                             <td class="whitespace-nowrap">@summary.SubcontractorName</td>
                             <td>@summary.Title</td>
@@ -314,7 +314,7 @@
         var available = option.RemainingToInvoice + (isCurrent ? Math.Max(line.Net, 0m) : 0m);
         var fits = line.Net <= 0m || line.Net <= available;
         <option value="@option.WorkOrderId" selected="@isCurrent" disabled="@(!fits && !isCurrent)">
-            @($"WO-{option.Number:0000} · {option.SubcontractorName} · {MoneyExact(option.RemainingToInvoice)} left")
+            @($"{option.Reference} · {option.SubcontractorName} · {MoneyExact(option.RemainingToInvoice)} left")
         </option>
     };
     private RenderFragment InvoicingPill(WorkOrderInvoiceSummary summary) => __builder =>

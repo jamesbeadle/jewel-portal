@@ -31,7 +31,11 @@ public sealed record SubcontractorVariationRequest(
     // Display helpers resolved server-side so portal sessions never join internal lists.
     string ProjectName = "",
     int WorkOrderNumber = 0,
-    string SubcontractorName = "")
+    string SubcontractorName = "",
+    string ProjectReference = "")
 {
+    /// <summary>The order it is raised against, qualified by its project ("JBB-2026-001-WO-0054").</summary>
+    public string WorkOrderReference => WorkOrderReferences.Qualified(ProjectReference, WorkOrderNumber);
+
     public bool IsOpen => Status is VariationRequestStatus.Submitted or VariationRequestStatus.UnderReview;
 }

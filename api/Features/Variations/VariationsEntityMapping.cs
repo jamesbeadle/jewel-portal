@@ -46,7 +46,7 @@ internal static class VariationsEntityMapping
 
     public static SubcontractorVariationRequest ToModel(
         this SubcontractorVariationRequestEntity entity,
-        string projectName = "", int workOrderNumber = 0, string subcontractorName = "") => new(
+        string projectName = "", int workOrderNumber = 0, string subcontractorName = "", string? projectReference = null) => new(
         entity.VariationRequestId,
         entity.ProjectId,
         entity.WorkOrderId,
@@ -62,5 +62,6 @@ internal static class VariationsEntityMapping
         entity.VariationOrderId,
         projectName,
         workOrderNumber,
-        subcontractorName);
+        subcontractorName,
+        projectReference ?? "");
 }

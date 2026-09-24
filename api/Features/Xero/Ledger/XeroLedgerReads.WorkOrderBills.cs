@@ -64,9 +64,13 @@ internal static partial class XeroLedgerReads
         if (approvals.Count == 0) return new Dictionary<string, WorkOrderBillApprovalStamp>();
 
         var orderIds = approvals.Select(approval => approval.WorkOrderId).Distinct().ToList();
-        var references = await context.WorkOrders.AsNoTracking()
+        var ordersWithProjects = await context.WorkOrders.AsNoTracking()
             .Where(order => orderIds.Contains(order.WorkOrderId))
-            .ToDictionaryAsync(order => order.WorkOrderId, order => order.Reference, cancellationToken);
+            .Join(context.Projects.AsNoTracking(), order => order.ProjectId, project => project.ProjectId,
+                (order, project) => new { Order = order, ProjectReference = project.Reference })
+            .ToListAsync(cancellationToken);
+        var references = ordersWithProjects.ToDictionary(
+            row => row.Order.WorkOrderId, row => row.Order.ReferenceOn(row.ProjectReference), StringComparer.OrdinalIgnoreCase);
 
         return approvals
             .GroupBy(approval => approval.XeroInvoiceId, StringComparer.OrdinalIgnoreCase)

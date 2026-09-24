@@ -19,7 +19,8 @@ public static partial class AiToolCatalogue
             new(
                 "find_by_reference",
                 "Look up a single record by the reference a person would say out loud — V72, RFI-049, REQ-0122, "
-                + "NOD-003, TODO-0074, WO-0045, BPI-0003, DEF-0012, LD-0007 (a sales lead), EST-0003 (an "
+                + "NOD-003, TODO-0074, JBB-2026-001-WO-0045 (the short WO-0045 lists the order on every "
+                + "project that has that number, each with its project), BPI-0003, DEF-0012, LD-0007 (a sales lead), EST-0003 (an "
                 + "estimate on a lead), KPI-0003 (administrators only), or a project "
                 + "reference like JBB-2026-002. "
                 + "Searches variations, requests, to-dos, work "
@@ -90,6 +91,10 @@ public static partial class AiToolCatalogue
                     // the lookup is by Number). 2026-08-21: TODO-0074 came back "not found" and the
                     // model told the user to click the card it could not reach — a reference a
                     // person can read out loud must resolve here, whatever the record type.
+                    if (WorkOrderReferences.TryRead(reference, out var orderProject, out var orderNumber) && orderProject is not null)
+                        return await FindWorkOrdersByNumberAsync(context, orderNumber, orderProject, ct)
+                            ?? NotFound($"Nothing found with reference {reference}. Say so — do not guess at a similar record.");
+
                     var stemForm = System.Text.RegularExpressions.Regex.Match(cleaned, "^(todo|wo|bpi|def|kpi|ld|est)0*(\\d+)$");
                     if (stemForm.Success && int.TryParse(stemForm.Groups[2].Value, out var stemNumber))
                     {
@@ -176,33 +181,8 @@ public static partial class AiToolCatalogue
                             }
                             case "wo":
                             {
-                                var orders = await context.Db.WorkOrders
-                                    .AsNoTracking()
-                                    .Where(row => row.Number == stemNumber)
-                                    .ToListAsync(ct);
-                                if (orders.Count > 0)
-                                {
-                                    var projects = await ProjectReferenceMapAsync(context, orders.Select(row => row.ProjectId), ct);
-                                    return Serialise(new
-                                    {
-                                        ok = true,
-                                        kind = "work_order",
-                                        matches = orders.Select(row => new
-                                        {
-                                            reference = row.Reference,
-                                            row.WorkOrderId,
-                                            row.Title,
-                                            status = ((WorkOrderStatus)row.Status).ToString(),
-                                            row.Value,
-                                            project = projects.TryGetValue(row.ProjectId, out var orderProject) ? orderProject : row.ProjectId,
-                                            projectId = row.ProjectId,
-                                            route = $"/projects/{row.ProjectId}/work-orders"
-                                        }),
-                                        note = "get_work_order_context reads the order's origin, lines and attachments; "
-                                            + "read_record_emails record_type work_order reads its correspondence; the "
-                                            + "work_order_edit dialog corrects it."
-                                    });
-                                }
+                                var orders = await FindWorkOrdersByNumberAsync(context, stemNumber, null, ct);
+                                if (orders is not null) return orders;
                                 break;
                             }
                             case "bpi":

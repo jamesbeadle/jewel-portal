@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Features.Procurement;
 using Jewel.JPMS.Contracts.Commercial;
 
 namespace Jewel.JPMS.Api.Features.Commercial.Queries;
@@ -56,6 +57,7 @@ public sealed class ListWorkOrderInvoiceSummariesHandler
         // rather than letting a stale zero pass for a confirmed one.
         var ledgerSyncedAtUtc = await context.XeroLedgerLines.AsNoTracking()
             .MaxAsync(line => (DateTimeOffset?)line.LastSyncedAtUtc, cancellationToken);
+        var projectReference = await WorkOrderProjectReferences.OfAsync(context, query.ProjectId, cancellationToken);
 
         return orders.Select(order =>
             {
@@ -84,7 +86,8 @@ public sealed class ListWorkOrderInvoiceSummariesHandler
                     invoicingStatus,
                     paid,
                     WorkOrderPaymentStatuses.For(linkedLineCount, paid, order.Value),
-                    ledgerSyncedAtUtc);
+                    ledgerSyncedAtUtc,
+                    projectReference ?? "");
             })
             .ToList();
     }

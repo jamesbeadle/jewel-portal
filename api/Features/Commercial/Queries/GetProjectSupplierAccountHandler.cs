@@ -46,7 +46,7 @@ public sealed partial class GetProjectSupplierAccountHandler
             links.Select(link => link.XeroLedgerLineId).ToHashSet(StringComparer.OrdinalIgnoreCase),
             await IsSupplierOnlyHereAsync(query, cancellationToken));
         var bills = await new SupplierBillFinder(context).FindAsync(search, cancellationToken);
-        var referencesByOrder = orders.ToDictionary(order => order.WorkOrderId, order => order.Reference, StringComparer.OrdinalIgnoreCase);
+        var referencesByOrder = orders.ToDictionary(order => order.WorkOrderId, order => order.ReferenceOn(project.Reference), StringComparer.OrdinalIgnoreCase);
 
         var invoices = bills
             .Select(bill => BuildInvoice(bill, links, referencesByOrder))
@@ -54,7 +54,7 @@ public sealed partial class GetProjectSupplierAccountHandler
             .ThenBy(invoice => invoice.InvoiceNumber, StringComparer.OrdinalIgnoreCase)
             .ToList();
         var accountOrders = orders
-            .Select(order => BuildOrder(order, linesByOrder, links, invoices, paidByOrder))
+            .Select(order => BuildOrder(order, referencesByOrder[order.WorkOrderId], linesByOrder, links, invoices, paidByOrder))
             .ToList();
 
         return new ProjectSupplierAccount(

@@ -38,7 +38,7 @@ public partial class ProjectVariations
                     order.IssuedAt?.LocalDateTime,
                     order.Status == VariationOrderStatus.Approved ? order.ApprovedAt?.LocalDateTime : null,
                     order.CreatedAt.LocalDateTime,
-                    issued.Count == 0 ? null : string.Join(", ", issued.Select(wo => $"WO-{wo.Number:0000}")));
+                    issued.Count == 0 ? null : string.Join(", ", issued.Select(wo => wo.Reference)));
             }
         }
 

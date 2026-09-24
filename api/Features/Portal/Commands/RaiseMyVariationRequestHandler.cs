@@ -42,10 +42,10 @@ public sealed class RaiseMyVariationRequestHandler
         context.SubcontractorVariationRequests.Add(entity);
         await context.SaveChangesAsync(cancellationToken);
 
-        var projectName = await context.Projects
-            .Where(project => project.ProjectId == workOrder.ProjectId)
-            .Select(project => project.Name)
-            .FirstOrDefaultAsync(cancellationToken) ?? "";
-        return entity.ToModel(projectName, workOrder.Number);
+        var project = await context.Projects
+            .Where(row => row.ProjectId == workOrder.ProjectId)
+            .Select(row => new { row.Name, row.Reference })
+            .FirstOrDefaultAsync(cancellationToken);
+        return entity.ToModel(project?.Name ?? "", workOrder.Number, projectReference: project?.Reference);
     }
 }

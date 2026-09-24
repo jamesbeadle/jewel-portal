@@ -166,7 +166,8 @@ public sealed record WorkOrder(
     // ---- Deposit the supplier requires, printed at the foot of the purchase order.
     //      Recorded as a percentage of the order value only; Percent is null unless required ----
     bool DepositRequired = false,
-    decimal? DepositPercent = null)
+    decimal? DepositPercent = null,
+    string ProjectReference = "")
 {
     /// <summary>The supplier has electronically accepted this order — from their portal login
     /// or from the acceptance link in the purchase-order email.</summary>
@@ -190,17 +191,20 @@ public sealed record WorkOrder(
     /// are recorded against it, so there is never a cost left behind to account for).</summary>
     public bool IsCancelled => Status == WorkOrderStatus.Cancelled;
 
-    /// <summary>The human reference. Drafts and rejected drafts have no number — approval is
-    /// what mints it — so they read by their state; anything else unnumbered falls back to an
-    /// id stem, mirroring WorkOrderEntity.Reference server-side. Never render
-    /// WO-{Number:0000} directly: a draft's 0 would print as "WO-0000".</summary>
-    public string Reference => Number > 0
-        ? $"WO-{Number:0000}"
-        : IsDraft
-            ? "Draft"
-            : IsRejected
-                ? "Rejected"
-                : "WO-" + (WorkOrderId.Length >= 8 ? WorkOrderId[..8] : WorkOrderId).ToUpperInvariant();
+    /// <summary>The human reference, qualified by the project ("JBB-2026-001-WO-0054"). Drafts
+    /// and rejected drafts have no number — approval is what mints it — so they read by their
+    /// state; anything else unnumbered falls back to an id stem, mirroring
+    /// WorkOrderEntity.Reference server-side. Never render WO-{Number:0000} directly: a draft's
+    /// 0 would print as "WO-0000", and the project would be missing.</summary>
+    public string Reference => IsDraft && Number == 0
+        ? "Draft"
+        : IsRejected && Number == 0
+            ? "Rejected"
+            : WorkOrderReferences.Qualify(ProjectReference, ShortReference);
+
+    private string ShortReference => Number > 0
+        ? WorkOrderReferences.Short(Number)
+        : WorkOrderReferences.Prefix + (WorkOrderId.Length >= 8 ? WorkOrderId[..8] : WorkOrderId).ToUpperInvariant();
 
     /// <summary>Raised directly in JPMS — no tender, no variation, no seed — so its supplier,
     /// title, scope and priced lines can be edited wholesale via UpdateManualWorkOrder.</summary>

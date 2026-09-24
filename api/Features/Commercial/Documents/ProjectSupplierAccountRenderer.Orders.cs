@@ -21,7 +21,7 @@ public static partial class ProjectSupplierAccountRenderer
     {
         SectionHeading(section, "Work orders held");
         var table = AddLinesTable(section,
-            (1.8, "Order"), (6.6, "Description"), (2.3, "Order value"),
+            (3.8, "Order"), (4.6, "Description"), (2.3, "Order value"),
             (2.4, "Invoiced and linked"), (2.3, "Paid"), (2.4, "Left to invoice"));
         SetMoneyColumns(table, OrderValueColumn, OrderInvoicedColumn, OrderPaidColumn, OrderRemainingColumn);
 

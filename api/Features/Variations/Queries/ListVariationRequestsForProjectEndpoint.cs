@@ -1,3 +1,5 @@
+using Jewel.JPMS.Api.Features.Procurement;
+
 
 namespace Jewel.JPMS.Api.Features.Variations.Queries;
 
@@ -45,11 +47,13 @@ public sealed class ListVariationRequestsForProjectEndpoint
                 .Where(order => workOrderIds.Contains(order.WorkOrderId))
                 .ToListAsync(cancellationToken))
             .ToDictionary(order => order.WorkOrderId, order => order.Number, StringComparer.OrdinalIgnoreCase);
+        var projectReference = await WorkOrderProjectReferences.OfAsync(context, projectId, cancellationToken);
 
         return new OkObjectResult(entities.Select(entity => entity.ToModel(
                 projectName: "",
                 workOrderNumbers.TryGetValue(entity.WorkOrderId, out var number) ? number : 0,
-                subcontractorNames.TryGetValue(entity.SubcontractorId, out var name) ? name : "(unknown)"))
+                subcontractorNames.TryGetValue(entity.SubcontractorId, out var name) ? name : "(unknown)",
+                projectReference))
             .ToList());
     }
 }

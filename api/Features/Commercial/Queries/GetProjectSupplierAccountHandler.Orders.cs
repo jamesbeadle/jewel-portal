@@ -43,6 +43,7 @@ public sealed partial class GetProjectSupplierAccountHandler
     // lines carry; the payment status says how far to trust the paid figure.
     private static ProjectSupplierAccountOrder BuildOrder(
         WorkOrderEntity order,
+        string reference,
         IReadOnlyDictionary<string, List<WorkOrderLineEntity>> linesByOrder,
         IReadOnlyList<XeroLineWorkOrderLinkEntity> links,
         IReadOnlyList<ProjectSupplierAccountInvoice> invoices,
@@ -63,7 +64,7 @@ public sealed partial class GetProjectSupplierAccountHandler
         return new ProjectSupplierAccountOrder(
             order.WorkOrderId,
             order.Number,
-            order.Reference,
+            reference,
             order.Title,
             (WorkOrderStatus)order.Status,
             order.AwardedAt,

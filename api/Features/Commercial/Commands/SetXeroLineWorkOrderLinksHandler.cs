@@ -1,5 +1,6 @@
 using System.Globalization;
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Procurement;
 using Jewel.JPMS.Contracts.Commercial;
 
 namespace Jewel.JPMS.Api.Features.Commercial.Commands;
@@ -69,13 +70,14 @@ public sealed class SetXeroLineWorkOrderLinksHandler : ICommandHandler<SetXeroLi
                 .Where(order => order.ProjectId == command.ProjectId && orderIds.Contains(order.WorkOrderId))
                 .ToListAsync(cancellationToken);
             var ordersById = orders.ToDictionary(order => order.WorkOrderId, StringComparer.OrdinalIgnoreCase);
+            var projectReference = await WorkOrderProjectReferences.OfAsync(context, command.ProjectId, cancellationToken);
 
             foreach (var slice in slices)
             {
                 if (!ordersById.TryGetValue(slice.WorkOrderId, out var order))
                     throw new InvalidOperationException("A work order in the split does not exist on this project.");
                 if (order.Status == (int)WorkOrderStatus.Cancelled)
-                    throw new InvalidOperationException($"{order.Reference} is cancelled — invoices can't be linked to it.");
+                    throw new InvalidOperationException($"{order.ReferenceOn(projectReference)} is cancelled — invoices can't be linked to it.");
                 if (order.Status == (int)WorkOrderStatus.Draft)
                     throw new InvalidOperationException(
                         $"\"{order.Title}\" is still a draft — approve the work order before linking invoices to it.");
@@ -94,7 +96,7 @@ public sealed class SetXeroLineWorkOrderLinksHandler : ICommandHandler<SetXeroLi
                     var remaining = order.Value - alreadyInvoiced;
                     if (slice.Amount > remaining)
                         throw new InvalidOperationException(
-                            $"This would over-invoice {order.Reference}: the slice is {slice.Amount.ToString("C2", Gbp)} but only " +
+                            $"This would over-invoice {order.ReferenceOn(projectReference)}: the slice is {slice.Amount.ToString("C2", Gbp)} but only " +
                             $"{Math.Max(remaining, 0m).ToString("C2", Gbp)} of its {order.Value.ToString("C2", Gbp)} value is left to invoice.");
                 }
             }

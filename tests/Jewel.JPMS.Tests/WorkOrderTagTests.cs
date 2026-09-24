@@ -40,7 +40,7 @@ public sealed class WorkOrderTagTests
         Assert.Equal("wo-bf-45", byFrance!.RecordId);
         Assert.Equal("wo-cl-45", coombeLane!.RecordId);
         Assert.Equal("JBB-2026-001-WO-0045", byFrance.TagReference);
-        Assert.Equal("WO-0045", byFrance.Reference);
+        Assert.Equal("JBB-2026-001-WO-0045", byFrance.Reference);
 
         Assert.Null(await provider.FindByTagAsync("WO-0045", CancellationToken.None));
         Assert.Equal("wo-bf-48", (await provider.FindByTagAsync("WO-0048", CancellationToken.None))!.RecordId);

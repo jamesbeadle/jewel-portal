@@ -71,7 +71,7 @@ public sealed class GetSubcontractorStatementHandler
                 var projectOrders = group
                     .OrderBy(order => order.Number)
                     .ThenBy(order => order.WorkOrderId, StringComparer.OrdinalIgnoreCase)
-                    .Select(order => BuildOrder(order, linksByOrder, ledgerLinesById))
+                    .Select(order => BuildOrder(order, project?.Reference, linksByOrder, ledgerLinesById))
                     .ToList();
                 return new SubcontractorStatementProject(
                     group.Key,
@@ -94,6 +94,7 @@ public sealed class GetSubcontractorStatementHandler
 
     private static SubcontractorStatementOrder BuildOrder(
         WorkOrderEntity order,
+        string? projectReference,
         IReadOnlyDictionary<string, List<XeroLineWorkOrderLinkEntity>> linksByOrder,
         IReadOnlyDictionary<string, XeroLedgerLineEntity> ledgerLinesById)
     {
@@ -129,6 +130,7 @@ public sealed class GetSubcontractorStatementHandler
             order.AwardedAt,
             order.Value,
             invoices.Sum(invoice => invoice.Amount),
-            invoices);
+            invoices,
+            projectReference ?? "");
     }
 }

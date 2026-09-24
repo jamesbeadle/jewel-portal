@@ -105,7 +105,7 @@ public partial class CostCentreCostOfSalesModal
     private string SplitTitle(CostCentreActualCostLine line) =>
         string.Join(" · ", line.Links.Select(link =>
             summariesByOrder.TryGetValue(link.WorkOrderId, out var summary)
-                ? $"WO-{summary.Number:0000} {MoneyExact(link.Amount)}"
+                ? $"{summary.Reference} {MoneyExact(link.Amount)}"
                 : MoneyExact(link.Amount)))
         + (line.Net - line.LinkedTotal == 0m ? "" : $" · {MoneyExact(line.Net - line.LinkedTotal)} not linked");
 

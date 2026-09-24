@@ -34,10 +34,10 @@ public sealed class ListMyVariationRequestsEndpoint
             .ToListAsync(cancellationToken);
 
         var projectIds = entities.Select(row => row.ProjectId).Distinct().ToList();
-        var projectNames = (await context.Projects
+        var projects = (await context.Projects
                 .Where(project => projectIds.Contains(project.ProjectId))
                 .ToListAsync(cancellationToken))
-            .ToDictionary(project => project.ProjectId, project => project.Name, StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(project => project.ProjectId, StringComparer.OrdinalIgnoreCase);
 
         var workOrderIds = entities.Select(row => row.WorkOrderId).Distinct().ToList();
         var workOrderNumbers = (await context.WorkOrders
@@ -46,8 +46,9 @@ public sealed class ListMyVariationRequestsEndpoint
             .ToDictionary(order => order.WorkOrderId, order => order.Number, StringComparer.OrdinalIgnoreCase);
 
         return new OkObjectResult(entities.Select(entity => entity.ToModel(
-                projectNames.TryGetValue(entity.ProjectId, out var name) ? name : "",
-                workOrderNumbers.TryGetValue(entity.WorkOrderId, out var number) ? number : 0))
+                projects.GetValueOrDefault(entity.ProjectId)?.Name ?? "",
+                workOrderNumbers.TryGetValue(entity.WorkOrderId, out var number) ? number : 0,
+                projectReference: projects.GetValueOrDefault(entity.ProjectId)?.Reference))
             .ToList());
     }
 }

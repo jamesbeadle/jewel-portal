@@ -55,10 +55,13 @@ public sealed class UndoWorkOrderBillApprovalHandler : ICommandHandler<UndoWorkO
 
         var xero = await writeBack.TryClearTrackingAsync(command.XeroInvoiceId, cancellationToken);
         var orderIds = approvals.Select(row => row.WorkOrderId).Distinct().ToList();
-        var references = await context.WorkOrders.AsNoTracking()
-            .Where(candidate => orderIds.Contains(candidate.WorkOrderId))
-            .Select(candidate => candidate.Reference)
-            .ToListAsync(cancellationToken);
+        var references = (await context.WorkOrders.AsNoTracking()
+                .Where(candidate => orderIds.Contains(candidate.WorkOrderId))
+                .Join(context.Projects.AsNoTracking(), candidate => candidate.ProjectId, project => project.ProjectId,
+                    (candidate, project) => new { Order = candidate, ProjectReference = project.Reference })
+                .ToListAsync(cancellationToken))
+            .Select(row => row.Order.ReferenceOn(row.ProjectReference))
+            .ToList();
         await audit.WriteAsync(
             AuditEventType.WorkOrderBillApprovalUndone,
             $"{lines[0].ContactName} {lines[0].InvoiceNumber} Work Order bill approval undone — {lines.Count} line(s) back to Unallocated, "

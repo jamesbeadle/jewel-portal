@@ -110,7 +110,7 @@ public sealed class CreateWorkOrderFromMessageHandler
             .FirstOrDefaultAsync(cancellationToken);
 
         var order = earlierAttempt is not null
-            ? earlierAttempt.ToModel()
+            ? await WorkOrderProjectReferences.ModelOfAsync(context, earlierAttempt, cancellationToken)
             : await createOrder.HandleAsync(
                 new CreateManualWorkOrder(
                     command.ProjectId,

@@ -46,7 +46,7 @@ public partial class ProjectBidPackageInviteDetail
         var order = awarded.Order;
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"<p>Hello {awarded.SubcontractorName},</p>");
-        sb.AppendLine($"<p>Following your tender for the <strong>{package!.Title}</strong> package (ref {package.Reference}), we are pleased to confirm the award and attach our work order <strong>WO-{order.Number:0000}</strong> below.</p>");
+        sb.AppendLine($"<p>Following your tender for the <strong>{package!.Title}</strong> package (ref {package.Reference}), we are pleased to confirm the award and attach our work order <strong>{order.Reference}</strong> below.</p>");
         sb.AppendLine(awarded.Lines.Count > 0
             ? WorkOrderPoEmail.LinesTable(OrderedLines(awarded), order.Value)
             : OrderValueAndScope(order));

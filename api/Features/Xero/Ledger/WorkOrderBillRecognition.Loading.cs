@@ -32,18 +32,18 @@ public sealed partial class WorkOrderBillRecognition
                 .ToListAsync(cancellationToken))
             .ToDictionary(row => row.WorkOrderId, row => row.Invoiced, StringComparer.OrdinalIgnoreCase);
         var projectIds = released.Select(order => order.ProjectId).Distinct().ToList();
-        var projectNames = await context.Projects.AsNoTracking()
+        var projects = await context.Projects.AsNoTracking()
             .Where(project => projectIds.Contains(project.ProjectId))
-            .ToDictionaryAsync(project => project.ProjectId, project => project.Name, cancellationToken);
+            .ToDictionaryAsync(project => project.ProjectId, project => new { project.Name, project.Reference }, cancellationToken);
 
         return released
             .Select(order => new OpenOrder(
                 order.WorkOrderId,
-                order.Reference,
+                order.ReferenceOn(projects.GetValueOrDefault(order.ProjectId)?.Reference),
                 order.Number,
                 order.Title,
                 order.ProjectId,
-                projectNames.TryGetValue(order.ProjectId, out var name) ? name : order.ProjectId,
+                projects.GetValueOrDefault(order.ProjectId)?.Name ?? order.ProjectId,
                 order.SubcontractorId,
                 order.Value,
                 invoicedByOrder.TryGetValue(order.WorkOrderId, out var invoiced) ? invoiced : 0m,

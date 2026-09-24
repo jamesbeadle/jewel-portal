@@ -152,7 +152,7 @@
                         @foreach (var detail in UnpackagedOrders)
                         {
                             <p class="text-sm text-content-muted">
-                                <span class="font-mono text-xs text-content-subtle">@($"WO-{detail.Order.Number:0000}")</span>
+                                <span class="font-mono text-xs text-content-subtle">@detail.Order.Reference</span>
                                 @detail.SubcontractorName · @WholeMoney(detail.Lines.Sum(line => line.LineTotal))
                             </p>
                         }

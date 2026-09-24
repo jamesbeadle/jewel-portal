@@ -40,7 +40,7 @@
                             <input type="checkbox" class="cursor-pointer" disabled="@taken"
                                    checked="@selectedOrderIds.Contains(order.WorkOrderId)"
                                    @onchange="() => ToggleOrder(order.WorkOrderId)" />
-                            <span class="font-mono text-xs text-content-subtle">@($"WO-{order.Number:0000}")</span>
+                            <span class="font-mono text-xs text-content-subtle">@order.Reference</span>
                             <span class="text-content truncate">@detail.SubcontractorName</span>
                             <span class="ml-auto text-content-muted whitespace-nowrap">@Money(CommittedOf(detail))</span>
                         </label>

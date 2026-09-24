@@ -97,6 +97,6 @@ public sealed class CreateManualWorkOrderHandler
         }
 
         await context.SaveChangesAsync(cancellationToken);
-        return entity.ToModel();
+        return await WorkOrderProjectReferences.ModelOfAsync(context, entity, cancellationToken);
     }
 }

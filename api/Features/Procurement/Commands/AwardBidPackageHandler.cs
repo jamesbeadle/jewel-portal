@@ -68,7 +68,7 @@ public sealed class AwardBidPackageHandler
         }
 
         await context.SaveChangesAsync(cancellationToken);
-        return entity.ToModel();
+        return await WorkOrderProjectReferences.ModelOfAsync(context, entity, cancellationToken);
     }
 
     // Builds the order's priced lines from the winning tender, one line per cost centre:
@@ -119,6 +119,7 @@ public sealed class AwardBidPackageHandler
             .GroupBy(centre => centre.Code, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First().Name, StringComparer.OrdinalIgnoreCase);
 
+        var orderReference = order.ReferenceOn(await WorkOrderProjectReferences.OfAsync(context, order.ProjectId, cancellationToken));
         var sortOrder = 0;
         void AddLine(string code, string title, decimal amount) =>
             context.WorkOrderLines.Add(new WorkOrderLineEntity
@@ -126,7 +127,7 @@ public sealed class AwardBidPackageHandler
                 WorkOrderLineId = ProcurementIdentifierFactory.NextWorkOrderLineId(),
                 WorkOrderId = order.WorkOrderId,
                 Title = title.Length > 256 ? title[..256] : title,
-                Description = $"Awarded from tender {order.Reference} scope",
+                Description = $"Awarded from tender {orderReference} scope",
                 CostType = "Subcontractor",
                 CostCode = code,
                 Quantity = 1m,

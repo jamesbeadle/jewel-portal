@@ -10,7 +10,8 @@ namespace Jewel.JPMS.Api.Features.Procurement;
 /// the projects@ mailbox. The stem therefore carries the project, exactly as RequestTags does:
 ///   stem = "{projectRef}-{reference}"  ->  category "JPMS/JBB-2026-001-WO-0045".
 /// The entity's own <see cref="WorkOrderEntity.Reference"/> stays the unqualified reference — what
-/// people say and what the pre-qualification legacy tag was (2026-09-14, the Coombe Lane collision).
+/// the pre-qualification legacy tag was (2026-09-14, the Coombe Lane collision); what a person reads
+/// is <see cref="WorkOrderEntity.ReferenceOn"/>, the same spelling as the stem.
 /// </summary>
 internal static class WorkOrderTags
 {
@@ -24,11 +25,8 @@ internal static class WorkOrderTags
         Stem(await ProjectRefAsync(context, order.ProjectId, cancellationToken), order.ProjectId, order.Reference);
 
     /// <summary>The project's human reference (e.g. "JBB-2026-001"), or null when unset.</summary>
-    public static async Task<string?> ProjectRefAsync(JpmsContext context, string projectId, CancellationToken cancellationToken) =>
-        await context.Projects.AsNoTracking()
-            .Where(p => p.ProjectId == projectId)
-            .Select(p => p.Reference)
-            .FirstOrDefaultAsync(cancellationToken);
+    public static Task<string?> ProjectRefAsync(JpmsContext context, string projectId, CancellationToken cancellationToken) =>
+        WorkOrderProjectReferences.OfAsync(context, projectId, cancellationToken);
 
     /// <summary>The order number a stem names — "WO-0045" (the legacy flat stem) or
     /// "JBB-2026-001-WO-0045" — or null when the stem is not a work-order stem at all.</summary>

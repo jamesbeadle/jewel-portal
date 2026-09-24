@@ -26,7 +26,7 @@ public sealed class ApproveWorkOrderBillHandlerTests
         Assert.All(lines, line =>
         {
             Assert.Equal((int)XeroAllocationStatus.Allocated, line.AllocationStatus);
-            Assert.Equal((WorkOrderBillFixture.ByFrance, "ELE-STD", "nigel@jewelbb.co.uk", "Work order WO-0026"), (line.ProjectId, line.CostCenterCode, line.AllocatedBy, line.Note));
+            Assert.Equal((WorkOrderBillFixture.ByFrance, "ELE-STD", "nigel@jewelbb.co.uk", "Work order JBB-2026-001-WO-0026"), (line.ProjectId, line.CostCenterCode, line.AllocatedBy, line.Note));
         });
         var links = fixture.Context.XeroLineWorkOrderLinks.AsNoTracking().ToList();
         Assert.Equal(new[] { 6000m, 4000m }, links.OrderByDescending(link => link.Amount).Select(link => link.Amount));
@@ -99,10 +99,10 @@ public sealed class ApproveWorkOrderBillHandlerTests
 
         var outcome = await fixture.ApproveAsync(split);
 
-        Assert.Equal(new[] { "WO-0055", "WO-0056" }, outcome.WorkOrderReferences);
+        Assert.Equal(new[] { "JBB-2026-004-WO-0055", "JBB-2026-004-WO-0056" }, outcome.WorkOrderReferences);
         var lines = fixture.Context.XeroLedgerLines.AsNoTracking().Where(candidate => candidate.XeroInvoiceId == "inv-lg").OrderBy(candidate => candidate.XeroLedgerLineId).ToList();
         Assert.Equal(new[] { ("321", 720m), ("322", 2372m) }, lines.Select(line => (line.AccountCode!, line.Net)));
-        Assert.All(lines, line => Assert.Equal((WorkOrderBillFixture.Woodhouse, (string?)null, "Work orders WO-0055, WO-0056"), (line.ProjectId, line.CostCenterCode, line.Note)));
+        Assert.All(lines, line => Assert.Equal((WorkOrderBillFixture.Woodhouse, (string?)null, "Work orders JBB-2026-004-WO-0055, JBB-2026-004-WO-0056"), (line.ProjectId, line.CostCenterCode, line.Note)));
         // Every line still adds up, and every order gets exactly its figure.
         foreach (var line in lines)
             Assert.Equal(line.Net, fixture.Context.XeroCostSplits.AsNoTracking().Where(split => split.XeroLedgerLineId == line.XeroLedgerLineId).Sum(split => split.Net));
@@ -112,7 +112,7 @@ public sealed class ApproveWorkOrderBillHandlerTests
         Assert.Equal(new[] { ("wo-lg-55", 1748m), ("wo-lg-56", 1344m) },
             fixture.Context.WorkOrderBillApprovals.AsNoTracking().OrderBy(row => row.WorkOrderId).AsEnumerable().Select(row => (row.WorkOrderId, row.BillNet)));
         var allocated = (await fixture.ReadAllocatedAsync()).First(candidate => candidate.XeroInvoiceId == "inv-lg");
-        Assert.Equal("WO-0055 + WO-0056", allocated.WorkOrderApproval?.OrdersLabel);
+        Assert.Equal("JBB-2026-004-WO-0055 + JBB-2026-004-WO-0056", allocated.WorkOrderApproval?.OrdersLabel);
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public sealed class ApproveWorkOrderBillHandlerTests
         await fixture.Context.SaveChangesAsync();
         var outcome = await fixture.ApproveAsync(command);
 
-        Assert.Equal(new[] { "WO-0026" }, outcome.WorkOrderReferences);
+        Assert.Equal(new[] { "JBB-2026-001-WO-0026" }, outcome.WorkOrderReferences);
         var approval = fixture.Context.WorkOrderBillApprovals.Single();
         Assert.Equal((int)WorkOrderMatchRule.BySupplierOrders, approval.MatchRule);
     }

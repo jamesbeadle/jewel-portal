@@ -49,7 +49,7 @@ public sealed class WorkOrderBillRecognitionTests
         {
             var match = Assert.IsType<WorkOrderBillMatch>(line.WorkOrderMatch);
             Assert.Equal(WorkOrderMatchRule.ByRemainingValue, match.Rule);
-            Assert.Contains("£3,092.00 is exactly what is left to invoice on WO-0055 (£1,748.00) + WO-0056 (£1,344.00)", match.Detail);
+            Assert.Contains("£3,092.00 is exactly what is left to invoice on JBB-2026-004-WO-0055 (£1,748.00) + JBB-2026-004-WO-0056 (£1,344.00)", match.Detail);
             Assert.Equal(
                 new[] { ("wo-lg-55", 1748m), ("wo-lg-56", 1344m) },
                 match.ProposedSlices.Select(slice => (slice.WorkOrderId, slice.Net)));
@@ -72,7 +72,7 @@ public sealed class WorkOrderBillRecognitionTests
 
         var match = Assert.IsType<WorkOrderBillMatch>(line.WorkOrderMatch);
         Assert.Equal((WorkOrderMatchRule.ByRemainingValue, "wo-lg-55"), (match.Rule, match.WorkOrderId));
-        Assert.Contains("exactly what is left to invoice on WO-0055", match.Detail);
+        Assert.Contains("exactly what is left to invoice on JBB-2026-004-WO-0055", match.Detail);
         var slice = Assert.Single(match.ProposedSlices);
         Assert.Equal(("wo-lg-55", 1748m), (slice.WorkOrderId, slice.Net));
     }
@@ -110,8 +110,8 @@ public sealed class WorkOrderBillRecognitionTests
 
         Assert.Equal((WorkOrderMatchRule.ByReference, "wo-lg-55"), (line.WorkOrderMatch?.Rule, line.WorkOrderMatch?.WorkOrderId));
         // ... and the conflict is badged, not acted on: the amount fits WO-0056, the reference wins.
-        Assert.Contains("Amount fits WO-0056 (£1,344.00 left)", line.WorkOrderMatch!.AmountNote);
-        Assert.Contains("names WO-0055, so it lands on WO-0055", line.WorkOrderMatch.AmountNote);
+        Assert.Contains("Amount fits JBB-2026-004-WO-0056 (£1,344.00 left)", line.WorkOrderMatch!.AmountNote);
+        Assert.Contains("names JBB-2026-004-WO-0055, so it lands on JBB-2026-004-WO-0055", line.WorkOrderMatch.AmountNote);
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public sealed class WorkOrderBillRecognitionTests
         Assert.All(lines, line =>
         {
             var match = Assert.IsType<WorkOrderBillMatch>(line.WorkOrderMatch);
-            Assert.Equal(("wo-bf-26", "WO-0026", WorkOrderMatchRule.ByReference, WorkOrderBillFixture.ByFrance), (match.WorkOrderId, match.WorkOrderReference, match.Rule, match.ProjectId));
+            Assert.Equal(("wo-bf-26", "JBB-2026-001-WO-0026", WorkOrderMatchRule.ByReference, WorkOrderBillFixture.ByFrance), (match.WorkOrderId, match.WorkOrderReference, match.Rule, match.ProjectId));
             var order = match.SupplierOrders.Single(candidate => candidate.WorkOrderId == "wo-bf-26");
             Assert.Equal((97810m, 0m), (order.OrderValue, order.InvoicedToDate));
             Assert.Equal(new[] { "wo-bf-26", "wo-ra-01" }, match.SupplierOrders.Select(candidate => candidate.WorkOrderId).OrderBy(id => id));
@@ -162,7 +162,7 @@ public sealed class WorkOrderBillRecognitionTests
 
         var line = (await fixture.ReadUnallocatedAsync()).First(candidate => candidate.XeroInvoiceId == "inv-1724");
 
-        Assert.Equal("WO-0026", line.WorkOrderMatch?.WorkOrderReference);
+        Assert.Equal("JBB-2026-001-WO-0026", line.WorkOrderMatch?.WorkOrderReference);
     }
 
     [Fact]
@@ -217,8 +217,8 @@ public sealed class WorkOrderBillRecognitionTests
         var lines = (await fixture.ReadUnallocatedAsync()).Where(line => line.XeroInvoiceId == "inv-lg").OrderBy(line => line.XeroLedgerLineId).ToList();
 
         Assert.All(lines, line => Assert.Equal(WorkOrderMatchRule.ByLineReference, line.WorkOrderMatch!.Rule));
-        Assert.Contains("WO-0055 (2 lines), WO-0056 (1 line)", lines[0].WorkOrderMatch!.Detail);
-        Assert.Contains("1 line names no order and is put on WO-0055", lines[0].WorkOrderMatch!.Detail);
+        Assert.Contains("JBB-2026-004-WO-0055 (2 lines), JBB-2026-004-WO-0056 (1 line)", lines[0].WorkOrderMatch!.Detail);
+        Assert.Contains("1 line names no order and is put on JBB-2026-004-WO-0055", lines[0].WorkOrderMatch!.Detail);
         // The proposal is a figure per order off the bill, the same on every line — never a coding of the lines.
         Assert.All(lines, line => Assert.Equal(
             new[] { ("wo-lg-55", 1758m), ("wo-lg-56", 1344m) },
@@ -241,7 +241,7 @@ public sealed class WorkOrderBillRecognitionTests
         // reaches the card, where the split puts £1,344 on WO-0056.
         Assert.Null(line.WorkOrderExceptionReason);
         Assert.Equal(("wo-lg-55", WorkOrderMatchRule.ByReference), (line.WorkOrderMatch?.WorkOrderId, line.WorkOrderMatch?.Rule));
-        Assert.Contains("names WO-0055 and WO-0056 — split", line.WorkOrderMatch!.Detail);
+        Assert.Contains("names JBB-2026-004-WO-0055 and JBB-2026-004-WO-0056 — split", line.WorkOrderMatch!.Detail);
     }
 
     [Fact]

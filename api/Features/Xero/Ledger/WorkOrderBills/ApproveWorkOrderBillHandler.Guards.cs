@@ -11,7 +11,7 @@ public sealed partial class ApproveWorkOrderBillHandler
     private sealed record PaidOrder(WorkOrderEntity Entity, WorkOrderBillOrderOption Option)
     {
         public string WorkOrderId => Entity.WorkOrderId;
-        public string Reference => Entity.Reference;
+        public string Reference => Option.Reference;
         public string ProjectId => Entity.ProjectId;
     }
 

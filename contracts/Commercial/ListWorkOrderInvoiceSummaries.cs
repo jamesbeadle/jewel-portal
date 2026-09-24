@@ -98,4 +98,8 @@ public sealed record WorkOrderInvoiceSummary(
     // When JPMS last heard from Xero. Project-wide, so the same value repeats on every row —
     // the paid figures are only as current as this, and the sync is a button someone presses
     // rather than a schedule. Null when no purchase line has ever been synced.
-    DateTimeOffset? LedgerSyncedAtUtc);
+    DateTimeOffset? LedgerSyncedAtUtc,
+    string ProjectReference = "")
+{
+    public string Reference => WorkOrderReferences.Qualified(ProjectReference, Number);
+}

@@ -105,7 +105,7 @@
                                                     var fits = remaining is null || line.Net <= 0m
                                                         || line.Net <= remaining.Value + (isCurrent ? Math.Max(line.Net, 0m) : 0m);
                                                     <option value="@order.Order.WorkOrderId" selected="@isCurrent" disabled="@(!fits && !isCurrent)">
-                                                        @($"WO-{order.Order.Number:0000} · {order.SubcontractorName}{(remaining is null ? "" : $" · {MoneyExact(remaining.Value)} left")}")
+                                                        @($"{order.Order.Reference} · {order.SubcontractorName}{(remaining is null ? "" : $" · {MoneyExact(remaining.Value)} left")}")
                                                     </option>
                                                 }
                                             </select>

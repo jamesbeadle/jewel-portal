@@ -149,6 +149,6 @@ public sealed class UpdateManualWorkOrderHandler
         entity.DepositPercent = command.DepositRequired ? command.DepositPercent : null;
 
         await context.SaveChangesAsync(cancellationToken);
-        return entity.ToModel();
+        return await WorkOrderProjectReferences.ModelOfAsync(context, entity, cancellationToken);
     }
 }

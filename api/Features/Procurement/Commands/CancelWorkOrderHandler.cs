@@ -56,15 +56,16 @@ public sealed class CancelWorkOrderHandler
 
         // The entity stamps nothing at cancellation (the status flips, no date, no decider), so
         // this best-effort row is the only dated record of the voiding on the order's timeline.
+        var reference = entity.ReferenceOn(await WorkOrderProjectReferences.OfAsync(context, entity.ProjectId, cancellationToken));
         await audit.WriteAsync(
             AuditEventType.WorkOrderCancelled,
-            $"Cancelled — {entity.Reference} is voided and its value no longer counts anywhere.",
+            $"Cancelled — {reference} is voided and its value no longer counts anywhere.",
             projectId: entity.ProjectId,
             recordType: RecordType.WorkOrder,
             recordId: entity.WorkOrderId,
-            recordReference: entity.Reference,
+            recordReference: reference,
             cancellationToken: cancellationToken);
 
-        return entity.ToModel();
+        return await WorkOrderProjectReferences.ModelOfAsync(context, entity, cancellationToken);
     }
 }

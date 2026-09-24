@@ -27,16 +27,16 @@ internal static partial class AiRecordTools
                 + "read_record_emails (record_type work_order) has those, and "
                 + "read_email_attachment opens their files. A DRAFT has no number yet — its "
                 + "workOrderId comes from list_work_orders (status Draft), never from a guessed "
-                + "reference. Accepts the id, or the reference the "
-                + "user actually says (\"WO-0045\") with the project resolved from the page in "
-                + "view. Defaults to the work order in view.",
+                + "reference. Accepts the id, or the reference — \"JBB-2026-001-WO-0045\" names "
+                + "its project; the short \"WO-0045\" is resolved against the page in view. "
+                + "Defaults to the work order in view.",
                 AiToolSchema.Object(
                     ("workOrderId", "string",
                         "The work order's id. Defaults to the record in view when the user is on "
                         + "its PO page.", false),
                     ("reference", "string",
-                        "The human reference instead — \"WO-0045\" (or just \"45\"). Resolved "
-                        + "against the project in view or projectId.", false),
+                        "The human reference instead — \"JBB-2026-001-WO-0045\", or the short "
+                        + "\"WO-0045\" (or just \"45\") resolved against the project in view or projectId.", false),
                     ("projectId", "string",
                         "The project a reference is resolved in. Defaults to the project in view.", false)),
                 AiToolKind.Read,
@@ -57,11 +57,16 @@ internal static partial class AiRecordTools
                     }
                     else if (AiToolSchema.Text(input, "reference") is { } reference && !string.IsNullOrWhiteSpace(reference))
                     {
-                        // "WO-0045" → 45. The number is unique per project, so a reference needs one.
-                        var digits = new string(reference.Where(char.IsDigit).ToArray());
-                        if (digits.Length == 0 || !int.TryParse(digits, out var number))
-                            return Fail($"\"{reference}\" doesn't contain an order number — say it like WO-0045.");
-                        var projectId = AiToolSchema.Text(input, "projectId") ?? context.Scope?.ProjectId;
+                        if (!WorkOrderReferences.TryRead(reference, out var namedProject, out var number))
+                            return Fail($"\"{reference}\" doesn't read as a work order — say it like JBB-2026-001-WO-0045 or WO-0045.");
+                        var projectId = namedProject is null
+                            ? AiToolSchema.Text(input, "projectId") ?? context.Scope?.ProjectId
+                            : await context.Db.Projects.AsNoTracking()
+                                .Where(row => row.Reference == namedProject)
+                                .Select(row => row.ProjectId)
+                                .FirstOrDefaultAsync(ct);
+                        if (namedProject is not null && string.IsNullOrWhiteSpace(projectId))
+                            return Fail($"No project has the reference {namedProject}.");
                         if (string.IsNullOrWhiteSpace(projectId))
                             return Fail("Say which project the reference belongs to: pass projectId, or have the user open a page of that project.");
                         order = await context.Db.WorkOrders.AsNoTracking()
@@ -70,7 +75,7 @@ internal static partial class AiRecordTools
                     }
                     else
                     {
-                        return Fail("Say which work order: pass workOrderId or a reference like WO-0045.");
+                        return Fail("Say which work order: pass workOrderId or a reference like JBB-2026-001-WO-0045.");
                     }
 
                     var lines = await context.Db.WorkOrderLines.AsNoTracking()
@@ -99,7 +104,10 @@ internal static partial class AiRecordTools
                         ok = true,
                         workOrderId = order.WorkOrderId,
                         projectId = order.ProjectId,
-                        reference = order.Reference,
+                        reference = order.ReferenceOn(await context.Db.Projects.AsNoTracking()
+                            .Where(row => row.ProjectId == order.ProjectId)
+                            .Select(row => row.Reference)
+                            .FirstOrDefaultAsync(ct)),
                         status = ((WorkOrderStatus)order.Status).ToString(),
                         origin = order.BidPackageId is not null ? "tender award"
                             : order.VariationOrderId is not null ? "variation instruction"

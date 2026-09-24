@@ -72,16 +72,19 @@ public sealed class WorkOrderAcceptanceService
             document.SiteAddressLines, document.ApprovedByName, document.PaymentTermsDays);
     }
 
-    private Task RecordAcceptanceAsync(WorkOrderEntity order, CancellationToken cancellationToken) =>
-        audit.WriteAsync(
+    private async Task RecordAcceptanceAsync(WorkOrderEntity order, CancellationToken cancellationToken)
+    {
+        var reference = order.ReferenceOn(await WorkOrderProjectReferences.OfAsync(context, order.ProjectId, cancellationToken));
+        await audit.WriteAsync(
             AuditEventType.WorkOrderAccepted,
-            detail: $"{order.Reference} accepted by {order.AcceptedByName} from the acceptance link in the purchase-order email",
+            detail: $"{reference} accepted by {order.AcceptedByName} from the acceptance link in the purchase-order email",
             projectId: order.ProjectId,
             recordType: RecordType.WorkOrder,
             recordId: order.WorkOrderId,
-            recordReference: order.Reference,
+            recordReference: reference,
             actorEmail: order.AcceptedByEmail,
             cancellationToken: cancellationToken);
+    }
 
     private static string Clip(string name) => name.Length <= MaxNameLength ? name : name[..MaxNameLength];
 }

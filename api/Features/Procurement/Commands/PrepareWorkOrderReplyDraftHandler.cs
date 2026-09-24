@@ -47,11 +47,11 @@ public sealed partial class PrepareWorkOrderReplyDraftHandler : ICommandHandler<
         var reply = await PurchaseOrderReplyAsync(command, order, model, bucket, acceptanceLink, cancellationToken);
         var filing = new OutboundEmailFiling(
             AuditTrail.PathwayLabel(bucket), StagingRefused,
-            order.ProjectId, RecordType.WorkOrder, order.WorkOrderId, order.Reference);
+            order.ProjectId, RecordType.WorkOrder, order.WorkOrderId, model.Order.Reference);
 
         var dispatch = await dispatcher.DispatchReplyAsync(reply, filing, saveAsDraftOnly: true, cancellationToken);
         return new WorkOrderReplyDraft(
-            order.WorkOrderId, order.Reference, dispatch.Subject,
+            order.WorkOrderId, model.Order.Reference, dispatch.Subject,
             dispatch.To ?? Array.Empty<string>(), dispatch.Cc ?? Array.Empty<string>(), dispatch.WebLink);
     }
 

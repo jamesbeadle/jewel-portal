@@ -219,8 +219,10 @@ public sealed class WorkOrderEntity
     // Computed, not stored — mirrors BidPackageEntity.Reference.
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string Reference => Number > 0
-        ? $"WO-{Number:0000}"
-        : "WO-" + (WorkOrderId.Length >= 8 ? WorkOrderId[..8] : WorkOrderId).ToUpperInvariant();
+        ? WorkOrderReferences.Short(Number)
+        : WorkOrderReferences.Prefix + (WorkOrderId.Length >= 8 ? WorkOrderId[..8] : WorkOrderId).ToUpperInvariant();
+
+    public string ReferenceOn(string? projectReference) => WorkOrderReferences.Qualify(projectReference, Reference);
 }
 
 // A priced line on a work order. Cost centre totals aggregate lines, not orders, because each
