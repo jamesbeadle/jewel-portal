@@ -29,6 +29,8 @@ public enum FormFilingKind
 /// introduction, the questions in the order they are asked and the form's own privacy wording.
 /// FilingKeys are the answers the person or company is named from when no one-time link names them.
 /// IsAnAccidentReport sends the office alert to the accident addresses instead, the hour it lands.
+/// IsSentByLinkOnly is a form that means nothing without what its sender chose (a policy sign-off):
+/// its open address answers "not valid" and only a one-time link or a pack opens it.
 /// </summary>
 public sealed record FormDefinition(
     string Slug,
@@ -39,7 +41,8 @@ public sealed record FormDefinition(
     FormEvidenceStore Store = FormEvidenceStore.General,
     FormFilingKind FilingKind = FormFilingKind.Person,
     IReadOnlyList<string>? FilingKeys = null,
-    bool IsAnAccidentReport = false)
+    bool IsAnAccidentReport = false,
+    bool IsSentByLinkOnly = false)
 {
     private static readonly string[] NamedByTheirName = { "name" };
 

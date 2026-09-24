@@ -1,0 +1,16 @@
+<div class="form-sheet-policy">
+    <div>
+        <b class="text-paper-strong">@Policy.Title</b>
+        <span class="text-paper-hint"> · revision @Policy.Revision</span>
+        <span class="form-sheet-invitation-note">@FormSheetWording.ReadThePolicyFirst</span>
+    </div>
+    @if (Policy.HasFile)
+    {
+        <a class="btn-form-open-file" href="@FileAddress" target="_blank" rel="noopener">@FormSheetWording.OpenThePolicy</a>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PublicPolicy Policy { get; set; } = default!;
+    [Parameter, EditorRequired] public string FileAddress { get; set; } = "";
+}

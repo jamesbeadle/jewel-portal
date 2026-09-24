@@ -1,285 +1,51 @@
 @page "/policies"
-@using System.Runtime.CompilerServices
+@using Jewel.JPMS.Contracts.Forms
 @using Jewel.JPMS.Contracts.Registers
+@using Jewel.JPMS.Features.Forms.Office
 @using Jewel.JPMS.Features.Registers
-@inject AuthService Auth
-@inject SessionService Session
-@inject PolicyDocumentsReadModel PolicyDocs
-@inject MyPolicySignOffsReadModel Mine
-@inject IQueryClient Queries
-@inject ICommandSender Commands
-@inject NavigationManager Nav
+@using Jewel.JPMS.Features.Registers.Policies
 @implements IDisposable
 
 <PageTitle>Policies & sign-off · JPMS</PageTitle>
 
 @*
     Staff sign-off forms (docs/Labour-Overview-Forecast-and-Xero-Mapping-Scope.md §8): NDAs,
-    staff policies, H&S documents. An admin publishes to named users; each recipient reads and
-    signs on their own login — typed name + timestamp against the document revision, the drawing
-    approval evidential pattern. A new revision re-triggers the cycle. Deliberately no
-    e-signature integration: portal RBAC and the audit row are the record.
+    staff policies, H&S documents. An admin publishes a revision — its PDF and its declaration —
+    to named users, who sign on their own login, and the office sends anyone else a Policy sign-off
+    form link; either way a typed name + timestamp against the exact revision. A new revision
+    re-triggers the cycle. Deliberately no e-signature integration: the audit row is the record.
 *@
 
 <Page OpenTo="JpmsRoleSets.Everyone" Class="max-w-5xl">
     <SectionHeader Title="Policies & sign-off">
         <Actions>
-        @if (IsAdminView)
+        @if (CanPublish)
         {
-            <button type="button" class="btn-primary" @onclick="() => publishOpen = true">Publish for signing</button>
+            <button type="button" class="btn-primary" @onclick="() => isPublishing = true">Publish for signing</button>
         }
         </Actions>
     </SectionHeader>
     <TableNote IsLead="true" Class="mb-5">
-        Documents that need everyone's signature — NDAs, staff policies, H&S. Signing records
-        your typed name and the time against the exact revision you read.
+        Documents that need everyone's signature — NDAs, staff policies, H&S. Signing records the
+        typed name and the time against the exact revision read, on a portal login or by form link.
     </TableNote>
 
-    @if (actionError is not null)
+    <SentLinkNotice Sent="sent" OnDismiss="() => sent = null" />
+    @if (note is not null)
     {
-        <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
+        <Notice Tone="Tone.Warning" Class="mb-3" Dismissible OnDismiss="() => note = null">@note</Notice>
     }
 
-    @* ---- The signed-in user's own queue: everyone sees this, and it leads. ---- *@
-    <Panel Title="For you to sign" Class="mb-6" BodyClass="p-0"
-           IsLoading="@(Mine.Current is null && !dataFailed)" LoadingLabel="Loading your documents">
-        @if (dataFailed)
-        {
-            <p class="p-5 text-sm text-negative">Couldn't load your documents — reload to try again.</p>
-        }
-        else
-        {
-            var outstanding = (Mine.Current ?? Array.Empty<PolicySignOff>()).Where(row => row.SignedAt is null).ToList();
-            var signed = (Mine.Current ?? Array.Empty<PolicySignOff>()).Where(row => row.SignedAt is not null).ToList();
-            @if (outstanding.Count == 0)
-            {
-                <p class="p-5 text-sm text-content-subtle italic">Nothing waiting for your signature.</p>
-            }
-            else
-            {
-                @foreach (var row in outstanding)
-                {
-                    <div class="px-5 py-4 border-b border-line/60">
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <p class="text-sm font-semibold text-content">@row.Title <span class="text-content-subtle font-normal">· rev @row.Revision</span></p>
-                                @if (row.Summary != "")
-                                {
-                                    <p class="text-sm text-content-muted mt-1 max-w-2xl whitespace-pre-line">@row.Summary</p>
-                                }
-                                <p class="text-xs text-content-subtle mt-1">Requested @DateText(row.RequestedAt)</p>
-                            </div>
-                        </div>
-                        <div class="flex flex-wrap items-end gap-2 mt-3">
-                            <FormField Label="Type your full name to sign">
-                                <input class="field mt-1 w-64" @bind="TypedNameFor(row.PolicySignOffId).Value" maxlength="@StoredTextLengths.Name" placeholder="Your name, exactly" />
-                            </FormField>
-                            <button type="button" class="btn-primary" disabled="@isSigning"
-                                    @onclick="() => SignAsync(row)">Sign</button>
-                        </div>
-                    </div>
-                }
-            }
-            @if (signed.Count > 0)
-            {
-                <div class="px-5 py-3">
-                    <p class="eyebrow mb-1.5">Signed</p>
-                    @foreach (var row in signed.Take(10))
-                    {
-                        <p class="text-sm text-content-muted py-0.5">@row.Title · rev @row.Revision —
-                            <span class="text-positive">signed @DateTimeText(row.SignedAt!.Value)</span> as “@row.SignedName”</p>
-                    }
-                </div>
-            }
-        }
-    </Panel>
+    <MyPoliciesPanel />
 
-    @* ---- Admin: published documents and who has / hasn't signed. Conditional panel. ---- *@
-    @if (IsAdminView && PolicyDocs.Current is { } documents)
+    @if (CanReadTheRegister && PolicyDocs.Current is { } documents)
     {
-        <Panel Title="Published documents" Class="mb-6" BodyClass="p-0">
-            @if (documents.Count == 0)
-            {
-                <p class="p-5 text-sm text-content-subtle italic">Nothing published yet — use Publish for signing above.</p>
-            }
-            else
-            {
-                <table class="data-table data-table-dense">
-                    <thead>
-                        <tr>
-                            <th>Title</th>
-                            <th>Rev</th>
-                            <th>Published</th>
-                            <th>Signed</th>
-                            <th>Outstanding</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var document in documents)
-                        {
-                            <tr class="border-b border-line/60 hover:bg-surface-raised/40 cursor-pointer"
-                                @onclick="() => ToggleDetailAsync(document.PolicyDocumentId)">
-                                <td class="font-medium text-content">@document.Title @(document.IsActive ? "" : "· superseded")</td>
-                                <td class="tabular-nums">@document.Revision</td>
-                                <td class="text-content-subtle whitespace-nowrap">@DateText(document.PublishedAt)</td>
-                                <td><Pill Tone="Tone.Positive">@document.SignedCount</Pill></td>
-                                <td>
-                                    @if (document.OutstandingCount > 0)
-                                    {
-                                        <Pill Tone="Tone.Negative">@document.OutstandingCount to chase</Pill>
-                                    }
-                                    else
-                                    {
-                                        <Pill Tone="Tone.Positive">All signed</Pill>
-                                    }
-                                </td>
-                            </tr>
-                            @if (detailDocumentId == document.PolicyDocumentId && detailRows is not null)
-                            {
-                                <tr class="bg-surface-raised/30">
-                                    <td colspan="5">
-                                        @foreach (var row in detailRows)
-                                        {
-                                            <p class="text-sm py-0.5">
-                                                <span class="text-content">@row.RecipientEmail</span> —
-                                                @if (row.SignedAt is { } at)
-                                                {
-                                                    <span class="text-positive">signed @at.ToString("dd MMM HH:mm") as “@row.SignedName”</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-content-subtle">not yet signed</span>
-                                                }
-                                            </p>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        }
-                    </tbody>
-                </table>
-            }
-        </Panel>
+        <PublishedPoliciesPanel @ref="published" Documents="documents" CanPublish="CanPublish" CanSend="CanSend"
+                                ChasingId="@chasingId" OnSendByLink="document => sendingFor = document"
+                                OnChase="ChaseAsync" OnChanged="RefreshAsync" />
     }
 
-    <Modal IsOpen="@publishOpen" Title="Publish for signing"
-           ConfirmLabel="@(publishing ? "Publishing…" : "Publish")" ConfirmDisabled="@publishing"
-           OnCancel="() => publishOpen = false" OnConfirm="PublishAsync">
-        <p class="text-xs text-content-subtle mb-3">Publishing the same title again supersedes it as a new revision — everyone signs afresh.</p>
-        <div class="space-y-3">
-            <FormField Label="Title">
-                <input class="field" @bind="publishTitle" maxlength="@StoredTextLengths.Title" placeholder="e.g. Staff Handbook 2026" />
-            </FormField>
-            <FormField Label="Summary / body (what they are agreeing to)">
-                <textarea class="field mt-1 min-h-32" @bind="publishSummary"></textarea>
-            </FormField>
-            <FormField Label="Recipients — one email per line">
-                <textarea class="field mt-1 min-h-24" @bind="publishRecipients" placeholder="name@jewelgroup.co.uk"></textarea>
-            </FormField>
-            @if (publishError is not null)
-            {
-                <Notice Tone="Tone.Negative">@publishError</Notice>
-            }
-        </div>
-    </Modal>
+    <PolicyPublishModal IsOpen="isPublishing" OnClose="() => isPublishing = false" OnPublished="PublishedAsync" />
+    <SendFormInviteModal IsOpen="@(sendingFor is not null)" PresetPolicyDocumentId="@sendingFor?.PolicyDocumentId"
+                         OnSent="LinkSentAsync" OnClose="() => sendingFor = null" />
 </Page>
-
-@code {
-    private bool dataFailed;
-    private string? actionError;
-    private bool isSigning;
-
-    private bool publishOpen;
-    private bool publishing;
-    private string? publishError;
-    private string publishTitle = "";
-    private string publishSummary = "";
-    private string publishRecipients = "";
-
-    private string? detailDocumentId;
-    private IReadOnlyList<PolicySignOff>? detailRows;
-
-    private readonly Dictionary<string, StrongBox<string>> typedNames = new();
-
-    private bool IsAdminView =>
-        Session.ActiveRole is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
-            or Role.OfficeAdmin or Role.SalesMarketing or Role.OfficeComplianceCoordinator;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await Session.EnsureLoadedAsync();
-        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        PolicyDocs.OnChanged += StateHasChanged;
-        Mine.OnChanged += StateHasChanged;
-        StateHasChanged();
-        try
-        {
-            var refreshes = new List<Task> { Mine.RefreshAsync(CancellationToken.None) };
-            if (IsAdminView) refreshes.Add(PolicyDocs.RefreshAsync(CancellationToken.None));
-            await Task.WhenAll(refreshes);
-        }
-        catch { dataFailed = true; }
-    }
-
-    public void Dispose()
-    {
-        PolicyDocs.OnChanged -= StateHasChanged;
-        Mine.OnChanged -= StateHasChanged;
-    }
-
-    private StrongBox<string> TypedNameFor(string policySignOffId)
-    {
-        if (!typedNames.TryGetValue(policySignOffId, out var box))
-            typedNames[policySignOffId] = box = new StrongBox<string>("");
-        return box;
-    }
-
-    private async Task SignAsync(PolicySignOff row)
-    {
-        var typed = TypedNameFor(row.PolicySignOffId).Value ?? "";
-        if (string.IsNullOrWhiteSpace(typed))
-        {
-            actionError = "Type your full name first — that is the signature.";
-            return;
-        }
-        actionError = null;
-        isSigning = true;
-        try
-        {
-            await Commands.SendAsync(new SignPolicy(row.PolicySignOffId, typed.Trim()), CancellationToken.None);
-            await Mine.RefreshAsync(CancellationToken.None);
-        }
-        catch (Exception) { actionError = "Signing didn't go through — try again."; }
-        finally { isSigning = false; }
-    }
-
-    private async Task ToggleDetailAsync(string policyDocumentId)
-    {
-        if (detailDocumentId == policyDocumentId) { detailDocumentId = null; detailRows = null; return; }
-        detailDocumentId = policyDocumentId;
-        detailRows = null;
-        try { detailRows = await Queries.AskAsync(new ListPolicySignOffs(policyDocumentId), CancellationToken.None); }
-        catch (Exception) { actionError = "Couldn't load the sign-off list — try again."; detailDocumentId = null; }
-    }
-
-    private async Task PublishAsync()
-    {
-        var recipients = publishRecipients
-            .Split(new[] { '\n', '\r', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(email => email.Trim()).Where(email => email != "").ToList();
-        publishError =
-            string.IsNullOrWhiteSpace(publishTitle) ? "Give the document a title."
-            : recipients.Count == 0 ? "Name at least one recipient." : null;
-        if (publishError is not null) return;
-        publishing = true;
-        try
-        {
-            await Commands.SendAsync(new PublishPolicyDocument(publishTitle.Trim(), publishSummary, recipients), CancellationToken.None);
-            publishOpen = false;
-            publishTitle = ""; publishSummary = ""; publishRecipients = "";
-            await PolicyDocs.RefreshAsync(CancellationToken.None);
-        }
-        catch (Exception) { publishError = "Could not publish — try again."; }
-        finally { publishing = false; }
-    }
-}

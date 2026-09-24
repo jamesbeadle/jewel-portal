@@ -1,0 +1,98 @@
+@using System.Runtime.CompilerServices
+@using Jewel.JPMS.Contracts.Registers
+@inject MyPolicySignOffsReadModel Mine
+@inject ICommandSender Commands
+@implements IDisposable
+
+@if (actionError is not null)
+{
+    <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
+}
+<Panel Title="For you to sign" Class="mb-6" BodyClass="p-0"
+       IsLoading="@(Mine.Current is null && !dataFailed)" LoadingLabel="Loading your documents">
+    @if (dataFailed)
+    {
+        <p class="p-5 text-sm text-negative">Couldn't load your documents — reload to try again.</p>
+    }
+    @if (!dataFailed && Outstanding.Count == 0)
+    {
+        <EmptyState Message="Nothing waiting for your signature." />
+    }
+    @foreach (var row in Outstanding)
+    {
+        <div class="px-5 py-4 border-b border-line/60">
+            <p class="text-sm font-semibold text-content">@row.Title <span class="text-content-subtle font-normal">· rev @row.Revision</span></p>
+            @if (row.Summary != "")
+            {
+                <p class="text-sm text-content-muted mt-1 max-w-2xl whitespace-pre-line">@row.Summary</p>
+            }
+            <p class="text-xs text-content-subtle mt-1">Requested @DateText(row.RequestedAt)</p>
+            @if (row.HasFile)
+            {
+                <a class="text-sm text-accent hover:underline" href="@PolicyFileUpload.FileAddress(row.PolicyDocumentId)" target="_blank" rel="noopener">Open the policy (PDF)</a>
+            }
+            <div class="flex flex-wrap items-end gap-2 mt-3">
+                <FormField Label="Type your full name to sign">
+                    <input class="field mt-1 w-64" @bind="TypedNameFor(row.PolicySignOffId).Value" maxlength="@StoredTextLengths.Name" placeholder="Your name, exactly" />
+                </FormField>
+                <button type="button" class="btn-primary" disabled="@isSigning" @onclick="() => SignAsync(row)">Sign</button>
+            </div>
+        </div>
+    }
+    @if (Signed.Count > 0)
+    {
+        <div class="px-5 py-3">
+            <p class="eyebrow mb-1.5">Signed</p>
+            @foreach (var row in Signed.Take(ShownSigned))
+            {
+                <p class="text-sm text-content-muted py-0.5">@row.Title · rev @row.Revision —
+                    <span class="text-positive">signed @DateTimeText(row.SignedAt!.Value)</span> as “@row.SignedName”</p>
+            }
+        </div>
+    }
+</Panel>
+
+@code {
+    private const int ShownSigned = 10;
+
+    private readonly Dictionary<string, StrongBox<string>> typedNames = new();
+    private bool dataFailed;
+    private bool isSigning;
+    private string? actionError;
+
+    private IReadOnlyList<PolicySignOff> All => Mine.Current ?? Array.Empty<PolicySignOff>();
+
+    private List<PolicySignOff> Outstanding => All.Where(row => !row.IsSigned).ToList();
+
+    private List<PolicySignOff> Signed => All.Where(row => row.IsSigned).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Mine.OnChanged += StateHasChanged;
+        try { await Mine.RefreshAsync(CancellationToken.None); }
+        catch { dataFailed = true; }
+    }
+
+    public void Dispose() => Mine.OnChanged -= StateHasChanged;
+
+    private StrongBox<string> TypedNameFor(string policySignOffId)
+    {
+        if (!typedNames.TryGetValue(policySignOffId, out var box)) typedNames[policySignOffId] = box = new StrongBox<string>("");
+        return box;
+    }
+
+    private async Task SignAsync(PolicySignOff row)
+    {
+        var typed = (TypedNameFor(row.PolicySignOffId).Value ?? "").Trim();
+        actionError = typed.Length == 0 ? "Type your full name first — that is the signature." : null;
+        if (actionError is not null) return;
+        isSigning = true;
+        try
+        {
+            await Commands.SendAsync(new SignPolicy(row.PolicySignOffId, typed), CancellationToken.None);
+            await Mine.RefreshAsync(CancellationToken.None);
+        }
+        catch (Exception) { actionError = "Signing didn't go through — try again."; }
+        finally { isSigning = false; }
+    }
+}

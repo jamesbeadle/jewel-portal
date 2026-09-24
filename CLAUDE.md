@@ -961,6 +961,42 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   so a retake supersedes — named with the result; a pass stands a year, a fail is filed already
   expired so the standing reads Expired until a retake passes. Pinned by `CyberQuizTests`.
 
+## The Policy sign-off form: any published policy, signed by link (contracts + api + jpms)
+
+- **One form for every policy, the revision fixed by the sender** (2026-09-24, the FD's task from
+  Jeremy: the Policies page reached portal logins only, and the Forms links only the fixed forms).
+  `PolicySignOffForm` (`/f/policy-sign-off`, `FormSlugs.PolicySignOff`) is `IsSentByLinkOnly`: its open
+  address answers "not valid", and only a one-time link or a pack opens it. Its policy line and
+  declaration are `FormQuestionKind.Fixed` (`Ask.Fixed`) — shown, never typed — and the api stamps them
+  from the invite's revision on submit (`PolicySignOffSigning.StampAnswers`), whatever the page posted.
+  Then the read tick, name, company, position and the signature (typed + drawn, as every form's).
+- **The invite carries the revision** (`FormInvites.PolicyDocumentId`; `SendFormInvite`/`SendFormPack`
+  take `PolicyDocumentId`). Sending, resending, a pack and a chase all go through
+  `PolicySignOffRequests` (`api/Features/Registers/Policies`): the revision must be the CURRENT one, the
+  person's `PolicySignOffs` row (one per revision + email) is found or made and pointed at the live link,
+  and someone who has signed that revision is refused. Submitting signs the row in the same save as the
+  form — `SignedName` from the signature, `RecipientName`, `CompanyName`, `Position`, `FormSubmissionId`
+  — so the signature shows on the Policies page against that exact revision. A revision superseded
+  since the link went reads `FormLinkProblem.PolicySuperseded` and cannot be signed: a new revision
+  needs fresh signatures. Not in the new starter pack unless the office ticks it in and names the policy.
+- **A revision carries its declaration and its PDF** (`PolicyDocuments.Declaration`, blank = the
+  standard line `PolicyDeclarations.Standard`; `FileName`/`FileBlobRef`, migration
+  `AddPolicySignOffForm`, script `add-policy-sign-off-form.sql`). The PDF lives in the form evidence
+  store's general container under `policies/{id}/` (`PolicyFiles`), attached at publish or from the
+  row (`POST registers/policies/{id}/file`, refused once anyone has signed the revision), read by the
+  internal team and the revision's own signers (`GET` the same route) and, with no login, by a link
+  holder (`GET public-forms/{slug}/policy-file?k=|p=`, declared open in `tools/permissions/policy.json`).
+  The H&S Policy's declaration is its Appendix B wording — entered when the revision is published;
+  the portal holds no copy of the wording in code.
+- **Surfaces.** Policies page (`jpms/Features/Registers/Policies`): publish with declaration + PDF,
+  every revision's signed / outstanding (by link or on their login), "Send by link…" and a chase per
+  outstanding person (`ChasePolicySignOff`: resend the live link, else a first link). Forms → Send a
+  form and Send a pack pick the policy (`PolicyToSignSelect`). `RegisterRoleSets.PolicyReaders` reads
+  the register (the managers + the forms office); sending and chasing are `FormRoleSets.Office`.
+  Connector: `list_policy_sign_offs` (the report), `send_form_invite` with `policy-sign-off` +
+  `policyDocumentId`, `send_form_pack` with `policyDocumentId`, `chase_policy_sign_off` — every send
+  confirm-first. Pinned by `PolicySignOffFormTests` and `FormsConnectorTests`.
+
 ## An api file the worker compiles may only reach for what the worker compiles
 
 **Run `python3 -m tools.worker_link_check.check .` before committing anything under `api/`.** It

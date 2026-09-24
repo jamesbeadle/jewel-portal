@@ -1,0 +1,44 @@
+@using Jewel.JPMS.Contracts.Registers
+@inject PolicyFileUpload Files
+
+@if (Document.HasFile)
+{
+    <a class="text-accent hover:underline" href="@PolicyFileUpload.FileAddress(Document.PolicyDocumentId)" target="_blank" rel="noopener">Open</a>
+}
+@if (!Document.HasFile && CanAttach && Document.SignedCount == 0)
+{
+    <label class="btn-secondary cursor-pointer">
+        @(isAttaching ? "Attaching…" : "Attach PDF")
+        <InputFile OnChange="AttachAsync" accept=".pdf,application/pdf" class="hidden" disabled="@isAttaching" />
+    </label>
+}
+@if (!Document.HasFile && !(CanAttach && Document.SignedCount == 0))
+{
+    <span class="text-content-subtle">—</span>
+}
+@if (problem is not null)
+{
+    <span class="block text-xs text-negative mt-1">@problem</span>
+}
+
+@code {
+    [Parameter, EditorRequired] public PolicyDocument Document { get; set; } = default!;
+    [Parameter] public bool CanAttach { get; set; }
+    [Parameter] public EventCallback OnAttached { get; set; }
+
+    private bool isAttaching;
+    private string? problem;
+
+    private async Task AttachAsync(InputFileChangeEventArgs chosen)
+    {
+        isAttaching = true;
+        problem = null;
+        try
+        {
+            await Files.AttachAsync(Document.PolicyDocumentId, chosen.File, CancellationToken.None);
+            await OnAttached.InvokeAsync();
+        }
+        catch (Exception refusal) when (refusal is InvalidOperationException or HttpRequestException or IOException) { problem = refusal.Message; }
+        finally { isAttaching = false; }
+    }
+}

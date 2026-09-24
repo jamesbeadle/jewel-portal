@@ -1,5 +1,7 @@
+using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Forms.Links;
 using Jewel.JPMS.Api.Features.Forms.Mail;
+using Jewel.JPMS.Api.Features.Registers.Policies;
 using Jewel.JPMS.Contracts.Forms;
 
 namespace Jewel.JPMS.Api.Features.Forms.Office.Links;
@@ -7,7 +9,8 @@ namespace Jewel.JPMS.Api.Features.Forms.Office.Links;
 /// <summary>
 /// A fresh link and a fresh expiry (api/invite.js op:'resend'). The old link dies with the new one,
 /// so a forwarded email cannot be used later by whoever it was forwarded to. A form from a pack sent
-/// again this way stays in its pack.
+/// again this way stays in its pack. A policy sign-off is sent again only while its revision is the
+/// current one, and its signature on the Policies page follows the new link.
 /// </summary>
 public sealed class ResendFormInviteHandler : ICommandHandler<ResendFormInvite, SentFormLink>
 {
@@ -35,9 +38,18 @@ public sealed class ResendFormInviteHandler : ICommandHandler<ResendFormInvite, 
         var sender = new FormLinkSender(command.SentByEmail, command.SentByName);
         var expiresAt = now.AddDays(FormLinkLifetimes.DefaultInviteDays);
         var issued = FormInviteRows.New(old.FormSlug, recipient, sender, now, expiresAt, old.Reason, old.FormPackId);
+        issued.Invite.PolicyDocumentId = old.PolicyDocumentId;
         context.FormInvites.Add(issued.Invite);
+        await AskAgainAsync(old, issued.Invite, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
         return await FormLinkMailing.SendOneAsync(mailer, options, form, issued, cancellationToken);
+    }
+
+    private async Task AskAgainAsync(FormInviteEntity old, FormInviteEntity renewed, CancellationToken cancellationToken)
+    {
+        if (old.PolicyDocumentId is null) return;
+        var policy = await PolicySignOffRequests.SignablePolicyAsync(context, old.PolicyDocumentId, cancellationToken);
+        await PolicySignOffRequests.AskAsync(context, policy, renewed, old.FormInviteId, cancellationToken);
     }
 }
 

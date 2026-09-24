@@ -1,0 +1,49 @@
+@using Jewel.JPMS.Contracts.Registers
+
+<SectionHeader Title="Published documents" />
+<RecordsTable Class="mb-6" Dense="true" IsEmpty="@(Documents.Count == 0)" EmptyMessage="Nothing published yet — use Publish for signing above.">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Rev</th>
+            <th>Published</th>
+            <th>Signed</th>
+            <th>Outstanding</th>
+            <th>PDF</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var document in Documents)
+        {
+            <tr class="is-clickable" @onclick="() => ToggleAsync(document.PolicyDocumentId)">
+                <td class="font-medium text-content">@document.Title @(document.IsActive ? "" : "· superseded")</td>
+                <td class="tabular-nums">@document.Revision</td>
+                <td class="whitespace-nowrap">@DateText(document.PublishedAt)</td>
+                <td><Pill Tone="Tone.Positive">@document.SignedCount</Pill></td>
+                <td><OutstandingPill Count="document.OutstandingCount" /></td>
+                <td @onclick:stopPropagation="true">
+                    <PolicyFileCell Document="document" CanAttach="CanPublish" OnAttached="OnChanged" />
+                </td>
+                <td class="text-right" @onclick:stopPropagation="true">
+                    @if (CanSend && document.IsActive)
+                    {
+                        <button type="button" class="btn-secondary" @onclick="() => OnSendByLink.InvokeAsync(document)">Send by link…</button>
+                    }
+                </td>
+            </tr>
+            @if (openDocumentId == document.PolicyDocumentId)
+            {
+                <tr>
+                    <td colspan="7">
+                        <p class="text-sm text-content-muted whitespace-pre-line mb-2">Declaration: @document.Declaration</p>
+                        <LoadGate IsLoading="@(openRows is null)">
+                            <PolicySignOffList Rows="@(openRows ?? Array.Empty<PolicySignOff>())" IsCurrent="document.IsActive"
+                                               CanChase="CanSend" ChasingId="@ChasingId" OnChase="OnChase" />
+                        </LoadGate>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</RecordsTable>

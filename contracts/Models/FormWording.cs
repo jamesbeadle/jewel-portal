@@ -5,7 +5,8 @@ public enum FormLinkProblem
 {
     NotValid = 0,
     Used = 1,
-    Expired = 2
+    Expired = 2,
+    PolicySuperseded = 3
 }
 
 public sealed record FormNotice(string Heading, string Body);
@@ -42,6 +43,9 @@ public static class FormWording
         FormLinkProblem.Expired => new("This link has expired",
             $"Links last a few days for security. Reply to the email we sent you, or ring the office on {JewelBespokeBuild.Phone}, "
             + "and we will send you a fresh one straight away."),
+        FormLinkProblem.PolicySuperseded => new("This policy has been updated",
+            "The policy this link was sent for has been replaced by a newer revision, so it can no longer be signed. "
+            + $"Ring the office on {JewelBespokeBuild.Phone} and we will send you the current one."),
         _ => new("This link is not valid",
             "It may have been mistyped, or replaced by a newer one. Check the most recent email we sent you, "
             + $"or ring the office on {JewelBespokeBuild.Phone}.")

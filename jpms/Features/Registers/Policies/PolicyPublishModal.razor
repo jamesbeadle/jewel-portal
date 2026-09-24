@@ -1,0 +1,27 @@
+<Modal IsOpen="@IsOpen" Title="Publish for signing"
+       ConfirmLabel="@(isPublishing ? "Publishing…" : "Publish")" ConfirmDisabled="@isPublishing"
+       OnCancel="OnClose" OnConfirm="PublishAsync">
+    <p class="text-xs text-content-subtle mb-3">Publishing the same title again supersedes it as a new revision — everyone signs afresh.</p>
+    <div class="space-y-3">
+        <FormField Label="Title" Required>
+            <input class="field" @bind="title" maxlength="@StoredTextLengths.Title" placeholder="e.g. Health & Safety Policy" />
+        </FormField>
+        <FormField Label="Summary / body (what they are agreeing to)">
+            <textarea class="field mt-1 min-h-24" @bind="summary"></textarea>
+        </FormField>
+        <FormField Label="Declaration" Hint="@($"What signing agrees to. Left blank: “{PolicyDeclarations.Standard}”.")">
+            <textarea class="field mt-1 min-h-24" @bind="declaration"></textarea>
+        </FormField>
+        <FormField Label="The policy (PDF)" Hint="What people open and read before they sign — on their login or by Policy sign-off link.">
+            <InputFile OnChange="chosen => file = chosen.File" accept=".pdf,application/pdf" class="text-sm" />
+        </FormField>
+        <FormField Label="Portal users to sign on their login — one email per line"
+                   Hint="Optional. Anyone without a login is sent a Policy sign-off link from the published row or Forms.">
+            <textarea class="field mt-1 min-h-24" @bind="recipients" placeholder="name@jewelgroup.co.uk"></textarea>
+        </FormField>
+        @if (problem is not null)
+        {
+            <Notice Tone="Tone.Negative">@problem</Notice>
+        }
+    </div>
+</Modal>

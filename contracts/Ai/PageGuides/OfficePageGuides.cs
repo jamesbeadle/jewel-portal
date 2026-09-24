@@ -320,9 +320,13 @@ public static class OfficePageGuides
 
         new("/policies", "Policies & sign-off",
             "Staff sign-off forms: NDAs, staff policies and H&S documents. An admin publishes a "
-            + "document to named users; each recipient reads and signs, and the page tracks who "
-            + "has signed what. You navigate_to only — no dialog or page action is registered "
-            + "here."),
+            + "revision — its PDF and its declaration — to named portal users, who sign on their "
+            + "login; anyone else (an operative, a subcontractor) is sent a Policy sign-off form link "
+            + "for the current revision from its row or from Forms, and signs with no login. The page "
+            + "tracks who has signed each revision; a new revision needs fresh signatures. Over the "
+            + "connector: list_policy_sign_offs reads it, send_form_invite (formSlug policy-sign-off, "
+            + "policyDocumentId) sends a link and chase_policy_sign_off chases one person, each "
+            + "confirmed by the user first."),
 
         new("/labour/xero-mapping", "Xero mapping",
             "The effective-dated bridges between the portal and Xero: project to Sites tracking "

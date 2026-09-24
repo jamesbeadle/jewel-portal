@@ -18,19 +18,20 @@ public sealed class FormsConnectorTests
         "send_form_invite", "resend_form_invite", "cancel_form_invite", "send_form_pack", "chase_form_pack", "cancel_form_pack",
         "set_form_submission_status", "file_form_to_directory", "file_quiz_to_directory", "record_form_folder_dates", "save_right_to_work_check",
         "send_right_to_work_confirmation", "accept_training_certificate", "set_training_record_details",
-        "resolve_workstation_action", "record_driving_licence_check"
+        "resolve_workstation_action", "record_driving_licence_check", "chase_policy_sign_off"
     };
 
     private static readonly string[] Reads =
     {
         "list_form_submissions", "get_form_submission", "list_form_packs", "list_form_invites", "list_form_folders",
         "list_right_to_work_checks", "list_training_records", "list_workstation_actions", "list_driving_licence_checks",
-        "list_emergency_contacts"
+        "list_emergency_contacts", "list_policy_sign_offs"
     };
 
     private static readonly string[] EmailsAStranger =
     {
-        "send_form_invite", "resend_form_invite", "send_form_pack", "chase_form_pack", "send_right_to_work_confirmation"
+        "send_form_invite", "resend_form_invite", "send_form_pack", "chase_form_pack", "send_right_to_work_confirmation",
+        "chase_policy_sign_off"
     };
 
     private static SignedInUser UserWith(params Role[] roles) => new("test@jewelbb.co.uk", "Test User", roles);

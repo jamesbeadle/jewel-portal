@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Forms.Links;
 using Jewel.JPMS.Api.Features.Forms.Mail;
+using Jewel.JPMS.Api.Features.Registers.Policies;
 using Jewel.JPMS.Contracts.Forms;
 
 namespace Jewel.JPMS.Api.Features.Forms.Office.Links;
@@ -9,6 +10,7 @@ namespace Jewel.JPMS.Api.Features.Forms.Office.Links;
 /// A new starter's pack: the office says who, how they are engaged and four answers,
 /// and the portal decides the forms (FormPackPlanner) rather than asking anyone to remember. One
 /// link; one invite row per form behind it, so each form keeps its own opened, used and expired state.
+/// A policy sign-off joins the pack only when the office ticked it in and named the policy.
 /// </summary>
 public sealed class SendFormPackHandler : ICommandHandler<SendFormPack, SentFormPack>
 {
@@ -35,8 +37,22 @@ public sealed class SendFormPackHandler : ICommandHandler<SendFormPack, SentForm
             .ToList();
         context.FormPacks.Add(pack);
         context.FormInvites.AddRange(invites);
+        await AddPolicySignOffAsync(command, recipient, sender, pack, invites, now, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
         return await FormLinkMailing.SendPackAsync(mailer, options, pack, invites, token, command.SentByName, false, cancellationToken);
+    }
+
+    private async Task AddPolicySignOffAsync(
+        SendFormPack command, FormLinkRecipient recipient, FormLinkSender sender, FormPackEntity pack,
+        List<FormInviteEntity> invites, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(command.PolicyDocumentId)) return;
+        var policy = await PolicySignOffRequests.SignablePolicyAsync(context, command.PolicyDocumentId, cancellationToken);
+        var invite = FormInviteRows.New(FormSlugs.PolicySignOff, recipient, sender, now, pack.ExpiresAt, "", pack.FormPackId).Invite;
+        invite.PolicyDocumentId = policy.PolicyDocumentId;
+        invites.Add(invite);
+        context.FormInvites.Add(invite);
+        await PolicySignOffRequests.AskAsync(context, policy, invite, null, cancellationToken);
     }
 
     private static FormPackEntity NewPack(SendFormPack command, string tokenHash, DateTimeOffset now) => new()

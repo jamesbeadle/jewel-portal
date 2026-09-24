@@ -20,7 +20,8 @@ internal sealed partial class FormsActions : IAiActionSource
         SetFormSubmissionStatusAction(), FileFormToDirectoryAction(), FileQuizToDirectoryAction(), RecordFormFolderDatesAction(),
         RecordACheckAction(), ConfirmACheckAction(),
         AcceptTrainingCertificateAction(), SetTrainingRecordDetailsAction(),
-        ResolveAWorkstationAction(), RecordDrivingLicenceCheckAction()
+        ResolveAWorkstationAction(), RecordDrivingLicenceCheckAction(),
+        ChasePolicySignOffAction()
     };
 
     private static AiAction SendFormInviteAction() => new AiAction(
@@ -37,8 +38,10 @@ internal sealed partial class FormsActions : IAiActionSource
         NameStamps: new[] { "SentByName" },
         Notes: "formSlug is one of starter, emergency, rtw, dse, vehicle, training, accident, subcontractor, insurance, "
             + "or one of the H&S officer's site checks (toolbox-talk, ladder-inspection, equipment-schedule, puwer-inspection, "
-            + "site-incident, personnel-incident, first-aid-kit, fire-extinguishers), which open at their own address without a link. "
-            + "For a new starter's whole set send_form_pack instead. Show the user who and which form first.",
+            + "site-incident, personnel-incident, first-aid-kit, fire-extinguishers), which open at their own address without a link, "
+            + "or policy-sign-off, which also takes policyDocumentId — a CURRENT revision from list_policy_sign_offs — and asks them "
+            + "to read that revision's PDF and sign its declaration; reason may be left blank. "
+            + "For a new starter's whole set send_form_pack instead. Show the user who and which form (and which policy) first.",
         RequiresConfirmation: true);
 
     private static AiAction ResendFormInviteAction() => new AiAction(

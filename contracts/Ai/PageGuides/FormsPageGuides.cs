@@ -26,11 +26,12 @@ public static class FormsPageGuides
         new("/forms/packs", "New starter packs",
             "One link per new starter to every form they owe, and the one screen of done and outstanding. Send a pack asks "
             + "who, how they are engaged and four questions (P45, screen work, a company vehicle, a "
-            + "ticket), and shows the forms before it sends. Each row's menu chases (a new link, fourteen fresh days; what "
+            + "ticket) — and, only when ticked, a policy to sign — and shows the forms before it sends. Each row's menu chases (a new link, fourteen fresh days; what "
             + "is done stays done) or cancels. Assistant: list_form_packs, send_form_pack, chase_form_pack, cancel_form_pack."),
         new("/forms/sent", "Forms sent out",
             "Forms sent on their own to one named person, with whether each link has been opened or used. Send a form "
-            + "picks the form, the person and how long the link lasts; a row's menu sends it again (the old "
+            + "picks the form, the person and how long the link lasts (a Policy sign-off also picks the policy's current "
+            + "revision, from list_policy_sign_offs); a row's menu sends it again (the old "
             + "link dies) or cancels it. Assistant: list_form_invites, send_form_invite, resend_form_invite, cancel_form_invite."),
         new("/forms/right-to-work", "Right to work",
             "The checker's register, behind its own readers: each check cleared, not finished (with what is missing) or do "

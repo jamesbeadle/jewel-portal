@@ -3,6 +3,7 @@ using Jewel.JPMS.Api.Features.Forms.Answers;
 using Jewel.JPMS.Api.Features.Forms.Filing;
 using Jewel.JPMS.Api.Features.Forms.Links;
 using Jewel.JPMS.Api.Features.Forms.Quizzes;
+using Jewel.JPMS.Api.Features.Registers.Policies;
 using Jewel.JPMS.Contracts.Forms;
 
 namespace Jewel.JPMS.Api.Features.Forms.Public;
@@ -14,7 +15,8 @@ public sealed partial class PublicFormService
     /// what the form would refuse; sent twice — a retry after a dropped signal — it answers with the
     /// first receipt. The link is spent as the LAST step, never on opening, so a man who starts the
     /// form and comes back later still gets in. The hourly ceiling is for the open address only: five
-    /// starters doing their packs on the office Wi-Fi are one address and are not strangers.
+    /// starters doing their packs on the office Wi-Fi are one address and are not strangers. A policy
+    /// sign-off is signed against the invite's revision in the same save.
     /// </summary>
     public async Task<PublicFormReceipt> SubmitAsync(
         string slug, PublicFormSubmission posted, string clientHash, CancellationToken cancellationToken)
@@ -25,11 +27,14 @@ public sealed partial class PublicFormService
         if (alreadySent is not null) return alreadySent;
         var link = await LinkOnSendingAsync(form.Slug, posted, cancellationToken);
         if (link is null) await CheckSubmissionLimitAsync(clientHash, cancellationToken);
+        var policy = await PolicyOnSendingAsync(form, link, cancellationToken);
         var answers = FormAnswerCleaning.Kept(form, posted.Answers);
+        if (policy is not null) PolicySignOffSigning.StampAnswers(policy, answers);
         var uploads = await PostedUploadsAsync(posted, form.Slug, cancellationToken);
         var problem = FormAnswerRules.FirstProblem(form, answers, FileCounts(uploads));
         if (problem is not null) throw new PublicFormRefusal(problem);
-        var submission = await RecordAsync(form, answers, uploads, link, posted.SessionId, clientHash, cancellationToken);
+        var sent = new SentAnswers(answers, uploads, policy);
+        var submission = await RecordAsync(form, sent, link, posted.SessionId, clientHash, cancellationToken);
         await AnnounceAsync(form, submission, answers, uploads);
         return new PublicFormReceipt(submission.FormSubmissionId, submission.IsVerifiedLink, FormQuizzes.Mark(form.Slug, answers));
     }
@@ -58,21 +63,25 @@ public sealed partial class PublicFormService
         uploads.GroupBy(upload => upload.QuestionKey).ToDictionary(group => group.Key, group => group.Count());
 
     private async Task<FormSubmissionEntity> RecordAsync(
-        FormDefinition form, Dictionary<string, string> answers, List<FormUploadEntity> uploads,
-        ResolvedLink? link, string sessionId, string clientHash, CancellationToken cancellationToken)
+        FormDefinition form, SentAnswers sent, ResolvedLink? link, string sessionId, string clientHash, CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
         var invite = link?.Invite;
+        var answers = sent.Answers;
         var filingName = FormFilingNames.FilingName(form, answers, invite?.PersonName);
         var folder = await FormFolderFiling.FolderForAsync(context, form, filingName, now, cancellationToken);
         var submission = PublicFormSubmissions.New(form, answers, link, folder, sessionId, clientHash, now);
         context.FormSubmissions.Add(submission);
-        foreach (var upload in uploads) upload.FormSubmissionId = submission.FormSubmissionId;
+        foreach (var upload in sent.Uploads) upload.FormSubmissionId = submission.FormSubmissionId;
         if (link is not null) await SpendAsync(link, submission, now);
         context.WorkstationActions.AddRange(PublicFormSubmissions.WorkstationActionsFor(form, submission, answers, now));
+        if (sent.Policy is { } policy && invite is not null)
+            await PolicySignOffSigning.SignAsync(context, policy, invite, submission.FormSubmissionId, answers, now, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
         return submission;
     }
+
+    private sealed record SentAnswers(Dictionary<string, string> Answers, List<FormUploadEntity> Uploads, PolicyDocumentEntity? Policy);
 
     private async Task SpendAsync(ResolvedLink link, FormSubmissionEntity submission, DateTimeOffset now)
     {

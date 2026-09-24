@@ -84,6 +84,7 @@
     "public-forms/{slug}",
     "public-forms/{slug}/uploads",
     "public-forms/{slug}/submit",
+    "public-forms/{slug}/policy-file",
     "public-form-packs/{token}"
   ],
   "callerIsTheScope": [

@@ -33,6 +33,10 @@
                 <FormInvitationPanel PersonName="@invitation.PersonName" CompanyName="@invitation.CompanyName"
                                      Note="@FormWording.SentToYou(invitation.Email, invitation.SentByName)" />
             }
+            @if (view?.Policy is { } policy)
+            {
+                <FormPolicyPanel Policy="policy" FileAddress="@PolicyFileAddress" />
+            }
             <CascadingValue Value="pads" IsFixed="true">
                 @foreach (var question in form.Questions)
                 {

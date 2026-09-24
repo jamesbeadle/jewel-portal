@@ -22,6 +22,8 @@ public static class FormSheetWording
     public const string Sent = "✓ Sent";
     public const string EverythingSent = "Every form in your pack has been sent to the office.";
     public const string SignatureUnavailable = "The signature box did not load. Reload the page to sign.";
+    public const string OpenThePolicy = "Open the policy (PDF)";
+    public const string ReadThePolicyFirst = "Open the policy and read it in full before you sign.";
 
     public const string PackIntro =
         "Welcome to " + JewelBespokeBuild.ShortName + ". Before your first day we need these forms from you. Each one takes "

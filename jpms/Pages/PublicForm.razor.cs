@@ -38,6 +38,8 @@ public partial class PublicForm
 
     private string DraftKey => FormDraftStorage.KeyFor(Form!.Slug, PackToken ?? InviteToken);
 
+    private string PolicyFileAddress => PublicFormRequests.PolicyFileAddress(Form!.Slug, InviteToken, PackToken);
+
     private string? PackAddress =>
         string.IsNullOrEmpty(PackToken) ? null : $"/f/pack/{Uri.EscapeDataString(PackToken)}";
 

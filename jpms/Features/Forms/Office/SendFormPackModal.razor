@@ -18,6 +18,11 @@
         <Checkbox @bind-Value="isWorkingAtAScreen" Label="They will work at a screen" />
         <Checkbox @bind-Value="isGettingAVehicle" Label="They are getting a company vehicle" />
         <Checkbox @bind-Value="mustHoldATicket" Label="Their role needs a ticket or certificate" />
+        <Checkbox @bind-Value="isSigningAPolicy" Label="Ask them to sign a policy" />
+        @if (isSigningAPolicy)
+        {
+            <PolicyToSignSelect @bind-Value="policyDocumentId" />
+        }
         @if (IsPlanned)
         {
             <TableNote>

@@ -620,6 +620,8 @@
 .form-sheet-intro { @apply text-sm leading-normal opacity-90; }
 .form-sheet-invitation { @apply mx-4 mt-4 rounded-[10px] border border-paper-line bg-paper-card px-4 py-3.5 text-sm leading-normal; }
 .form-sheet-invitation-note { @apply mt-1 block text-[13px] text-paper-hint; }
+.form-sheet-policy { @apply mx-4 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-paper-line bg-paper-card px-4 py-3.5 text-sm leading-normal; }
+.form-sheet-fixed { @apply mt-1 whitespace-pre-line text-[15px] leading-normal text-paper-ink; }
 .form-sheet-section { @apply mx-4 mt-[26px]; }
 .form-sheet-section-title { @apply border-b-2 border-jewel-gold pb-1.5 text-base font-semibold; color: var(--form-accent); }
 .form-sheet-card { @apply mx-4 mt-3.5 rounded-[14px] border border-paper-line bg-paper-card p-3.5; }
@@ -664,6 +666,11 @@
 .btn-form-send:active { background-color: var(--form-accent-deep); }
 .btn-form-choose {
     @apply cursor-pointer rounded-[10px] border bg-paper-card px-3.5 py-[9px] text-[15px] font-semibold disabled:opacity-60;
+    border-color: var(--form-accent);
+    color: var(--form-accent);
+}
+.btn-form-open-file {
+    @apply inline-block rounded-[10px] border bg-paper-card px-3.5 py-[9px] text-[15px] font-semibold no-underline;
     border-color: var(--form-accent);
     color: var(--form-accent);
 }

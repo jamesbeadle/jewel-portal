@@ -1,0 +1,47 @@
+@using Jewel.JPMS.Contracts.Registers
+
+@if (Rows.Count == 0)
+{
+    <p class="text-sm text-content-subtle py-0.5">Nobody has been asked to sign this revision yet.</p>
+}
+@foreach (var row in Rows)
+{
+    <div class="flex flex-wrap items-center justify-between gap-2 py-1 text-sm">
+        <p>
+            <span class="text-content">@WhoIs(row)</span>
+            @if (Details(row) is { Length: > 0 } details)
+            {
+                <span class="text-content-subtle"> · @details</span>
+            }
+            —
+            @if (row.SignedAt is { } at)
+            {
+                <span class="text-positive">signed @DateTimeText(at) as “@row.SignedName”</span>
+            }
+            @if (row.SignedAt is null)
+            {
+                <span class="text-content-subtle">not yet signed</span>
+            }
+            <span class="text-content-subtle"> · @(row.IsByLink ? "by link" : "on their login")</span>
+        </p>
+        @if (CanChase && IsCurrent && !row.IsSigned)
+        {
+            <button type="button" class="btn-secondary" disabled="@(ChasingId == row.PolicySignOffId)"
+                    @onclick="() => OnChase.InvokeAsync(row)">@(row.IsByLink ? "Chase" : "Send a link")</button>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<PolicySignOff> Rows { get; set; } = Array.Empty<PolicySignOff>();
+    [Parameter] public bool IsCurrent { get; set; }
+    [Parameter] public bool CanChase { get; set; }
+    [Parameter] public string? ChasingId { get; set; }
+    [Parameter] public EventCallback<PolicySignOff> OnChase { get; set; }
+
+    private static string WhoIs(PolicySignOff row) =>
+        row.RecipientName.Length > 0 ? $"{row.RecipientName} ({row.RecipientEmail})" : row.RecipientEmail;
+
+    private static string Details(PolicySignOff row) =>
+        string.Join(", ", new[] { row.Position, row.CompanyName }.Where(part => part.Length > 0));
+}

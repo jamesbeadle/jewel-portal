@@ -53,6 +53,7 @@ public static class RegistersRouteRegistration
         services.AddScoped<RegisterItemsReadModel>();
         services.AddScoped<PolicyDocumentsReadModel>();
         services.AddScoped<MyPolicySignOffsReadModel>();
+        services.AddScoped<Policies.PolicyFileUpload>();
         return services;
     }
 
@@ -72,5 +73,7 @@ public static class RegistersRouteRegistration
         commands.Register<DeactivateRegisterItem, Acknowledgement>(CommandRoute.Post("/api/registers/items/deactivate"));
         commands.Register<PublishPolicyDocument, PolicyDocument>(CommandRoute.Post("/api/registers/policies"));
         commands.Register<SignPolicy, PolicySignOff>(CommandRoute.Post("/api/my/policy-sign-offs/sign"));
+        commands.Register<ChasePolicySignOff, Jewel.JPMS.Contracts.Forms.SentFormLink>(new CommandRoute("POST", "/api/registers/policy-sign-offs/{policySignOffId}/chase",
+            command => $"/api/registers/policy-sign-offs/{((ChasePolicySignOff)command).PolicySignOffId}/chase"));
     }
 }

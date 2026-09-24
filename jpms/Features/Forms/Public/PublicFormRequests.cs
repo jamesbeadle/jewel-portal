@@ -20,11 +20,14 @@ public static class PublicFormRequests
 {
     public static string FormAddress(string slug) => $"/api/public-forms/{Uri.EscapeDataString(slug)}";
 
-    public static Task<PublicFormAnswer<PublicFormView>> OpenAsync(HttpClient http, string slug, string? inviteToken, string? packToken)
-    {
-        var query = $"?k={Uri.EscapeDataString(inviteToken ?? "")}&p={Uri.EscapeDataString(packToken ?? "")}";
-        return AskAsync<PublicFormView>(() => http.GetAsync(FormAddress(slug) + query));
-    }
+    public static Task<PublicFormAnswer<PublicFormView>> OpenAsync(HttpClient http, string slug, string? inviteToken, string? packToken) =>
+        AskAsync<PublicFormView>(() => http.GetAsync(FormAddress(slug) + LinkQuery(inviteToken, packToken)));
+
+    public static string PolicyFileAddress(string slug, string? inviteToken, string? packToken) =>
+        FormAddress(slug) + "/policy-file" + LinkQuery(inviteToken, packToken);
+
+    private static string LinkQuery(string? inviteToken, string? packToken) =>
+        $"?k={Uri.EscapeDataString(inviteToken ?? "")}&p={Uri.EscapeDataString(packToken ?? "")}";
 
     public static Task<PublicFormAnswer<PublicPackView>> OpenPackAsync(HttpClient http, string token) =>
         AskAsync<PublicPackView>(() => http.GetAsync($"/api/public-form-packs/{Uri.EscapeDataString(token)}"));

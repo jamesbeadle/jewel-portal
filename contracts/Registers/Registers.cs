@@ -23,11 +23,23 @@ public sealed record ListPolicyDocuments : IQuery<IReadOnlyList<PolicyDocument>>
 public sealed record ListPolicySignOffs(string PolicyDocumentId) : IQuery<IReadOnlyList<PolicySignOff>>;
 
 /// <summary>
-/// Publishes a document for acknowledgement to the named portal users. Publishing a NEW revision
-/// of an existing title re-triggers the cycle: fresh sign-off rows, everyone signs again.
+/// Publishes a document for acknowledgement to the named portal users (none, when it is to be sent
+/// by Policy sign-off link only). Publishing a NEW revision of an existing title re-triggers the
+/// cycle: fresh sign-off rows, everyone signs again. Declaration is what signing agrees to — blank
+/// is the standard line — and is fixed for the revision once published.
 /// </summary>
 public sealed record PublishPolicyDocument(
-    string Title, string Summary, IReadOnlyList<string> RecipientEmails) : ICommand<PolicyDocument>;
+    string Title, string Summary, IReadOnlyList<string> RecipientEmails, string Declaration = "") : ICommand<PolicyDocument>;
+
+/// <summary>
+/// Chases one outstanding signature by Policy sign-off link: a fresh link emailed again (the old one
+/// stops working), or — for someone asked on their portal login — a first link. Refused once signed,
+/// and once the revision is superseded, because a new revision needs fresh signatures.
+/// </summary>
+public sealed record ChasePolicySignOff(
+    string PolicySignOffId,
+    string SentByEmail = "",
+    string SentByName = "") : ICommand<Jewel.JPMS.Contracts.Forms.SentFormLink>;
 
 /// <summary>The signed-in user's own outstanding (and recently signed) acknowledgements.</summary>
 public sealed record ListMyPolicySignOffs : IQuery<IReadOnlyList<PolicySignOff>>;
