@@ -32,7 +32,7 @@ public sealed class AuthService
     /// <summary>Set only for portal-scoped subcontractor contacts (resolved server-side).</summary>
     public string? CurrentSubcontractorId { get; private set; }
 
-    /// <summary>Set only for client-portal-scoped client contacts (resolved server-side).</summary>
+    /// <summary>Set only for a client login linked to its client account (resolved server-side).</summary>
     public string? CurrentClientId { get; private set; }
 
     /// <summary>Set only for architect contacts linked to their practice (resolved server-side).</summary>

@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Architects;
+using Jewel.JPMS.Api.Features.Clients;
 using Jewel.JPMS.Contracts.Projects;
 
 namespace Jewel.JPMS.Api.Features.Projects.Queries;
@@ -27,6 +28,7 @@ public sealed class ListProjectsVisibleToUserHandler
     private IQueryable<ProjectEntity> VisibleProjects(ListProjectsVisibleToUser query)
     {
         if (query.ArchitectId is { } architectId) return ArchitectProjects.For(context, architectId);
+        if (query.ClientId is { } clientId) return ClientProjects.For(context, clientId);
         return context.Projects.AsNoTracking();
     }
 }

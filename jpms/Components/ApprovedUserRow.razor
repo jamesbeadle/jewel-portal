@@ -176,7 +176,7 @@
     private IReadOnlyList<Role> EditableRoles => roles;
 
     private IReadOnlyList<Role> AddableRoles =>
-        LoginRoles.All
+        LoginRoles.AssignedByHand
             .Where(role => !roles.Contains(role))
             .ToList();
 

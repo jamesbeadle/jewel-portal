@@ -14,13 +14,16 @@ public sealed class InviteArchitectPortalUserHandler
     private readonly JpmsContext context;
     private readonly UserInviter inviter;
     private readonly InviteArchitectPortalUserValidation validation;
+    private readonly SignedInUserCache userCache;
 
     public InviteArchitectPortalUserHandler(
-        JpmsContext context, UserInviter inviter, InviteArchitectPortalUserValidation validation)
+        JpmsContext context, UserInviter inviter, InviteArchitectPortalUserValidation validation,
+        SignedInUserCache userCache)
     {
         this.context = context;
         this.inviter = inviter;
         this.validation = validation;
+        this.userCache = userCache;
     }
 
     public sealed record Outcome(InviteResult? Result, string? Error, int StatusCode);
@@ -41,30 +44,28 @@ public sealed class InviteArchitectPortalUserHandler
 
         var existing = await context.DirectoryUsers
             .FirstOrDefaultAsync(row => row.Email == email, cancellationToken);
-        var refusal = ArchitectInviteRefusals.For(existing, architectId);
-        if (refusal is not null) return new Outcome(null, refusal, StatusCodes.Status409Conflict);
-
-        var result = await inviter.InviteAsync(
-            email, displayName, await RolesKeptPlusArchitectAsync(email, cancellationToken), baseUrl, cancellationToken);
-        await LinkToPracticeAsync(email, architectId, cancellationToken);
-        return new Outcome(result, null, StatusCodes.Status200OK);
-    }
-
-    private async Task<IReadOnlyList<Role>> RolesKeptPlusArchitectAsync(string email, CancellationToken cancellationToken)
-    {
         var held = await context.DirectoryUserRoles
             .Where(row => row.DirectoryUserEmail == email)
             .Select(row => (Role)row.Role)
             .ToListAsync(cancellationToken);
-        return held.Append(Role.Architect).Distinct().ToList();
+        var refusal = ArchitectInviteRefusals.For(existing, held, architectId);
+        if (refusal is not null) return new Outcome(null, refusal, StatusCodes.Status409Conflict);
+
+        var roles = held.Append(Role.Architect).Distinct().ToList();
+        var result = await inviter.InviteAsync(email, displayName, roles, baseUrl, cancellationToken);
+        await LinkToPracticeAsync(email, architectId, cancellationToken);
+        return new Outcome(result, null, StatusCodes.Status200OK);
     }
 
+    // The link is saved after the invite has already dropped the cached login, so drop it again:
+    // otherwise a login signing in within the cache's life reads as an architect with no practice.
     private async Task LinkToPracticeAsync(string email, string architectId, CancellationToken cancellationToken)
     {
         var directoryUser = await context.DirectoryUsers
             .FirstAsync(row => row.Email == email, cancellationToken);
         directoryUser.ArchitectId = architectId;
         await context.SaveChangesAsync(cancellationToken);
+        userCache.InvalidateEmail(email);
     }
 
     private static string? FirstNonBlank(params string?[] values) =>

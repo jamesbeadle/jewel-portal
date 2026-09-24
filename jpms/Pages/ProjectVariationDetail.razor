@@ -23,7 +23,7 @@
 
 <PageTitle>Variation · JPMS</PageTitle>
 
-<Page OpenTo="JpmsRoleSets.ProjectDeliveryTeam">
+<Page OpenTo="JpmsRoleSets.DeliveryTeamAndParties">
     @if (!orderLoaded)
     {
         @* Tab chrome first, the record when it lands — "could not be found" must never flash over a
@@ -128,7 +128,7 @@
                                          EmptyMessage="@LineItemsEmptyMessage" />
 
                     @* ---- Conversation: the typed record — internal notes plus the shared thread the
-                           client portal reads and writes (threaded replies). Distinct from the email
+                           project's client and architect read and write (threaded replies). Distinct from the email
                            Communications below on purpose: clients never see email. *@
                     <VariationConversation VariationOrderId="@VariationOrderId" />
 

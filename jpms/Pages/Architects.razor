@@ -1,9 +1,9 @@
 @page "/architects"
 @using Jewel.JPMS.Contracts.Architects
+@using Jewel.JPMS.Features.Architects
 @inject AuthService Auth
 @inject SessionService Session
 @inject IArchitectStore ArchitectStore
-@inject UserInviteService Invites
 @inject NavigationManager Nav
 
 <PageTitle>Architects · JPMS</PageTitle>
@@ -76,33 +76,7 @@
 
     <PartyContactsEditor @ref="contactsEditor" Kind="PartyKind.Architect" OnChanged="ReloadAsync" />
 
-    <Modal IsOpen="isInviting"
-           Title="Invite to the portal"
-           ConfirmLabel="@(isInviteBusy ? "Inviting…" : inviteResult is null ? "Send invite" : "Re-send invite")"
-           OnCancel="CloseInvite"
-           OnConfirm="SendInviteAsync"
-           Class="max-w-2xl">
-        <div class="space-y-4">
-            <p class="text-sm text-content-muted">
-                Invites <span class="font-medium text-content">@(inviteTarget?.ContactName ?? inviteTarget?.Name)</span>
-                (@(inviteTarget?.ContactEmail ?? "no contact email")) to the portal, where they can raise and answer
-                requests, file their instructions and read the drawings on the projects that name this practice as the
-                party. The login is linked to the practice, so it only ever reaches those projects — and never internal
-                notes or email.
-            </p>
-            @if (inviteError is not null)
-            {
-                <Notice Tone="Tone.Negative">@inviteError</Notice>
-            }
-            @if (inviteResult is not null)
-            {
-                <Notice Tone="Tone.Positive">
-                    <p class="mb-1">Invite sent to <span class="font-medium">@inviteResult.Email</span>. If the email doesn't arrive, share this link (valid until @DateText(inviteResult.ExpiresAt)):</p>
-                    <code class="block break-all text-xs bg-white/60 rounded px-2 py-1">@inviteResult.InviteLink</code>
-                </Notice>
-            }
-        </div>
-    </Modal>
+    <ArchitectInviteDialog Target="inviteTarget" OnClosed="() => inviteTarget = null" />
 
     <Modal IsOpen="creating"
            Title="New architect practice"
@@ -196,35 +170,9 @@
         if (contactsEditor is not null) await contactsEditor.Open(architect.ArchitectId, architect.Name);
     }
 
-    private bool isInviting;
-    private bool isInviteBusy;
     private Architect? inviteTarget;
-    private string? inviteError;
-    private Contracts.Auth.InviteResult? inviteResult;
 
-    private void OpenInvite(Architect architect)
-    {
-        inviteTarget = architect;
-        inviteError = null;
-        inviteResult = null;
-        isInviting = true;
-    }
-
-    private void CloseInvite() => isInviting = false;
-
-    private async Task SendInviteAsync()
-    {
-        if (isInviteBusy || inviteTarget is null) return;
-        inviteError = null;
-        try
-        {
-            isInviteBusy = true;
-            var outcome = await Invites.InviteArchitectAsync(inviteTarget.ArchitectId);
-            inviteResult = outcome.Result;
-            inviteError = outcome.Error;
-        }
-        finally { isInviteBusy = false; }
-    }
+    private void OpenInvite(Architect architect) => inviteTarget = architect;
 
     private void OpenEdit(Architect architect)
     {

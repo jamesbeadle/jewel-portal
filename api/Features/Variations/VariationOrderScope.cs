@@ -1,5 +1,5 @@
 using Jewel.JPMS.Api.Features.Architects;
-using Jewel.JPMS.Api.Features.ClientPortal;
+using Jewel.JPMS.Api.Features.Clients;
 
 namespace Jewel.JPMS.Api.Features.Variations;
 
@@ -10,8 +10,8 @@ namespace Jewel.JPMS.Api.Features.Variations;
 /// Internal roles work every project, so their role is the whole answer. A client is not:
 /// AllowedToApproveVariations admits Role.Client for ANY order id, and approval writes the contract
 /// figures — so without this a signed-in client could approve or reject another client's variation
-/// (found by the permission check, 2026-09-19). The ownership rule is the client portal's own
-/// ClientProjects, so the two surfaces answer the same question the same way. An architect is
+/// (found by the permission check, 2026-09-19). The ownership rule is ClientProjects, the same
+/// one every read a client makes answers by (Parties/PartyReads). An architect is
 /// confined the same way to the projects that name their practice (ArchitectProjects).
 /// </summary>
 internal static class VariationOrderScope

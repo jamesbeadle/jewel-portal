@@ -45,7 +45,6 @@ public static class PageContext
         ("/clients", "Clients"),
         ("/rfis", "RFIs"),
         ("/my-day", "My day"),
-        ("/client", "Client portal"),
         ("/portal", "Subcontractor portal"),
         ("/document-control", "Document Triage"),
         ("/site-photos", "Site photos"),

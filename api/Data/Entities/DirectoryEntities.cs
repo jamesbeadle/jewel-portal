@@ -12,8 +12,8 @@ public sealed class DirectoryUserEntity
     /// Null for all internal users.</summary>
     [MaxLength(64)] public string? SubcontractorId { get; set; }
 
-    /// <summary>Set when this login belongs to an external client contact. Client portal endpoints
-    /// scope every read/write to this id (Gates/ClientScope) — a Role.Client session with no link
+    /// <summary>Set when this login belongs to an external client contact. Every read and write a
+    /// client makes is scoped to this id (Gates/ClientScope) — a Role.Client session with no link
     /// sees nothing. Null for all internal users.</summary>
     [MaxLength(64)] public string? ClientId { get; set; }
 

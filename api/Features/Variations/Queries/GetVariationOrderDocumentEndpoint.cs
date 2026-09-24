@@ -1,4 +1,5 @@
 using Jewel.JPMS.Contracts.Variations;
+using Jewel.JPMS.Api.Features.Parties;
 
 namespace Jewel.JPMS.Api.Features.Variations.Queries;
 
@@ -9,19 +10,21 @@ namespace Jewel.JPMS.Api.Features.Variations.Queries;
 public sealed class GetVariationOrderDocumentEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly JpmsContext context;
     private readonly IQueryHandler<GetVariationOrderDocument, VariationDocumentFile?> handler;
 
     public GetVariationOrderDocumentEndpoint(
         SignedInUserResolver users,
-        IQueryHandler<GetVariationOrderDocument, VariationDocumentFile?> handler)
+        IQueryHandler<GetVariationOrderDocument, VariationDocumentFile?> handler,
+        JpmsContext context)
     {
+        this.context = context;
         this.users = users;
         this.handler = handler;
     }
 
-    // The same read set as the variation record itself: the internal team alone (see
-    // GetVariationOrderByIdEndpoint).
-    private static readonly RoleSet RolesThatMayReadVariations = JpmsRoleSets.ProjectDeliveryTeam;
+    // The same read set as the variation record itself (see GetVariationOrderByIdEndpoint).
+    private static readonly RoleSet RolesThatMayReadVariations = JpmsRoleSets.DeliveryTeamAndParties;
 
     [Function(nameof(GetVariationOrderDocument))]
     public async Task<IActionResult> Run(
@@ -31,6 +34,7 @@ public sealed class GetVariationOrderDocumentEndpoint
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!RolesThatMayReadVariations.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await PartyReads.MayReadVariationAsync(context, signedInUser, voId, request.HttpContext.RequestAborted)) return new NotFoundResult();
 
         var file = await handler.HandleAsync(new GetVariationOrderDocument(voId), request.HttpContext.RequestAborted);
         if (file is null) return new NotFoundResult();

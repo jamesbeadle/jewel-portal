@@ -124,9 +124,11 @@ public static class NavigationRoles
         Role.SalesMarketing
     };
 
-    // The RFI and Variation Orders rows: the paperwork roles (the pages' ProjectDeliveryTeam gate).
-    // These pages carry the business's notes and mail, so no external login is offered them.
-    public static readonly Role[] RequestRoles = ProjectPaperworkRoles;
+    // The RFI and Variation Orders rows: the paperwork roles and the project's parties — its client
+    // and its architect — the pages' DeliveryTeamAndParties gate. The pages are the same for all of
+    // them; the API confines a party to its own projects and strips what is internal.
+    public static readonly Role[] RequestRoles =
+        ProjectPaperworkRoles.Append(Role.Architect).Append(Role.Client).ToArray();
 
     // The Documents row: every project role and the foreman (who builds from them) — the pages'
     // DrawingReaders gate, less the subcontractor, whose drawings reach them through their portal.

@@ -13,11 +13,13 @@ public sealed class ClientPortalInviter
 {
     private readonly JpmsContext context;
     private readonly UserInviter inviter;
+    private readonly SignedInUserCache userCache;
 
-    public ClientPortalInviter(JpmsContext context, UserInviter inviter)
+    public ClientPortalInviter(JpmsContext context, UserInviter inviter, SignedInUserCache userCache)
     {
         this.context = context;
         this.inviter = inviter;
+        this.userCache = userCache;
     }
 
     public sealed record Outcome(InviteResult? Result, string? Error, int StatusCode);
@@ -45,10 +47,12 @@ public sealed class ClientPortalInviter
             && !string.Equals(linked, clientId, StringComparison.OrdinalIgnoreCase))
             return new Outcome(null, "That email is already linked to a different client.", StatusCodes.Status409Conflict);
 
-        // One login, one portal: an email already scoped to the subcontractor portal must not
-        // quietly become a hybrid account scoped to both.
+        // One login, one portal: an email already scoped to the subcontractor or architect portal
+        // must not quietly become a hybrid account scoped to both.
         if (existing?.SubcontractorId is { Length: > 0 })
             return new Outcome(null, "That email belongs to a subcontractor portal login. Use a different address for the client contact.", StatusCodes.Status409Conflict);
+        if (existing?.ArchitectId is { Length: > 0 })
+            return new Outcome(null, "That email belongs to an architect's portal login. Use a different address for the client contact.", StatusCodes.Status409Conflict);
 
         // A revoked user's roles survive for the admin-only Restore. This path is NOT admin-gated,
         // and UserInviter would clear the revocation and re-apply every surviving role — a portal
@@ -58,14 +62,17 @@ public sealed class ClientPortalInviter
                 "That email belongs to a user whose access was revoked. An administrator must restore (or permanently delete) them first.",
                 StatusCodes.Status409Conflict);
 
+        // A staff login is never also a client's: the two readings of one person would disagree
+        // about what they may see.
+        var held = await context.DirectoryUserRoles
+            .Where(row => row.DirectoryUserEmail == email)
+            .Select(row => (Role)row.Role)
+            .ToListAsync(cancellationToken);
+        if (LoginRoles.IncludeStaff(held))
+            return new Outcome(null, "That email is a Jewel staff login. A client's login needs the client's own address.", StatusCodes.Status409Conflict);
+
         // UserInviter replaces the directory user's roles, so preserve any the user already holds.
-        var roles = (await context.DirectoryUserRoles
-                .Where(row => row.DirectoryUserEmail == email)
-                .Select(row => (Role)row.Role)
-                .ToListAsync(cancellationToken))
-            .Append(Role.Client)
-            .Distinct()
-            .ToList();
+        var roles = held.Append(Role.Client).Distinct().ToList();
 
         var result = await inviter.InviteAsync(email, displayName, roles, baseUrl, cancellationToken);
 
@@ -73,6 +80,7 @@ public sealed class ClientPortalInviter
             .FirstAsync(row => row.Email == email, cancellationToken);
         directoryUser.ClientId = clientId;
         await context.SaveChangesAsync(cancellationToken);
+        userCache.InvalidateEmail(email);
 
         return new Outcome(result, null, StatusCodes.Status200OK);
     }

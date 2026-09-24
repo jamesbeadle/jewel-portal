@@ -41,7 +41,6 @@ using Jewel.JPMS.Api.Features.Forms;
 using Jewel.JPMS.Api.Features.Mobilisation;
 using Jewel.JPMS.Api.Features.Places;
 using Jewel.JPMS.Api.Features.Platform;
-using Jewel.JPMS.Api.Features.ClientPortal;
 using Jewel.JPMS.Api.Features.Portal;
 using Jewel.JPMS.Api.Features.Procurement;
 using Jewel.JPMS.Api.Features.Progress;
@@ -116,7 +115,6 @@ var host = new HostBuilder()
         services.AddVariationsFeature();
         services.AddSubcontractorsFeature(context.Configuration);
         services.AddPortalFeature();
-        services.AddClientPortalFeature();
         services.AddHsFeature();
         services.AddHsAuditFeature();
         services.AddFormsFeature(context.Configuration);

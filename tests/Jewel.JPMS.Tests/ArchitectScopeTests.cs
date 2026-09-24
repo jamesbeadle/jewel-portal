@@ -127,12 +127,20 @@ public sealed class ArchitectScopeTests
     [Fact]
     public void AnInvite_refusesALoginThatBelongsElsewhere()
     {
-        Assert.Null(ArchitectInviteRefusals.For(null, Practice));
-        Assert.Null(ArchitectInviteRefusals.For(new DirectoryUserEntity { ArchitectId = Practice }, Practice));
-        Assert.NotNull(ArchitectInviteRefusals.For(new DirectoryUserEntity { ArchitectId = AnotherPractice }, Practice));
-        Assert.NotNull(ArchitectInviteRefusals.For(new DirectoryUserEntity { ClientId = "client-a" }, Practice));
-        Assert.NotNull(ArchitectInviteRefusals.For(new DirectoryUserEntity { SubcontractorId = Trade }, Practice));
-        Assert.NotNull(ArchitectInviteRefusals.For(new DirectoryUserEntity { RevokedAt = DateTimeOffset.UtcNow }, Practice));
+        var anArchitect = new[] { Role.Architect };
+        Assert.Null(ArchitectInviteRefusals.For(null, Array.Empty<Role>(), Practice));
+        Assert.Null(ArchitectInviteRefusals.For(new DirectoryUserEntity { ArchitectId = Practice }, anArchitect, Practice));
+        Assert.NotNull(ArchitectInviteRefusals.For(new DirectoryUserEntity { ArchitectId = AnotherPractice }, anArchitect, Practice));
+        Assert.NotNull(ArchitectInviteRefusals.For(new DirectoryUserEntity { ClientId = "client-a" }, new[] { Role.Client }, Practice));
+        Assert.NotNull(ArchitectInviteRefusals.For(new DirectoryUserEntity { SubcontractorId = Trade }, new[] { Role.Subcontractor }, Practice));
+        Assert.NotNull(ArchitectInviteRefusals.For(new DirectoryUserEntity { RevokedAt = DateTimeOffset.UtcNow }, Array.Empty<Role>(), Practice));
+    }
+
+    [Fact]
+    public void AnInvite_refusesAStaffLogin()
+    {
+        Assert.NotNull(ArchitectInviteRefusals.For(new DirectoryUserEntity(), new[] { Role.ManagingDirector }, Practice));
+        Assert.NotNull(ArchitectInviteRefusals.For(new DirectoryUserEntity(), new[] { Role.Admin }, Practice));
     }
 
     private static SignedInUser Signed(Role role, string? subcontractorId = null, string? architectId = null) =>

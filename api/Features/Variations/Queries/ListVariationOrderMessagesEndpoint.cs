@@ -1,24 +1,27 @@
 using Jewel.JPMS.Contracts.Variations;
+using Jewel.JPMS.Api.Features.Parties;
 
 namespace Jewel.JPMS.Api.Features.Variations.Queries;
 
 public sealed class ListVariationOrderMessagesEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly JpmsContext context;
     private readonly IQueryHandler<ListVariationOrderMessages, IReadOnlyList<VariationOrderMessage>> handler;
 
     public ListVariationOrderMessagesEndpoint(
         SignedInUserResolver users,
-        IQueryHandler<ListVariationOrderMessages, IReadOnlyList<VariationOrderMessage>> handler)
+        IQueryHandler<ListVariationOrderMessages, IReadOnlyList<VariationOrderMessage>> handler,
+        JpmsContext context)
     {
+        this.context = context;
         this.users = users;
         this.handler = handler;
     }
 
-    // Variation reads are the internal team's, same as the order itself. Externals read
-    // the shared thread through their own scoped endpoint (Features/ClientPortal), never here —
-    // this view includes internal notes.
-    private static readonly RoleSet RolesThatMayReadVariations = JpmsRoleSets.ProjectDeliveryTeam;
+    // Same read set as the order itself. A party reads the shared thread alone: the handler
+    // drops internal notes for anyone outside the internal team (SignedInCaller).
+    private static readonly RoleSet RolesThatMayReadVariations = JpmsRoleSets.DeliveryTeamAndParties;
 
     [Function(nameof(ListVariationOrderMessages))]
     public async Task<IActionResult> Run(
@@ -28,6 +31,7 @@ public sealed class ListVariationOrderMessagesEndpoint
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!RolesThatMayReadVariations.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await PartyReads.MayReadVariationAsync(context, signedInUser, voId, request.HttpContext.RequestAborted)) return new NotFoundResult();
 
         var messages = await handler.HandleAsync(new ListVariationOrderMessages(voId), request.HttpContext.RequestAborted);
         return new OkObjectResult(messages);

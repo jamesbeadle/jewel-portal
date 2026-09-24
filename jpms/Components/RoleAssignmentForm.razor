@@ -20,13 +20,13 @@
 </div>
 
 @code {
-    [Parameter] public Role InitialRole { get; set; } = Role.Subcontractor;
+    [Parameter] public Role InitialRole { get; set; } = Role.SiteOperative;
     [Parameter] public EventCallback<Role> OnConfirm { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
 
     private Role selectedRole;
 
-    private static readonly IReadOnlyList<Role> AllRoles = LoginRoles.All;
+    private static readonly IReadOnlyList<Role> AllRoles = LoginRoles.AssignedByHand;
 
     protected override void OnInitialized() => selectedRole = InitialRole;
 
