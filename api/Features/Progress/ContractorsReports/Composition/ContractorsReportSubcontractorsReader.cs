@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Procurement;
 using Jewel.JPMS.Contracts.Progress;
 
 namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
@@ -27,11 +28,12 @@ internal static class ContractorsReportSubcontractorsReader
             .Where(row => supplierIds.Contains(row.SubcontractorId))
             .ToDictionaryAsync(row => row.SubcontractorId, row => row.CompanyName, cancellationToken);
         var entered = attendance.ToDictionary(item => item.WorkOrderId);
+        var projectReference = await WorkOrderProjectReferences.OfAsync(context, projectId, cancellationToken);
 
         return live
             .Select(order => new ContractorsReportSubcontractor(
                 order.WorkOrderId,
-                order.Reference,
+                order.ReferenceOn(projectReference),
                 suppliers.TryGetValue(order.SubcontractorId, out var name) ? name : "",
                 ScopeFor(entered.GetValueOrDefault(order.WorkOrderId), TitleOf(order)),
                 TitleOf(order),

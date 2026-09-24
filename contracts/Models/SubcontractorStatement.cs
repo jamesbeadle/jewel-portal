@@ -41,9 +41,10 @@ public sealed record SubcontractorStatementOrder(
     DateTimeOffset AwardedAt,
     decimal Value,
     decimal InvoicedToDate,
-    IReadOnlyList<SubcontractorStatementInvoice> Invoices)
+    IReadOnlyList<SubcontractorStatementInvoice> Invoices,
+    string ProjectReference = "")
 {
-    public string Reference => $"WO-{Number:0000}";
+    public string Reference => WorkOrderReferences.Qualified(ProjectReference, Number);
     public decimal RemainingToInvoice => Value - InvoicedToDate;
 }
 

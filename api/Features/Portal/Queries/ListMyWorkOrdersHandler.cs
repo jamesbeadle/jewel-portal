@@ -54,7 +54,7 @@ public sealed class ListMyWorkOrdersHandler : IQueryHandler<ListMyWorkOrders, IR
             {
                 var project = projectsById.TryGetValue(order.ProjectId, out var found) ? found : null;
                 return new PortalWorkOrder(
-                    order.ToModel(),
+                    order.ToModel(project?.Reference),
                     project?.Name ?? "(project)",
                     linesByOrder.TryGetValue(order.WorkOrderId, out var lines)
                         ? lines.OrderBy(line => line.SortOrder).Select(line => line.ToModel()).ToList()

@@ -132,7 +132,7 @@
                 on @DateText(awarded.Order.AwardedAt) —
                 <a class="text-accent hover:underline" href="@($"/projects/{ProjectId}/work-orders")"
                    title="Open the project's Work Orders tab, where this order's cost-coded lines feed the cost-centre totals.">
-                    work order WO-@awarded.Order.Number.ToString("0000")</a>
+                    work order @awarded.Order.Reference</a>
                 raised as the purchase order.
             </p>
             @if (CanEdit)

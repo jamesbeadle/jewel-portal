@@ -33,7 +33,7 @@
                         @foreach (var option in Options)
                         {
                             <option value="@option.WorkOrderId" selected="@(row.WorkOrderId == option.WorkOrderId)">
-                                @($"WO-{option.Number:0000} · {option.SubcontractorName} · {MoneyExact(AvailableFor(option))} available")
+                                @($"{option.Reference} · {option.SubcontractorName} · {MoneyExact(AvailableFor(option))} available")
                             </option>
                         }
                     </select>

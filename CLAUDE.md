@@ -1026,6 +1026,19 @@ so the first CI build is the compile check, and this tool is what stands in for 
   PO email and reply draft (`SendWorkOrderPoEmailHandler`, `PrepareWorkOrderReplyDraftHandler`)
   writes the qualified tag; the resolver verifies a qualified stem against the candidate's own,
   and accepts the bare legacy stem only when ONE order carries the number — never a guess.
+- **Every reference a person reads is project-qualified too** (2026-09-24, Jeremy: WO-0054 was By
+  France's JP Air Conditioning order AND JBB-2026-005's painting order). Numbers stay per project
+  and existing orders keep theirs; what is shown or sent — screens, the PO PDF and its file name,
+  PO emails, statements, the supplier account, the Contractor's Report, Xero bill cards and the
+  ledger note, audit text, the connector — reads `JBB-2026-001-WO-0054`, the same spelling as the
+  tag stem. `WorkOrderReferences` (contracts) is the one spelling (`Short`, `Qualified`, and
+  `TryRead` for however it is said); the `WorkOrder` model carries `ProjectReference`, filled by
+  `ToModel(projectReference)` / `WorkOrderProjectReferences.ModelOfAsync`, so `order.Reference`
+  is qualified; `WorkOrderEntity.Reference` stays SHORT because the tag stems build on it, and
+  `ReferenceOn(projectReference)` is the entity's qualified reading. Never format
+  `WO-{Number:0000}` in a view. `find_by_reference` takes the qualified form (exactly one order)
+  and the short form (every project's order with that number, each with its project);
+  `get_work_order_context` takes either. Pinned by `WorkOrderReferenceTests`.
 - **Historic mail moves with `RetagWorkOrderWorkflowTags`** (POST `mailbox/retag-work-orders`,
   connector action `retag_work_order_tags`, confirm-first, triage roles): `WorkOrderRetagPlanner`
   moves a unique number's tag whole, moves each thread of a colliding number to the order the

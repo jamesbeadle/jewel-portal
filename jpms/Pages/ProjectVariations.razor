@@ -157,7 +157,7 @@
                                     <div>
                                         <p class="font-medium text-content">@variationRequest.Title</p>
                                         <p class="text-xs text-content-subtle mt-1">
-                                            @variationRequest.SubcontractorName · against WO-@variationRequest.WorkOrderNumber.ToString("0000") · raised @DateText(variationRequest.SubmittedAt)
+                                            @variationRequest.SubcontractorName · against @variationRequest.WorkOrderReference · raised @DateText(variationRequest.SubmittedAt)
                                         </p>
                                         <p class="text-sm text-content-muted mt-2 whitespace-pre-line">@variationRequest.Description</p>
                                     </div>
@@ -340,7 +340,7 @@
                                     @{ var issued = IssuedWorkOrdersFor(order); }
                                     @if (issued.Count > 0)
                                     {
-                                        <span class="text-xs text-content-muted">@string.Join(", ", issued.Select(wo => $"WO-{wo.Number:0000}"))</span>
+                                        <span class="text-xs text-content-muted">@string.Join(", ", issued.Select(wo => wo.Reference))</span>
                                     }
                                     @if (CanIssueWorkOrder(order))
                                     {

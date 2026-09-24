@@ -115,8 +115,8 @@ public static class SubcontractorStatementRenderer
         var table = section.AddTable();
         table.Borders.Color = Hair;
         table.Borders.Width = 0.5;
-        table.AddColumn(Unit.FromCentimeter(2.0));                              // order / invoice ref
-        table.AddColumn(Unit.FromCentimeter(6.1));                              // title / invoice detail
+        table.AddColumn(Unit.FromCentimeter(3.9));                              // order / invoice ref
+        table.AddColumn(Unit.FromCentimeter(4.2));                              // title / invoice detail
         var status = table.AddColumn(Unit.FromCentimeter(2.2));                 // status / invoice date
         var value = table.AddColumn(Unit.FromCentimeter(2.5));
         var invoiced = table.AddColumn(Unit.FromCentimeter(2.5));
@@ -144,7 +144,7 @@ public static class SubcontractorStatementRenderer
             row.BottomPadding = Unit.FromMillimeter(1.4);
 
             var reference = row.Cells[0].AddParagraph(order.Reference);
-            reference.Format.Font.Size = 8.5;
+            reference.Format.Font.Size = 8;
             reference.Format.Font.Bold = true;
             reference.Format.Font.Color = Navy;
 

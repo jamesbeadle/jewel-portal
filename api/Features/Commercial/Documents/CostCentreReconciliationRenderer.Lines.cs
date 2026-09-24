@@ -26,7 +26,7 @@ public static partial class CostCentreReconciliationRenderer
     private static void AddWorkOrders(Section section, CostCentreReconciliationDocument document)
     {
         SectionHeading(section, "Costs — work orders");
-        var table = AddLinesTable(section, (2.0, "REF"), (4.6, "SUPPLIER"), (6.2, "ORDER"), (1.8, "STATUS"), (3.2, "THIS CENTRE"));
+        var table = AddLinesTable(section, (3.8, "REF"), (4.6, "SUPPLIER"), (4.4, "ORDER"), (1.8, "STATUS"), (3.2, "THIS CENTRE"));
 
         foreach (var order in document.WorkOrders)
             AddWorkOrderRow(table, order);

@@ -116,12 +116,12 @@ public sealed class WorkOrderLinkProvider : ILinkableRecordProvider, ITagResolvi
 
     private static LinkableRecord ToLinkable(WorkOrderEntity entity, WorkOrderCompany? company, string? projectRef)
     {
-        // The order's sequential WO-0001 reference is what people say; the tag stem is that
-        // reference qualified by the project (WorkOrderTags), so an email tagged
+        // The order's number is per project, so the reference shown and the tag stem are both
+        // qualified by the project — "JBB-2026-001-WO-0001" — and an email tagged
         // "JPMS/JBB-2026-001-WO-0001" surfaces under this project's order and no other's. Seeded
         // Buildertrend orders keep their PO number in the project's sequence, and legacy rows with
         // no Number fall back to the id-derived stem (WorkOrderEntity.Reference handles both).
-        var reference = entity.Reference;
+        var reference = entity.ReferenceOn(projectRef);
 
         // Orders raised straight from an award can carry an empty Title; the scope is the next-best
         // thing to show in the picker so a row is never blank.
@@ -134,7 +134,7 @@ public sealed class WorkOrderLinkProvider : ILinkableRecordProvider, ITagResolvi
             RecordId:     entity.WorkOrderId,
             ProjectId:    entity.ProjectId,
             Reference:    reference,
-            TagReference: WorkOrderTags.Stem(projectRef, entity.ProjectId, reference),
+            TagReference: WorkOrderTags.Stem(projectRef, entity.ProjectId, entity.Reference),
             Title:        title,
             StatusLabel:  ((WorkOrderStatus)entity.Status).ToString(),
             Summary:      RecordSummaries.Clip(company?.CompanyName),

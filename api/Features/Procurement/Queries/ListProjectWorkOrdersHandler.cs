@@ -42,6 +42,7 @@ public sealed class ListProjectWorkOrdersHandler
         // export, the printed purchase order, the cost-centre drill-down) reads the line figure,
         // so restating it here is what makes them all agree with Xero.
         var paidByOrder = await WorkOrderPaidPositions.ForProjectAsync(context, query.ProjectId, cancellationToken);
+        var projectReference = await WorkOrderProjectReferences.OfAsync(context, query.ProjectId, cancellationToken);
 
         return orders.Select(order =>
             {
@@ -50,7 +51,7 @@ public sealed class ListProjectWorkOrdersHandler
                     : new List<WorkOrderLine>();
 
                 return new ProjectWorkOrderDetail(
-                    order.ToModel(),
+                    order.ToModel(projectReference),
                     namesById.TryGetValue(order.SubcontractorId, out var name) ? name : "(unknown supplier)",
                     paidByOrder.TryGetValue(order.WorkOrderId, out var paid)
                         ? SpreadPaidAcrossLines(lines, paid)

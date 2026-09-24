@@ -20,7 +20,7 @@ public static class WorkOrderPoDocumentBuilder
             .FirstOrDefaultAsync(order => order.WorkOrderId == workOrderId, cancellationToken);
         if (orderEntity is null) return null;
 
-        var order = orderEntity.ToModel();
+        var order = await WorkOrderProjectReferences.ModelOfAsync(context, orderEntity, cancellationToken);
 
         var lines = (await context.WorkOrderLines.AsNoTracking()
                 .Where(line => line.WorkOrderId == workOrderId)

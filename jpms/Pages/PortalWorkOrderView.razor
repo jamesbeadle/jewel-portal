@@ -122,7 +122,7 @@
     private IReadOnlyList<string> SupplierAddressLines =>
         MyRecord?.Record.AddressLines ?? Array.Empty<string>();
 
-    private string Title => Order is null ? "Work order" : $"WO-{Order.Order.Number:0000}";
+    private string Title => Order is null ? "Work order" : Order.Order.Reference;
 
     private async Task AcceptAsync()
     {
@@ -133,7 +133,7 @@
         {
             acceptBusy = true;
             var accepted = await PortalStore.AcceptWorkOrderAsync(WorkOrderId);
-            acceptNote = $"WO-{accepted.Number:0000} accepted — thank you. Your acceptance is recorded on the purchase order.";
+            acceptNote = $"{accepted.Reference} accepted — thank you. Your acceptance is recorded on the purchase order.";
         }
         catch (CommandFailedException ex) { acceptError = ex.Message; }
         catch { acceptError = "Couldn't record your acceptance. Please try again."; }

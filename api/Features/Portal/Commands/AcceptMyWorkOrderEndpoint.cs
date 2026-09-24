@@ -43,6 +43,6 @@ public sealed class AcceptMyWorkOrderEndpoint
         if (!isStamped) return new BadRequestObjectResult(WorkOrderAcceptance.OnlyIssuedOrdersRefusal);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new OkObjectResult(order.ToModel());
+        return new OkObjectResult(await WorkOrderProjectReferences.ModelOfAsync(context, order, cancellationToken));
     }
 }

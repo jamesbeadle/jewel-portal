@@ -17,6 +17,6 @@ public sealed class UpdateWorkOrderHandler
         entity.Value = command.Value;
         entity.Scope = command.Scope;
         await context.SaveChangesAsync(cancellationToken);
-        return entity.ToModel();
+        return await WorkOrderProjectReferences.ModelOfAsync(context, entity, cancellationToken);
     }
 }

@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Procurement;
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Contracts.Xero;
 
@@ -76,6 +77,7 @@ public sealed class ListCostCentreActualCostsHandler : IQueryHandler<ListCostCen
                 .Select(order => new { order.WorkOrderId, order.Number })
                 .ToListAsync(cancellationToken))
             .ToDictionary(order => order.WorkOrderId, order => order.Number, StringComparer.OrdinalIgnoreCase);
+        var projectReference = await WorkOrderProjectReferences.OfAsync(context, query.ProjectId, cancellationToken);
 
         var attributions = new List<CostCentreActualCostLine>();
         var linesById = lines.ToDictionary(line => line.XeroLedgerLineId, StringComparer.OrdinalIgnoreCase);
@@ -85,7 +87,7 @@ public sealed class ListCostCentreActualCostsHandler : IQueryHandler<ListCostCen
             foreach (var slice in lineLinks.Value)
             {
                 if (!codeTotalsByOrder.TryGetValue(slice.WorkOrderId, out var codeTotals)) continue; // stays on the invoice's centre
-                var reference = orderNumbers.TryGetValue(slice.WorkOrderId, out var number) ? $"WO-{number:0000}" : "WO";
+                var reference = orderNumbers.TryGetValue(slice.WorkOrderId, out var number) ? WorkOrderReferences.Qualified(projectReference, number) : "WO";
 
                 if (string.Equals(sourceLine.CostCenterCode, query.CostCode, StringComparison.OrdinalIgnoreCase))
                     attributions.Add(AttributionRow(sourceLine, -slice.Amount, reference, sourceLine.CostCenterCode));

@@ -52,16 +52,17 @@ public sealed class ApproveWorkOrderHandler
         // After the save, like every AuditTrail caller — best-effort, never fails the approval.
         // The entity stamps (AwardedAt/AwardedByEmail) are the primary record; this row puts the
         // decision on the order's timeline alongside its sends and filed correspondence.
+        var reference = entity.ReferenceOn(await WorkOrderProjectReferences.OfAsync(context, entity.ProjectId, cancellationToken));
         await audit.WriteAsync(
             AuditEventType.WorkOrderApproved,
-            $"Approved — issued as {entity.Reference}.",
+            $"Approved — issued as {reference}.",
             projectId: entity.ProjectId,
             recordType: RecordType.WorkOrder,
             recordId: entity.WorkOrderId,
-            recordReference: entity.Reference,
+            recordReference: reference,
             actorEmail: command.ApprovedByEmail,
             cancellationToken: cancellationToken);
 
-        return entity.ToModel();
+        return await WorkOrderProjectReferences.ModelOfAsync(context, entity, cancellationToken);
     }
 }

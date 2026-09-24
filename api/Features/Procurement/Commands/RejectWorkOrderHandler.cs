@@ -35,15 +35,16 @@ public sealed class RejectWorkOrderHandler
 
         // The entity stamps nothing at rejection (no date, no decider), so this best-effort row
         // is the only dated record of the decision on the order's timeline.
+        var reference = entity.ReferenceOn(await WorkOrderProjectReferences.OfAsync(context, entity.ProjectId, cancellationToken));
         await audit.WriteAsync(
             AuditEventType.WorkOrderRejected,
             "Draft rejected — never issued; it counts nowhere.",
             projectId: entity.ProjectId,
             recordType: RecordType.WorkOrder,
             recordId: entity.WorkOrderId,
-            recordReference: entity.Reference,
+            recordReference: reference,
             cancellationToken: cancellationToken);
 
-        return entity.ToModel();
+        return await WorkOrderProjectReferences.ModelOfAsync(context, entity, cancellationToken);
     }
 }

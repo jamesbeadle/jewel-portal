@@ -78,6 +78,6 @@ public sealed class IssueWorkOrderForVariationOrderHandler
         // does not move the variation's own status (Issued now means "sent to the client", which is
         // an earlier stage). The instruction is recorded by the work order itself.
         await context.SaveChangesAsync(cancellationToken);
-        return entity.ToModel();
+        return await WorkOrderProjectReferences.ModelOfAsync(context, entity, cancellationToken);
     }
 }

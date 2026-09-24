@@ -204,7 +204,7 @@
                                 <div class="flex items-start justify-between gap-3">
                                     <div>
                                         <p class="font-medium text-content">
-                                            WO-@workOrder.Order.Number.ToString("0000")
+                                            @workOrder.Order.Reference
                                             @if (!string.IsNullOrWhiteSpace(workOrder.Order.Title))
                                             {
                                                 <span class="font-normal"> · @workOrder.Order.Title</span>
@@ -272,7 +272,7 @@
                                     <div>
                                         <p class="font-medium text-content">@variationRequest.Title</p>
                                         <p class="text-xs text-content-subtle mt-1">
-                                            Against WO-@variationRequest.WorkOrderNumber.ToString("0000")@(string.IsNullOrWhiteSpace(variationRequest.ProjectName) ? "" : $" · {variationRequest.ProjectName}") · raised @DateText(variationRequest.SubmittedAt)
+                                            Against @variationRequest.WorkOrderReference@(string.IsNullOrWhiteSpace(variationRequest.ProjectName) ? "" : $" · {variationRequest.ProjectName}") · raised @DateText(variationRequest.SubmittedAt)
                                         </p>
                                         @if (variationRequest.Status == VariationRequestStatus.Rejected && !string.IsNullOrWhiteSpace(variationRequest.RejectionReason))
                                         {
@@ -326,7 +326,7 @@
                                 <option value="">Choose a work order…</option>
                                 @foreach (var workOrder in OpenWorkOrders)
                                 {
-                                    <option value="@workOrder.Order.WorkOrderId">WO-@workOrder.Order.Number.ToString("0000") · @workOrder.Order.Title</option>
+                                    <option value="@workOrder.Order.WorkOrderId">@workOrder.Order.Reference · @workOrder.Order.Title</option>
                                 }
                             </select>
                             </FormField>

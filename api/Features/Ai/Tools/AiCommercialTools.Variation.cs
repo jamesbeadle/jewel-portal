@@ -134,7 +134,7 @@ internal static partial class AiCommercialTools
                         .Select(row => new
                         {
                             row.WorkOrderId,
-                            reference = row.Number > 0 ? $"WO-{row.Number:0000}" : "(draft)",
+                            reference = row.Number > 0 ? WorkOrderReferences.Qualified(project?.Reference, row.Number) : "(draft)",
                             row.Title,
                             status = ((WorkOrderStatus)row.Status).ToString(),
                             row.Value,

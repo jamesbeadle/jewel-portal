@@ -25,11 +25,11 @@ internal static class ProcurementEntityMapping
         new(entity.QuoteLineItemId, entity.QuoteId, entity.BidPackageLineItemId, entity.Description,
             entity.Unit, entity.Quantity, entity.Rate, entity.Total);
 
-    public static WorkOrder ToModel(this WorkOrderEntity entity) =>
+    public static WorkOrder ToModel(this WorkOrderEntity entity, string? projectReference) =>
         new(entity.WorkOrderId, entity.ProjectId, entity.BidPackageId, entity.SubcontractorId, entity.Value, entity.Scope, entity.AwardedAt, entity.AwardedByEmail,
             entity.Number, entity.Title, (WorkOrderStatus)entity.Status, entity.CreatedAt, entity.ScheduledCompletion, entity.VariationOrderId, entity.SourceReference,
             entity.ProgrammeStart, entity.ProgrammeNotes, entity.AcceptedAt, entity.AcceptedByEmail, entity.AcceptedByName,
-            entity.DepositRequired, entity.DepositPercent);
+            entity.DepositRequired, entity.DepositPercent, projectReference ?? "");
 
     public static WorkOrderLine ToModel(this WorkOrderLineEntity entity) =>
         new(entity.WorkOrderLineId, entity.WorkOrderId, entity.Title, entity.Description, entity.CostType, entity.CostCode,

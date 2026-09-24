@@ -56,7 +56,7 @@ public sealed partial class SendWorkOrderPoEmailHandler : ICommandHandler<SendWo
             order.ProjectId,
             RecordType.WorkOrder,
             order.WorkOrderId,
-            order.Reference);
+            order.ReferenceOn(await WorkOrderProjectReferences.OfAsync(context, order.ProjectId, cancellationToken)));
 
         var dispatch = await dispatcher.DispatchAsync(message, filing, command.SaveAsDraftOnly, cancellationToken);
         return new WorkOrderPoEmailOutcome(

@@ -109,7 +109,7 @@ public partial class ProjectWorkOrderAllocation
         {
             var summary = summaries.FirstOrDefault(candidate =>
                 string.Equals(candidate.WorkOrderId, link.WorkOrderId, StringComparison.OrdinalIgnoreCase));
-            return summary is null ? MoneyExact(link.Amount) : $"WO-{summary.Number:0000} {MoneyExact(link.Amount)}";
+            return summary is null ? MoneyExact(link.Amount) : $"{summary.Reference} {MoneyExact(link.Amount)}";
         }))
         + (line.UnlinkedRemainder == 0m ? "" : $" · {MoneyExact(line.UnlinkedRemainder)} not linked");
 
@@ -248,7 +248,7 @@ public partial class ProjectWorkOrderAllocation
         if (linkId is null) return "Not linked";
         var summary = summaries.FirstOrDefault(candidate =>
             string.Equals(candidate.WorkOrderId, linkId, StringComparison.OrdinalIgnoreCase));
-        return summary is null ? linkId : $"WO-{summary.Number:0000}";
+        return summary is null ? linkId : summary.Reference;
     }
 
     // One workbook, two sheets: the work-order table (respecting the supplier/title
@@ -274,7 +274,7 @@ public partial class ProjectWorkOrderAllocation
         foreach (var summary in filteredSummaries)
         {
             ordersSheet.AddRow(
-                $"WO-{summary.Number:0000}",
+                summary.Reference,
                 summary.SubcontractorName,
                 summary.Title,
                 InvoicingLabel(summary.InvoicingStatus),
