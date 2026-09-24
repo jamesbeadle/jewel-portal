@@ -128,7 +128,7 @@ public sealed class McpEndpoint
         // Same short-TTL cache as the cookie path, keyed by the token hash instead of the session
         // id — the directory read and role list survive between calls in a burst.
         var now = DateTimeOffset.UtcNow;
-        if (userCache.Get(resolved.TokenHash, now) is { } cached) return cached;
+        if (userCache.Get(resolved.TokenHash, now) is { } cached) return users.Remember(cached);
 
         var user = await users.ResolveByEmailAsync(resolved.UserEmail, cancellationToken);
         if (user is null) return null;

@@ -15,8 +15,8 @@ public sealed class GetRequestByIdEndpoint
         this.handler = handler;
     }
 
-    // Request reads are internal plus the architect, who reads/approves RFIs per the permissions matrix.
-    private static readonly RoleSet RolesThatMayReadRequests = JpmsRoleSets.InternalAndArchitect;
+    // Internal only: a request carries the business's notes and mail (2026-09-24).
+    private static readonly RoleSet RolesThatMayReadRequests = JpmsRoleSets.ProjectDeliveryTeam;
 
     [Function(nameof(GetRequestById))]
     public async Task<IActionResult> Run(

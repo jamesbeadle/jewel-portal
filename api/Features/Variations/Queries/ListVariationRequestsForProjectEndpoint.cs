@@ -15,8 +15,8 @@ public sealed class ListVariationRequestsForProjectEndpoint
         this.users = users; this.context = context;
     }
 
-    // Same read gate as the other variation queries: internal roles plus the architect.
-    private static readonly RoleSet RolesThatMayReadVariations = JpmsRoleSets.InternalAndArchitect;
+    // Same read gate as the other variation queries: the internal team alone.
+    private static readonly RoleSet RolesThatMayReadVariations = JpmsRoleSets.ProjectDeliveryTeam;
 
     [Function("ListVariationRequestsForProject")]
     public async Task<IActionResult> Run(

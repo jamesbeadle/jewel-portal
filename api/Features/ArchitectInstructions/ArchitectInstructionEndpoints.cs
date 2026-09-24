@@ -174,7 +174,7 @@ public sealed class ArchitectInstructionEndpoints
         var cancellationToken = request.HttpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!ArchitectInstructionRoles.AllowedToManage.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!ArchitectInstructionRoles.AllowedToImportFromMail.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         if (!await ArchitectInstructionScope.MayFileOnProjectAsync(context, signedInUser, projectId, cancellationToken))
             return new StatusCodeResult(403);
 

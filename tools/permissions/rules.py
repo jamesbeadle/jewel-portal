@@ -10,6 +10,7 @@ EVERY_ENDPOINT_IS_GATED = "every endpoint is gated"
 EXTERNAL_WRITES_ARE_SCOPED = "an external write is scoped to its own rows"
 CORRESPONDENCE_IS_READ_BY = "correspondence is read by the internal team"
 CORRESPONDENCE_IS_SENT_BY = "correspondence is sent by the directors"
+MAIL_IS_REACHED_BY_THE_INTERNAL_TEAM = "mail is reached only by the internal team"
 CONNECTOR_MATCHES_THE_GATE = "the connector offers no more than the gate allows"
 A_PAGE_STATES_WHO_MAY_OPEN_IT = "a page states who may open it"
 A_SCOPED_COMMAND_IS_SCOPED_ON_THE_CONNECTOR = "a scoped command is scoped on the connector too"
@@ -72,6 +73,28 @@ def correspondence(inventory: dict, policy: dict):
             if beyond:
                 yield finding(CORRESPONDENCE_RULES[kind], route, endpoint["verbs"],
                               "also reachable by " + ", ".join(beyond), endpoint["file"])
+
+
+def mailReached(inventory: dict, policy: dict, endpointReader, toolReader):
+    """The route never has to say mail: an endpoint or connector tool that reaches a mail reader
+    is correspondence, whatever it is called, and admits the internal team alone. The two readers
+    answer which mail reader an endpoint type (with its verbs) or a tool's body reaches, or None."""
+    declared = set(policy["correspondence"]["read"]["mayReach"])
+    for endpoint in inventory["endpoints"]:
+        reader = endpointReader(endpoint["type"], endpoint["verbs"])
+        if not reader:
+            continue
+        beyond = sorted(set(endpoint["roles"]) - declared)
+        if beyond or not endpoint["roles"]:
+            detail = "also reachable by " + ", ".join(beyond) if beyond else "no role gate"
+            yield finding(MAIL_IS_REACHED_BY_THE_INTERNAL_TEAM, endpoint["route"], endpoint["verbs"],
+                          f"reaches {reader}; {detail}", endpoint["file"])
+    for tool in inventory["connectorTools"]:
+        reader = toolReader(tool["body"])
+        beyond = sorted(set(tool["roles"]) - declared)
+        if reader and beyond:
+            yield finding(MAIL_IS_REACHED_BY_THE_INTERNAL_TEAM, tool["name"], ["tool"],
+                          f"reaches {reader}; also offered to " + ", ".join(beyond), tool["file"])
 
 
 def externalReach(inventory: dict, policy: dict):

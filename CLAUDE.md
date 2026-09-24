@@ -1204,6 +1204,20 @@ so the first CI build is the compile check, and this tool is what stands in for 
   render nothing and read nothing outside it — `Session.MayReadRecordEmails`, judged on the roles
   the person HOLDS, as the API judges. A page an external role can open never depends on a 403
   being handled. A new widget that shows mail gates on the same reading.
+- **The rule sits on the data, not the door** (2026-09-24: the RFI conversation,
+  `requests/{id}/messages`, merged the tagged mail into its answer and admitted the architect,
+  because only the endpoints NAMED for mail were gated). `SignedInCaller` (api/Gates, scoped,
+  set by `SignedInUserResolver` on every path — cookie, cache hit, the connector's bearer) is who
+  the invocation runs for; `RequestEmailReader` and `RecordEmailReader` return nothing, and the
+  request and variation conversation reads return only the shared typed thread, when
+  `MayReadInternalCorrespondence` is false — every client, architect, subcontractor and site
+  operative login. The internal records' reads (requests, RFIs, variations, their documents,
+  the Architect's Instruction register) are `JpmsRoleSets.ProjectDeliveryTeam` — internal only;
+  `InternalAndArchitect` is for the architect's scoped WRITES and is never a read gate. The
+  permission check's rule "mail is reached only by the internal team" follows every endpoint and
+  connector tool through the types it is handed (`tools/permissions/reach.py`) and fails any
+  that reaches a mail reader while admitting an external role — whatever its route is called.
+  An external party's reads come back through its own portal's scoped reads, as the client's do.
 
 ## Record tabs & the in-view toolbar (jpms)
 

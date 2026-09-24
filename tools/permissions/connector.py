@@ -36,12 +36,15 @@ def tools(repositoryRoot: Path, resolver: gates.Resolver) -> list[dict]:
     for path in source.connectorFiles(repositoryRoot):
         text = path.read_text(errors="replace")
         masked = masking.mask(text)
-        for match in TOOL.finditer(text):
+        starts = [match for match in TOOL.finditer(text)]
+        for index, match in enumerate(starts):
             roles = TOOL_ROLES.search(masked[match.end():match.end() + TOOL_WINDOW])
+            following = starts[index + 1].start() if index + 1 < len(starts) else len(text)
             found.append({
                 "name": match.group(1),
                 "file": path.relative_to(repositoryRoot).as_posix(),
                 "roles": resolver.ofBody(f"{roles.group(1)}.IncludesAny()")["roles"] if roles else [],
+                "body": masked[match.end():following],
             })
     return found
 

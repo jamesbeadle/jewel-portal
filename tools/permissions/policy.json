@@ -16,7 +16,18 @@
         "Foreman",
         "Accounts"
       ],
-      "why": "Reading correspondence, and filing it at triage, stays with the internal team (Nigel, 2026-09-19). Externals never pass: the architect was removed from request email reads on the same day."
+      "why": "Reading correspondence, and filing it at triage, stays with the internal team (Nigel, 2026-09-19). Externals never pass: the architect was removed from request email reads on the same day.",
+      "readers": {
+        "anyVerb": [
+          "RequestEmailReader",
+          "RecordEmailReader",
+          "RequestContextAssembler"
+        ],
+        "reads": [
+          "IMailboxGraphClient"
+        ],
+        "why": "Judged by what an endpoint or connector tool reaches, not by its route: the RFI conversation (requests/{requestId}/messages) merged the tagged mail and admitted the architect until 2026-09-24, because its route never said mail. The readers also refuse an external caller at run time (SignedInCaller)."
+      }
     },
     "send": {
       "routePattern": "mailbox/compose|email-draft|draft-email|reply-draft|reply-in-thread|drafts/delete|document/send|statement-email",
@@ -115,39 +126,19 @@
   "externalRouteExceptions": {
     "Architect": [
       {
-        "why": "P08 in the permissions matrix: the architect issues drawings and reads revisions. The extraction is the same drawing read as data, gated to DrawingReaders since 2026-09-19.",
-        "routes": [
-          "drawings/{drawingId}",
-          "drawings/{drawingId}/revisions",
-          "drawings/revisions/{revisionId}/file",
-          "projects/{projectId}/drawings",
-          "projects/{projectId}/drawing-folders",
-          "drawings/revisions/{revisionId}/extraction"
-        ]
-      },
-      {
-        "why": "P08: the architect's instruction is their own instrument, and they sign off RFIs, submittals and variations.",
+        "why": "P08: the architect's instruction is their own instrument, and they sign off RFIs, submittals and variations — the WRITES, each scoped to their practice's projects. Every read of these records is the internal team's since 2026-09-24 (they carry the business's notes and mail); the architect's reads come back through its own portal's scoped reads.",
         "routes": [
           "architect-instructions/{instructionId}",
-          "architect-instructions/{instructionId}/file",
           "architect-instructions/{instructionId}/variations/{variationOrderId}",
           "projects/{projectId}/architect-instructions",
-          "projects/{projectId}/architect-instructions/import-from-message",
           "projects/{projectId}/requests",
-          "projects/{projectId}/variation-orders",
-          "projects/{projectId}/variation-requests",
           "requests/{requestId}",
           "requests/{requestId}/form",
-          "requests/{requestId}/document",
           "requests/{requestId}/messages",
-          "requests/{requestId}/recipients",
-          "requests/{requestId}/voq",
           "requests/{requestId}/attachments",
           "requests/{requestId}/attachments/drawings",
           "requests/{requestId}/attachments/{attachmentId}",
-          "requests/{requestId}/attachments/{attachmentId}/file",
           "variation-orders/{voId}",
-          "variation-orders/{voId}/document",
           "variation-orders/{voId}/messages"
         ]
       },

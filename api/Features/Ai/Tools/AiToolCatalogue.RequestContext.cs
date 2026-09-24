@@ -44,7 +44,7 @@ public static partial class AiToolCatalogue
                         + "AND you have read what you were given.", false)),
                 AiToolKind.Read,
                 // Mirrors ListRequestMessagesEndpoint / ListRequestsForProjectEndpoint.
-                JpmsRoleSets.InternalAndArchitect,
+                JpmsRoleSets.ProjectDeliveryTeam,
                 async (context, input, ct) =>
                 {
                     var requestId = AiToolSchema.Text(input, "requestId");

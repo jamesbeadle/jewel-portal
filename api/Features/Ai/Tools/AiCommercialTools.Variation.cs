@@ -31,7 +31,7 @@ internal static partial class AiCommercialTools
                     ("variationOrderId", "string", "The variation's id, when you already have it (find_by_reference, list_variations).", false),
                     ("projectId", "string", "Defaults to the project in view. Needed with a reference when no project is in view.", false)),
                 AiToolKind.Read,
-                JpmsRoleSets.InternalAndArchitect,
+                JpmsRoleSets.ProjectDeliveryTeam,
                 async (context, input, ct) =>
                 {
                     var id = AiToolSchema.Text(input, "variationOrderId");

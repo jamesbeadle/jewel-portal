@@ -10,13 +10,14 @@ import json
 import sys
 from pathlib import Path
 
-from . import connector, inventory, rules, source
+from . import connector, endpoints, inventory, reach, rules, source
 
 RULES_IN_REPORT_ORDER = [
     rules.EVERY_ENDPOINT_IS_GATED,
     rules.EXTERNAL_WRITES_ARE_SCOPED,
     rules.CORRESPONDENCE_IS_READ_BY,
     rules.CORRESPONDENCE_IS_SENT_BY,
+    rules.MAIL_IS_REACHED_BY_THE_INTERNAL_TEAM,
     "Client reaches only what the policy declares",
     "Subcontractor reaches only what the policy declares",
     "SiteOperative reaches only what the policy declares",
@@ -42,11 +43,18 @@ def findingsFor(model: dict, policy: dict, repositoryRoot: Path) -> list[dict]:
     return [*rules.ungated(model, policy),
             *rules.unscopedExternalWrites(model, policy, bodies),
             *rules.correspondence(model, policy),
+            *mailReached(model, policy, repositoryRoot),
             *rules.externalReach(model, policy),
             *rules.connectorDrift(model["connectorActions"]),
             *rules.scopedCommandsOffTheConnector(model, bodies, connectorText(repositoryRoot),
                                                  scopesText(repositoryRoot)),
             *rules.pagesWithoutACheck(model["pages"], policy)]
+
+
+def mailReached(model: dict, policy: dict, repositoryRoot: Path):
+    readers = reach.MailReaders(repositoryRoot, endpoints.declarations(repositoryRoot),
+                                policy["correspondence"]["read"]["readers"])
+    return rules.mailReached(model, policy, readers.ofEndpoint, readers.ofCode)
 
 
 def connectorText(repositoryRoot: Path) -> str:

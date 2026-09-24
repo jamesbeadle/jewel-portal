@@ -13,8 +13,8 @@ public sealed class ListVariationOrdersForProjectEndpoint
         this.handler = handler;
     }
 
-    // Variation reads are internal plus the architect, who reads/approves variations per the permissions matrix.
-    private static readonly RoleSet RolesThatMayReadVariations = JpmsRoleSets.InternalAndArchitect;
+    // Internal only: a variation carries cost and internal notes (2026-09-24).
+    private static readonly RoleSet RolesThatMayReadVariations = JpmsRoleSets.ProjectDeliveryTeam;
 
     [Function(nameof(ListVariationOrdersForProject))]
     public async Task<IActionResult> Run(
