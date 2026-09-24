@@ -7,6 +7,7 @@ public static class CvrRouteRegistration
     public static IServiceCollection AddCvrReadModels(this IServiceCollection services)
     {
         services.AddScoped<CvrSnapshotsReadModel>();
+        services.AddScoped<ProjectProfitReadModel>();
         return services;
     }
 
