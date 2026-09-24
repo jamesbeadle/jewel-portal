@@ -13,6 +13,7 @@ public sealed class GetProjectByIdHandler
     {
         var entity = await context.Projects.FindAsync(new object[] { query.ProjectId }, cancellationToken);
         if (entity is null) return null;
-        return entity.ToModel();
+        var lastLockedAt = await ProjectValuationLocks.LatestForAsync(context, entity.ProjectId, cancellationToken);
+        return entity.ToModel(lastLockedAt);
     }
 }

@@ -24,7 +24,7 @@ public sealed record Project(
     // Explicit mapping: the Xero write-back (cost-code confirmation + invoice approval)
     // stamps it on every allocated line and refuses to run while it's unset.
     string? XeroSiteName = null,
-    // When the next valuation is expected. Set manually via SetNextValuationDate; informational.
+    // With a ValuationCycle, the anchor it counts from — read NextValuationDue for when it is due.
     DateTimeOffset? NextExpectedValuationDate = null,
     // The FD's per-project forecast assumption (2026-08-13): roughly how much the architect is
     // expected to certify per valuation month. Null means "no view" — the Cash Forecast spreads
@@ -42,4 +42,10 @@ public sealed record Project(
     // pre-fills the audit's front sheet; his address is where the H&S digest of what the officer
     // did on his site goes. Blank means nobody is told.
     string SiteManagerName = "",
-    string SiteManagerEmail = "");
+    string SiteManagerEmail = "",
+    ValuationCycle ValuationCycle = ValuationCycle.None,
+    DateTimeOffset? LastValuationLockedAt = null)
+{
+    public DateTimeOffset? NextValuationDue =>
+        ValuationSchedule.NextDue(NextExpectedValuationDate, ValuationCycle, LastValuationLockedAt);
+}

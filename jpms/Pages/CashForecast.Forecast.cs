@@ -63,7 +63,7 @@ public partial class CashForecast
             projectId,
             receipts,
             futureValuations,
-            project.NextExpectedValuationDate,
+            project.NextValuationDue,
             practicalCompletion,
             lagDays,
             new DatedAmount(row.Release1, schedule?.CompletionRelease.DueOn),

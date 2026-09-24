@@ -1150,6 +1150,22 @@ so the first CI build is the compile check, and this tool is what stands in for 
   `jpms-valuation-cycle.md` (re-save to the portal's stored skills with `save_skill` after the
   deploy — the DB copy is what the connector loads), and the jpms-operator skill's references.
 
+## The next valuation follows the project's cycle and its locked claims (contracts + api + jpms)
+
+- **A locked valuation is taken as sent — however it went** (2026-09-24, Jeremy's By France
+  report; James: the portal never reads Sent Items to decide it, because a valuation can leave by
+  another mailbox, by hand or by WhatsApp). `Projects.ValuationCycle` (`ValuationCycle`: None,
+  Fortnightly, FourWeekly, Monthly = same date each month; migration `AddProjectValuationCycle`,
+  script `add-project-valuation-cycle.sql`) is set from the contract terms beside the date in
+  Project settings (`NextValuationDateEditor`, `SetNextValuationDate.Cycle` — null keeps it).
+  With a cycle the stored date is the ANCHOR; `Project.NextValuationDue` =
+  `ValuationSchedule.NextDue(anchor, cycle, LastValuationLockedAt)` is the one reading every
+  badge, list, export and the Cash Forecast show: a lock covers the latest due date up to
+  `EarlyLockWindowDays` after it, and the next due is the one after. Worked out on every read,
+  never stored or rolled; the newest `ValuationClaims.LockedAt` comes from
+  `ProjectValuationLocks`. No cycle: the date as set by hand, exactly as before. Pinned by
+  `ValuationScheduleTests`.
+
 ## Generated documents wear one house style (api)
 
 - **Every PDF the portal renders is `JewelDocumentStyle`** (`api/Features/Documents`): `A4Page`

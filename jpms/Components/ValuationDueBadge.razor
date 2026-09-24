@@ -4,7 +4,7 @@
    Upcoming valuations panel and the portfolio table both render, so a date reads the same red or
    amber wherever it appears. "Not set" is muted, never alarming: it is a gap, not a lateness. *@
 
-@if (Project.NextExpectedValuationDate is { } date && Project.Stage != ProjectStage.Completed)
+@if (Project.NextValuationDue is { } date && Project.Stage != ProjectStage.Completed)
 {
     var status = ValuationDue.Of(Project);
     <span class="whitespace-nowrap @(status switch

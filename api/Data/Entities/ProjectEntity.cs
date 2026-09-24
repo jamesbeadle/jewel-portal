@@ -31,9 +31,10 @@ public sealed class ProjectEntity
     // call is marked Received. Denormalised for the directors' project-level view.
     public decimal ValuationInvoicePaidTotal { get; set; }
 
-    // When the next valuation is expected on this project. Set manually from the project view
-    // (date-maths editor: base date plus N days/weeks/months); purely informational.
+    // With a ValuationCycle this is the anchor the cycle counts from (ValuationSchedule).
     public DateTimeOffset? NextExpectedValuationDate { get; set; }
+
+    public int ValuationCycle { get; set; }
 
     // The FD's forecast assumption (2026-08-13): roughly how much the architect is expected to
     // certify per valuation month on this project. Null = no view (the Cash Forecast spreads
