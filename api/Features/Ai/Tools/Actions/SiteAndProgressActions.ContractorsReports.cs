@@ -50,7 +50,8 @@ internal sealed partial class SiteAndProgressActions
             NameStamps: Array.Empty<string>(),
             Notes: "Every field is written as posted — read the record with get_contractors_report "
                 + "first and carry forward what should not change. workOrderId values come from "
-                + "the document's subcontractors[] (or list_work_orders); progress update ids from "
+                + "get_contractors_report's workOrdersOnSite[] (or list_work_orders); only orders "
+                + "with attendanceDays above 0 print in Section 8; progress update ids from "
                 + "updatesInPeriod[]. The report is never emailed by the portal: a person "
                 + "downloads the Word or PDF from the page and sends it."),
 

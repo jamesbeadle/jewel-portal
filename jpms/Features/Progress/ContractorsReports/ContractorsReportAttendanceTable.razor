@@ -1,7 +1,8 @@
 @using Jewel.JPMS.Contracts.Progress
 
 @* Section 8: the work orders on site come from the register; the days on site and the
-   client-nominated flag are what a person keys against each. *@
+   client-nominated flag are what a person keys against each. Only an order given days on site
+   prints in the report — the rest stay here, never on the document. *@
 
 <RecordsTable IsEmpty="@(Subcontractors.Count == 0)" EmptyMessage="No work orders are on site this week." Dense>
     <thead>
