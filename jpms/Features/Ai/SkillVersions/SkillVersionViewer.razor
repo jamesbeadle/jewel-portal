@@ -1,0 +1,61 @@
+@*
+    One version of a skill or reference document: who wrote it and when, its description and its
+    text — or, with "Compare with" set, what changed between it and another version. Restore is
+    offered on every version but the one in force; the panel above confirms it.
+*@
+
+<Panel Title="@($"Version {Shown.Version}")" Class="mt-4">
+    <HeaderActions>
+        @if (!Shown.IsCurrent)
+        {
+            <button type="button" class="btn-secondary" disabled="@IsBusy" @onclick="OnRestore">Restore this version</button>
+        }
+    </HeaderActions>
+    <ChildContent>
+        <p class="eyebrow mb-1">@Shown.DisplayName</p>
+        <p class="text-sm text-content-muted mb-4">@Shown.Description</p>
+        <FormField Label="Compare with" Class="mb-4 max-w-xs">
+            <select class="field" value="@comparedWith" @onchange="PickComparison">
+                <option value="">Nothing — show this version's text</option>
+                @foreach (var other in Versions.Where(version => version.Version != Shown.Version))
+                {
+                    <option value="@other.Version">v@(other.Version)@(other.IsCurrent ? " (in force)" : "")</option>
+                }
+            </select>
+        </FormField>
+        @if (Compared is { } compared)
+        {
+            <SkillTextComparisonView Earlier="Earlier(compared)" Later="Later(compared)" />
+        }
+        else
+        {
+            <pre class="max-h-[60vh] overflow-auto whitespace-pre-wrap font-mono text-xs leading-relaxed text-content">@Shown.Body</pre>
+        }
+    </ChildContent>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public SkillVersion Shown { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<SkillVersion> Versions { get; set; } = Array.Empty<SkillVersion>();
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public EventCallback OnRestore { get; set; }
+
+    private string comparedWith = "";
+    private int shownFor;
+
+    private SkillVersion? Compared =>
+        int.TryParse(comparedWith, out var number) ? SkillVersionTimeline.Numbered(Versions, number) : null;
+
+    protected override void OnParametersSet()
+    {
+        if (shownFor == Shown.Version) return;
+        shownFor = Shown.Version;
+        comparedWith = "";
+    }
+
+    private void PickComparison(ChangeEventArgs change) => comparedWith = change.Value?.ToString() ?? "";
+
+    private SkillVersion Earlier(SkillVersion compared) => compared.Version < Shown.Version ? compared : Shown;
+
+    private SkillVersion Later(SkillVersion compared) => compared.Version < Shown.Version ? Shown : compared;
+}

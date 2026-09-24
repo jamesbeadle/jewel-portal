@@ -356,6 +356,28 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
   contracts/Models). RFIs are not on the chart: nothing links an RFI to a task yet.
 
 
+## A stored skill keeps every version, and any one can be restored (contracts + api + jpms)
+
+- **A save never destroys a version** (2026-09-24, Nigel: "we may need to audit stuff", then
+  "ensure he can revert back to a skill easily too"). `SaveAiSkillHandler` copies the outgoing
+  version to `SkillRevisions` — text, description, name, `IsPinned` / `IsActive`, who wrote it
+  (`SavedByEmail`), when (`WrittenAt`, null on revisions kept before today) and when it was
+  replaced (`SavedAt`); `SaveAiSkillReferenceHandler` does the same for a reference document into
+  `SkillReferenceRevisions`, and `SkillReferences.Version` counts (migration
+  `AddSkillVersionHistory`, script `add-skill-version-history.sql`). `SkillVersionTimeline`
+  (contracts/Ai) is the one reading: newest first, a missing written time read off the previous
+  version's replacement, and `InForceAt(moment)` for "what did it say on the 12th".
+- **A restore is a new version, never a rollback**: `RestoreAiSkillVersion` (POST
+  `ai/skills/restore`, `SkillRoles.ManageSkills`) saves the earlier version's name, description and
+  text through the same save handlers, so the version it replaces is kept and the restore can
+  itself be undone; a skill keeps its discipline, pin and active flag as they are now. Restoring
+  the version in force is refused. Never delete a revision row.
+- **Surfaces**: the AI Skills page's History panel under an open skill (`SkillHistoryPanel`,
+  `jpms/Features/Ai/SkillVersions`: the versions per document, the text, Compare with — a line
+  comparison by `SkillTextComparison` — and Restore through `ConfirmDialog`); GET
+  `ai/skills/{key}/history` (`GetAiSkillHistory`); connector `list_skill_history` and
+  `restore_skill_version` (same gate as the page). Pinned by `SkillHistoryTests`.
+
 ## The site note and its photographs reach the portal (contracts + api + jpms)
 
 - **The Contractor's Report intake, changes 1–3 of the FD's 2026-09-15 spec** (`portal-change-spec-

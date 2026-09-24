@@ -524,6 +524,9 @@ ageing toggle due date ↔ invoice date; Refresh, Excel export. Read-only.
 - **AI Agents** — `/admin/agents`: the live agent registry (read-only; config
   is code). **AI Skills** — `/admin/skills`: versioned markdown skills, in
   force on the assistant's next message, no deploy; each save is a new version.
+  Under an open skill, **History**: every version of the skill and of each
+  reference document (who, written, replaced), its text, Compare with another
+  version line by line, and Restore this version (saved as a new version).
 
 ## Off-rail pages
 

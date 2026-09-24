@@ -12,6 +12,10 @@ described to the model. Every call is logged under the caller's name at
 `/agents/activity`. Skills — versioned markdown doctrine the discipline owner
 manages at `/admin/skills` — are in force on the very next conversation, no
 deploy (`list_skills`, `load_skill`, `save_skill`, `save_skill_reference`).
+Every save of a skill or a reference keeps the version it replaces: the skill
+page's History panel and `list_skill_history` (a `version`, or `as_of` a date —
+"what did it say on the 12th") read any of them, and `restore_skill_version`
+brings one back as a NEW version, confirm-first, so nothing is ever lost.
 
 Hard rules (enforced by the tool gates and the confirm-first protocol):
 
@@ -71,7 +75,7 @@ tagged, linked, drafted, approved what and when), and the guides
 Writes: `perform_action` runs any registered action (`list_actions`,
 `describe_action` inlines the doctrine attached to it); the direct write tools
 are `post_request_message`, `add_todo`, `complete_todo`, `log_todo_progress`,
-`save_skill`, `save_skill_reference`. Every action mirrors a button; the
+`save_skill`, `save_skill_reference`, `restore_skill_version`. Every action mirrors a button; the
 registry is pinned by `AiConnectorTests` so a rename never drops one.
 
 Three rules from Jeremy's 23/09/2026 morning, written into the stored skills

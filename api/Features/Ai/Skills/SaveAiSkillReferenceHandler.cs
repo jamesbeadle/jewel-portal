@@ -3,6 +3,8 @@ using Jewel.JPMS.Contracts.Ai;
 
 namespace Jewel.JPMS.Api.Features.Ai.Skills;
 
+/// <summary>Upsert, versioned exactly as a skill is: an existing reference's outgoing text is
+/// copied to SkillReferenceRevisions before the new text replaces it.</summary>
 public sealed class SaveAiSkillReferenceHandler : ICommandHandler<SaveAiSkillReference, Acknowledgement>
 {
     private readonly JpmsContext context;
@@ -29,28 +31,44 @@ public sealed class SaveAiSkillReferenceHandler : ICommandHandler<SaveAiSkillRef
 
         if (existing is null)
         {
-            context.SkillReferences.Add(new SkillReferenceEntity
+            var reference = new SkillReferenceEntity
             {
-                SkillReferenceId = Guid.NewGuid().ToString("N"),
-                SkillKey = skillKey,
-                RefKey = refKey,
-                DisplayName = command.DisplayName.Trim(),
-                Description = command.Description.Trim(),
-                Body = command.Body,
-                UpdatedByEmail = command.SavedByEmail,
-                UpdatedAt = now
-            });
+                SkillReferenceId = Guid.NewGuid().ToString("N"), SkillKey = skillKey, RefKey = refKey, Version = 1
+            };
+            Write(reference, command, now);
+            context.SkillReferences.Add(reference);
         }
         else
         {
-            existing.DisplayName = command.DisplayName.Trim();
-            existing.Description = command.Description.Trim();
-            existing.Body = command.Body;
-            existing.UpdatedByEmail = command.SavedByEmail;
-            existing.UpdatedAt = now;
+            context.SkillReferenceRevisions.Add(RevisionOf(existing, now));
+            existing.Version += 1;
+            Write(existing, command, now);
         }
 
         await context.SaveChangesAsync(cancellationToken);
         return new Acknowledgement($"{skillKey}/{refKey}");
+    }
+
+    private static SkillReferenceRevisionEntity RevisionOf(SkillReferenceEntity outgoing, DateTimeOffset replacedAt) => new()
+    {
+        SkillReferenceRevisionId = Guid.NewGuid().ToString("N"),
+        SkillKey = outgoing.SkillKey,
+        RefKey = outgoing.RefKey,
+        Version = outgoing.Version,
+        DisplayName = outgoing.DisplayName,
+        Description = outgoing.Description,
+        Body = outgoing.Body,
+        WrittenByEmail = outgoing.UpdatedByEmail,
+        WrittenAt = outgoing.UpdatedAt,
+        ReplacedAt = replacedAt
+    };
+
+    private static void Write(SkillReferenceEntity reference, SaveAiSkillReference command, DateTimeOffset now)
+    {
+        reference.DisplayName = command.DisplayName.Trim();
+        reference.Description = command.Description.Trim();
+        reference.Body = command.Body;
+        reference.UpdatedByEmail = command.SavedByEmail;
+        reference.UpdatedAt = now;
     }
 }

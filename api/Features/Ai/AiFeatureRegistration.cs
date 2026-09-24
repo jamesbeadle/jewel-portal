@@ -58,6 +58,10 @@ public static class AiFeatureRegistration
         services.AddScoped<ICommandHandler<SaveAiSkillReference, Acknowledgement>, Skills.SaveAiSkillReferenceHandler>();
         services.AddScoped<Skills.SaveAiSkillReferenceAuthorisation>();
         services.AddScoped<Skills.SaveAiSkillReferenceValidation>();
+        services.AddScoped<IQueryHandler<GetAiSkillHistory, SkillHistory?>, Skills.GetAiSkillHistoryHandler>();
+        services.AddScoped<ICommandHandler<RestoreAiSkillVersion, Acknowledgement>, Skills.RestoreAiSkillVersionHandler>();
+        services.AddScoped<Skills.RestoreAiSkillVersionAuthorisation>();
+        services.AddScoped<Skills.RestoreAiSkillVersionValidation>();
 
         // Skills wired to connector actions — the AI Actions admin page's catalogue and picker
         // (describe_action reads the same rows straight off the request's JpmsContext).

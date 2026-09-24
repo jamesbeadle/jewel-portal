@@ -4,6 +4,7 @@
 @inject IQueryClient Queries
 @inject ICommandSender Commands
 @inject NavigationManager Nav
+@using Jewel.JPMS.Features.Ai.SkillVersions
 
 <PageTitle>AI skills · JPMS</PageTitle>
 
@@ -250,6 +251,9 @@
                         </div>
                     }
                 </div>
+
+                <SkillHistoryPanel SkillKey="@editing.SkillKey" Revision="historyRevision"
+                                   OnRestored="() => OpenAsync(editing.SkillKey)" />
             }
         }
 </Page>

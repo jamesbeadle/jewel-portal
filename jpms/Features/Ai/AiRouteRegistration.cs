@@ -22,6 +22,13 @@ public static class AiRouteRegistration
         commands.Register<SaveAiSkillReference, Acknowledgement>(
             CommandRoute.Post("/api/ai/skills/references"));
 
+        queries.Register<GetAiSkillHistory, SkillHistory?>(
+            new QueryRoute("/api/ai/skills/{skillKey}/history",
+                query => $"/api/ai/skills/{Uri.EscapeDataString(((GetAiSkillHistory)query).SkillKey)}/history"));
+
+        commands.Register<RestoreAiSkillVersion, Acknowledgement>(
+            CommandRoute.Post("/api/ai/skills/restore"));
+
         // Skills wired to connector actions — the AI Actions admin page (/admin/ai-actions).
         queries.Register<GetAiActionCatalogue, AiActionCatalogue>(
             new QueryRoute("/api/ai/action-skills", _ => "/api/ai/action-skills"));

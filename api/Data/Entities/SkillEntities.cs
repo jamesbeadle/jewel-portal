@@ -55,6 +55,8 @@ public sealed class SkillReferenceEntity
     /// <summary>One or two clauses telling the model when this reference is worth loading.</summary>
     [MaxLength(2000)] public string Description { get; set; } = "";
     public string Body { get; set; } = "";
+    /// <summary>Incremented on every save; the outgoing text is copied to SkillReferenceRevisions first.</summary>
+    public int Version { get; set; } = 1;
     [MaxLength(256)] public string UpdatedByEmail { get; set; } = "";
     public DateTimeOffset UpdatedAt { get; set; }
 }
@@ -67,8 +69,15 @@ public sealed class SkillRevisionEntity
     [MaxLength(128)] public string SkillKey { get; set; } = "";
     /// <summary>The version this body WAS — the row is written at the moment it is superseded.</summary>
     public int Version { get; set; }
+    [MaxLength(256)] public string DisplayName { get; set; } = "";
     public string Body { get; set; } = "";
     [MaxLength(4000)] public string Description { get; set; } = "";
+    public bool? IsPinned { get; set; }
+    public bool? IsActive { get; set; }
+    /// <summary>Who wrote this version.</summary>
     [MaxLength(256)] public string SavedByEmail { get; set; } = "";
+    /// <summary>When this version was written. Null on revisions kept before 2026-09-24.</summary>
+    public DateTimeOffset? WrittenAt { get; set; }
+    /// <summary>When this version was replaced by the next — the moment the row was written.</summary>
     public DateTimeOffset SavedAt { get; set; }
 }

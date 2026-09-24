@@ -8,6 +8,8 @@ public partial class AiSkillsAdmin
     private bool savedTick;
     private bool isNew;
     private bool referenceIsNew;
+    // Moves on every open, save and restore so the History panel below the editor reloads.
+    private int historyRevision;
 
     // Null means no fetch has landed — never render a count from it (CLAUDE.md loading states).
     private IReadOnlyList<SkillSummary>? skills;
@@ -103,6 +105,7 @@ public partial class AiSkillsAdmin
                 IsActive = detail.IsActive
             };
             references = detail.References.ToList();
+            historyRevision++;
             isNew = false;
         }
         catch
@@ -141,6 +144,7 @@ public partial class AiSkillsAdmin
 
             savedTick = true;
             isNew = false;
+            historyRevision++;
         }
         catch (CommandFailedException failure)
         {
