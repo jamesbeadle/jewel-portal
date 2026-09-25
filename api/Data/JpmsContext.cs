@@ -22,6 +22,7 @@ public sealed partial class JpmsContext : DbContext
 
     public DbSet<ProjectEntity> Projects => Set<ProjectEntity>();
     public DbSet<ProjectContactEntity> ProjectContacts => Set<ProjectContactEntity>();
+    public DbSet<ProjectAccessGrantEntity> ProjectAccessGrants => Set<ProjectAccessGrantEntity>();
     public DbSet<PartyContactEntity> PartyContacts => Set<PartyContactEntity>();
     public DbSet<ClientEntity> Clients => Set<ClientEntity>();
     public DbSet<ArchitectEntity> Architects => Set<ArchitectEntity>();

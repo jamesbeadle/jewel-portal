@@ -62,6 +62,12 @@ public sealed class HttpUserDirectory : IUserDirectory
         return saved;
     }
 
+    public async Task SetProjectsAsync(string email, IReadOnlyList<string> projectIds, CancellationToken cancellationToken)
+    {
+        await commands.SendAsync(new SetLoginProjects(email, projectIds), cancellationToken);
+        await readModel.RefreshAsync(cancellationToken);
+    }
+
     public bool Remove(string email)
     {
         _ = RemoveAsync(email, CancellationToken.None);

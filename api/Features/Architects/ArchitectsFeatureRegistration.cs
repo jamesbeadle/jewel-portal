@@ -19,9 +19,6 @@ public static class ArchitectsFeatureRegistration
         services.AddScoped<ICommandHandler<UpdateArchitect, Architect>, UpdateArchitectHandler>();
         services.AddScoped<UpdateArchitectAuthorisation>();
         services.AddScoped<UpdateArchitectValidation>();
-        services.AddScoped<InviteArchitectPortalUserAuthorisation>();
-        services.AddScoped<InviteArchitectPortalUserValidation>();
-        services.AddScoped<InviteArchitectPortalUserHandler>();
 
         return services;
     }

@@ -5508,6 +5508,39 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("ProgressUpdates");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ProjectAccessGrantEntity", b =>
+                {
+                    b.Property<string>("ProjectAccessGrantId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("GrantedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("GrantedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("ProjectAccessGrantId");
+
+                    b.HasIndex("Email", "ProjectId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ProjectAccessGrants_Email_ProjectId");
+
+                    b.ToTable("ProjectAccessGrants");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ProjectContactEntity", b =>
                 {
                     b.Property<string>("ContactId")

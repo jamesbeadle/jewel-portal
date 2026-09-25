@@ -8,7 +8,10 @@ public sealed record DirectoryUser(
     // defaults back to this user's own role (HomeRoleSelection.From). Off by default — most
     // users would find the revert prompt an interruption; it exists for people (the FD above
     // all) whose Administrator view kept "sticking" across days.
-    bool RevertToOwnRole = false);
+    bool RevertToOwnRole = false,
+    // The projects an architect login was given in Admin → Users (ProjectAccessGrants). Null when
+    // the read did not load them; empty when the login holds none.
+    IReadOnlyList<string>? ProjectIds = null);
 
 /// <summary>
 /// A user whose access has been revoked. Their directory record survives — with the roles they

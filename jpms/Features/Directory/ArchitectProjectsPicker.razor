@@ -1,0 +1,93 @@
+@namespace Jewel.JPMS.Features.Directory
+@using Jewel.JPMS.Features.Projects
+@inject IUserDirectory UserDirectory
+@inject ProjectListReadModel ProjectList
+
+@*
+    The projects an architect login reads (2026-09-25, Nigel: "maintain the relationship between
+    architects and projects through the admin"). Shown on an Admin → Users row that holds the
+    Architect role; each tick saves at once, as a role edit does, and the server's list is the
+    truth — the API confines the login to exactly these projects (ArchitectProjects).
+*@
+
+<div class="mt-2 flex flex-wrap items-center gap-1.5">
+    <span class="text-xs text-content-subtle">Projects</span>
+    @foreach (var project in GivenProjects)
+    {
+        <span class="inline-flex items-center rounded-full border border-line-strong bg-surface-field px-2 py-0.5 text-xs text-content-muted">
+            <span class="font-mono text-content-subtle mr-1">@project.Reference</span>@project.Name
+        </span>
+    }
+    @if (given.Count == 0)
+    {
+        <span class="text-xs text-content-faint italic">None yet — they will see nothing until a project is ticked.</span>
+    }
+    @if (CanEdit)
+    {
+        <ProjectMultiSelect Projects="@AllProjects" Selected="@given" SelectedChanged="SaveAsync"
+                            Disabled="@(busy || ProjectList.Current is null)"
+                            ToggleTitle="@($"Choose the projects {DisplayName} can see")" />
+    }
+    @if (busy)
+    {
+        <span class="text-xs text-content-subtle">Saving</span>
+    }
+</div>
+@if (error is not null)
+{
+    <p class="mt-2 text-xs text-negative">@error</p>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Email { get; set; } = "";
+    [Parameter, EditorRequired] public string DisplayName { get; set; } = "";
+    [Parameter] public IReadOnlyList<string>? ProjectIds { get; set; }
+    [Parameter] public bool CanEdit { get; set; }
+
+    private IReadOnlyCollection<string> given = Array.Empty<string>();
+    private bool busy;
+    private string? error;
+
+    private IReadOnlyList<Project> AllProjects => ProjectList.Current ?? Array.Empty<Project>();
+
+    private IEnumerable<Project> GivenProjects =>
+        AllProjects.Where(project => given.Contains(project.ProjectId, StringComparer.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ProjectList.Current is null) await ProjectList.RefreshAsync(CancellationToken.None);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (busy) return;
+        given = ProjectIds ?? Array.Empty<string>();
+    }
+
+    private async Task SaveAsync(IReadOnlyCollection<string> ticked)
+    {
+        if (busy) return;
+        var previous = given;
+        busy = true;
+        error = null;
+        given = ticked;
+        try
+        {
+            await UserDirectory.SetProjectsAsync(Email, ticked.ToList(), CancellationToken.None);
+        }
+        catch (CommandFailedException failure)
+        {
+            given = previous;
+            error = failure.Message;
+        }
+        catch
+        {
+            given = previous;
+            error = "Couldn't save the projects. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

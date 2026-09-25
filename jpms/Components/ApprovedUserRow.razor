@@ -89,6 +89,12 @@
         }
     </div>
 
+    @if (roles.Contains(Role.Architect))
+    {
+        <Jewel.JPMS.Features.Directory.ArchitectProjectsPicker Email="@User.Email" DisplayName="@User.DisplayName"
+                                                               ProjectIds="@User.ProjectIds" CanEdit="@CanEdit" />
+    }
+
     @if (roles.Count > 1 && OwnRoleName is { } ownRole)
     {
         @* The two-hour default-back opt-in. Only meaningful with more than one role, and unlike

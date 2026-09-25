@@ -18,7 +18,7 @@ public sealed class ListProjectsVisibleToUserEndpoint
     }
 
     // Every internal role reads the whole list; the project's parties read their own projects —
-    // an architect those naming their practice (ArchitectProjects), a client its own
+    // an architect those given to their login (ArchitectProjects), a client its own
     // (ClientProjects) — with the commercial fields stripped (Parties/PartyReads).
     private static readonly RoleSet RolesThatMayListProjects = JpmsRoleSets.DeliveryTeamAndParties;
 
@@ -37,14 +37,14 @@ public sealed class ListProjectsVisibleToUserEndpoint
         return new OkObjectResult(projects.Select(project => project.AsReadBy(signedInUser)).ToList());
     }
 
-    // An internal role sees everything; a linked client or architect sees its own projects, and
-    // a party login never linked to its client or practice sees nothing.
+    // An internal role sees everything; a linked client or an architect sees its own projects,
+    // and a client login never linked to its client sees nothing.
     private static ListProjectsVisibleToUser? QueryFor(SignedInUser signedInUser)
     {
         if (PartyReads.IsInternal(signedInUser)) return new ListProjectsVisibleToUser();
         var clientId = ClientScope.OwnClientId(signedInUser);
         if (clientId is not null) return new ListProjectsVisibleToUser(ClientId: clientId);
-        var architectId = ArchitectScope.OwnArchitectId(signedInUser);
-        return architectId is null ? null : new ListProjectsVisibleToUser(architectId);
+        var architectLogin = ArchitectScope.OwnArchitectLogin(signedInUser);
+        return architectLogin is null ? null : new ListProjectsVisibleToUser(architectLogin);
     }
 }

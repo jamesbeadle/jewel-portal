@@ -37,6 +37,24 @@ internal sealed partial class SubcontractorsAndLeadsActions
                 + "permission."),
 
         new AiAction(
+            Name: "set_login_projects",
+            Area: "Directory & users",
+            Description: "Sets the projects an ARCHITECT login may see — the Projects picker on its "
+                + "Admin → Users row. The projects supplied become exactly the login's projects; any "
+                + "not supplied are taken away. Refused for a login without the Architect role.",
+            CommandType: typeof(SetLoginProjects),
+            ResultType: typeof(Acknowledgement),
+            AuthorisationType: typeof(SetLoginProjectsAuthorisation),
+            ValidationType: typeof(SetLoginProjectsValidation),
+            VisibleTo: UserAdministrators,
+            EmailStamps: new[] { "GrantedByEmail" },
+            NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
+            Notes: "The login's current projectIds come from list_portal_users and the project ids "
+                + "from list_projects — carry forward the projects that should stay, and confirm the "
+                + "list with the user before calling."),
+
+        new AiAction(
             Name: "remove_directory_user",
             Area: "Directory & users",
             Description: "REVOKES a user's portal access immediately — they can no longer sign in and "

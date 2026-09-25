@@ -968,4 +968,16 @@ public sealed class AiConnectorTests
         Assert.NotNull(delete);
         Assert.True(delete!.RequiresConfirmation);
     }
+
+    // An architect login's projects (2026-09-25) are set in Admin → Users, and on the connector too.
+    [Fact]
+    public void ArchitectLoginProjects_reachTheConnector()
+    {
+        var action = AiActionRegistry.Find("set_login_projects");
+        Assert.NotNull(action);
+        Assert.True(action!.RequiresConfirmation);
+        Assert.Contains("GrantedByEmail", action.EmailStamps);
+        Assert.False(action.VisibleTo.Includes(Role.Architect));
+        Assert.Contains("list_portal_users", action.Notes);
+    }
 }

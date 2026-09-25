@@ -226,7 +226,8 @@ internal static class AiRegisterTools
                         {
                             user.Email,
                             user.DisplayName,
-                            roles = user.Roles.Select(role => role.ToString())
+                            roles = user.Roles.Select(role => role.ToString()),
+                            projectIds = user.ProjectIds
                         })
                     });
                 }),

@@ -85,14 +85,6 @@ public sealed class UserInviteService
         return await PostInviteAsync($"/api/clients/{Uri.EscapeDataString(clientId)}/portal-invite", request);
     }
 
-    /// <summary>Invites an architect practice's contact to the portal: mints the set-password
-    /// link and links the login to the practice so their session is scoped to its projects.</summary>
-    public async Task<InviteOutcome> InviteArchitectAsync(string architectId, string? email = null, string? displayName = null)
-    {
-        var request = new Contracts.Architects.InviteArchitectPortalUserRequest(email, displayName);
-        return await PostInviteAsync($"/api/architects/{Uri.EscapeDataString(architectId)}/portal-invite", request);
-    }
-
     private async Task<InviteOutcome> PostInviteAsync<TRequest>(string url, TRequest request)
     {
         try
