@@ -1,6 +1,8 @@
 """Orders the refactor for this repository: component breakout, then utility functions, then design patterns."""
 from __future__ import annotations
 
+from .handler_evidence import LOCAL, UNDECIDED
+
 
 BREAKOUT, UTILITIES, PATTERNS = "Pass 2 — Component breakout", "Pass 3 — Utility function identification", "Pass 4 — Design pattern identification"
 SHOWN_BLOCKS = 4
@@ -37,12 +39,25 @@ def sharedFromViewSteps(targets: list[dict]) -> list[dict]:
     ]
 
 
+def repeatedBodyStep(row: dict) -> dict:
+    where = f"in {len(row['declaredIn'])} files: {', '.join(row['declaredIn'][:SHOWN_FILES])}"
+    body = f"{row['lines']} lines, identical {where}"
+    if row["verdict"] == UNDECIDED:
+        return step(UTILITIES, f"Decide what `{row['name']}` is, then record it",
+                    f"{body}. The evidence does not settle it: {row['evidence']}. Read one declaration and its "
+                    "call site. If the framework binds the name to each component, add the name to "
+                    "`frameworkHandlers.names` in rules.json and leave the code alone; if it is one function, "
+                    "give it a home and point every caller at it.")
+    if row["verdict"] == LOCAL:
+        return step(UTILITIES, f"Extract what `{row['name']}` shares, leaving the handler where it is",
+                    f"The framework binds this name to each component, so the handler stays; its {body}. "
+                    f"Move the body to a utility each one calls. Evidence: {row['evidence']}.")
+    return step(UTILITIES, f"Give `{row['name']}` one home",
+                f"The same function, word for word: {body}. Evidence: {row['evidence']}.")
+
+
 def utilitySteps(views: list[dict], repeatedBodies: list[dict], audit: dict) -> list[dict]:
-    steps = [
-        step(UTILITIES, f"Give `{row['name']}` one home",
-             f"The same {row['lines']}-line function, word for word, is in {len(row['declaredIn'])} files: {', '.join(row['declaredIn'][:SHOWN_FILES])}.")
-        for row in repeatedBodies[:SHOWN_REPEATS]
-    ]
+    steps = [repeatedBodyStep(row) for row in repeatedBodies[:SHOWN_REPEATS]]
     steps += sharedFromViewSteps(views)
     orphanCount = audit["summaries"].get("orphans", {}).get("orphanFunctions", 0) + audit["summaries"].get("inventory", {}).get("orphanComponents", 0)
     if orphanCount:

@@ -1,7 +1,8 @@
 """Measures how deep a line walks into an object's insides: property hops in one unbroken chain.
 
-order.customer.address.postcode is three hops. A method call is not a hop and ends the run, so a fluent
-pipeline — db.Invoices.Where(...).Select(...).ToList() — is one hop deep however long it is.
+order.customer.address.postcode is three hops; apple.colour is one, which is all a line may take. A method
+call is not a hop and ends the run, so a fluent pipeline — db.Invoices.Where(...).Select(...).ToList() — is
+one hop deep however long it is.
 """
 from __future__ import annotations
 
@@ -9,7 +10,7 @@ import re
 
 HOP = re.compile(r"(?<=[\w\)\]>])\s*(?:\?\.|!\.|\.)\s*([A-Za-z_]\w*)(\s*(?:<[^<>()]*>)?\s*\()?")
 FREE_PREFIXES_WHEN_UNSET = ["this.", "base.", "self.", "import.meta."]
-MAX_DEPTH_WHEN_UNSET = 2
+MAX_DEPTH_WHEN_UNSET = 1
 
 
 def withoutFreePrefixes(line: str, freePrefixes: list[str]) -> str:

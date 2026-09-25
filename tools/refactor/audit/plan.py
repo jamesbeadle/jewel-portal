@@ -31,7 +31,7 @@ def buildPlan(repositoryRoot: Path, audit: dict) -> dict:
     steps = [
         *adoptionSteps(audit),
         *breakoutSteps(views),
-        *utilitySteps(views, usage.repeatedBodies(), audit),
+        *utilitySteps(views, usage.repeatedBodies(rules.get("frameworkHandlers", {})), audit),
         *patternSteps(others, designPatterns),
         *sweepSteps(audit["score"]),
     ]

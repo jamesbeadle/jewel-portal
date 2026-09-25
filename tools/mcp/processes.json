@@ -1,0 +1,90 @@
+{
+  "processes": [
+    {
+      "tool": "run_code_quality_check",
+      "skill": "code-quality-check",
+      "title": "Run the code quality check",
+      "sentences": ["Run the code quality check", "run the quality check", "score the repo", "publish the score"],
+      "summary": "Publish this repository's code quality: the score box at the bottom of README.md with its breakdown, the refactoring plan, and the site definition refreshed on the way. Changes no source code. Ends as a pull request on a quality/check-<date> branch.",
+      "branch": "quality/check-<date>",
+      "writes": ["README.md", "tools/refactor/refactor-plan.md", "tools/refactor/site-definition.md"],
+      "commands": [["python3", "-m", "tools.refactor.audit.quality_check", "."]]
+    },
+    {
+      "tool": "run_widget_identification",
+      "skill": "widget-identification",
+      "title": "Run the widget identification",
+      "sentences": ["Run the widget identification", "identify the widgets", "where are the widgets written by hand", "show me the site definition"],
+      "summary": "Identify the widgets: every route as a user sees it, in the widget notation, with every place a view writes by hand the markup a catalogue widget should own. Read-only - no branch, no commit, no pull request, no score box. It identifies the widgets; it never adopts them.",
+      "branch": null,
+      "writes": ["tools/refactor/site-definition.md"],
+      "commands": [
+        ["python3", "-m", "tools.refactor.audit.run_audit", ".", "--output", "tools/refactor/audit-output"],
+        ["python3", "-m", "tools.refactor.audit.site.site_document", "."]
+      ]
+    },
+    {
+      "tool": "run_input_validation_check",
+      "skill": "input-validation-check",
+      "title": "Run the input validation check",
+      "sentences": ["Run the input validation check", "check the inputs against the schema", "can anything write data that does not fit its column", "is the MCP server validating its inputs"],
+      "summary": "Check every entry point that writes - API routes, server actions, command handlers, MCP tool and action handlers - against the column types and constraints it writes to: guarded, mismatched, unguarded, form only or repaired. Read-only - no branch, no commit, no pull request, no score box. It finds the gaps; fixing them is a fix/ branch the person asks for.",
+      "branch": null,
+      "writes": ["tools/refactor/input-validation.md"],
+      "commands": []
+    },
+    {
+      "tool": "run_refactor_round",
+      "skill": "refactor-round",
+      "title": "Refactor the repo",
+      "sentences": ["Refactor the repo", "refactor the repository", "run a refactor round"],
+      "summary": "One measured round on a refactor/round-N branch, taking the next steps from the top of the refactoring plan in order. Behaviour never changes. This is the one process that changes source code.",
+      "branch": "refactor/round-N",
+      "writes": ["source code", "tools/refactor/baseline.json", "README.md"],
+      "commands": []
+    },
+    {
+      "tool": "run_widget_design",
+      "skill": "widget-design",
+      "title": "Set up the widget designs",
+      "sentences": ["Set up the widget designs", "Extract the brand from <references>", "Extract the design for <Widget> from <images>", "Check the site against the brand", "Check the widgets against their designs"],
+      "summary": "The brand sheet and each widget's design sheet, and checking the site against them. Optional: only a repository with a widget catalogue has designs to keep. A question gets the reading and changes nothing; a Check fixes the widget on a branch.",
+      "branch": "design/check-<date>",
+      "writes": ["docs/design/brand.md", "docs/design/widgets/<Widget>.md"],
+      "commands": []
+    },
+    {
+      "tool": "run_end_of_day",
+      "skill": "end-of-day",
+      "title": "Run end of day",
+      "sentences": ["Run end of day", "close the day", "end-of-day"],
+      "summary": "The refactor round if one is due, the check that the connector covers what changed today, the plain-English work log on the day's tasks, and the day's branch pushed with its pull request open.",
+      "branch": null,
+      "writes": ["Your Business Today work logs"],
+      "commands": []
+    },
+    {
+      "tool": "read_code_quality_score",
+      "skill": null,
+      "title": "What is the code quality score?",
+      "sentences": ["What is the code quality score?", "run the audit", "does the gate pass?"],
+      "summary": "The score and whether the gate passes, read only. No branch, no commit, nothing published - this is the reading, not the code quality check.",
+      "branch": null,
+      "writes": ["tools/refactor/audit-output/"],
+      "commands": [
+        ["python3", "-m", "tools.refactor.audit.run_audit", ".", "--output", "tools/refactor/audit-output", "--fast"],
+        ["python3", "-m", "tools.refactor.audit.gate", "tools/refactor/baseline.json", "tools/refactor/audit-output/audit.json"]
+      ]
+    },
+    {
+      "tool": "read_refactor_round_due",
+      "skill": null,
+      "title": "Is a refactor round due?",
+      "sentences": ["Is a refactor round due?", "how many deploys since the baseline"],
+      "summary": "The commits on the default branch since the baseline was last committed, against the rhythm. Read-only.",
+      "branch": null,
+      "writes": [],
+      "commands": [["bash", "tools/refactor/deploys_since_baseline.sh"]]
+    }
+  ]
+}

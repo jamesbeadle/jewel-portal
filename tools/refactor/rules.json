@@ -87,7 +87,14 @@
     "maxMemberAccessesPerLine": 3,
     "maxLineLength": 160,
     "maxIndentDepth": 5,
-    "indentWidth": 4
+    "indentWidth": 4,
+    "maxMemberChainDepth": 1,
+    "freeChainPrefixes": [
+      "this.",
+      "base.",
+      "self.",
+      "import.meta."
+    ]
   },
   "functionNames": {
     "maxWords": 5,
@@ -188,27 +195,115 @@
     "elements": {}
   },
   "siteDefinition": {
-    "viewGlobs": ["jpms/**/*.razor"],
-    "ignoredTags": ["PageTitle", "HeadContent"],
+    "viewGlobs": [
+      "jpms/**/*.razor"
+    ],
+    "ignoredTags": [
+      "PageTitle",
+      "HeadContent"
+    ],
     "catalogue": [
-      "Page", "PageHeader", "PageHeading", "SectionHeader", "Panel", "Notice", "Pill", "DropdownMenu", "FormField", "Checkbox",
-      "RecordsTable", "SortableColumnHeader", "TabRow", "FilterChips", "SearchInput", "SearchSelect", "StatTile", "MetricStat",
-      "EmptyState", "ConfirmDialog", "InlineConfirm", "Modal", "Toolbar", "ToolbarButton", "ToolbarDivider", "LoadGate",
-      "DateText", "DateTimeText", "Money", "WholeMoney", "RecordTabBar", "ExportToExcelButton", "RichTextEditor", "ErrorToast"
+      "Page",
+      "PageHeader",
+      "PageHeading",
+      "SectionHeader",
+      "Panel",
+      "Notice",
+      "Pill",
+      "DropdownMenu",
+      "FormField",
+      "Checkbox",
+      "RecordsTable",
+      "SortableColumnHeader",
+      "TabRow",
+      "FilterChips",
+      "SearchInput",
+      "SearchSelect",
+      "StatTile",
+      "MetricStat",
+      "EmptyState",
+      "ConfirmDialog",
+      "InlineConfirm",
+      "Modal",
+      "Toolbar",
+      "ToolbarButton",
+      "ToolbarDivider",
+      "LoadGate",
+      "DateText",
+      "DateTimeText",
+      "Money",
+      "WholeMoney",
+      "RecordTabBar",
+      "ExportToExcelButton",
+      "RichTextEditor",
+      "ErrorToast"
     ],
     "handRolled": [
-      {"element": "table", "ownedBy": "RecordsTable"},
-      {"element": "input", "ownedBy": "FormField", "unlessAttributes": ["type=\"checkbox\"", "type=\"radio\"", "type=\"file\"", "type=\"hidden\""]},
-      {"element": "select", "ownedBy": "FormField"},
-      {"element": "textarea", "ownedBy": "FormField"},
-      {"element": "h1", "ownedBy": "PageHeader"},
-      {"element": "h2", "ownedBy": "SectionHeader"},
-      {"element": "h3", "ownedBy": "SectionHeader"},
-      {"element": "dl", "ownedBy": "KeyValueList"},
-      {"element": "button", "ownedBy": "Button", "unlessClassPrefixes": ["btn-", "chip", "tab"]}
+      {
+        "element": "table",
+        "ownedBy": "RecordsTable"
+      },
+      {
+        "element": "input",
+        "ownedBy": "FormField",
+        "unlessAttributes": [
+          "type=\"checkbox\"",
+          "type=\"radio\"",
+          "type=\"file\"",
+          "type=\"hidden\""
+        ]
+      },
+      {
+        "element": "select",
+        "ownedBy": "FormField"
+      },
+      {
+        "element": "textarea",
+        "ownedBy": "FormField"
+      },
+      {
+        "element": "h1",
+        "ownedBy": "PageHeader"
+      },
+      {
+        "element": "h2",
+        "ownedBy": "SectionHeader"
+      },
+      {
+        "element": "h3",
+        "ownedBy": "SectionHeader"
+      },
+      {
+        "element": "dl",
+        "ownedBy": "KeyValueList"
+      },
+      {
+        "element": "button",
+        "ownedBy": "Button",
+        "unlessClassPrefixes": [
+          "btn-",
+          "chip",
+          "tab"
+        ]
+      }
     ],
-    "horizontalClasses": ["flex", "inline-flex"],
-    "verticalClasses": ["flex-col"],
+    "horizontalClasses": [
+      "flex",
+      "inline-flex"
+    ],
+    "verticalClasses": [
+      "flex-col"
+    ],
     "document": "tools/refactor/site-definition.md"
+  },
+  "frameworkHandlers": {
+    "namePatterns": [
+      "^on[A-Z]",
+      "^handle[A-Z]",
+      "^On[A-Z]",
+      "^Handle[A-Z]"
+    ],
+    "names": [],
+    "coincidenceLines": 12
   }
 }

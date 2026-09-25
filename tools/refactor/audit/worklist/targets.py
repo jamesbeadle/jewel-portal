@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from ..checks import file_length
 from ..source_files import SourceFile, matchesAny
-from .function_usage import FunctionUsage, blockOwning
+from .block_ownership import blockOwning
+from .function_usage import FunctionUsage
 from .markup_blocks import componentCandidates
 
 STYLESHEET_SUFFIX = ".css"

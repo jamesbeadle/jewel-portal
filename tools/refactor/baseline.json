@@ -261,7 +261,7 @@
       "repeatedStringLiterals": 30
     },
     "prose": {
-      "longMemberChainLines": 3165,
+      "longMemberChainLines": 4117,
       "deeplyIndentedLines": 3125,
       "overlongLines": 1840,
       "measurementIsHeuristic": true
