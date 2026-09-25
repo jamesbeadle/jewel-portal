@@ -11,6 +11,9 @@
         </FormField>
         <FormField Label="Declaration" Hint="@($"What signing agrees to. Left blank: “{PolicyDeclarations.Standard}”.")">
             <textarea class="field mt-1 min-h-24" @bind="declaration"></textarea>
+            <button type="button" class="btn-ghost mt-1" @onclick="UseHealthAndSafetyDeclaration">
+                Use the H&amp;S Policy's own declaration (@HealthAndSafetyDeclaration.Source)
+            </button>
         </FormField>
         <FormField Label="The policy (PDF)" Hint="What people open and read before they sign — on their login or by Policy sign-off link.">
             <InputFile OnChange="chosen => file = chosen.File" accept=".pdf,application/pdf" class="text-sm" />
