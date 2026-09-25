@@ -31,14 +31,14 @@
 
     <div class="mb-3 flex items-center justify-end gap-4">
         @* Where the dashboard's "Valuations overdue" tile lands: the same rows it counted — its
-           red count on the first tick, its orange "due soon" line on the second. One filter, so
-           ticking one clears the other. *@
+           red count on the first tick, its orange "due soon" line on the second. Both may be
+           ticked: the list then shows every row that is either (Jeremy, 2026-09-25). *@
         <label class="flex items-center gap-2 text-sm cursor-pointer select-none @(overdueValuationsOnly ?"text-negative font-medium" : "text-content-muted")">
-            <input type="checkbox" checked="@overdueValuationsOnly" @onchange="e => SetValuationFilter((bool)e.Value!, ValuationDue.Status.Overdue)" />
+            <input type="checkbox" checked="@overdueValuationsOnly" @onchange="e => SetValuationFilter(ValuationDue.Status.Overdue, (bool)e.Value!)" />
             <span>Overdue valuations only@(OverdueValuationCount > 0 ? $" ({OverdueValuationCount})" : "")</span>
         </label>
         <label class="flex items-center gap-2 text-sm cursor-pointer select-none @(dueSoonValuationsOnly ?"text-warning font-medium" : "text-content-muted")">
-            <input type="checkbox" checked="@dueSoonValuationsOnly" @onchange="e => SetValuationFilter((bool)e.Value!, ValuationDue.Status.DueSoon)" />
+            <input type="checkbox" checked="@dueSoonValuationsOnly" @onchange="e => SetValuationFilter(ValuationDue.Status.DueSoon, (bool)e.Value!)" />
             <span>Due soon only@(DueSoonValuationCount > 0 ? $" ({DueSoonValuationCount})" : "")</span>
         </label>
         <label class="flex items-center gap-2 text-sm text-content-muted cursor-pointer select-none">
@@ -52,13 +52,9 @@
                              BuildWorkbook="BuildExportWorkbook" />
     </div>
 
-    @if (overdueValuationsOnly && VisibleProjects.Count == 0)
+    @if (IsFilteredByValuation && VisibleProjects.Count == 0)
     {
-        <p class="text-sm text-content-subtle italic mb-3">No live project has an overdue valuation date. Dates are set on each project's Settings tab.</p>
-    }
-    @if (dueSoonValuationsOnly && VisibleProjects.Count == 0)
-    {
-        <p class="text-sm text-content-subtle italic mb-3">No live project has a valuation due in the next week. Dates are set on each project's Settings tab.</p>
+        <p class="text-sm text-content-subtle italic mb-3">No live project has @NoMatchingValuationText. Dates are set on each project's Settings tab.</p>
     }
     @* Filtered to overdue or due-soon valuations, a row is a claim to raise — it lands on the
        project's Valuation Report. Unfiltered, the row keeps the role's default project tab. *@
@@ -74,22 +70,33 @@
     private bool showForm;
     private bool showCompleted;
 
-    // The one valuation filter: null is unfiltered; Overdue or DueSoon narrows to that status.
-    private ValuationDue.Status? valuationFilter;
+    // The valuation statuses ticked: none is unfiltered; otherwise a row shows when its status is ticked.
+    private readonly HashSet<ValuationDue.Status> valuationFilters = new();
 
-    private bool overdueValuationsOnly => valuationFilter == ValuationDue.Status.Overdue;
-    private bool dueSoonValuationsOnly => valuationFilter == ValuationDue.Status.DueSoon;
-    private bool IsFilteredByValuation => valuationFilter is not null;
+    private bool overdueValuationsOnly => valuationFilters.Contains(ValuationDue.Status.Overdue);
+    private bool dueSoonValuationsOnly => valuationFilters.Contains(ValuationDue.Status.DueSoon);
+    private bool IsFilteredByValuation => valuationFilters.Count > 0;
 
-    private void SetValuationFilter(bool isTicked, ValuationDue.Status status) =>
-        valuationFilter = isTicked ? status : null;
+    private string NoMatchingValuationText =>
+        (overdueValuationsOnly, dueSoonValuationsOnly) switch
+        {
+            (true, true) => "a valuation overdue or due in the next week",
+            (true, false) => "an overdue valuation date",
+            _ => "a valuation due in the next week",
+        };
+
+    private void SetValuationFilter(ValuationDue.Status status, bool isTicked)
+    {
+        if (isTicked) valuationFilters.Add(status);
+        if (!isTicked) valuationFilters.Remove(status);
+    }
 
     private IReadOnlyList<Project> ActiveProjects =>
         ProjectsReadModel.Current ?? Array.Empty<Project>();
 
     private IReadOnlyList<Project> VisibleProjects =>
         (showCompleted ? ActiveProjects : ActiveProjects.Where(p => p.Stage != ProjectStage.Completed))
-            .Where(p => valuationFilter is null || ValuationDue.Of(p) == valuationFilter)
+            .Where(p => !IsFilteredByValuation || valuationFilters.Contains(ValuationDue.Of(p)))
             .ToList();
 
     private int OverdueValuationCount => ActiveProjects.Count(ValuationDue.IsOverdue);
@@ -154,7 +161,7 @@
         // ?valuations=overdue / ?valuations=due-soon (the dashboard tile and its due-soon line)
         // open the page already filtered. Read once at load; the tick boxes are the source of
         // truth thereafter.
-        valuationFilter = FilterFromQuery(new Uri(Nav.Uri).Query);
+        if (FilterFromQuery(new Uri(Nav.Uri).Query) is { } landingFilter) valuationFilters.Add(landingFilter);
         ProjectsReadModel.OnChanged += StateHasChanged;
         Session.OnChange += StateHasChanged;
         if (!Session.CanOpen(JpmsRoleSets.AllInternal)) return;
