@@ -305,5 +305,43 @@
     ],
     "names": [],
     "coincidenceLines": 12
+  },
+  "inputValidation": {
+    "schemaGlobs": [
+      "**/Migrations/*.cs",
+      "**/*.sql"
+    ],
+    "entryPointGlobs": [
+      "**/Controllers/**/*.cs",
+      "**/*Controller.cs",
+      "**/Endpoints/**/*.cs",
+      "**/*Endpoints.cs",
+      "**/*Handler.cs",
+      "**/Mcp/**/*.cs",
+      "**/*Tools.cs",
+      "**/Pages/**/*.razor",
+      "**/Components/**/*.razor",
+      "**/*.razor.cs",
+      "**/Program.cs"
+    ],
+    "writePatterns": [
+      "\\.(?P<table>\\w+)\\s*\\.\\s*(?:Add|AddRange|AddAsync|AddRangeAsync|Update|UpdateRange|Attach)\\(",
+      "insert\\s+into\\s+(?:\\w+\\.)?[\\\"`\\[]?(?P<table>\\w+)",
+      "\\bupdate\\s+(?:\\w+\\.)?[\\\"`\\[]?(?P<table>\\w+)[\\\"`\\]]?\\s+set\\b"
+    ],
+    "validatorPatterns": [
+      "AbstractValidator<",
+      "\\bRuleFor\\(",
+      "\\[(?:MaxLength|StringLength|Range|Required|RegularExpression|EmailAddress)\\b",
+      "DataAnnotationsValidator",
+      "FluentValidationValidator",
+      "Validator\\.TryValidateObject",
+      "\\.ValidateAsync\\(",
+      "\\.Validate\\(",
+      "ValidateAndThrow"
+    ],
+    "exemptGlobs": [
+      "**/Migrations/**"
+    ]
   }
 }

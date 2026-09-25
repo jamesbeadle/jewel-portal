@@ -5,6 +5,7 @@ from ..score.elements import ELEMENTS
 
 SWEEP = "Pass 5 — The sweep to zero"
 HANDLED_BY_EARLIER_PASSES = {"filesOverLimit", "worstFile", "orphans", "predictedFiles", "entityFileCounts", "handRolledWidgets"}
+CHANGES_BEHAVIOUR = {"unvalidatedWrites"}
 
 
 def checkNameFor(elementKey: str) -> str:
@@ -14,7 +15,7 @@ def checkNameFor(elementKey: str) -> str:
 def sweepSteps(score: dict) -> list[dict]:
     remaining = [
         row for row in score["elements"]
-        if row["isMeasured"] and row["offenders"] and row["key"] not in HANDLED_BY_EARLIER_PASSES
+        if row["isMeasured"] and row["offenders"] and row["key"] not in HANDLED_BY_EARLIER_PASSES | CHANGES_BEHAVIOUR
     ]
     remaining.sort(key=lambda row: row["score"])
     return [

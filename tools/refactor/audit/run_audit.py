@@ -15,7 +15,7 @@ from pathlib import Path
 from . import report
 from .checks import (
     accessor_names, comments, conditions, design_patterns, duplication, file_length,
-    function_names, function_shape, magic_values, naming, orphans, prose,
+    function_names, function_shape, input_validation, magic_values, naming, orphans, prose,
 )
 from .inventory import file_areas, pages_and_widgets
 from .site import site_definition
@@ -51,6 +51,7 @@ def runChecks(repositoryRoot: Path, rules: dict, baselinePath: Path | None = Non
         result = module.check(sourceFiles, rules)
         results[result["name"]] = result
     results["fileAreas"] = file_areas.check(repositoryRoot, sourceFiles, rules)
+    results["inputValidation"] = input_validation.check(repositoryRoot, sourceFiles, rules)
     results["duplication"] = duplicationFromBaseline(baselinePath) if baselinePath else duplication.check(repositoryRoot, rules)
     return results
 

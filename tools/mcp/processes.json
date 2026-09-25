@@ -30,8 +30,8 @@
       "sentences": ["Run the input validation check", "check the inputs against the schema", "can anything write data that does not fit its column", "is the MCP server validating its inputs"],
       "summary": "Check every entry point that writes - API routes, server actions, command handlers, MCP tool and action handlers - against the column types and constraints it writes to: guarded, mismatched, unguarded, form only or repaired. Read-only - no branch, no commit, no pull request, no score box. It finds the gaps; fixing them is a fix/ branch the person asks for.",
       "branch": null,
-      "writes": ["tools/refactor/input-validation.md"],
-      "commands": []
+      "writes": ["tools/refactor/input-validation.md", "tools/refactor/audit-output/"],
+      "commands": [["python3", "-m", "tools.refactor.audit.run_audit", ".", "--output", "tools/refactor/audit-output", "--fast"]]
     },
     {
       "tool": "run_refactor_round",

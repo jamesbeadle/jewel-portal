@@ -6,6 +6,7 @@ zeroAt. rules.json may override any weight or zeroAt under score.elements.<key>.
 from __future__ import annotations
 
 BASELINE, PATTERNS, PROSE, WIDGETS = "Standard baseline checks", "Design pattern file count", "Prose", "Widget adoption"
+INPUTS = "Input validation"
 ONE = [("constant", "one")]
 FILES = [("fileLength", "totalFiles")]
 FUNCTIONS = [("functionShape", "totalFunctions")]
@@ -41,6 +42,8 @@ ELEMENTS = [
     element("gluedAccessors", "Accessor names that want to be a property", PROSE, [("accessorNames", "gluedAccessorNames")], FUNCTIONS, "functions", 0.1, 6),
     element("handRolledWidgets", "Markup written by hand where a widget should be", WIDGETS,
             [("siteDefinition", "handRolledElements")], [("siteDefinition", "widgetSlots")], "widget slots", 0.5, 8),
+    element("unvalidatedWrites", "Doors that write without checking their input against the columns", INPUTS,
+            [("inputValidation", "unvalidatedDoors"), ("inputValidation", "looserLimits")], [("inputValidation", "writeDoors")], "write doors", 0.5, 8),
 ]
 
 

@@ -46,6 +46,8 @@ Each step is one of five kinds, and each kind has its own method. The playbook's
 
 **Pass 5 — The sweep to zero.** Take the element the step names and clear its offenders from `audit.json`, file by file: an `else` becomes an early return; a condition with calls inside calls gets a named local before it, so the line reads as a sentence (`const apple = getApple(1)` then `if (apple.colour === Colours.red)`); a raw literal in a comparison becomes a named constant; `getAppleColour()` becomes a property of the object; a member chain moves onto the type that owns the data, becoming a local only where that type is not yours to change; deeply indented code becomes a named function called from the block; a comment comes off because the name now says it.
 
+One element is never swept: **Input validation** (doors that write without checking their input against the columns). Adding a check refuses a value that was accepted yesterday, which is a change of behaviour, and a round never changes behaviour — so the plan carries no step for it and the round does not add validators. The gate still holds it: a round must not raise `inputValidation.unvalidatedDoors` or `inputValidation.looserLimits`, and the fixes go on `fix/` branches the person asks for (*"Run the input validation check"* shows where).
+
 ## 3. How every step goes
 
 1. Read the target file and the files the plan names for it — not the repository.
