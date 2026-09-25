@@ -31,7 +31,7 @@ public sealed class ListProjectsVisibleToUserHandler
 
     private IQueryable<ProjectEntity> VisibleProjects(ListProjectsVisibleToUser query)
     {
-        if (query.ArchitectId is { } architectId) return ArchitectProjects.For(context, architectId);
+        if (query.ArchitectLogin is { } architectLogin) return ArchitectProjects.For(context, architectLogin);
         if (query.ClientId is { } clientId) return ClientProjects.For(context, clientId);
         return context.Projects.AsNoTracking();
     }

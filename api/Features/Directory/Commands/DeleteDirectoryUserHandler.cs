@@ -51,6 +51,11 @@ public sealed class DeleteDirectoryUserHandler
             .ToListAsync(cancellationToken);
         context.UserSessions.RemoveRange(sessions);
 
+        var grants = await context.ProjectAccessGrants
+            .Where(row => row.Email == command.Email)
+            .ToListAsync(cancellationToken);
+        context.ProjectAccessGrants.RemoveRange(grants);
+
         await context.SaveChangesAsync(cancellationToken);
 
         // Revocation already unpinned their to-dos, but belt-and-braces in case a pin was created

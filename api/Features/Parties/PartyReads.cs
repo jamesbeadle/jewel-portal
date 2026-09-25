@@ -5,7 +5,7 @@ using Jewel.JPMS.Api.Features.Clients;
 namespace Jewel.JPMS.Api.Features.Parties;
 
 /// <summary>
-/// What a project's parties — its client and its architect practice — may read of the RFI and
+/// What a project's parties — its client and its architect — may read of the RFI and
 /// variation views, which are the same pages the delivery team opens, tailored to the role
 /// (2026-09-24: one app, never a sub-site per role). The internal team reads every project whole.
 /// A party reads only its own projects (ClientProjects, ArchitectProjects); a record outside them
@@ -79,8 +79,8 @@ internal static class PartyReads
     {
         var clientId = ClientScope.OwnClientId(user);
         if (clientId is not null) return ClientProjects.For(context, clientId);
-        var architectId = ArchitectScope.OwnArchitectId(user);
-        if (architectId is not null) return ArchitectProjects.For(context, architectId);
+        var architectLogin = ArchitectScope.OwnArchitectLogin(user);
+        if (architectLogin is not null) return ArchitectProjects.For(context, architectLogin);
         return context.Projects.AsNoTracking().Where(_ => false);
     }
 }

@@ -12,7 +12,7 @@ namespace Jewel.JPMS.Api.Features.Variations;
 /// figures — so without this a signed-in client could approve or reject another client's variation
 /// (found by the permission check, 2026-09-19). The ownership rule is ClientProjects, the same
 /// one every read a client makes answers by (Parties/PartyReads). An architect is
-/// confined the same way to the projects that name their practice (ArchitectProjects).
+/// confined the same way to the projects their login was given (ArchitectProjects).
 /// </summary>
 internal static class VariationOrderScope
 {
@@ -22,9 +22,9 @@ internal static class VariationOrderScope
     {
         if (JpmsRoleSets.AllInternal.IncludesAny(user.Roles)) return true;
 
-        var architectId = ArchitectScope.OwnArchitectId(user);
-        if (architectId is not null)
-            return await ArchitectProjects.OwnsVariationOrderAsync(context, architectId, variationOrderId, cancellationToken);
+        var architectLogin = ArchitectScope.OwnArchitectLogin(user);
+        if (architectLogin is not null)
+            return await ArchitectProjects.OwnsVariationOrderAsync(context, architectLogin, variationOrderId, cancellationToken);
 
         var clientId = ClientScope.OwnClientId(user);
         if (clientId is null) return false;

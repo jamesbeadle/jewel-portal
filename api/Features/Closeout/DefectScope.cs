@@ -11,9 +11,9 @@ namespace Jewel.JPMS.Api.Features.Closeout;
 /// ANY project id (permission check, 2026-09-19). Ownership is ClientProjects, the same rule every
 /// read a client makes answers by (Parties/PartyReads).
 ///
-/// The architect is admitted by the same gate and confined the same way, to the projects that
-/// name their practice (ArchitectProjects, since the login carries ArchitectId). An external
-/// login with no link reaches nothing.
+/// The architect is admitted by the same gate and confined the same way, to the projects their
+/// login was given in Admin → Users (ArchitectProjects). An external login with no link reaches
+/// nothing.
 /// </summary>
 internal static class DefectScope
 {
@@ -22,9 +22,9 @@ internal static class DefectScope
     {
         if (JpmsRoleSets.AllInternal.IncludesAny(user.Roles)) return true;
 
-        var architectId = ArchitectScope.OwnArchitectId(user);
-        if (architectId is not null)
-            return await ArchitectProjects.OwnsProjectAsync(context, architectId, projectId, cancellationToken);
+        var architectLogin = ArchitectScope.OwnArchitectLogin(user);
+        if (architectLogin is not null)
+            return await ArchitectProjects.OwnsProjectAsync(context, architectLogin, projectId, cancellationToken);
 
         var clientId = ClientScope.OwnClientId(user);
         if (clientId is null) return false;

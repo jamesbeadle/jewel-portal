@@ -19,6 +19,10 @@ public static class DirectoryFeatureRegistration
         services.AddScoped<UpsertDirectoryUserValidation>();
         services.AddScoped<ScopedRoleGrants>();
 
+        services.AddScoped<ICommandHandler<SetLoginProjects, Acknowledgement>, SetLoginProjectsHandler>();
+        services.AddScoped<SetLoginProjectsAuthorisation>();
+        services.AddScoped<SetLoginProjectsValidation>();
+
         services.AddScoped<ICommandHandler<RemoveDirectoryUser, Acknowledgement>, RemoveDirectoryUserHandler>();
         services.AddScoped<RemoveDirectoryUserAuthorisation>();
         services.AddScoped<RemoveDirectoryUserValidation>();

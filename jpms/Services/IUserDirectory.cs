@@ -25,6 +25,9 @@ public interface IUserDirectory
     /// show a busy state and report a failure instead of guessing that it worked.</summary>
     Task<DirectoryUser> SaveAsync(DirectoryUser user, CancellationToken cancellationToken);
 
+    /// <summary>Gives an architect login exactly these projects, and waits for the refreshed list.</summary>
+    Task SetProjectsAsync(string email, IReadOnlyList<string> projectIds, CancellationToken cancellationToken);
+
     bool Remove(string email);
 
     /// <summary>Awaitable counterpart to <see cref="Remove"/>, for callers that need to know it

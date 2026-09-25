@@ -774,19 +774,20 @@ If any answer is "no" or "I'm not sure", fix it before saying you're done.
 
 ## An external login carries its identity, and every external write is scoped by it (api + jpms)
 
-- **An architect login belongs to an architect** (2026-09-21, from the system-wide permission
-  check). `DirectoryUsers.ArchitectId` (migration `AddDirectoryUserArchitectId`, script
-  `add-directory-user-architect-id.sql`) is the architect twin of `ClientId` and
-  `SubcontractorId`: set by the Architects page's "Invite to portal" (`InviteArchitectPortalUserHandler`,
-  `POST architects/{id}/portal-invite`, the same office roles as the client invite), carried on
-  `SignedInUser.ArchitectId` / `AuthenticatedUserResponse.ArchitectId` / `Auth.CurrentArchitectId`,
-  and read by `Gates/ArchitectScope.OwnArchitectId`. **An architect's projects are the ones that
-  name their practice as the party** — `Project.PartyKind == Architect && PartyId == theirs`
-  (Nigel's decision) — **or list one of the practice's people among the project's contacts**
-  (a Project settings → Contacts row linked to the practice's contact book, 2026-09-24: most
-  projects correspond with the client), never Lead-stage — through
-  `Features/Architects/ArchitectProjects`, the twin of `Features/Clients/ClientProjects`. A
-  Role.Architect login with no link reaches nothing, and its project list is empty, not a 403.
+- **An architect login sees the projects an administrator ticked for it** (2026-09-25, Nigel:
+  "maintain the relationship between architects and projects through the admin" — building it
+  through the Directory's practices and contacts was too long a road). Admin → Users gives the
+  Architect role by hand, and a row holding it shows a **Projects** picker
+  (`ArchitectProjectsPicker`, jpms/Features/Directory) whose ticks save at once through
+  `SetLoginProjects` (POST `directory/projects`, `AdminGate`; refused for a login without the
+  Architect role). The grants are `ProjectAccessGrants` (email + project, unique; migration
+  `AddProjectAccessGrants`, script `add-project-access-grants.sql`), carried on
+  `DirectoryUser.ProjectIds` and removed with the login on a permanent delete.
+  `Gates/ArchitectScope.OwnArchitectLogin` is the login's email when it holds Role.Architect;
+  `Features/Architects/ArchitectProjects` reads its grants, never Lead-stage, the twin of
+  `Features/Clients/ClientProjects`. A Role.Architect login with no ticked project reaches
+  nothing, and its project list is empty, not a 403. The Architects page's "Invite to portal" is
+  gone; `DirectoryUsers.ArchitectId` stays in the database, and no scope reads it.
 - **Every write an external role may make consults a scope in the endpoint** — the permission
   check's rule, now at zero. `RequestScope` (raise on a project: architect → their projects,
   subcontractor → a project they hold an issued work order on, `Portal/SubcontractorProjects`;
@@ -1345,13 +1346,14 @@ so the first CI build is the compile check, and this tool is what stands in for 
   `ProjectVariations`, `ProjectVariationDetail` open to `DeliveryTeamAndParties`, and the sidebar's
   RFI and Variation Orders rows show for the architect and the client (`NavigationRoles.RequestRoles`).
   A panel whose read is the team's alone is not rendered for a party — never left to 403.
-- **An external login is made by an invite from its own record, never by hand.** "Invite to
-  portal" on the client, the architect practice (`ArchitectInviteDialog`: the office picks one of
-  the practice's contacts) or the company links the login; each invite refuses an email that is a
-  staff login (`LoginRoles.IncludeStaff`), already linked to another party, or revoked, and drops
-  the cached login after the link is saved. Admin → Users and the admin invite offer
-  `LoginRoles.AssignedByHand` only, and `ScopedRoleGrants` refuses a request that adds Client,
-  Architect or Subcontractor to a login that did not already hold it.
+- **A client or subcontractor login is made by an invite from its own record; an architect by
+  hand.** "Invite to portal" on the client or the company links the login; each invite refuses an
+  email that is a staff login (`LoginRoles.IncludeStaff`), already linked to another party, or
+  revoked, and drops the cached login after the link is saved. The architect is given in Admin →
+  Users with the projects it may see (above). Admin → Users and the admin invite offer
+  `LoginRoles.AssignedByHand` — everything but `LoginRoles.ScopedByALink` (Client, Subcontractor)
+  — and `ScopedRoleGrants` refuses a request that adds Client or Subcontractor to a login that did
+  not already hold it.
 - **The permission check follows the mail, not the route.** "Mail is reached only by the internal
   team" (`tools/permissions/reach.py`) fails an endpoint or connector tool that admits an external
   role and reaches a mail reader — unless the reader itself refuses an external caller (it asks

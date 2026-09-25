@@ -19,11 +19,22 @@ public sealed class ListDirectoryUsersHandler
             .Where(user => user.RevokedAt == null)
             .ToListAsync(cancellationToken);
         var roleRows = await context.DirectoryUserRoles.AsNoTracking().ToListAsync(cancellationToken);
+        var grants = await context.ProjectAccessGrants.AsNoTracking().ToListAsync(cancellationToken);
         return users
-            .Select(user => user.ToModel(RolesFor(user.Email, roleRows)))
+            .Select(user => user.ToModel(RolesFor(user.Email, roleRows)) with
+            {
+                ProjectIds = ProjectsGivenTo(user.Email, grants)
+            })
             .ToList()
             .AsReadOnly();
     }
+
+    private static IReadOnlyList<string> ProjectsGivenTo(string email, IReadOnlyList<ProjectAccessGrantEntity> grants) =>
+        grants
+            .Where(grant => string.Equals(grant.Email, email, StringComparison.OrdinalIgnoreCase))
+            .Select(grant => grant.ProjectId)
+            .ToList()
+            .AsReadOnly();
 
     private static IReadOnlyList<Role> RolesFor(string email, IReadOnlyList<DirectoryUserRoleEntity> roleRows) =>
         roleRows

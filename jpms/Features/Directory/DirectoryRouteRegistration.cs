@@ -16,6 +16,12 @@ public static class DirectoryRouteRegistration
 
     public static void RegisterDirectoryRoutes(QueryRouteTable queries, CommandRouteTable commands)
     {
+        RegisterDirectoryQueries(queries);
+        RegisterDirectoryCommands(commands);
+    }
+
+    private static void RegisterDirectoryQueries(QueryRouteTable queries)
+    {
         queries.Register<ListDirectoryUsers, IReadOnlyList<DirectoryUser>>(QueryRoute.Static("/api/directory"));
         // The composers' address book — every directory email address, fetched once per session.
         queries.Register<ListEmailRecipients, IReadOnlyList<EmailRecipient>>(QueryRoute.Static("/api/email-recipients"));
@@ -24,8 +30,12 @@ public static class DirectoryRouteRegistration
             "/api/directory/{email}",
             query => $"/api/directory/{Uri.EscapeDataString(((GetDirectoryUser)query).Email)}"));
         queries.Register<ListPendingAccessRequests, IReadOnlyList<AccessRequest>>(QueryRoute.Static("/api/access-requests"));
+    }
 
+    private static void RegisterDirectoryCommands(CommandRouteTable commands)
+    {
         commands.Register<UpsertDirectoryUser, DirectoryUser>(CommandRoute.Post("/api/directory"));
+        commands.Register<SetLoginProjects, Acknowledgement>(CommandRoute.Post("/api/directory/projects"));
         commands.Register<RemoveDirectoryUser, Acknowledgement>(new CommandRoute(
             "DELETE",
             "/api/directory/{email}",

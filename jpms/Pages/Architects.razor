@@ -1,6 +1,5 @@
 @page "/architects"
 @using Jewel.JPMS.Contracts.Architects
-@using Jewel.JPMS.Features.Architects
 @inject AuthService Auth
 @inject SessionService Session
 @inject IArchitectStore ArchitectStore
@@ -63,7 +62,6 @@
                         <td>@Dash(architect.ContactName)</td>
                         <td>@Dash(architect.ContactEmail)</td>
                         <td class="text-right whitespace-nowrap">
-                            <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenInvite(architect)">Invite to portal</button>
                             <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenContacts(architect)">Contacts</button>
                             <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => OpenEdit(architect)">Edit</button>
                         </td>
@@ -75,8 +73,6 @@
     </LoadGate>
 
     <PartyContactsEditor @ref="contactsEditor" Kind="PartyKind.Architect" OnChanged="ReloadAsync" />
-
-    <ArchitectInviteDialog Target="inviteTarget" OnClosed="() => inviteTarget = null" />
 
     <Modal IsOpen="creating"
            Title="New architect practice"
@@ -169,10 +165,6 @@
     {
         if (contactsEditor is not null) await contactsEditor.Open(architect.ArchitectId, architect.Name);
     }
-
-    private Architect? inviteTarget;
-
-    private void OpenInvite(Architect architect) => inviteTarget = architect;
 
     private void OpenEdit(Architect architect)
     {

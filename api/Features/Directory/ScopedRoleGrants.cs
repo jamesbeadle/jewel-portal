@@ -1,18 +1,19 @@
 namespace Jewel.JPMS.Api.Features.Directory;
 
 /// <summary>
-/// Keeps the external roles out of Admin → Users. A client, architect or subcontractor login is
-/// made by an invite from the account it belongs to, which links the login and scopes everything
-/// it reads; granted by hand, the role arrives without the link and the person meets a portal of
-/// refusals (2026-09-24, an architect role given in Admin → Users). A role the person already
-/// holds is kept — editing an invited login's other roles never strips the one its invite gave.
+/// Keeps the linked external roles out of Admin → Users. A client or subcontractor login is made
+/// by an invite from the account it belongs to, which links the login and scopes everything it
+/// reads; granted by hand, the role arrives without the link and the person meets a portal of
+/// refusals. A role the person already holds is kept — editing an invited login's other roles
+/// never strips the one its invite gave. The architect is given by hand, with its projects
+/// (ProjectAccessGrants, 2026-09-25).
 /// </summary>
 public sealed class ScopedRoleGrants
 {
     private const string Refusal =
-        "Client, architect and subcontractor logins are made by \"Invite to portal\" on the client's, "
-        + "the architect practice's or the company's own record, which links the login to it. "
-        + "Remove the role here and invite them from there.";
+        "Client and subcontractor logins are made by \"Invite to portal\" on the client's or the "
+        + "company's own record, which links the login to it. Remove the role here and invite them "
+        + "from there.";
 
     private readonly JpmsContext context;
 
