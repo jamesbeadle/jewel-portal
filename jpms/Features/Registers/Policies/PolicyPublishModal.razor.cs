@@ -62,6 +62,8 @@ public partial class PolicyPublishModal
         }
     }
 
+    private void UseHealthAndSafetyDeclaration() => declaration = HealthAndSafetyDeclaration.Wording;
+
     private void Forget()
     {
         title = "";
