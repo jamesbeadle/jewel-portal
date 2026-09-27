@@ -337,6 +337,16 @@ Static Web Apps' own sign-in; it has its own cookie session behind `/api`.)
 5. Run the 3.3 block (runbook page 10): unlink, delete the environment. Delete
    `.github/workflows/jpms-swa-rehearsal.yml`, commit *Remove rehearsal workflow*, push.
 
+   Found on the day: `unlink --remove-backend-auth` removes the Static Web App's identity
+   provider but leaves the app's built-in authentication switched on and required, so the
+   direct hostname keeps answering 401 with nobody to authenticate against. Switch it off, and
+   the production link in Step 4 re-creates it:
+
+   ```bash
+   cd ~/jpms-upgrade && source vars.sh
+   az rest --method put --url "https://management.azure.com$FUNC_ID/config/authsettingsV2?api-version=2022-03-01" --body '{"properties":{"platform":{"enabled":false}}}' -o none
+   ```
+
 **Gate 3:** login and pages worked on the preview URL; the API workflow re-ran green while
 linked; the environment list shows only *default*; the direct hostname answers 200 again.
 
@@ -427,11 +437,19 @@ deploy; with one instance it still restarts, so this needs two.
    cd ~/jpms-upgrade && source vars.sh
    az functionapp update-strategy config set -g $RG -n $FUNC --type RollingUpdate
    az functionapp update-strategy config show -g $RG -n $FUNC -o json
-   # older CLI:
-   # az rest --method patch --url "https://management.azure.com$FUNC_ID?api-version=2024-11-01" \
-   #   --body '{"properties":{"functionAppConfig":{"siteUpdateStrategy":{"type":"RollingUpdate"}}}}' \
-   #   --query "properties.functionAppConfig.siteUpdateStrategy" -o json
    ```
+
+   On an older CLI (2.86 on the day), send the whole `functionAppConfig` back with the strategy
+   added. A PATCH carrying only `siteUpdateStrategy` is refused with *Runtime name and version
+   must be provided*, because Azure treats `functionAppConfig` as one block:
+
+   ```bash
+   cd ~/jpms-upgrade && source vars.sh
+   az resource show --ids "$FUNC_ID" --api-version 2024-11-01 --query properties.functionAppConfig -o json | jq '.siteUpdateStrategy = {"type":"RollingUpdate"}' > functionAppConfig.json
+   az rest --method patch --url "https://management.azure.com$FUNC_ID?api-version=2024-11-01" --body "{\"properties\":{\"functionAppConfig\":$(cat functionAppConfig.json)}}" --query "properties.functionAppConfig.siteUpdateStrategy" -o json
+   ```
+
+   North Europe accepted it on 27 September.
 
    Two things Microsoft's own page says to expect: an app on a single instance still sees a
    brief interruption on deploy whatever the strategy, which is why this step runs two; and in
@@ -455,7 +473,9 @@ deploy; with one instance it still restarts, so this needs two.
 **Gate 6:** no failed calls and no gap in the 200s during the second run; or RollingUpdate
 refused in North Europe and that recorded on the task with the quiet-window rule instead.
 (The `x-jpms-version` header only changes on a real release; a re-deploy of the same build
-keeps it, which is fine.)
+keeps it, which is fine.) Met on 27 September: two deploys through the loop, every call 200,
+the slowest 4.4 s during the swap, most under a third of a second. The `http=2` change itself
+still rebuilt the instances the old way (one 9 s call), as the page says it would.
 
 Not a gate, but during the first week: look at the app's memory (Metrics blade, memory
 working set) and at App Insights for restarts or out-of-memory exceptions. Over ~1.5 GB, or

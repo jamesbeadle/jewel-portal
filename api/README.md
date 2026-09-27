@@ -8,7 +8,7 @@ Azure Functions Isolated worker project that hosts the JPMS HTTP endpoints and p
 |---|---|
 | Runtime | .NET 8 Isolated worker |
 | ORM | EF Core 8 (SQL Server provider) |
-| Hosting | Azure Static Web Apps managed Functions (`/api/*` on the same domain as the SPA) |
+| Hosting | Azure Functions Flex Consumption, `func-jpms-api-prod` in North Europe next to the database, two always-ready instances, linked to the Static Web App as its backend so `/api/*` stays on the portal's own domain (since 27 September 2026). Deployed by `.github/workflows/jpms-api.yml`; plan and history in `infra/hosting-upgrade/README.md` |
 | Schema | `Database.EnsureCreatedAsync()` on cold start (replace with migrations when the schema stabilises) |
 
 ## Folder layout
