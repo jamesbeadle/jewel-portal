@@ -89,7 +89,7 @@ it unsupported (Step 3 has the detail). More likely to work than not, and unprov
 finds out first and cheaply: Step 1 and its probe take about 40 minutes, cost £0 and touch
 nothing in production. A refusal makes the day the Container Apps fallback, about a day's
 work and a similar monthly cost (below). Data protection, the alert rules and the budget do
-not depend on the link at all.
+not depend on the link at all. With the link proven, Steps 2 to 6 are all done the same day.
 
 ### What it will cost (27 Sep, from the August bill)
 
@@ -182,19 +182,23 @@ paste it to Claude. Steps 1 to 4 in order. Step 4 in a quiet window. Steps 5 and
 
 ### The weekend order
 
-Friday: reply to Microsoft, message Nigel. Saturday: Step 1, Step 2, the budget task, Step 5,
-the monitoring rules. Saturday or Sunday: Step 3. Sunday evening: Step 4, then the End-to-End
-Regression Test. The weekend after: Step 6, the restore drill.
+As first written: Friday, reply to Microsoft, message Nigel. Saturday: Step 1, Step 2, the
+budget task, Step 5, the monitoring rules. Saturday or Sunday: Step 3. Sunday evening: Step 4,
+then the End-to-End Regression Test. The weekend after: Step 6, the restore drill. Superseded
+by the one-day order below; only the restore drill stays for later.
 
 ### The same steps in one day (the run of 27 September)
 
-Nothing in Steps 1 to 4 needs a night between them; the only hard orderings are Gate 3
-before Step 4, and Step 4 in a quiet window. So: Step 1; then, before Step 2, start the
-rehearsal workflow and run the link probe at the end of Step 1, because that is the fastest
-way to learn whether Static Web Apps will accept a Flex app at all; Step 2; Step 3 on the
-preview environment the probe already published; Step 5 while a workflow runs; Step 4 in
-the evening, then the regression test. Step 6 stays a week away: it needs a week of memory
-readings and a second instance nobody has agreed to yet.
+Nothing in Steps 1 to 6 needs a night between them; the only hard orderings are Gate 3
+before Step 4, Step 4 in a quiet window, and Step 6 after Step 4 has settled. So: Step 1;
+then, before Step 2, start the rehearsal workflow and run the link probe at the end of Step
+1, because that is the fastest way to learn whether Static Web Apps will accept a Flex app
+at all; Step 2; Step 3 on the preview environment the probe already published; Step 5 while
+a workflow runs; Step 4 in the evening, then the regression test; then Step 6 the same
+evening. Step 6 was first written a week out for a week of memory readings and a second
+instance not yet agreed; neither holds. The memory reading is not a gate (if 2 GB is tight
+the fix is one command, below), and the second instance is inside the +£35 to £45 Nigel
+agreed.
 
 ### Before Saturday
 
@@ -389,7 +393,7 @@ rm -f ~/jpms-upgrade/swa-appsettings-before.json; ls -la ~/jpms-upgrade
 policies enabled, 14 days; the secrets snapshot gone. The GRS copy completes in the background
 over a few hours.
 
-### Step 6 — releases without interruption (the weekend after Step 4, 30 min)
+### Step 6 — releases without interruption (the same evening, after Step 4 has settled, 30 min)
 
 Flex has no deployment slots. Its rolling site update replaces instances in batches during a
 deploy; with one instance it still restarts, so this needs two.
@@ -424,18 +428,25 @@ deploy; with one instance it still restarts, so this needs two.
    yet: keep the two instances and release in quiet windows with the ~10 s restart until it
    lands; check monthly.
 
-3. Push a trivial API change and watch:
+3. Run the API workflow twice (Actions → *Deploy JPMS portal API to Azure Functions* → Run
+   workflow; no code change is needed, a re-deploy of the same build exercises the update
+   exactly as a release would), with this running in a second terminal throughout:
 
    ```bash
    while true; do curl -s -o /dev/null -w "%{http_code} %{time_total}s $(date +%T)\n" https://portal.jewelbb.co.uk/api/version; sleep 2; done
    ```
 
-**Gate 6:** no failed calls during the second deploy after the change, and the
-`x-jpms-version` header changes over; or RollingUpdate refused in North Europe and that
-recorded on the task with the quiet-window rule instead.
+   The first run may still restart (a region mid-rollout applies the change one deploy
+   late); the second is the one that counts.
 
-Also here: read the app's memory over its first week (Metrics blade, memory working set). Over
-~1.5 GB → `az functionapp scale config set -g rg-jpms-prod -n func-jpms-api-prod
+**Gate 6:** no failed calls and no gap in the 200s during the second run; or RollingUpdate
+refused in North Europe and that recorded on the task with the quiet-window rule instead.
+(The `x-jpms-version` header only changes on a real release; a re-deploy of the same build
+keeps it, which is fine.)
+
+Not a gate, but during the first week: look at the app's memory (Metrics blade, memory
+working set) and at App Insights for restarts or out-of-memory exceptions. Over ~1.5 GB, or
+any of those → `az functionapp scale config set -g rg-jpms-prod -n func-jpms-api-prod
 --instance-memory 4096` (doubles the instance cost, restarts the app).
 
 ### Afterwards
