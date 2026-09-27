@@ -120,13 +120,15 @@ Three things follow:
   in the first week of a £305 month. The original runbook had £350 with e-mail at 80 per cent
   actual and 100 per cent forecast; that is the figure for the budget task.
 - **Confirm the baseline before the MD sees a total.** This prints last month's bill by
-  service from the Mac (`az extension add -n costmanagement` once, if asked):
+  service from the Mac, largest first, with nothing to install (`az costmanagement query` is
+  an extension the CLI does not prompt for; `az rest` asks the same API directly). Change
+  `TheLastMonth` to `MonthToDate` for the current month so far:
 
   ```bash
-  az costmanagement query --type ActualCost --timeframe TheLastMonth \
-    --scope "subscriptions/08c5510c-bb27-4da8-b826-a8e76fb270ec" \
-    --dataset-grouping name=ServiceName type=Dimension \
-    --dataset-aggregation '{"totalCost":{"name":"PreTaxCost","function":"Sum"}}' -o table
+  az rest --method post \
+    --url "https://management.azure.com/subscriptions/08c5510c-bb27-4da8-b826-a8e76fb270ec/providers/Microsoft.CostManagement/query?api-version=2023-11-01" \
+    --body '{"type":"ActualCost","timeframe":"TheLastMonth","dataset":{"granularity":"None","aggregation":{"totalCost":{"name":"PreTaxCost","function":"Sum"}},"grouping":[{"type":"Dimension","name":"ServiceName"}]}}' \
+    --query "reverse(sort_by(properties.rows, &[0]))" -o table
   ```
 
   The expectation: the SQL serverless database at its 0.5 vCore floor is £150 or more of the
