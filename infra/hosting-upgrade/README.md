@@ -75,6 +75,68 @@ Fallback order if North Europe refuses the Flex create, decided by the Step 1 cr
 
 Never a different cloud.
 
+### Will it work? (assessed 27 Sep)
+
+The parts under our control are proven: a Flex app in North Europe with an always-ready
+instance, next to the database, deployed by the new workflow; every command in this file checks
+out against Microsoft's current documents and the CLI source. The one unknown is whether Static
+Web Apps will accept that Flex app as its linked backend. For: the link is validated server-side
+by resource type, and Functions is a supported type; the authentication it switches on is
+supported on Flex; a Microsoft answer of 2025 recommends exactly this, Flex with always-ready
+linked to a Static Web App. Against: the documents' list of plans a linked backend may be on
+predates Flex, and one 2026 thread reports a Flex link that answered 404s with a reply calling
+it unsupported (Step 3 has the detail). More likely to work than not, and unproven; so the plan
+finds out first and cheaply: Step 1 and its probe take about 40 minutes, cost £0 and touch
+nothing in production. A refusal makes the day the Container Apps fallback, about a day's
+work and a similar monthly cost (below). Data protection, the alert rules and the budget do
+not depend on the link at all.
+
+### What it will cost (27 Sep)
+
+The September bill is **£280 a month before VAT**, which is not the baseline the 22 September
+findings assumed (they put the bill after the move at about £230, which implied about £190
+before it). The move adds the lines below and removes none: the managed functions were free
+inside the Static Web App's Standard plan, and Phase 7's £11 saving was dropped with the shared
+plan. List prices before VAT, converted from Microsoft's dollar rates; the pre-flight prints the
+real GBP meters and the first invoice is the truth.
+
+| Line | After Step 4 (one instance) | After Step 6 (two instances) |
+|---|---|---|
+| Everything paid today | £280 | £280 |
+| Flex always-ready 2 GB instance, idle rate ($0.000004 per GB-second) | +£16 | +£33 |
+| The same instance while handling requests ($0.000016 per GB-second), at a working day's share | +£3 to £6 | +£6 to £10 |
+| Flex runtime storage account | under £1 | under £1 |
+| SQL 35-day restore and long-term backups, 94 MB database | +£1 to £2 | +£1 to £2 |
+| Documents storage geo-redundant with soft delete | +£2 to £3 | +£2 to £3 |
+| **Likely bill** | **about £305** | **about £325** |
+
+So the delta Nigel agreed, +£35 to £45 a month, holds; the total in the findings does not.
+The Container Apps fallback in place of the Flex instance would be about £31 a month for the
+smallest always-on replica (0.5 vCPU, 1 GiB) and about £62 for 1 vCPU and 2 GiB.
+
+Three things follow:
+
+- **The budget is £350, not £300.** A £300 budget with a forecast alert at 100 per cent fires
+  in the first week of a £305 month. The original runbook had £350 with e-mail at 80 per cent
+  actual and 100 per cent forecast; that is the figure for the budget task.
+- **Confirm the baseline before the MD sees a total.** This prints last month's bill by
+  service from the Mac (`az extension add -n costmanagement` once, if asked):
+
+  ```bash
+  az costmanagement query --type ActualCost --timeframe TheLastMonth \
+    --scope "subscriptions/08c5510c-bb27-4da8-b826-a8e76fb270ec" \
+    --dataset-grouping name=ServiceName type=Dimension \
+    --dataset-aggregation '{"totalCost":{"name":"PreTaxCost","function":"Sum"}}' -o table
+  ```
+
+  The expectation: the SQL serverless database at its 0.5 vCore floor is £150 or more of the
+  £280, the MCP host's B1 plan about £10, the Static Web App about £7, and the rest is
+  telemetry, storage, e-mail and the AI, vision and image services. Large AI lines are a
+  separate conversation from hosting.
+- **This move does not reduce the bill.** It buys the behaviour: no idle freeze, no restart on
+  release, the API next to its data. If the goal were cost, the lever is the database's vCore
+  floor, and that is a different task.
+
 The runbook PDF on the task is the P1v4 edition. Its Phases 2, 3, 4 and 5 apply as written;
 Phases 1 and 6 are replaced by Steps 1 and 6 below, and Phase 7 (consolidating the MCP host
 and worker onto the plan) no longer applies because Flex has no shared plan.
@@ -289,8 +351,8 @@ Leave a week before Step 6.
 
 ### Step 5 — data protection (any time, 15 min, a few pounds a month)
 
-Runbook Phase 5 (pages 15–16) without its budget lines; the £300 budget and alerts are their
-own task. Independent of the hosting: do it Saturday while a deploy runs.
+Runbook Phase 5 (pages 15–16) without its budget lines; the £350 budget and alerts are their
+own task (£350, not the £300 the task was raised with: see *What it will cost*). Independent of the hosting: do it Saturday while a deploy runs.
 
 ```bash
 cd ~/jpms-upgrade && source vars.sh
@@ -360,7 +422,7 @@ Also here: read the app's memory over its first week (Metrics blade, memory work
 
 - Old P1v4 leftovers gone: nothing named `plan-jpms-prod` exists; `stjpmsapi69e23c` is the
   Flex app's storage and nothing else.
-- The related tasks on the same goal: the £300 budget with alerts, the five monitoring alert
+- The related tasks on the same goal: the £350 budget with alerts, the five monitoring alert
   rules, and the backup restore rehearsal after Step 5.
 - For the next portal, do not repeat this migration: build it on this shape from day one.
   See `docs/09-operations/hosting-a-new-portal.md`.

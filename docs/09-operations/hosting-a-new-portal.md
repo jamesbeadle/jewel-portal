@@ -146,7 +146,7 @@ the region caveat).
 
 | Line | About |
 |---|---|
-| Flex Consumption API, one always-ready 2 GB instance | £16 a month, plus execution |
+| Flex Consumption API, one always-ready 2 GB instance | £16 a month idle, about £20 with a working day's traffic |
 | Flex Consumption MCP host, one always-ready instance | £16 a month |
 | Worker, Flex with no always-ready or Consumption | a few pounds |
 | SQL serverless GP 0.5 to 4 vCore, auto-pause off | the largest line; read the current Jewel invoice for the real figure |
