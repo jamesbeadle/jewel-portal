@@ -91,54 +91,71 @@ nothing in production. A refusal makes the day the Container Apps fallback, abou
 work and a similar monthly cost (below). Data protection, the alert rules and the budget do
 not depend on the link at all.
 
-### What it will cost (27 Sep)
+### What it will cost (27 Sep, from the August bill)
 
-The September bill is **£280 a month before VAT**, which is not the baseline the 22 September
-findings assumed (they put the bill after the move at about £230, which implied about £190
-before it). The move adds the lines below and removes none: the managed functions were free
-inside the Static Web App's Standard plan, and Phase 7's £11 saving was dropped with the shared
-plan. List prices before VAT, converted from Microsoft's dollar rates; the pre-flight prints the
-real GBP meters and the first invoice is the truth.
+August's bill by service, before VAT, from Cost Management (the command is at the end of this
+section):
+
+| Service | August |
+|---|---|
+| SQL Database | £209.55 |
+| Azure App Service (the Static Web App's Standard plan; the MCP host's B1 plan appears to have billed only part of the month) | £6.91 |
+| Storage | £0.44 |
+| Bandwidth, e-mail, Log Analytics, Functions | under £0.01 |
+| **Total before VAT** | **£216.90** |
+
+So the database is 97 per cent of the bill. The £280 quoted on 27 September is either the
+figure with VAT (£217 plus 20 per cent is £260) or a month that ran higher; the month-to-date
+command settles it. Expect September to carry about £10 more than August for a full month of
+the MCP host's plan, so the working baseline is **about £227 a month before VAT**. The 22
+September findings' "about £230 after the move" was near the mark for the wrong reason.
+
+The move adds the lines below and removes none: the managed functions were free inside the
+Static Web App's Standard plan, and Phase 7's £11 saving was dropped with the shared plan. List
+prices before VAT, converted from Microsoft's dollar rates; the pre-flight prints the real GBP
+meters and the first invoice is the truth.
 
 | Line | After Step 4 (one instance) | After Step 6 (two instances) |
 |---|---|---|
-| Everything paid today | £280 | £280 |
+| Everything paid today (August, plus a full month of the MCP host's plan) | £227 | £227 |
 | Flex always-ready 2 GB instance, idle rate ($0.000004 per GB-second) | +£16 | +£33 |
 | The same instance while handling requests ($0.000016 per GB-second), at a working day's share | +£3 to £6 | +£6 to £10 |
 | Flex runtime storage account | under £1 | under £1 |
 | SQL 35-day restore and long-term backups, 94 MB database | +£1 to £2 | +£1 to £2 |
 | Documents storage geo-redundant with soft delete | +£2 to £3 | +£2 to £3 |
-| **Likely bill** | **about £305** | **about £325** |
+| **Likely bill before VAT** | **about £250** | **about £270** |
+| With VAT at 20 per cent | about £300 | about £325 |
 
-So the delta Nigel agreed, +£35 to £45 a month, holds; the total in the findings does not.
-The Container Apps fallback in place of the Flex instance would be about £31 a month for the
-smallest always-on replica (0.5 vCPU, 1 GiB) and about £62 for 1 vCPU and 2 GiB.
+The delta is +£23 to £28 a month after Step 4 and +£42 to £49 once the second instance runs,
+which is the top of the +£35 to £45 Nigel agreed, or a few pounds over it. The Container Apps
+fallback in place of the Flex instance would be about £31 a month for the smallest always-on
+replica (0.5 vCPU, 1 GiB) and about £62 for 1 vCPU and 2 GiB.
 
 Three things follow:
 
-- **The budget is £350, not £300.** A £300 budget with a forecast alert at 100 per cent fires
-  in the first week of a £305 month. The original runbook had £350 with e-mail at 80 per cent
-  actual and 100 per cent forecast; that is the figure for the budget task.
-- **Confirm the baseline before the MD sees a total.** This prints the month's bill so far by
-  service from the Mac, largest first, with nothing to install (`az costmanagement query` is
-  an extension the CLI does not prompt for; `az rest` asks the same API directly). The API
-  no longer accepts `TheLastMonth`: for a whole earlier month use `"timeframe":"Custom"` with
-  `"timePeriod":{"from":"2026-08-01T00:00:00Z","to":"2026-08-31T23:59:59Z"}` in its place.
-
-  ```bash
-  az rest --method post \
-    --url "https://management.azure.com/subscriptions/08c5510c-bb27-4da8-b826-a8e76fb270ec/providers/Microsoft.CostManagement/query?api-version=2023-11-01" \
-    --body '{"type":"ActualCost","timeframe":"MonthToDate","dataset":{"granularity":"None","aggregation":{"totalCost":{"name":"PreTaxCost","function":"Sum"}},"grouping":[{"type":"Dimension","name":"ServiceName"}]}}' \
-    --query "reverse(sort_by(properties.rows, &[0]))" -o table
-  ```
-
-  The expectation: the SQL serverless database at its 0.5 vCore floor is £150 or more of the
-  £280, the MCP host's B1 plan about £10, the Static Web App about £7, and the rest is
-  telemetry, storage, e-mail and the AI, vision and image services. Large AI lines are a
-  separate conversation from hosting.
+- **The budget is £350.** Azure budgets count cost before VAT. A £300 budget puts its 80 per
+  cent line at £240, below the expected bill after Step 6, so it would fire every month and
+  be ignored. £350 puts that line at £280, above the expected bill, so it speaks only when
+  something grows, and the 100 per cent forecast line catches a runaway. That is the figure
+  for the budget task.
+- **The database is the lever, and it has a question in it.** £210 a month for a 94 MB
+  database with near-zero CPU is well above the 0.5 vCore serverless floor, which is about
+  £150 in North Europe. The pre-flight now prints the floor it is set to; the metric
+  `app_cpu_billed` on the database shows the vCore-seconds actually billed. Whether it should
+  move to a fixed tier, and which, is a separate task from this move.
 - **This move does not reduce the bill.** It buys the behaviour: no idle freeze, no restart on
-  release, the API next to its data. If the goal were cost, the lever is the database's vCore
-  floor, and that is a different task.
+  release, the API next to its data.
+
+The command, for the month so far (`az costmanagement query` is an extension the CLI does not
+prompt for; `az rest` asks the same API directly). For a whole earlier month replace the
+timeframe with `"timeframe":"Custom","timePeriod":{"from":"2026-08-01T00:00:00Z","to":"2026-08-31T23:59:59Z"}`:
+
+```bash
+az rest --method post \
+  --url "https://management.azure.com/subscriptions/08c5510c-bb27-4da8-b826-a8e76fb270ec/providers/Microsoft.CostManagement/query?api-version=2023-11-01" \
+  --body '{"type":"ActualCost","timeframe":"MonthToDate","dataset":{"granularity":"None","aggregation":{"totalCost":{"name":"PreTaxCost","function":"Sum"}},"grouping":[{"type":"Dimension","name":"ServiceName"}]}}' \
+  --query "reverse(sort_by(properties.rows, &[0]))" -o table
+```
 
 The runbook PDF on the task is the P1v4 edition. Its Phases 2, 3, 4 and 5 apply as written;
 Phases 1 and 6 are replaced by Steps 1 and 6 below, and Phase 7 (consolidating the MCP host
