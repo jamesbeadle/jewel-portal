@@ -22,7 +22,7 @@ BUDGET_EMAIL=nigel.reilly@jewelgroup.co.uk
 VARS
 source vars.sh
 command -v jq >/dev/null || brew install jq
-echo "## CLI version (want 2.71 or newer for Flex Consumption commands)"; az version --query '"azure-cli"' -o tsv
+echo "## CLI version (want 2.87 or newer: Flex commands, and Step 6's update-strategy command)"; az version --query '"azure-cli"' -o tsv
 az account set --subscription $SUB && az account show --query "{subscription:name,signedInAs:user.name}" -o table
 az extension add --name application-insights --upgrade --only-show-errors
 echo "## Static Web App tier - linked backends need Standard"

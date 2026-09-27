@@ -25,8 +25,6 @@ az staticwebapp appsettings list -n $SWA -g $RG -o json \
   > api-settings.json && chmod 600 api-settings.json
 echo "## settings being copied (names only):"; jq -r '.[].name' api-settings.json | sort | tr '\n' ' '; echo
 az functionapp config appsettings set -n $FUNC -g $RG --settings @api-settings.json -o none && rm -f api-settings.json
-echo "## Flex/.NET isolated packaging: without this a green deploy lists only WarmUp"
-az functionapp config appsettings set -n $FUNC -g $RG --settings WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=0 -o none
 az functionapp config set -n $FUNC -g $RG --min-tls-version 1.2 --http20-enabled true -o none
 echo "## GATE 1 - want Running, a hostname, https true, sku FlexConsumption"
 az functionapp show -n $FUNC -g $RG --query "{state:state,host:defaultHostName,https:httpsOnly,sku:sku,location:location}" -o json

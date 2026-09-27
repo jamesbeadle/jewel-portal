@@ -53,8 +53,10 @@ Europe, which the new plan reuses. Nothing in production was touched.
 **Flex Consumption (FC1) in North Europe.** Same Functions project, same deploy action, same
 region as the database. It has its own quota (250 cores per region by default), no 100 MB cap,
 always-ready instances to remove the cold start, and a rolling site update to remove the restart
-on release. About £16 a month per always-ready 2 GB instance at list, against £94 for P1v4, so
-the revised ask is +£35–45 a month rather than +£90 (Nigel's yes is its own subtask).
+on release. About £16 a month per always-ready 2 GB instance at list while idle (the same seconds
+bill at four times the rate while a request is being handled, so a busy instance costs a few
+pounds more), against £94 for P1v4, so the revised ask is +£35–45 a month rather than +£90
+(Nigel's yes is its own subtask). The pre-flight prints the live GBP meters.
 
 Instance size is 2,048 MB: it is what the API runs in today on managed functions, and the MCP
 host running the same code peaks at 1.35 GB on a 1.75 GB B1. Step 6 reads the memory over the
@@ -83,7 +85,7 @@ and worker onto the plan) no longer applies because Flex has no shared plan.
 |---|---|---|
 | `phase0-preflight.sh` | before Step 1 | Read-only checks and rollback snapshots. Writes `~/jpms-upgrade/vars.sh`. Flex edition. |
 | `phase1-provision.sh` | Step 1 | Creates the Flex app (the capacity test) and copies the 24 portal settings onto it. Idempotent. |
-| `../../.github/workflows/jpms-api.yml` | Step 2 | Deploys the API to the Flex app on every push to `main` touching `api/**`, signed in with a federated credential. |
+| `../../.github/workflows/jpms-api.yml` | Step 2 | Deploys the API to the Flex app on every push to `main` touching `api/**`, signed in with a federated credential, then syncs the triggers and waits for the functions to be listed. |
 | `../../.github/workflows/jpms-swa-rehearsal.yml` | Step 3 | Temporary. Publishes the frontend to the *upgrade* preview environment with no API. Deleted after Gate 3. |
 
 `quota-p1v4.sh` is gone with the P1v4 route; it is in git history if the story is ever needed.
@@ -203,9 +205,13 @@ raised; the first call's time in 3 says how close this API runs to it (it regist
 117-entity model at start-up, so it will not be instant). Well under 30 s: fine. Near it, or
 a 5xx on the first call that clears on the second: paste the timing to Claude before Step 3.
 
-**Known trap:** a green deploy whose Functions list shows only *WarmUp* is the Flex/.NET
-packaging fault. Confirm `WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=0` is set (phase1 sets it) and
-re-run the workflow. Still wrong: paste the run log to Claude.
+**Known trap:** a green deploy whose Functions list shows only *WarmUp* is a known fault of the
+deploy action on Flex (Azure/functions-action issue 373, open): it uploads the package and never
+asks the host to sync its triggers, and the WarmUp placeholder is what the list shows until
+specialisation completes. The workflow now does the sync itself after every deploy, waits for
+`GetAppVersion` to be listed, and restarts the app once if it is slow; a red *Sync the triggers*
+step means paste the run log to Claude. `WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED`, which an
+earlier edition of this plan set, is a Consumption-plan setting that Flex ignores; it is gone.
 
 ### Step 3 — rehearse: link the new API to a preview copy of the portal (Sat or Sun, 45 min)
 
@@ -312,19 +318,29 @@ deploy; with one instance it still restarts, so this needs two.
    az functionapp scale config always-ready set -g rg-jpms-prod -n func-jpms-api-prod --settings http=2
    ```
 
-2. Rolling update. ARM only (public preview, not in the CLI or portal; GA in four US/Asia
-   regions and rolling out elsewhere):
+2. Rolling update. Checked 27 Sep: generally available in East Asia, West Central US, North
+   Central US and West US 2 by Microsoft's note of May 2026 with the other regions "over the
+   following weeks", a September 2026 write-up calls it available everywhere, and North Europe
+   is named nowhere either way, so the command below is the test. CLI 2.87 or later has a
+   command for it; the ARM PATCH beneath is the same change for an older CLI:
 
    ```bash
    cd ~/jpms-upgrade && source vars.sh
-   az rest --method patch --url "https://management.azure.com$FUNC_ID?api-version=2024-11-01" \
-     --body '{"properties":{"functionAppConfig":{"siteUpdateStrategy":{"type":"RollingUpdate"}}}}' \
-     --query "properties.functionAppConfig.siteUpdateStrategy" -o json
+   az functionapp update-strategy config set -g $RG -n $FUNC --type RollingUpdate
+   az functionapp update-strategy config show -g $RG -n $FUNC -o json
+   # older CLI:
+   # az rest --method patch --url "https://management.azure.com$FUNC_ID?api-version=2024-11-01" \
+   #   --body '{"properties":{"functionAppConfig":{"siteUpdateStrategy":{"type":"RollingUpdate"}}}}' \
+   #   --query "properties.functionAppConfig.siteUpdateStrategy" -o json
    ```
 
-   If the response is `null` or the PATCH is refused naming the property or the region, North
-   Europe does not have it yet: keep the two instances and release in quiet windows with the
-   ~10 s restart until it lands; check monthly.
+   Two things Microsoft's own page says to expect: an app on a single instance still sees a
+   brief interruption on deploy whatever the strategy, which is why this step runs two; and in
+   a region where the rollout is still in progress, the deploy that follows the change is
+   carried out with the previous strategy, so judge it on the second deploy, not the first. If
+   the command is refused naming the property or the region, North Europe does not have it
+   yet: keep the two instances and release in quiet windows with the ~10 s restart until it
+   lands; check monthly.
 
 3. Push a trivial API change and watch:
 
@@ -332,9 +348,9 @@ deploy; with one instance it still restarts, so this needs two.
    while true; do curl -s -o /dev/null -w "%{http_code} %{time_total}s $(date +%T)\n" https://portal.jewelbb.co.uk/api/version; sleep 2; done
    ```
 
-**Gate 6:** no failed calls during the deploy, and the `x-jpms-version` header changes over;
-or RollingUpdate refused in North Europe and that recorded on the task with the quiet-window
-rule instead.
+**Gate 6:** no failed calls during the second deploy after the change, and the
+`x-jpms-version` header changes over; or RollingUpdate refused in North Europe and that
+recorded on the task with the quiet-window rule instead.
 
 Also here: read the app's memory over its first week (Metrics blade, memory working set). Over
 ~1.5 GB → `az functionapp scale config set -g rg-jpms-prod -n func-jpms-api-prod

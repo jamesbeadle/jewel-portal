@@ -60,3 +60,23 @@ jobs:
           package: ./api-publish
           sku: flexconsumption
           remote-build: false
+
+      # The action uploads the package and stops; it never asks the host to sync its triggers, and
+      # on Flex a .NET isolated app can then list only the WarmUp placeholder and serve nothing
+      # until something does (Azure/functions-action issue 373). Sync, then wait for a known
+      # function to be listed; one restart if it is slow; red if it never appears.
+      - name: Sync the triggers and confirm the functions are listed
+        run: |
+          APP="${{ vars.JPMS_API_APP_NAME }}"
+          RG=rg-jpms-prod
+          SITE="https://management.azure.com/subscriptions/${{ vars.AZURE_SUBSCRIPTION_ID }}/resourceGroups/$RG/providers/Microsoft.Web/sites/$APP"
+          az rest --method post --url "$SITE/syncfunctiontriggers?api-version=2023-12-01" -o none
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if az functionapp function list -n "$APP" -g "$RG" --query "[].name" -o tsv | grep -q GetAppVersion; then
+              echo "functions listed after attempt $attempt"; exit 0
+            fi
+            [ "$attempt" = 5 ] && { echo "still only WarmUp after five checks: restarting the app once"; az functionapp restart -n "$APP" -g "$RG" -o none; }
+            echo "attempt $attempt: GetAppVersion not listed yet"; sleep 30
+          done
+          echo "The app lists no functions five minutes after the deploy and a restart: paste this log to Claude."
+          exit 1
