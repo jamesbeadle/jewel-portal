@@ -102,6 +102,16 @@ Friday: reply to Microsoft, message Nigel. Saturday: Step 1, Step 2, the budget 
 the monitoring rules. Saturday or Sunday: Step 3. Sunday evening: Step 4, then the End-to-End
 Regression Test. The weekend after: Step 6, the restore drill.
 
+### The same steps in one day (the run of 27 September)
+
+Nothing in Steps 1 to 4 needs a night between them; the only hard orderings are Gate 3
+before Step 4, and Step 4 in a quiet window. So: Step 1; then, before Step 2, start the
+rehearsal workflow and run the link probe at the end of Step 1, because that is the fastest
+way to learn whether Static Web Apps will accept a Flex app at all; Step 2; Step 3 on the
+preview environment the probe already published; Step 5 while a workflow runs; Step 4 in
+the evening, then the regression test. Step 6 stays a week away: it needs a week of memory
+readings and a second instance nobody has agreed to yet.
+
 ### Before Saturday
 
 1. Merge this branch's pull request so `main` carries the Flex scripts and workflows. The API
@@ -113,7 +123,7 @@ Regression Test. The weekend after: Step 6, the restore drill.
 
 ```bash
 az login
-bash infra/hosting-upgrade/phase0-preflight.sh     # want: North Europe listed, stjpmsapi69e23c exists, func name free
+bash infra/hosting-upgrade/phase0-preflight.sh     # want: North Europe listed, stjpmsapi69e23c exists, func name free, SQL autoPauseMinutes -1
 bash infra/hosting-upgrade/phase1-provision.sh     # creates the app, copies the settings, prints Gate 1
 ```
 
@@ -126,7 +136,8 @@ FLEX_LOC=uksouth STG=stjpmsapiuks bash infra/hosting-upgrade/phase1-provision.sh
 ```
 
 Refused there too: stop, paste the output to Claude. Container Apps is next; production is
-untouched.
+untouched. Whichever region the app lands in, phase1 records it as `LOC` too, so the runbook's
+link commands in Steps 3 and 4 (`--backend-region $LOC`) need no editing.
 
 **Gate 1:** `state Running`, a hostname, `https true`, `sku FlexConsumption`; the 24 portal
 setting names listed with `MailboxIntake__*` using double underscores; `APIHOST` and `FUNC_ID`
@@ -134,6 +145,24 @@ recorded in `~/jpms-upgrade/vars.sh`.
 
 **Undo if abandoning:** `az functionapp delete -n func-jpms-api-prod -g rg-jpms-prod`, then
 delete the plan it created.
+
+**The link probe (5 min, £0, nothing deployed).** Whether Static Web Apps accepts a Flex app
+as a linked backend is the one thing this plan cannot prove from documents (see Step 3), and
+it can be asked the moment the app exists, before any code is on it. Start Actions →
+*Rehearsal: portal frontend to the "upgrade" preview environment* → Run workflow (~6 min),
+then:
+
+```bash
+cd ~/jpms-upgrade && source vars.sh
+az staticwebapp environment list -n $SWA -g $RG --query "[].{env:name,hostname:hostname,status:status}" -o table
+az staticwebapp backends validate -n $SWA -g $RG --environment-name upgrade --backend-resource-id "$FUNC_ID" --backend-region $LOC
+```
+
+Validate passing (or complaining only about something the environment has, never about the
+SKU, plan or resource type) means carry on to Step 2 and leave the environment up for
+Step 3. A refusal naming the SKU, the plan or the resource type is the answer the whole
+day turns on: stop, paste it to Claude, and the day becomes the Container Apps fallback with
+production untouched and the Flex app deleted.
 
 ### Step 2 — deploy the API to it and test on its own hostname (Sat, 45 min)
 
@@ -169,15 +198,29 @@ Runbook Phase 2 (pages 7–8) with three changes for Flex.
 
 **Gate 2:** all of 3.
 
+**Known trap:** Flex abandons an app whose start-up passes 30 seconds, and the limit cannot be
+raised; the first call's time in 3 says how close this API runs to it (it registers the whole
+117-entity model at start-up, so it will not be instant). Well under 30 s: fine. Near it, or
+a 5xx on the first call that clears on the second: paste the timing to Claude before Step 3.
+
 **Known trap:** a green deploy whose Functions list shows only *WarmUp* is the Flex/.NET
 packaging fault. Confirm `WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=0` is set (phase1 sets it) and
 re-run the workflow. Still wrong: paste the run log to Claude.
 
 ### Step 3 — rehearse: link the new API to a preview copy of the portal (Sat or Sun, 45 min)
 
-Runbook Phase 3 (pages 9–11), unchanged. This is the go/no-go for Flex: the link switches on
-built-in authentication on the new app, and nothing documents that for a Flex app, so it is
-proven here on a preview environment, never in production.
+Runbook Phase 3 (pages 9–11), unchanged. This is the go/no-go for Flex, and it is a real
+question, not a formality. Checked 27 Sep: the Static Web Apps documents still list the
+Functions plans a linked backend may be on as Consumption, Premium and Dedicated (a 2022
+table) and say nothing either way about Flex; Microsoft's own Consumption-to-Flex migration
+guide (Sep 2026) says built-in authentication, which the link switches on, is set up on a Flex
+app like any other; and one Microsoft Q&A thread from 2026 describes a Flex app linked to a
+Static Web App whose `/api/*` answered the Static Web App's own 404, with the reply calling
+Flex unsupported and naming Consumption or Premium instead. That thread is one report with no
+detail of how the app was set up, so it is not a verdict, and it is why the probe at the end of
+Step 1 and this rehearsal exist: the proxy is proven on a preview environment, never in
+production. (The `rolesSource` part of that thread does not apply here: the portal never uses
+Static Web Apps' own sign-in; it has its own cookie session behind `/api`.)
 
 1. Actions → *Rehearsal: portal frontend to the "upgrade" preview environment* → Run workflow
    (~6 min).
@@ -199,19 +242,28 @@ the Container Apps fallback, and production is untouched.
 
 Runbook Phase 4 (pages 12–14), unchanged. Needs Gate 3 and Nigel's yes.
 
-**Before:** switch on the always-ready instance. Billing starts here, about 55p a day:
+**Before:** switch on the always-ready instance, and raise the instance's HTTP concurrency.
+Billing starts with the first line, about 55p a day; the second is free. Flex hands a 2 GB
+instance 16 requests at a time by default and starts a cold instance for the seventeenth, and
+a Blazor route load fetches several things at once, so a Monday-morning burst from a dozen
+people would spill onto cold instances and feel exactly like the lag this move is meant to
+end. The API waits on SQL rather than on the CPU, so one warm instance can hold far more:
 
 ```bash
 az functionapp scale config always-ready set -g rg-jpms-prod -n func-jpms-api-prod --settings http=1
+az functionapp scale config set -g rg-jpms-prod -n func-jpms-api-prod --trigger-type http --trigger-settings perInstanceConcurrency=100
+az functionapp scale config show -g rg-jpms-prod -n func-jpms-api-prod -o json     # want alwaysReady http 1, triggers http perInstanceConcurrency 100
 curl -s -o /dev/null -w "%{http_code} in %{time_total}s\n" https://$APIHOST/api/version   # twice; the second well under a second
 ```
 
 1. The 4.1 block (read-only pre-check). The validate may complain only that managed functions
    are present; that is expected and confirms the order.
-2. Edit `.github/workflows/jpms-swa.yml`: `api_location: ''` and remove the two `'api/**'`
-   path entries (runbook Appendix C). Commit *Portal API now served by func-jpms-api-prod
-   (linked backend)*, push, watch *JPMS portal* go green (5–8 min). The API gap starts when it
-   goes green.
+2. Edit `.github/workflows/jpms-swa.yml`: `api_location: ''`, and remove `'api/**'` from the
+   **push** paths only (one line, not the two of runbook Appendix C): under `pull_request` it
+   stays, because that is what runs the *Build the API* compile check on a pull request, and
+   `tests.yml` is manual. Commit *Portal API now served by func-jpms-api-prod (linked
+   backend)*, push, watch *JPMS portal* go green (5–8 min). The API gap starts when it goes
+   green.
 3. The moment it is green: the link command 4.1 printed, then the 4.4 block: polls reach 200,
    discovery shows an issuer, managed functions list is empty, direct hostname 401.
 4. Log in on portal.jewelbb.co.uk: dashboard, a project, a document download. Ask Nigel to do

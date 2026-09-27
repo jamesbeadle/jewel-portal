@@ -38,8 +38,9 @@ az storage account show -n $STG -g $RG --query "{name:name,location:location,sku
 echo "## names free?"
 az functionapp show -n $FUNC -g $RG --query name -o tsv 2>/dev/null && echo "FUNC EXISTS - phase1 will reuse it" || echo "$FUNC is free"
 az appservice plan show -n plan-jpms-prod -g $RG --query name -o tsv 2>/dev/null && echo "plan-jpms-prod EXISTS - a P1v4 leftover, delete it" || echo "no P1v4 leftover plan"
-echo "## SQL: tier (vCore tiers allow 35-day restore) and a firewall rule that lets Azure services in (0.0.0.0)"
-az sql db show -g $RG -s $SQLSRV -n jpms --query "{tier:sku.tier,sku:sku.name}" -o json
+echo "## SQL: tier (vCore tiers allow 35-day restore); auto-pause (want -1: a paused database is its own 30 s cold start, which no compute move fixes); the vCore floor it idles at"
+az sql db show -g $RG -s $SQLSRV -n jpms --query "{tier:sku.tier,sku:sku.name,autoPauseMinutes:autoPauseDelay,minVcores:minCapacity,maxVcores:sku.capacity}" -o json
+echo "## SQL: a firewall rule that lets Azure services in (0.0.0.0) - the Flex app connects through it"
 az sql server firewall-rule list -g $RG -s $SQLSRV --query "[].{name:name,start:startIpAddress,end:endIpAddress}" -o table
 echo "## snapshot for rollback"
 az staticwebapp show -n $SWA -g $RG -o json > swa-before.json
