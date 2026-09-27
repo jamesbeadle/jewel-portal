@@ -23,8 +23,18 @@ az sql db list-editions -l <region> --edition GeneralPurpose -o table   # server
 Static Web Apps content is served globally; its `--location` only places the metadata, so it
 does not constrain the choice.
 
-North Europe or UK South, whichever lists Flex and SQL. Do not put the database in one region
-and the compute in another to get a cheaper tier; the round trip costs more than the tier.
+North Europe or UK South, whichever lists Flex and SQL; UK West if neither, since Microsoft
+says it is not under the same pressure, though Premium v4 is not sold there; Sweden Central only
+with the customer's agreement that their data leaves the UK and Ireland. Do not put the
+database in one region and the compute in another to get a cheaper tier: the round trip
+(North Europe to West Europe 17 ms, to UK South 12 ms, UK South to UK West 7 ms) costs more
+than the tier.
+
+The rule behind all of this, learned in September 2026: never pin the offer to a SKU or a
+region. Provision each customer into whichever region sells the capacity that day, keep the
+scripts parameterised, and sell the behaviour (always-on, next to its data, releases without
+interruption), never the hardware. The full reasoning is in
+`2026-09-22-azure-p1v4-refused-and-the-way-forward.md`.
 
 Never raise a quota ticket for an App Service plan to get started. The Jewel ticket took 18
 days and ended in a refusal. If Flex is not offered in the region you need, choose another

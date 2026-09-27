@@ -29,6 +29,10 @@ echo "## Static Web App tier - linked backends need Standard"
 az staticwebapp show -n $SWA -g $RG --query "{sku:sku.name,stagingEnvironments:stagingEnvironmentPolicy,linkedBackends:linkedBackends}" -o json
 echo "## Flex Consumption regions offered to this subscription (want North Europe; UK South is the fallback)"
 az functionapp list-flexconsumption-locations -o table | grep -iE "north europe|northeurope|uk south|uksouth" || echo "NEITHER REGION LISTED - stop"
+echo "## Flex Consumption meters, GBP, North Europe (informational; always-ready is the standing cost)"
+curl -sG "https://prices.azure.com/api/retail/prices" --data-urlencode "currencyCode='GBP'" \
+  --data-urlencode "\$filter=armRegionName eq '$FLEX_LOC' and serviceName eq 'Functions' and contains(productName,'Flex')" \
+  | jq -r '.Items[] | "\(.meterName) | £\(.unitPrice) per \(.unitOfMeasure)"' | sort -u || echo "(price lookup unavailable - not a blocker)"
 echo "## the runtime storage account Phase 1.1 created on 15 Sep (want: exists, in $FLEX_LOC)"
 az storage account show -n $STG -g $RG --query "{name:name,location:location,sku:sku.name}" -o json 2>/dev/null || echo "$STG does not exist - phase1 will create it"
 echo "## names free?"

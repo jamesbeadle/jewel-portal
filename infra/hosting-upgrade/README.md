@@ -1,10 +1,12 @@
 # JPMS hosting upgrade — the plan, and how it got here
 
 The portal's API moves off Static Web Apps managed functions onto its own always-ready
-Function App in North Europe, next to the database. This file is the plan of record in the
-repository; the same plan, step by step with its gates, is on the task *Move the portal API
-onto always-on hosting next to the database* in Your Business Today (goal *Hosting and
-Infrastructure*), where each step is a subtask and the runbook PDF is attached.
+Function App in North Europe, next to the database. This file is the runnable plan in the
+repository. The decision behind it, with Microsoft's words, the wider capacity picture and the
+stay-or-leave reasoning, is `docs/09-operations/2026-09-22-azure-p1v4-refused-and-the-way-forward.md`.
+The same steps with their gates are on the task *Move the portal API onto always-on hosting next
+to the database* in Your Business Today (goal *Azure Hosting and Infrastructure*), where each
+step is a subtask and the runbook PDF is attached.
 
 ## Why
 
@@ -31,7 +33,17 @@ then on capacity:
 | 10 Sep | Microsoft closed the ticket saying the quota had been increased and a deployment had completed. |
 | 15 Sep | Phase 0 passed. Phase 1.1 refused with the identical *Current Limit (P1v4 VMs): 0* message. Reading the full thread: the engineer had expected James to complete the new self-service quota process and closed the case assuming it was done. The self-service view (Microsoft.Quota) showed a limit of 30, but App Service enforces its own allowance, which was 0, so self-service could never lift it. Only the App Service capacity team can. |
 | 16 Sep | Microsoft explained the original request had been submitted as *current 60 → new 4*, was read as a reduction, and never reached the capacity team. A fresh self-service request (New Limit 32) was rejected by automatic review. Evidence sent back on the ticket. |
-| 22 Sep | Final answer after 18 days and four engineers: **P1v4 in North Europe refused on capacity**. App Service plans are scarce across North Europe, West Europe and UK South this year. |
+| 21 Sep | Ganesh Chintha: "due to regional constraints and high demand for App Service in this region, PG team unable to approve your quota request"; suggests an alternate region. |
+| 22 Sep | Syed Mohsin (Technical Advisor) confirmed: North Europe "is currently experiencing significant demand for App Service capacity"; self-service may be used for another region and SKU; moving SQL and Blob is outside the App Service team's scope; may the case be archived. **P1v4, non-zone-redundant, North Europe, 2 instances: refused on capacity** after 18 days and four engineers. No longer a form problem. |
+
+The refusal is not peculiar to this subscription. An Azure MVP write-up of 21 July 2026 calls
+North Europe the worst-hit region in Europe (the Irish grid), with quota increases "almost
+certainly going to be refused" "for a number of years" and West Europe also constrained; a
+Microsoft Q&A thread of the same month shows UK South refusing even a Consumption plan, with
+Microsoft itself suggesting UK West or Flex Consumption, whose quota is a separate model based
+on memory. Premium v4 is not offered in UK West at all. App Service plans, the stamp hardware,
+are what is scarce; Azure is not, which is why the answer is a different Azure service and not
+a different cloud.
 
 The only thing that plan created was the runtime storage account `stjpmsapi69e23c` in North
 Europe, which the new plan reuses. Nothing in production was touched.
@@ -44,8 +56,21 @@ always-ready instances to remove the cold start, and a rolling site update to re
 on release. About £16 a month per always-ready 2 GB instance at list, against £94 for P1v4, so
 the revised ask is +£35–45 a month rather than +£90 (Nigel's yes is its own subtask).
 
-Fallback order if North Europe refuses the Flex create: **UK South** (Step 1 says how), then
-**Container Apps in North Europe**, then **P1v4 in UK South with the database moved after**.
+Instance size is 2,048 MB: it is what the API runs in today on managed functions, and the MCP
+host running the same code peaks at 1.35 GB on a 1.75 GB B1. Step 6 reads the memory over the
+first week and moves to 4,096 MB if the working set passes ~1.5 GB.
+
+Fallback order if North Europe refuses the Flex create, decided by the Step 1 create itself:
+
+1. **Flex Consumption in UK South** (12 ms from the database, UK compute). Step 1 says how.
+2. **Container Apps in North Europe**: min replicas 1, revisions for zero-downtime releases,
+   supported as a Static Web Apps linked backend, ~£20–50/month; costs a Dockerfile, a registry
+   and a new workflow, about a day.
+3. **App Service P1v4 in UK South** (£98.34/month) or P1v3 in UK West, with the database moved
+   after cut-over by a failover group (94 MB, minutes, no data loss). Only if 1 and 2 fail.
+4. **Sweden Central P1v4**, Microsoft's recommended region; works, but the data leaves the
+   UK and Ireland.
+
 Never a different cloud.
 
 The runbook PDF on the task is the P1v4 edition. Its Phases 2, 3, 4 and 5 apply as written;
@@ -70,6 +95,12 @@ admin.james@jewelenterprises.co.uk on subscription 08c5510c-bb27-4da8-b826-a8e76
 Each block prints `BLOCK COMPLETE` or `STOPPED AT THE FIRST ERROR ABOVE`; a stopped block ran
 nothing past the failure. Each step ends in a gate: if the output does not match, stop and
 paste it to Claude. Steps 1 to 4 in order. Step 4 in a quiet window. Steps 5 and 6 after.
+
+### The weekend order
+
+Friday: reply to Microsoft, message Nigel. Saturday: Step 1, Step 2, the budget task, Step 5,
+the monitoring rules. Saturday or Sunday: Step 3. Sunday evening: Step 4, then the End-to-End
+Regression Test. The weekend after: Step 6, the restore drill.
 
 ### Before Saturday
 
