@@ -93,8 +93,9 @@ Each block is idempotent. Names carry the customer prefix and the environment:
    `infra/azure-mcp-host-setup.sh` (`:` becomes `__`, runtime-owned keys skipped, values never
    printed). Secrets go in Key Vault references where the setting supports them.
 9. **Budget and alerts** on the resource group at creation: a monthly budget with e-mail at 80%
-   actual and 100% forecast, and the five alert rules from `infra/setup-alerts.sh` (5xx rate,
-   SQL failures, exceptions, response time, availability).
+   actual and 100% forecast, and the alert rules from `infra/setup-alerts.sh` (server errors, slow
+   responses, an exception spike, and the availability test that catches a gateway 503),
+   sent to an action group.
 
 ## 4. Deploy without stored secrets
 
