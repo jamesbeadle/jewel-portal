@@ -227,9 +227,14 @@ Refused there too: stop, paste the output to Claude. Container Apps is next; pro
 untouched. Whichever region the app lands in, phase1 records it as `LOC` too, so the runbook's
 link commands in Steps 3 and 4 (`--backend-region $LOC`) need no editing.
 
-**Gate 1:** `state Running`, a hostname, `https true`, `sku FlexConsumption`; the 24 portal
-setting names listed with `MailboxIntake__*` using double underscores; `APIHOST` and `FUNC_ID`
-recorded in `~/jpms-upgrade/vars.sh`.
+**Gate 1:** `state Running`, a hostname, `https true`, `sku FlexConsumption`, `memoryMB 2048`;
+the 24 portal setting names listed with `MailboxIntake__*` using double underscores; `APIHOST`
+and `FUNC_ID` recorded in `~/jpms-upgrade/vars.sh`.
+
+Found on the day: on CLI 2.86 `az functionapp show` returns a Flex app with `state`,
+`defaultHostName` and `hostNames` all null while the app is fine, so the script reads the app
+through `az resource show` instead. Anything else that needs the app's state or hostname
+should do the same.
 
 **Undo if abandoning:** `az functionapp delete -n func-jpms-api-prod -g rg-jpms-prod`, then
 delete the plan it created.
