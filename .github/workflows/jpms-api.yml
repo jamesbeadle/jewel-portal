@@ -1,0 +1,62 @@
+name: Deploy JPMS portal API to Azure Functions
+
+# The portal's /api is served by a dedicated Function App (func-jpms-api-prod, Flex Consumption,
+# North Europe, next to the database) linked to the Static Web App as its backend, instead of SWA
+# managed functions. Same api project as jpms-mcp.yml deploys, but with the standard "api" route
+# prefix left in place: the SWA proxies /api/* to this host unchanged. The MCP host keeps its own
+# workflow because it blanks the prefix. Plan and history: infra/hosting-upgrade/README.md.
+#
+# Signs in with a federated credential (no stored secret). Required repository VARIABLES:
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID  (from Step 2's az ad block)
+#   JPMS_API_APP_NAME = func-jpms-api-prod
+# remote-build is off because the package is already a published .NET build; sku: flexconsumption
+# makes the action use the Flex deployment endpoint.
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/**'
+      - 'contracts/**'
+      - '.github/workflows/jpms-api.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: jpms-api-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    name: Build and deploy portal API
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish api
+        run: dotnet publish api/JpmsApi.csproj -c Release -o ./api-publish
+
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure Functions (Flex Consumption)
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ vars.JPMS_API_APP_NAME }}
+          package: ./api-publish
+          sku: flexconsumption
+          remote-build: false

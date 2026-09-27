@@ -2,6 +2,11 @@
 
 Azure provisioning for the JPMS test environment.
 
+The portal API is moving off Static Web Apps managed functions onto a Flex Consumption Function
+App next to the database: plan, history and steps in `hosting-upgrade/README.md`. The shape a
+new portal is built to from day one, so it never needs that migration, is in
+`docs/09-operations/hosting-a-new-portal.md`.
+
 ## What `azure-setup.sh` creates
 
 | Resource | Tier | Cost |
