@@ -227,9 +227,14 @@ Refused there too: stop, paste the output to Claude. Container Apps is next; pro
 untouched. Whichever region the app lands in, phase1 records it as `LOC` too, so the runbook's
 link commands in Steps 3 and 4 (`--backend-region $LOC`) need no editing.
 
-**Gate 1:** `state Running`, a hostname, `https true`, `sku FlexConsumption`; the 24 portal
-setting names listed with `MailboxIntake__*` using double underscores; `APIHOST` and `FUNC_ID`
-recorded in `~/jpms-upgrade/vars.sh`.
+**Gate 1:** `state Running`, a hostname, `https true`, `sku FlexConsumption`, `memoryMB 2048`;
+the 24 portal setting names listed with `MailboxIntake__*` using double underscores; `APIHOST`
+and `FUNC_ID` recorded in `~/jpms-upgrade/vars.sh`.
+
+Found on the day: on CLI 2.86 `az functionapp show` returns a Flex app with `state`,
+`defaultHostName` and `hostNames` all null while the app is fine, so the script reads the app
+through `az resource show` instead. Anything else that needs the app's state or hostname
+should do the same.
 
 **Undo if abandoning:** `az functionapp delete -n func-jpms-api-prod -g rg-jpms-prod`, then
 delete the plan it created.
@@ -285,6 +290,14 @@ Runbook Phase 2 (pages 7–8) with three changes for Flex.
    single-digit ms, no exceptions.
 
 **Gate 2:** all of 3.
+
+**Known trap, found on the day:** a deploy that goes green and answers `/api/version` with
+`dev` while production answers a number has lost its SQL driver. `api/JpmsApi.csproj` trims
+every `runtimes/<platform>` folder except Windows at publish (the Static Web App's 100 MB cap,
+Windows host), which removes `runtimes/unix`, the Linux build of `Microsoft.Data.SqlClient`;
+every database read then throws `FileNotFoundException`, the version endpoints swallow it, and
+a login hangs to the gateway's 240 s. The workflow publishes with `-p:KeepAllRuntimes=true`
+for that reason; if the symptom returns, that flag is the first thing to check.
 
 **Known trap:** Flex abandons an app whose start-up passes 30 seconds, and the limit cannot be
 raised; the first call's time in 3 says how close this API runs to it (it registers the whole
