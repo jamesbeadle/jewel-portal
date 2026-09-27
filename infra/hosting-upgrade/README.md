@@ -119,15 +119,16 @@ Three things follow:
 - **The budget is £350, not £300.** A £300 budget with a forecast alert at 100 per cent fires
   in the first week of a £305 month. The original runbook had £350 with e-mail at 80 per cent
   actual and 100 per cent forecast; that is the figure for the budget task.
-- **Confirm the baseline before the MD sees a total.** This prints last month's bill by
+- **Confirm the baseline before the MD sees a total.** This prints the month's bill so far by
   service from the Mac, largest first, with nothing to install (`az costmanagement query` is
-  an extension the CLI does not prompt for; `az rest` asks the same API directly). Change
-  `TheLastMonth` to `MonthToDate` for the current month so far:
+  an extension the CLI does not prompt for; `az rest` asks the same API directly). The API
+  no longer accepts `TheLastMonth`: for a whole earlier month use `"timeframe":"Custom"` with
+  `"timePeriod":{"from":"2026-08-01T00:00:00Z","to":"2026-08-31T23:59:59Z"}` in its place.
 
   ```bash
   az rest --method post \
     --url "https://management.azure.com/subscriptions/08c5510c-bb27-4da8-b826-a8e76fb270ec/providers/Microsoft.CostManagement/query?api-version=2023-11-01" \
-    --body '{"type":"ActualCost","timeframe":"TheLastMonth","dataset":{"granularity":"None","aggregation":{"totalCost":{"name":"PreTaxCost","function":"Sum"}},"grouping":[{"type":"Dimension","name":"ServiceName"}]}}' \
+    --body '{"type":"ActualCost","timeframe":"MonthToDate","dataset":{"granularity":"None","aggregation":{"totalCost":{"name":"PreTaxCost","function":"Sum"}},"grouping":[{"type":"Dimension","name":"ServiceName"}]}}' \
     --query "reverse(sort_by(properties.rows, &[0]))" -o table
   ```
 
