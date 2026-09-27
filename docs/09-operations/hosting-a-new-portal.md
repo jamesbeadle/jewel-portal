@@ -99,7 +99,11 @@ Each block is idempotent. Names carry the customer prefix and the environment:
 
    The SWA workflow then carries `api_location: ''` from day one and never triggers on
    `api/**`. Linking switches on built-in authentication on the Function App so only the SWA
-   can call it; the direct hostname answering 401 afterwards is correct.
+   can call it; the direct hostname answering 401 afterwards is correct. Two things learned on
+   27 September 2026: on CLI 2.86 `az functionapp show` returns a Flex app with no state or
+   hostname, so read it with `az resource show`; and `backends unlink --remove-backend-auth`
+   leaves that authentication on with no provider, so after unlinking a preview, switch it off
+   with a PUT of `{"properties":{"platform":{"enabled":false}}}` to `config/authsettingsV2`.
 7. **Entra app registration** with the SWA's redirect URIs.
 8. **Settings** on the API app first, then copied to the MCP host and worker with the filter in
    `infra/azure-mcp-host-setup.sh` (`:` becomes `__`, runtime-owned keys skipped, values never
@@ -112,7 +116,11 @@ Each block is idempotent. Names carry the customer prefix and the environment:
 ## 4. Deploy without stored secrets
 
 Every workflow signs in with a federated credential and deploys with
-`Azure/functions-action@v1` given `sku: flexconsumption` and `remote-build: false`.
+`Azure/functions-action@v1` given `sku: flexconsumption` and `remote-build: false`. Publish
+for the Linux host with every runtime kept (`dotnet publish ... -p:KeepAllRuntimes=true`) or a
+Linux keep-list: the API project trims every `runtimes/<platform>` folder except Windows for
+the Static Web App's cap, and that removes the Linux build of the SQL driver, so every
+database read then fails with `FileNotFoundException` while the deploy stays green.
 `.github/workflows/jpms-api.yml` is the model; the MCP variant adds the one `jq` step that
 blanks the route prefix. One Entra application per repository, Website Contributor on each
 Function App it deploys, trusting `repo:<owner>/<repo>:ref:refs/heads/main` only. Repository
