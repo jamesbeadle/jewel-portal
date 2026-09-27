@@ -291,6 +291,14 @@ Runbook Phase 2 (pages 7–8) with three changes for Flex.
 
 **Gate 2:** all of 3.
 
+**Known trap, found on the day:** a deploy that goes green and answers `/api/version` with
+`dev` while production answers a number has lost its SQL driver. `api/JpmsApi.csproj` trims
+every `runtimes/<platform>` folder except Windows at publish (the Static Web App's 100 MB cap,
+Windows host), which removes `runtimes/unix`, the Linux build of `Microsoft.Data.SqlClient`;
+every database read then throws `FileNotFoundException`, the version endpoints swallow it, and
+a login hangs to the gateway's 240 s. The workflow publishes with `-p:KeepAllRuntimes=true`
+for that reason; if the symptom returns, that flag is the first thing to check.
+
 **Known trap:** Flex abandons an app whose start-up passes 30 seconds, and the limit cannot be
 raised; the first call's time in 3 says how close this API runs to it (it registers the whole
 117-entity model at start-up, so it will not be instant). Well under 30 s: fine. Near it, or

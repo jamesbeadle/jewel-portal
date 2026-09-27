@@ -43,8 +43,13 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      # KeepAllRuntimes: the project trims every runtimes/<platform> folder except Windows at
+      # publish, to fit the Static Web App's 100 MB cap on its Windows host. This host is Linux and
+      # has no cap; without the flag runtimes/unix goes, and with it the Linux build of
+      # Microsoft.Data.SqlClient, so every database read fails with FileNotFoundException
+      # (found on the day, 27 Sep 2026; the MCP host hit the same on 16 Sep).
       - name: Publish api
-        run: dotnet publish api/JpmsApi.csproj -c Release -o ./api-publish
+        run: dotnet publish api/JpmsApi.csproj -c Release -o ./api-publish -p:KeepAllRuntimes=true
 
       - name: Sign in to Azure
         uses: azure/login@v2
