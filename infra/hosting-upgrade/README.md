@@ -53,8 +53,10 @@ Europe, which the new plan reuses. Nothing in production was touched.
 **Flex Consumption (FC1) in North Europe.** Same Functions project, same deploy action, same
 region as the database. It has its own quota (250 cores per region by default), no 100 MB cap,
 always-ready instances to remove the cold start, and a rolling site update to remove the restart
-on release. About £16 a month per always-ready 2 GB instance at list, against £94 for P1v4, so
-the revised ask is +£35–45 a month rather than +£90 (Nigel's yes is its own subtask).
+on release. About £16 a month per always-ready 2 GB instance at list while idle (the same seconds
+bill at four times the rate while a request is being handled, so a busy instance costs a few
+pounds more), against £94 for P1v4, so the revised ask is +£35–45 a month rather than +£90
+(Nigel's yes is its own subtask). The pre-flight prints the live GBP meters.
 
 Instance size is 2,048 MB: it is what the API runs in today on managed functions, and the MCP
 host running the same code peaks at 1.35 GB on a 1.75 GB B1. Step 6 reads the memory over the
@@ -73,6 +75,68 @@ Fallback order if North Europe refuses the Flex create, decided by the Step 1 cr
 
 Never a different cloud.
 
+### Will it work? (assessed 27 Sep)
+
+The parts under our control are proven: a Flex app in North Europe with an always-ready
+instance, next to the database, deployed by the new workflow; every command in this file checks
+out against Microsoft's current documents and the CLI source. The one unknown is whether Static
+Web Apps will accept that Flex app as its linked backend. For: the link is validated server-side
+by resource type, and Functions is a supported type; the authentication it switches on is
+supported on Flex; a Microsoft answer of 2025 recommends exactly this, Flex with always-ready
+linked to a Static Web App. Against: the documents' list of plans a linked backend may be on
+predates Flex, and one 2026 thread reports a Flex link that answered 404s with a reply calling
+it unsupported (Step 3 has the detail). More likely to work than not, and unproven; so the plan
+finds out first and cheaply: Step 1 and its probe take about 40 minutes, cost £0 and touch
+nothing in production. A refusal makes the day the Container Apps fallback, about a day's
+work and a similar monthly cost (below). Data protection, the alert rules and the budget do
+not depend on the link at all.
+
+### What it will cost (27 Sep)
+
+The September bill is **£280 a month before VAT**, which is not the baseline the 22 September
+findings assumed (they put the bill after the move at about £230, which implied about £190
+before it). The move adds the lines below and removes none: the managed functions were free
+inside the Static Web App's Standard plan, and Phase 7's £11 saving was dropped with the shared
+plan. List prices before VAT, converted from Microsoft's dollar rates; the pre-flight prints the
+real GBP meters and the first invoice is the truth.
+
+| Line | After Step 4 (one instance) | After Step 6 (two instances) |
+|---|---|---|
+| Everything paid today | £280 | £280 |
+| Flex always-ready 2 GB instance, idle rate ($0.000004 per GB-second) | +£16 | +£33 |
+| The same instance while handling requests ($0.000016 per GB-second), at a working day's share | +£3 to £6 | +£6 to £10 |
+| Flex runtime storage account | under £1 | under £1 |
+| SQL 35-day restore and long-term backups, 94 MB database | +£1 to £2 | +£1 to £2 |
+| Documents storage geo-redundant with soft delete | +£2 to £3 | +£2 to £3 |
+| **Likely bill** | **about £305** | **about £325** |
+
+So the delta Nigel agreed, +£35 to £45 a month, holds; the total in the findings does not.
+The Container Apps fallback in place of the Flex instance would be about £31 a month for the
+smallest always-on replica (0.5 vCPU, 1 GiB) and about £62 for 1 vCPU and 2 GiB.
+
+Three things follow:
+
+- **The budget is £350, not £300.** A £300 budget with a forecast alert at 100 per cent fires
+  in the first week of a £305 month. The original runbook had £350 with e-mail at 80 per cent
+  actual and 100 per cent forecast; that is the figure for the budget task.
+- **Confirm the baseline before the MD sees a total.** This prints last month's bill by
+  service from the Mac (`az extension add -n costmanagement` once, if asked):
+
+  ```bash
+  az costmanagement query --type ActualCost --timeframe TheLastMonth \
+    --scope "subscriptions/08c5510c-bb27-4da8-b826-a8e76fb270ec" \
+    --dataset-grouping name=ServiceName type=Dimension \
+    --dataset-aggregation '{"totalCost":{"name":"PreTaxCost","function":"Sum"}}' -o table
+  ```
+
+  The expectation: the SQL serverless database at its 0.5 vCore floor is £150 or more of the
+  £280, the MCP host's B1 plan about £10, the Static Web App about £7, and the rest is
+  telemetry, storage, e-mail and the AI, vision and image services. Large AI lines are a
+  separate conversation from hosting.
+- **This move does not reduce the bill.** It buys the behaviour: no idle freeze, no restart on
+  release, the API next to its data. If the goal were cost, the lever is the database's vCore
+  floor, and that is a different task.
+
 The runbook PDF on the task is the P1v4 edition. Its Phases 2, 3, 4 and 5 apply as written;
 Phases 1 and 6 are replaced by Steps 1 and 6 below, and Phase 7 (consolidating the MCP host
 and worker onto the plan) no longer applies because Flex has no shared plan.
@@ -83,7 +147,7 @@ and worker onto the plan) no longer applies because Flex has no shared plan.
 |---|---|---|
 | `phase0-preflight.sh` | before Step 1 | Read-only checks and rollback snapshots. Writes `~/jpms-upgrade/vars.sh`. Flex edition. |
 | `phase1-provision.sh` | Step 1 | Creates the Flex app (the capacity test) and copies the 24 portal settings onto it. Idempotent. |
-| `../../.github/workflows/jpms-api.yml` | Step 2 | Deploys the API to the Flex app on every push to `main` touching `api/**`, signed in with a federated credential. |
+| `../../.github/workflows/jpms-api.yml` | Step 2 | Deploys the API to the Flex app on every push to `main` touching `api/**`, signed in with a federated credential, then syncs the triggers and waits for the functions to be listed. |
 | `../../.github/workflows/jpms-swa-rehearsal.yml` | Step 3 | Temporary. Publishes the frontend to the *upgrade* preview environment with no API. Deleted after Gate 3. |
 
 `quota-p1v4.sh` is gone with the P1v4 route; it is in git history if the story is ever needed.
@@ -102,6 +166,16 @@ Friday: reply to Microsoft, message Nigel. Saturday: Step 1, Step 2, the budget 
 the monitoring rules. Saturday or Sunday: Step 3. Sunday evening: Step 4, then the End-to-End
 Regression Test. The weekend after: Step 6, the restore drill.
 
+### The same steps in one day (the run of 27 September)
+
+Nothing in Steps 1 to 4 needs a night between them; the only hard orderings are Gate 3
+before Step 4, and Step 4 in a quiet window. So: Step 1; then, before Step 2, start the
+rehearsal workflow and run the link probe at the end of Step 1, because that is the fastest
+way to learn whether Static Web Apps will accept a Flex app at all; Step 2; Step 3 on the
+preview environment the probe already published; Step 5 while a workflow runs; Step 4 in
+the evening, then the regression test. Step 6 stays a week away: it needs a week of memory
+readings and a second instance nobody has agreed to yet.
+
 ### Before Saturday
 
 1. Merge this branch's pull request so `main` carries the Flex scripts and workflows. The API
@@ -113,7 +187,7 @@ Regression Test. The weekend after: Step 6, the restore drill.
 
 ```bash
 az login
-bash infra/hosting-upgrade/phase0-preflight.sh     # want: North Europe listed, stjpmsapi69e23c exists, func name free
+bash infra/hosting-upgrade/phase0-preflight.sh     # want: North Europe listed, stjpmsapi69e23c exists, func name free, SQL autoPauseMinutes -1
 bash infra/hosting-upgrade/phase1-provision.sh     # creates the app, copies the settings, prints Gate 1
 ```
 
@@ -126,7 +200,8 @@ FLEX_LOC=uksouth STG=stjpmsapiuks bash infra/hosting-upgrade/phase1-provision.sh
 ```
 
 Refused there too: stop, paste the output to Claude. Container Apps is next; production is
-untouched.
+untouched. Whichever region the app lands in, phase1 records it as `LOC` too, so the runbook's
+link commands in Steps 3 and 4 (`--backend-region $LOC`) need no editing.
 
 **Gate 1:** `state Running`, a hostname, `https true`, `sku FlexConsumption`; the 24 portal
 setting names listed with `MailboxIntake__*` using double underscores; `APIHOST` and `FUNC_ID`
@@ -134,6 +209,24 @@ recorded in `~/jpms-upgrade/vars.sh`.
 
 **Undo if abandoning:** `az functionapp delete -n func-jpms-api-prod -g rg-jpms-prod`, then
 delete the plan it created.
+
+**The link probe (5 min, £0, nothing deployed).** Whether Static Web Apps accepts a Flex app
+as a linked backend is the one thing this plan cannot prove from documents (see Step 3), and
+it can be asked the moment the app exists, before any code is on it. Start Actions →
+*Rehearsal: portal frontend to the "upgrade" preview environment* → Run workflow (~6 min),
+then:
+
+```bash
+cd ~/jpms-upgrade && source vars.sh
+az staticwebapp environment list -n $SWA -g $RG --query "[].{env:name,hostname:hostname,status:status}" -o table
+az staticwebapp backends validate -n $SWA -g $RG --environment-name upgrade --backend-resource-id "$FUNC_ID" --backend-region $LOC
+```
+
+Validate passing (or complaining only about something the environment has, never about the
+SKU, plan or resource type) means carry on to Step 2 and leave the environment up for
+Step 3. A refusal naming the SKU, the plan or the resource type is the answer the whole
+day turns on: stop, paste it to Claude, and the day becomes the Container Apps fallback with
+production untouched and the Flex app deleted.
 
 ### Step 2 — deploy the API to it and test on its own hostname (Sat, 45 min)
 
@@ -169,15 +262,33 @@ Runbook Phase 2 (pages 7–8) with three changes for Flex.
 
 **Gate 2:** all of 3.
 
-**Known trap:** a green deploy whose Functions list shows only *WarmUp* is the Flex/.NET
-packaging fault. Confirm `WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=0` is set (phase1 sets it) and
-re-run the workflow. Still wrong: paste the run log to Claude.
+**Known trap:** Flex abandons an app whose start-up passes 30 seconds, and the limit cannot be
+raised; the first call's time in 3 says how close this API runs to it (it registers the whole
+117-entity model at start-up, so it will not be instant). Well under 30 s: fine. Near it, or
+a 5xx on the first call that clears on the second: paste the timing to Claude before Step 3.
+
+**Known trap:** a green deploy whose Functions list shows only *WarmUp* is a known fault of the
+deploy action on Flex (Azure/functions-action issue 373, open): it uploads the package and never
+asks the host to sync its triggers, and the WarmUp placeholder is what the list shows until
+specialisation completes. The workflow now does the sync itself after every deploy, waits for
+`GetAppVersion` to be listed, and restarts the app once if it is slow; a red *Sync the triggers*
+step means paste the run log to Claude. `WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED`, which an
+earlier edition of this plan set, is a Consumption-plan setting that Flex ignores; it is gone.
 
 ### Step 3 — rehearse: link the new API to a preview copy of the portal (Sat or Sun, 45 min)
 
-Runbook Phase 3 (pages 9–11), unchanged. This is the go/no-go for Flex: the link switches on
-built-in authentication on the new app, and nothing documents that for a Flex app, so it is
-proven here on a preview environment, never in production.
+Runbook Phase 3 (pages 9–11), unchanged. This is the go/no-go for Flex, and it is a real
+question, not a formality. Checked 27 Sep: the Static Web Apps documents still list the
+Functions plans a linked backend may be on as Consumption, Premium and Dedicated (a 2022
+table) and say nothing either way about Flex; Microsoft's own Consumption-to-Flex migration
+guide (Sep 2026) says built-in authentication, which the link switches on, is set up on a Flex
+app like any other; and one Microsoft Q&A thread from 2026 describes a Flex app linked to a
+Static Web App whose `/api/*` answered the Static Web App's own 404, with the reply calling
+Flex unsupported and naming Consumption or Premium instead. That thread is one report with no
+detail of how the app was set up, so it is not a verdict, and it is why the probe at the end of
+Step 1 and this rehearsal exist: the proxy is proven on a preview environment, never in
+production. (The `rolesSource` part of that thread does not apply here: the portal never uses
+Static Web Apps' own sign-in; it has its own cookie session behind `/api`.)
 
 1. Actions → *Rehearsal: portal frontend to the "upgrade" preview environment* → Run workflow
    (~6 min).
@@ -199,19 +310,28 @@ the Container Apps fallback, and production is untouched.
 
 Runbook Phase 4 (pages 12–14), unchanged. Needs Gate 3 and Nigel's yes.
 
-**Before:** switch on the always-ready instance. Billing starts here, about 55p a day:
+**Before:** switch on the always-ready instance, and raise the instance's HTTP concurrency.
+Billing starts with the first line, about 55p a day; the second is free. Flex hands a 2 GB
+instance 16 requests at a time by default and starts a cold instance for the seventeenth, and
+a Blazor route load fetches several things at once, so a Monday-morning burst from a dozen
+people would spill onto cold instances and feel exactly like the lag this move is meant to
+end. The API waits on SQL rather than on the CPU, so one warm instance can hold far more:
 
 ```bash
 az functionapp scale config always-ready set -g rg-jpms-prod -n func-jpms-api-prod --settings http=1
+az functionapp scale config set -g rg-jpms-prod -n func-jpms-api-prod --trigger-type http --trigger-settings perInstanceConcurrency=100
+az functionapp scale config show -g rg-jpms-prod -n func-jpms-api-prod -o json     # want alwaysReady http 1, triggers http perInstanceConcurrency 100
 curl -s -o /dev/null -w "%{http_code} in %{time_total}s\n" https://$APIHOST/api/version   # twice; the second well under a second
 ```
 
 1. The 4.1 block (read-only pre-check). The validate may complain only that managed functions
    are present; that is expected and confirms the order.
-2. Edit `.github/workflows/jpms-swa.yml`: `api_location: ''` and remove the two `'api/**'`
-   path entries (runbook Appendix C). Commit *Portal API now served by func-jpms-api-prod
-   (linked backend)*, push, watch *JPMS portal* go green (5–8 min). The API gap starts when it
-   goes green.
+2. Edit `.github/workflows/jpms-swa.yml`: `api_location: ''`, and remove `'api/**'` from the
+   **push** paths only (one line, not the two of runbook Appendix C): under `pull_request` it
+   stays, because that is what runs the *Build the API* compile check on a pull request, and
+   `tests.yml` is manual. Commit *Portal API now served by func-jpms-api-prod (linked
+   backend)*, push, watch *JPMS portal* go green (5–8 min). The API gap starts when it goes
+   green.
 3. The moment it is green: the link command 4.1 printed, then the 4.4 block: polls reach 200,
    discovery shows an issuer, managed functions list is empty, direct hostname 401.
 4. Log in on portal.jewelbb.co.uk: dashboard, a project, a document download. Ask Nigel to do
@@ -231,8 +351,8 @@ Leave a week before Step 6.
 
 ### Step 5 — data protection (any time, 15 min, a few pounds a month)
 
-Runbook Phase 5 (pages 15–16) without its budget lines; the £300 budget and alerts are their
-own task. Independent of the hosting: do it Saturday while a deploy runs.
+Runbook Phase 5 (pages 15–16) without its budget lines; the £350 budget and alerts are their
+own task (£350, not the £300 the task was raised with: see *What it will cost*). Independent of the hosting: do it Saturday while a deploy runs.
 
 ```bash
 cd ~/jpms-upgrade && source vars.sh
@@ -260,19 +380,29 @@ deploy; with one instance it still restarts, so this needs two.
    az functionapp scale config always-ready set -g rg-jpms-prod -n func-jpms-api-prod --settings http=2
    ```
 
-2. Rolling update. ARM only (public preview, not in the CLI or portal; GA in four US/Asia
-   regions and rolling out elsewhere):
+2. Rolling update. Checked 27 Sep: generally available in East Asia, West Central US, North
+   Central US and West US 2 by Microsoft's note of May 2026 with the other regions "over the
+   following weeks", a September 2026 write-up calls it available everywhere, and North Europe
+   is named nowhere either way, so the command below is the test. CLI 2.87 or later has a
+   command for it; the ARM PATCH beneath is the same change for an older CLI:
 
    ```bash
    cd ~/jpms-upgrade && source vars.sh
-   az rest --method patch --url "https://management.azure.com$FUNC_ID?api-version=2024-11-01" \
-     --body '{"properties":{"functionAppConfig":{"siteUpdateStrategy":{"type":"RollingUpdate"}}}}' \
-     --query "properties.functionAppConfig.siteUpdateStrategy" -o json
+   az functionapp update-strategy config set -g $RG -n $FUNC --type RollingUpdate
+   az functionapp update-strategy config show -g $RG -n $FUNC -o json
+   # older CLI:
+   # az rest --method patch --url "https://management.azure.com$FUNC_ID?api-version=2024-11-01" \
+   #   --body '{"properties":{"functionAppConfig":{"siteUpdateStrategy":{"type":"RollingUpdate"}}}}' \
+   #   --query "properties.functionAppConfig.siteUpdateStrategy" -o json
    ```
 
-   If the response is `null` or the PATCH is refused naming the property or the region, North
-   Europe does not have it yet: keep the two instances and release in quiet windows with the
-   ~10 s restart until it lands; check monthly.
+   Two things Microsoft's own page says to expect: an app on a single instance still sees a
+   brief interruption on deploy whatever the strategy, which is why this step runs two; and in
+   a region where the rollout is still in progress, the deploy that follows the change is
+   carried out with the previous strategy, so judge it on the second deploy, not the first. If
+   the command is refused naming the property or the region, North Europe does not have it
+   yet: keep the two instances and release in quiet windows with the ~10 s restart until it
+   lands; check monthly.
 
 3. Push a trivial API change and watch:
 
@@ -280,9 +410,9 @@ deploy; with one instance it still restarts, so this needs two.
    while true; do curl -s -o /dev/null -w "%{http_code} %{time_total}s $(date +%T)\n" https://portal.jewelbb.co.uk/api/version; sleep 2; done
    ```
 
-**Gate 6:** no failed calls during the deploy, and the `x-jpms-version` header changes over;
-or RollingUpdate refused in North Europe and that recorded on the task with the quiet-window
-rule instead.
+**Gate 6:** no failed calls during the second deploy after the change, and the
+`x-jpms-version` header changes over; or RollingUpdate refused in North Europe and that
+recorded on the task with the quiet-window rule instead.
 
 Also here: read the app's memory over its first week (Metrics blade, memory working set). Over
 ~1.5 GB → `az functionapp scale config set -g rg-jpms-prod -n func-jpms-api-prod
@@ -292,7 +422,7 @@ Also here: read the app's memory over its first week (Metrics blade, memory work
 
 - Old P1v4 leftovers gone: nothing named `plan-jpms-prod` exists; `stjpmsapi69e23c` is the
   Flex app's storage and nothing else.
-- The related tasks on the same goal: the £300 budget with alerts, the five monitoring alert
+- The related tasks on the same goal: the £350 budget with alerts, the five monitoring alert
   rules, and the backup restore rehearsal after Step 5.
 - For the next portal, do not repeat this migration: build it on this shape from day one.
   See `docs/09-operations/hosting-a-new-portal.md`.

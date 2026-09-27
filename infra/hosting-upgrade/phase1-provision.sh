@@ -11,6 +11,7 @@ FLEX_LOC="${FLEX_LOC:-northeurope}"
 ( set -eo pipefail
 setvar() { [ -n "$2" ] || { echo "refusing to record an empty $1"; return 1; }; grep -v "^$1=" vars.sh > vars.tmp; echo "$1=$2" >> vars.tmp; mv vars.tmp vars.sh; }
 setvar FLEX_LOC "$FLEX_LOC"; setvar STG "$STG"
+setvar LOC "$FLEX_LOC"; echo "## LOC=$LOC - the runbook's link commands (--backend-region \$LOC) now follow the region the app is created in"
 echo "## runtime storage account $STG in $FLEX_LOC (Flex needs it in the app's own region)"
 az storage account show -n $STG -g $RG -o none 2>/dev/null || az storage account create -n $STG -g $RG -l $FLEX_LOC --sku Standard_LRS --kind StorageV2 --min-tls-version TLS1_2 --allow-blob-public-access false -o none
 trap 'rm -f api-settings.json' EXIT
@@ -24,8 +25,6 @@ az staticwebapp appsettings list -n $SWA -g $RG -o json \
   > api-settings.json && chmod 600 api-settings.json
 echo "## settings being copied (names only):"; jq -r '.[].name' api-settings.json | sort | tr '\n' ' '; echo
 az functionapp config appsettings set -n $FUNC -g $RG --settings @api-settings.json -o none && rm -f api-settings.json
-echo "## Flex/.NET isolated packaging: without this a green deploy lists only WarmUp"
-az functionapp config appsettings set -n $FUNC -g $RG --settings WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=0 -o none
 az functionapp config set -n $FUNC -g $RG --min-tls-version 1.2 --http20-enabled true -o none
 echo "## GATE 1 - want Running, a hostname, https true, sku FlexConsumption"
 az functionapp show -n $FUNC -g $RG --query "{state:state,host:defaultHostName,https:httpsOnly,sku:sku,location:location}" -o json

@@ -78,14 +78,16 @@ Each block is idempotent. Names carry the customer prefix and the environment:
    az functionapp create -g $RG -n func-<customer>-api-prod --storage-account $API_STG \
      --flexconsumption-location $LOC --runtime dotnet-isolated --runtime-version 8.0 \
      --instance-memory 2048 --app-insights $AI --https-only true
-   az functionapp config appsettings set -n func-<customer>-api-prod -g $RG \
-     --settings WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=0
    az functionapp scale config always-ready set -g $RG -n func-<customer>-api-prod --settings http=1
+   az functionapp scale config set -g $RG -n func-<customer>-api-prod --trigger-type http --trigger-settings perInstanceConcurrency=100
    ```
 
-   The placeholder setting matters: without it a green .NET isolated deploy on Flex can list
-   only *WarmUp* and serve nothing. Repeat for the MCP host; for the worker leave always-ready
-   off.
+   The concurrency line matters: a 2 GB instance takes 16 requests at once by default and
+   starts a cold instance for the seventeenth, and a portal route load fetches several things
+   at once. Repeat both for the MCP host; for the worker leave always-ready off. After every
+   deploy, sync the triggers and wait for the function list, because the deploy action does not
+   and a green .NET isolated deploy on Flex can list only *WarmUp* until something does; the
+   step in `.github/workflows/jpms-api.yml` is the model.
 6. **Static Web App, Standard**, with the API app linked as its backend *before* the first
    deploy, so managed functions are never published:
 
@@ -122,8 +124,9 @@ Flex has no deployment slots. Its rolling site update replaces instances in batc
 needs at least two always-ready instances to mean anything. Decide this per customer by how
 many people notice a ten-second restart: for a portal with a handful of daily users one
 always-ready instance and releases outside working hours is enough; for one used all day, two
-instances and the RollingUpdate site strategy (ARM only while it is in preview; see Step 6 of
-`infra/hosting-upgrade/README.md` for the PATCH and the region caveat).
+instances and the RollingUpdate site strategy (`az functionapp update-strategy config set
+--type RollingUpdate`, CLI 2.87 or later; see Step 6 of `infra/hosting-upgrade/README.md` for
+the region caveat).
 
 ## 6. What to verify before handing over
 
@@ -143,7 +146,7 @@ instances and the RollingUpdate site strategy (ARM only while it is in preview; 
 
 | Line | About |
 |---|---|
-| Flex Consumption API, one always-ready 2 GB instance | £16 a month, plus execution |
+| Flex Consumption API, one always-ready 2 GB instance | £16 a month idle, about £20 with a working day's traffic |
 | Flex Consumption MCP host, one always-ready instance | £16 a month |
 | Worker, Flex with no always-ready or Consumption | a few pounds |
 | SQL serverless GP 0.5 to 4 vCore, auto-pause off | the largest line; read the current Jewel invoice for the real figure |
