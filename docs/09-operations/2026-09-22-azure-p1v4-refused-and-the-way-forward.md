@@ -96,8 +96,8 @@ interruption), never the hardware. That shape is written up in `hosting-a-new-po
 - Cost at list (USD list, GBP approx.): always-ready baseline $0.000004/GB-s → 2 GB ≈
   £16/month per instance, plus execution time ($0.000016/GB-s while handling requests; a few
   pounds at 12 users). Bill after the move ≈ £225–235/month: the ask to the MD falls from +£90
-  to about +£35–45/month including Step 5's backups and GRS. **Corrected 27 Sep:** the September bill is £280 before the move, not the ~£190 this
-  implied; the delta holds, the total does not. The corrected table and the £350 budget are in
+  to about +£35–45/month including Step 5's backups and GRS. **Corrected 27 Sep:** August's bill was £217 before VAT, £210 of it the database; the
+  figure after the move is about £250, and about £270 with the second instance. The corrected table and the £350 budget are in
   `infra/hosting-upgrade/README.md`, *What it will cost*.
 - Rough edges, all known: `functions-action` with Flex + .NET has needed `sku: flexconsumption`,
   `remote-build: false`, `WEBSITE_USE_PLACEHOLDER_DOTNETISOLATED=0` and RBAC sign-in
