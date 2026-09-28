@@ -52,9 +52,9 @@ public sealed class GetMyLabourDayHandler : IQueryHandler<GetMyLabourDay, MyLabo
             return new MyLabourDay("", "", today, Array.Empty<MyLabourProject>(), Array.Empty<MyRejectedTimesheet>(), Array.Empty<MyRecentTimesheet>());
 
         var cards = await projects.ForAsync(worker, email, today, cancellationToken);
-        var rejected = await OwnTimesheetsAsync(worker, sheet => sheet.Status == (int)TimesheetStatus.Rejected, cancellationToken);
+        var rejected = await OwnTimesheets(worker, sheet => sheet.Status == (int)TimesheetStatus.Rejected).ToListAsync(cancellationToken);
         var recentSince = today.AddDays(-RecentDays);
-        var recent = await OwnTimesheetsAsync(worker, sheet => sheet.WorkedOn >= recentSince, cancellationToken);
+        var recent = await OwnTimesheets(worker, sheet => sheet.WorkedOn >= recentSince).ToListAsync(cancellationToken);
         return new MyLabourDay(
             worker.WorkerId, worker.Name, today, cards,
             rejected.Select(row => new MyRejectedTimesheet(
@@ -63,15 +63,14 @@ public sealed class GetMyLabourDayHandler : IQueryHandler<GetMyLabourDay, MyLabo
                 row.TimesheetId, row.ProjectId, row.ProjectName, row.WorkedOn, row.Hours, row.CostCode, (TimesheetStatus)row.Status)).ToList());
     }
 
-    private Task<List<OwnTimesheet>> OwnTimesheetsAsync(
-        WorkerEntity worker, Expression<Func<TimesheetEntity, bool>> within, CancellationToken cancellationToken) =>
+    // Sorted before the record is built: SQL Server cannot sort on a record made by its constructor.
+    internal IQueryable<OwnTimesheet> OwnTimesheets(WorkerEntity worker, Expression<Func<TimesheetEntity, bool>> within) =>
         context.Timesheets
             .Where(timesheet => timesheet.WorkerId == worker.WorkerId)
             .Where(within)
+            .OrderByDescending(timesheet => timesheet.WorkedOn)
             .Join(context.Projects, timesheet => timesheet.ProjectId, project => project.ProjectId,
                 (timesheet, project) => new OwnTimesheet(
                     timesheet.TimesheetId, timesheet.ProjectId, project.Name, timesheet.WorkedOn,
-                    timesheet.Hours, timesheet.CostCode, timesheet.Status, timesheet.RejectionReason))
-            .OrderByDescending(row => row.WorkedOn)
-            .ToListAsync(cancellationToken);
+                    timesheet.Hours, timesheet.CostCode, timesheet.Status, timesheet.RejectionReason));
 }

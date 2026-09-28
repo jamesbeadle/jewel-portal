@@ -22,7 +22,7 @@ public sealed class MyDayProjects
     public async Task<IReadOnlyList<MyLabourProject>> ForAsync(
         WorkerEntity worker, string email, DateTimeOffset today, CancellationToken cancellationToken)
     {
-        var assigned = await AssignedAsync(worker, cancellationToken);
+        var assigned = await AssignedTo(worker).ToListAsync(cancellationToken);
         var projectIds = assigned.Select(project => project.ProjectId).ToList();
         var attendanceToday = await context.SiteAttendances
             .Where(attendance => attendance.WorkerId == worker.WorkerId
@@ -43,11 +43,12 @@ public sealed class MyDayProjects
         }).ToList();
     }
 
-    private Task<List<AssignedProject>> AssignedAsync(WorkerEntity worker, CancellationToken cancellationToken) =>
+    // Sorted before the record is built: SQL Server cannot sort on a record made by its constructor.
+    internal IQueryable<AssignedProject> AssignedTo(WorkerEntity worker) =>
         context.ProjectWorkerAssignments
             .Where(assignment => assignment.WorkerId == worker.WorkerId && assignment.IsActive)
             .Join(context.Projects, assignment => assignment.ProjectId, project => project.ProjectId,
-                (assignment, project) => new AssignedProject(project.ProjectId, project.Name))
-            .OrderBy(project => project.ProjectName)
-            .ToListAsync(cancellationToken);
+                (assignment, project) => project)
+            .OrderBy(project => project.Name)
+            .Select(project => new AssignedProject(project.ProjectId, project.Name));
 }
