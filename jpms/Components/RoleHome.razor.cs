@@ -33,8 +33,10 @@ public partial class RoleHome
     // screen someone looks at every morning.
 
     // Site-floor roles do their day (sign in, hours, rejected timesheets) straight from the
-    // dashboard — MyDayWorkspace renders nothing for accounts without a worker record.
+    // dashboard; on a home for the day it says why when there is nothing to log yet.
     private bool ShowMyDay => Role is Role.SiteOperative or Role.Foreman or Role.SiteManager;
+
+    private bool IsHomeForTheDay => Role is Role.SiteOperative or Role.Foreman;
 
     // Mirrors the API's TodoRoles.AssignableAsTodoAssignee: the internal office/management roles a
     // to-do can be assigned to. Everyone else has no list to show.
@@ -266,7 +268,7 @@ public partial class RoleHome
         Role.Accounts => "The accounts work waiting on you.",
         Role.Architect => "Your projects' RFIs and variation orders.",
         Role.Client => "Where your project has got to.",
-        Role.Foreman or Role.SiteOperative => "Sign in, log your hours, flag anything wrong.",
+        _ when IsHomeForTheDay => "Sign in, log your hours, flag anything wrong.",
         _ => "Everything assigned to you, in one place."
     };
 
@@ -296,8 +298,13 @@ public partial class RoleHome
             RefreshInboxTotalAsync());
     }
 
+    // The project list endpoint's own gate: a read it would refuse (a site operative's) is never
+    // made, because a refused read puts a permission error across the top of the home.
+    private bool CanListProjects => JpmsRoleSets.DeliveryTeamAndParties.Includes(Role);
+
     private async Task RefreshProjectsAsync()
     {
+        if (!CanListProjects) return;
         try { await Projects.RefreshAsync(CancellationToken.None); }
         catch { /* each panel renders its own empty state */ }
     }

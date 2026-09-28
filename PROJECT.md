@@ -1059,7 +1059,10 @@ so the first CI build is the compile check, and this tool is what stands in for 
   Operative My Day + Policies. A new row names its set from `NavigationRoles` (add one, mirroring
   the page's gate, when none fits) — never a bare role list, never `DirectorRoles` by default.
   `RoleHome` picks its panels by the same reads (a panel whose read the API would refuse for the
-  role is not shown — the architect's home carries no cross-project RFI panel for that reason).
+  role is not shown — the architect's home carries no cross-project RFI panel for that reason),
+  and makes no read the API would refuse: it asks for the project list only for a role inside
+  that endpoint's gate (`JpmsRoleSets.DeliveryTeamAndParties`), so a site operative's home never
+  opens on a "You don't have permission" toast (JPMS-CE7B87, 2026-09-28).
 - **External logins.** There is ONE app: a view is the same page for every role, tailored to it,
   and what is protected is protected by the API — never a sub-site per role (Nigel, 2026-09-24;
   the client portal's `/client` pages were deleted as dead code the same day). The project's
@@ -1238,8 +1241,14 @@ finds drift.
 ## The worker's day (My Day)
 
 The site worker's whole portal is the **My day** workspace on the Dashboard (`jpms/Features/Labour/MyDay/`,
-`RoleHome` shows it for Site Operative, Foreman and Site Manager; nothing renders for an account with no
-linked, active worker record). The day is the finance director's model (2026-09-28), and the API's
+`RoleHome` shows it for Site Operative, Foreman and Site Manager). On a home for the day — the site
+operative's and the foreman's, whose brief is "Sign in, log your hours" (`RoleHome.IsHomeForTheDay`) — the
+section is always there: the jewel while the day loads, the failure and its Refresh when it cannot, and for
+a login with no linked, active worker record a notice naming the login's email and who fixes it (Nigel,
+2026-09-28: "keep this entire process tailored for the goal of completing his daily site log"). On the
+site manager's home nothing renders until a linked day arrives, so an office dashboard stays clean. The
+link is the email and nothing else: a worker record carrying a personal address against a work login
+leaves the day unlinked. The day is the finance director's model (2026-09-28), and the API's
 `my/labour/*` commands are its only doors:
 
 - **Sign in** (`MySiteSignIn`, `SignedInAt` optional) — the health-and-safety record. The time is the phone's

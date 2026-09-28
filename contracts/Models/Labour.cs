@@ -119,14 +119,18 @@ public sealed record SiteSheetCostCode(string Code, string Name);
 public sealed record SiteSignOutEntry(string CostCode, decimal Hours);
 
 /// <summary>Today's state for the signed-in worker across their assigned projects, plus their
-/// recent timesheets so they can see what they submitted and whether it was approved.</summary>
+/// recent timesheets so they can see what they submitted and whether it was approved. A login
+/// with no linked, active Worker record is answered with an unlinked day: no worker, nothing to log.</summary>
 public sealed record MyLabourDay(
     string WorkerId,
     string WorkerName,
     DateTimeOffset WorkDate,
     IReadOnlyList<MyLabourProject> Projects,
     IReadOnlyList<MyRejectedTimesheet> Rejected,
-    IReadOnlyList<MyRecentTimesheet> Recent);
+    IReadOnlyList<MyRecentTimesheet> Recent)
+{
+    public bool IsLinked => !string.IsNullOrEmpty(WorkerId);
+}
 
 /// <summary>One of the caller's recent timesheets (last two weeks) — hours and status only.</summary>
 public sealed record MyRecentTimesheet(

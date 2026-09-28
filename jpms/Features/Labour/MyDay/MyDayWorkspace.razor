@@ -4,14 +4,16 @@
 
 @*
     The worker's own day on the Dashboard (docs/Labour-Time-Tracking-Scope.md §5): sign in on
-    arrival, log the day at sign-out or record a day off, fix anything sent back. Never shows £, and
-    renders nothing for an account with no linked worker record, so staff dashboards stay clean.
+    arrival, log the day at sign-out or record a day off, fix anything sent back. Never shows £.
+    Where the home is for the day (IsAlwaysShown — the site operative's and the foreman's) the
+    section is always there: the jewel while the day loads, the reason when it cannot be logged.
+    Anywhere else it renders nothing until a linked day arrives, so staff dashboards stay clean.
 *@
 
-@if (Labour.MyDay() is { WorkerId: not "" } day)
+@if (IsShown)
 {
     <div class="max-w-md">
-        <SectionHeader Title="My day" Subtitle="@DayLine(day)">
+        <SectionHeader Title="My day" Subtitle="@DayLine">
             <Actions>
                 <ToolbarButton Icon="refresh" Label="Refresh" Busy="@isRefreshing" OnClick="RefreshSafelyAsync" />
             </Actions>
@@ -20,22 +22,50 @@
         {
             <Notice Tone="Tone.Negative" Class="mb-3">@loadError</Notice>
         }
-        @if (HasNoProjects(day))
-        {
-            <p class="text-sm text-content-subtle italic">You're not on any project's worker list yet — ask your Project Manager.</p>
-        }
-        @foreach (var project in day.Projects)
-        {
-            <MyDayProjectCard @key="project.ProjectId" Project="project" TodaysHours="TodaysHoursFor(day, project)" />
-        }
-        <MyDayRecentDays Recent="day.Recent" WorkDate="day.WorkDate" />
-        <MyDayRejectedPanel Rejected="day.Rejected" />
+        <LoadGate IsLoading="@IsWaitingForTheDay" Label="Loading your day">
+            @if (Day is { IsLinked: true } day)
+            {
+                @if (HasNoProjects(day))
+                {
+                    <p class="text-sm text-content-subtle italic">You're not on any project's worker list yet — ask your Project Manager.</p>
+                }
+                @foreach (var project in day.Projects)
+                {
+                    <MyDayProjectCard @key="project.ProjectId" Project="project" TodaysHours="TodaysHoursFor(day, project)" />
+                }
+                <MyDayRecentDays Recent="day.Recent" WorkDate="day.WorkDate" />
+                <MyDayRejectedPanel Rejected="day.Rejected" />
+            }
+            @if (Day is { IsLinked: false })
+            {
+                <Notice Title="Your day log isn't set up yet">
+                    Your account isn't linked to a worker record, so there is no day for you to log yet.
+                    Ask your Project Manager to add @Email to your worker record on the Workers page,
+                    and to put you on your project's worker list.
+                </Notice>
+            }
+        </LoadGate>
     </div>
 }
 
 @code {
+    /// <summary>The signed-in email: the one a worker record must carry for the day to be this login's.</summary>
+    [Parameter, EditorRequired] public string Email { get; set; } = "";
+
+    /// <summary>True where the home is for the day. The section never renders nothing there: a login
+    /// not yet linked to a worker record, or a day that failed to load, is said in words.</summary>
+    [Parameter] public bool IsAlwaysShown { get; set; }
+
     private bool isRefreshing;
     private string? loadError;
+
+    private MyLabourDay? Day => Labour.MyDay();
+
+    private bool IsShown => IsAlwaysShown || Day is { IsLinked: true };
+
+    private bool IsWaitingForTheDay => Day is null && loadError is null;
+
+    private string? DayLine => Day is { IsLinked: true } day ? $"{day.WorkerName} · {day.WorkDate:dddd dd MMMM}" : null;
 
     protected override void OnInitialized()
     {
@@ -44,8 +74,6 @@
     }
 
     public void Dispose() => Labour.OnChange -= StateHasChanged;
-
-    private static string DayLine(MyLabourDay day) => $"{day.WorkerName} · {day.WorkDate:dddd dd MMMM}";
 
     private static bool HasNoProjects(MyLabourDay day) => day.Projects.Count == 0;
 
