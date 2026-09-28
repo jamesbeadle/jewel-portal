@@ -565,6 +565,34 @@ The project-process kit writes this file once and never touches it again, and `C
   endpoint needs an entry there — the permission check's rule "a scoped command is scoped on the
   connector too" fails when one is missing. Pinned by `AiActionScopesTests`.
 
+## An administrator sets a user's password by hand (contracts + api + jpms)
+
+- **Admin → Users → Set password** (2026-09-28, the portal's administrator: "allow the
+  administrator role to manually set passwords in the user list section"), for someone whose
+  invite or reset email never arrives or who has no inbox they can reach. `SetUserPassword` (POST
+  `directory/password`) is gated by `SetUserPasswordAuthorisation` = `JpmsRoleSets.Administrators`
+  — narrower than `AdminGate`: the Finance Director sends resets but does not set passwords,
+  because whoever sets one knows it. `SetUserPasswordDialog` (jpms/Features/Directory) opens from
+  every row but your own, and the server refuses your own too (`SetUserPasswordValidation`: your
+  own is changed through Forgot password, and setting it here would end the session you are in).
+  A revoked user is refused until restored; an address not in the directory is refused.
+- **One way a password changes hands: `PasswordSetter`** (api/Features/Auth). The set-password
+  link and the administrator both go through it, so the login ends in the same state: the hash
+  (`PasswordHasher`), Active, the failed attempts and lockout cleared, every live invite or reset
+  link for the address voided (`PasswordLinks.VoidEveryLiveLinkAsync`, shared with the reset
+  sender), every session and connected AI tool ended, and the cached caller dropped. Since this
+  change, completing a link voids the address's other live links as well as its own.
+- **`PasswordPolicy` lives in contracts/Auth**, so the API and the dialog read one statement of
+  the limits (12–128 characters, an uppercase letter, a lowercase letter, a number). The dialog
+  mirrors them (`minlength`/`maxlength`, the requirements as the hint, a confirmation field) and
+  the API decides.
+- **Audit and secrecy.** `AuditEventType.PasswordSetByAdministrator` (57) names whose password it
+  was (in the detail, which erasure rewrites, never in `RecordReference`, which it does not) and
+  who set it, never the password. The password is never emailed, echoed or shown again; the
+  administrator tells the person. **Deliberately not on the connector**: a password is typed on
+  the page, never into a chat, the same rule as a site credential (`SetUsefulInformationSecret`).
+  Pinned by `SetUserPasswordTests` and `SetPasswordLinkTests`.
+
 ## Data protection: the notice, the rights and the retention (contracts + api + jpms + worker)
 
 - **The privacy notice is `/privacy`** (2026-09-21, the data-protection task): a landing-layout
