@@ -1,0 +1,46 @@
+@inject NavigationManager Nav
+@implements IDisposable
+
+@*
+    The app's navigation in the two shapes the shell needs. From md up it is the sidebar: a fixed
+    column down the left, 256px expanded or a 64px rail collapsed (IsExpanded, the desktop toggle).
+    Below md it is a drawer: off the left edge until the header's menu button opens it (IsOpen),
+    then the same labelled nav — Home, the project picker, the folders — over a scrim. It goes
+    away on a pick, on its own X, on a press on the scrim and on the browser's Back, all through
+    OnClose; the slide itself is app.tailwind.css (.nav-drawer*).
+*@
+
+@if (IsOpen)
+{
+    <div class="nav-drawer-scrim md:hidden" @onclick="CloseAsync" aria-hidden="true"></div>
+}
+<aside class="@AsideClass">
+    <SideNav IsExpanded="IsExpanded" OnToggleExpand="OnToggleExpand" OnNavigate="CloseAsync" OnClose="CloseAsync" />
+</aside>
+
+@code {
+    /// <summary>The drawer is open — meaningful below md only; from md up the sidebar is always shown.</summary>
+    [Parameter] public bool IsOpen { get; set; }
+    /// <summary>The desktop sidebar's width: the labelled column, or the icon rail.</summary>
+    [Parameter] public bool IsExpanded { get; set; } = true;
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnToggleExpand { get; set; }
+
+    private string AsideClass
+    {
+        get
+        {
+            var slide = IsOpen ? "nav-drawer-open" : "nav-drawer-closed";
+            var desktopWidth = IsExpanded ? "md:w-64" : "md:w-16";
+            return $"nav-drawer {slide} fixed top-0 bottom-0 left-0 z-40 w-72 max-w-[85vw] md:max-w-none {desktopWidth} border-r border-line pb-[env(safe-area-inset-bottom)]";
+        }
+    }
+
+    protected override void OnInitialized() => Nav.LocationChanged += HandleLocationChanged;
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs args) => _ = CloseAsync();
+
+    private Task CloseAsync() => IsOpen ? OnClose.InvokeAsync() : Task.CompletedTask;
+
+    public void Dispose() => Nav.LocationChanged -= HandleLocationChanged;
+}

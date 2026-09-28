@@ -140,7 +140,7 @@
     [data-modal-footer] .btn-primary,
     [data-modal-footer] .btn-secondary,
     [data-modal-footer] .btn-neutral {
-        @apply h-[52px] px-8 py-4 text-base;
+        @apply h-[52px] px-5 py-4 text-base md:px-8;
     }
 
     [data-modal-footer] .btn-secondary,
@@ -167,6 +167,13 @@
 
     .chip-active {
         @apply border-accent bg-accent/10 text-accent hover:text-accent hover:border-accent;
+    }
+
+    /* The Large chip — a choice made by thumb on a phone (My day's Half day / Full day): 44px tall
+       on 16px type, which is to `chip` what `btn-lg` is to `btn`. FilterChips renders it (Large);
+       a view never composes it by hand. */
+    .chip-lg {
+        @apply h-11 px-4 text-base;
     }
 
     /* The count that rides on a tab or chip. */
@@ -316,6 +323,54 @@
 
     @media (prefers-reduced-motion: reduce) {
         .chat-panel, .chat-push, .modal-overlay-chat {
+            transition: none;
+        }
+    }
+
+    /* The navigation drawer (Layout/NavigationDrawer.razor). Below md the sidebar is a drawer: off
+       the left edge until the header's menu button opens it, then the whole labelled nav — Home,
+       the project picker, the folders — slides in over a scrim and leaves on a pick, its X, a
+       press on the scrim or Back. From md up the same element is the fixed sidebar and never
+       moves, so every rule here is undone at that width. The slide lives here rather than as a
+       translate utility for the reason the chat panel's does (the colour lint's substring), and
+       the OPEN state is `transform: none`, not translateX(0): a transformed ancestor becomes the
+       containing block of every position:fixed descendant, and the project picker's panel is one
+       — drawn against the viewport so no scroll box clips it, which a transform would undo.
+       The closed drawer is also hidden from the tab order and the accessibility tree. */
+    .nav-drawer {
+        transition: transform 200ms ease-out, visibility 0s linear 200ms;
+    }
+
+    .nav-drawer-closed {
+        transform: translateX(-100%);
+        visibility: hidden;
+    }
+
+    .nav-drawer-open {
+        transform: none;
+        visibility: visible;
+        transition-delay: 0s;
+    }
+
+    /* The scrim is the one press that closes the drawer from outside, and it deliberately
+       swallows that press: a tap beside a navigation drawer means "put it away", never "and press
+       what was underneath". (A dropdown's backdrop is the opposite case — DropdownMenu.) It is a
+       recipe here, like .modal-overlay, because the shell's lint reads `fixed inset-0` in markup as
+       a hand-rolled dropdown backdrop. */
+    .nav-drawer-scrim {
+        @apply fixed inset-0 z-40 bg-canvas/70;
+    }
+
+    @media (min-width: 768px) {
+        .nav-drawer, .nav-drawer-closed, .nav-drawer-open {
+            transform: none;
+            visibility: visible;
+            transition: none;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .nav-drawer {
             transition: none;
         }
     }

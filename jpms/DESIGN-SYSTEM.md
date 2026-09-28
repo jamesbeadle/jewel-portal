@@ -56,7 +56,9 @@ For the common repeated idioms, use the class instead of re-typing utilities:
 | `btn-ghost` | Quiet text-only dismissals |
 | `btn-icon` | A Toolbar's square icon button (32px, `line` border, no fill, disabled styling built in) |
 | `data-table` | The Figma table: header on `canvas` in white SemiBold, body on `surface` in `content-muted`, `line-strong` cell borders, 40/48px rows, 24/16 cell padding |
-| `modal-overlay` / `modal-panel` | Full-screen overlay + the dialog: 600 wide, on `canvas`, `rounded-lg`, `line-strong` border, the design's one shadow |
+| `modal-overlay` / `modal-panel` | Full-screen overlay + the dialog: 600 wide, on `canvas`, `rounded-lg`, `line-strong` border, the design's one shadow. Below `md` the dialog's padding comes in to 20px and its footer wraps |
+| `chip-lg` | The Large chip (44px, 16px type) — what `btn-lg` is to `btn` — for a choice made by thumb on a phone. `FilterChips Large` renders it |
+| `nav-drawer` / `nav-drawer-open` / `nav-drawer-closed` / `nav-drawer-scrim` | The sidebar as a phone drawer (`NavigationDrawer`): the slide and the scrim behind it below `md`; from `md` up the same element is the fixed sidebar and none of these do anything |
 
 **Buttons come in two sizes and two looks, and that is all.** Small (`btn-*`, 32px, 14/Med) for
 every in-view action; Large (`btn-lg`, 52px, 16/Med) for dialog and form submits — a `Modal`'s
@@ -113,6 +115,7 @@ behind each: `docs/ui/stage-1-components.md`.
 | `JewelIcon` / `NavIcon` / `ActionIcon` | The brand mark / rail icons / action glyphs |
 | `LoadGate` | THE loading mark: `IsLoading` covers a region with nothing to show yet, `Overlay="true"` veils content being refreshed. A gate silences every gate nested inside it, so a screen shows one jewel (`CLAUDE.md` → *Loading states*). The whole-page mark is the boot screen in `index.html`; `JewelSpinner` is the gate's own part and is never written in a view |
 | `DropdownMenu` | The row/record actions menu |
+| `NavigationDrawer` (Layout) | The sidebar in both shapes: the fixed column from `md` up, and below `md` a drawer over a scrim that the header's menu button opens and a pick, its X, the scrim or Back closes |
 | `DateText` / `DateTimeText` / `Money` / `WholeMoney` | Not components — the global helpers every date and figure renders through |
 
 ## 5. Keeping future work consistent

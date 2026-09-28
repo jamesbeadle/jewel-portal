@@ -1060,6 +1060,21 @@ so the first CI build is the compile check, and this tool is what stands in for 
   the page's gate, when none fits) — never a bare role list, never `DirectorRoles` by default.
   `RoleHome` picks its panels by the same reads (a panel whose read the API would refuse for the
   role is not shown — the architect's home carries no cross-project RFI panel for that reason).
+- **Below `md` (768px) the sidebar is a drawer, and the page runs edge to edge** (2026-09-28,
+  Nigel: the site operative and the site manager use the portal on a phone; Jeremy could not
+  find a project through the unlabelled icon rail). `Layout/NavigationDrawer.razor` renders the
+  one `SideNav` in both shapes: from `md` up the fixed column (expanded or the rail, the desktop
+  toggle), below `md` the whole labelled nav — Home, the project picker, the folders — sliding in
+  over a scrim from the header's menu button, and leaving on a pick, its own X, a press on the
+  scrim or the browser's Back. Opening it also expands the sidebar, so the drawer is always the
+  labelled nav. The slide and the scrim are recipes in `app.tailwind.css` (`.nav-drawer*`), the
+  OPEN state is `transform: none` so the picker's fixed panel keeps the viewport as its containing
+  block, and the shell's padding is `md:pl-*` only. A phone never shows the rail, so nothing in
+  `SideNav` is `hidden md:…` any more: a row that should not show on a phone is a decision to
+  write here, not a breakpoint class. The site floor's buttons on Home (`MyDay*`) are the
+  design's Large size (`btn-lg`, 52px): a `.btn` is 32px tall whatever padding a view adds to it,
+  which is what the earlier `py-3.5` had silently produced. The Half day / Full day choice is
+  `FilterChips Large` (`chip-lg`, 44px).
 - **External logins.** There is ONE app: a view is the same page for every role, tailored to it,
   and what is protected is protected by the API — never a sub-site per role (Nigel, 2026-09-24;
   the client portal's `/client` pages were deleted as dead code the same day). The project's

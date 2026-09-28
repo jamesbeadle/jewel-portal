@@ -24,9 +24,8 @@
 
     @if (CanSeeNavigation)
     {
-        <aside class="@SideNavClass">
-            <SideNav IsExpanded="isSideNavExpanded" OnToggleExpand="ToggleSideNav" />
-        </aside>
+        <NavigationDrawer IsOpen="isPhoneNavOpen" IsExpanded="isSideNavExpanded"
+                          OnClose="ClosePhoneNav" OnToggleExpand="ToggleSideNav" />
     }
 
     <div class="@ShellClass">
@@ -34,7 +33,11 @@
             <div class="h-full px-4 flex items-center justify-between gap-3">
                 @if (CanSeeNavigation)
                 {
-                    <PageHeading />
+                    <div class="min-w-0 flex items-center gap-3">
+                        @* Below md the sidebar is a drawer, and this is the button that opens it. *@
+                        <ToolbarButton Icon="menu" Label="Open navigation" OnClick="OpenPhoneNav" Class="w-10 h-10 md:hidden" />
+                        <PageHeading />
+                    </div>
                 }
                 else
                 {
@@ -57,7 +60,7 @@
             @Body
         </main>
 
-        <footer class="border-t border-line">
+        <footer class="border-t border-line pb-[env(safe-area-inset-bottom)]">
             <div class="px-4 py-3 text-xs text-content-subtle flex items-center justify-between">
                 <span>Jewel Bespoke Build</span>
                 @* The version the API announces ("v473"), adopted from the first response this
@@ -72,25 +75,19 @@
 
 @code {
     private bool isSideNavExpanded = true;
+    private bool isPhoneNavOpen;
 
     private bool CanSeeNavigation => Auth.IsSignedIn && Session.IsApproved;
 
-    private string SideNavClass
-    {
-        get
-        {
-            var width = isSideNavExpanded ? "md:w-64" : "md:w-16";
-            return $"fixed top-0 bottom-0 left-0 z-40 w-16 {width} border-r border-line";
-        }
-    }
-
+    // Below md the page runs edge to edge and the nav is a drawer over it; from md up the shell
+    // leaves room for the sidebar at whichever width it is.
     private string ShellClass
     {
         get
         {
             var column = "min-h-dvh flex flex-col";
             if (!CanSeeNavigation) return column;
-            var padding = isSideNavExpanded ? "pl-16 md:pl-64" : "pl-16 md:pl-16";
+            var padding = isSideNavExpanded ? "md:pl-64" : "md:pl-16";
             return $"{column} {padding}";
         }
     }
@@ -107,6 +104,16 @@
     }
 
     private void ToggleSideNav() => isSideNavExpanded = !isSideNavExpanded;
+
+    // The drawer is always the labelled nav: opening it on a phone also expands the sidebar, so a
+    // desktop that collapsed it to the rail and then shrank never shows a drawer of bare icons.
+    private void OpenPhoneNav()
+    {
+        isSideNavExpanded = true;
+        isPhoneNavOpen = true;
+    }
+
+    private void ClosePhoneNav() => isPhoneNavOpen = false;
 
     private void Repaint() => InvokeAsync(StateHasChanged);
 

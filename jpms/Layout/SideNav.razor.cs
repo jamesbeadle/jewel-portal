@@ -7,6 +7,8 @@ public partial class SideNav
     [Parameter] public EventCallback OnNavigate { get; set; }
     [Parameter] public bool IsExpanded { get; set; } = true;
     [Parameter] public EventCallback OnToggleExpand { get; set; }
+    /// <summary>Below md the nav is a drawer (NavigationDrawer); its X asks the owner to put it away.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
 
     private DropdownMenu? projectPicker;
     private bool projectsRequested;
@@ -17,10 +19,12 @@ public partial class SideNav
     // toggled follow the route instead — see IsFolderOpen.
     private static readonly Dictionary<SidebarFolder, bool> folderToggles = new();
 
-    private string LabelClass => IsExpanded ? "hidden md:inline truncate" : "hidden";
+    // Expanded is the labelled nav at every width — the desktop column and the phone drawer alike;
+    // collapsed is the desktop's icon rail, which a phone never shows.
+    private string LabelClass => IsExpanded ? "truncate" : "hidden";
 
     private string HeaderLayout => IsExpanded
-        ? "h-14 px-2 flex items-center justify-center md:justify-between"
+        ? "h-14 px-2 flex items-center justify-between"
         : "px-2 py-3 flex flex-col items-center gap-2";
 
     private string CurrentPath => new Uri(Nav.Uri).AbsolutePath;
@@ -186,21 +190,17 @@ public partial class SideNav
 
     private string LinkClass(bool isActive)
     {
-        var layout = IsExpanded ? "md:justify-start" : "";
-        var baseClass = $"flex items-center gap-3 justify-center {layout} px-3 py-2 rounded text-sm transition";
+        var baseClass = $"flex items-center gap-3 {RowAlignment} px-3 py-2 rounded text-sm transition";
         if (isActive) return $"{baseClass} text-content font-semibold";
         return $"{baseClass} text-content-subtle font-medium hover:text-content hover:bg-surface-raised";
     }
 
     // Muted twin of LinkClass for unresolvable top-level rows (flat rendering only).
-    private string DisabledLinkClass
-    {
-        get
-        {
-            var layout = IsExpanded ? "md:justify-start" : "";
-            return $"flex items-center gap-3 justify-center {layout} px-3 py-2 rounded text-sm text-content-subtle font-medium opacity-50 cursor-default";
-        }
-    }
+    private string DisabledLinkClass =>
+        $"flex items-center gap-3 {RowAlignment} px-3 py-2 rounded text-sm text-content-subtle font-medium opacity-50 cursor-default";
+
+    // A labelled row reads left to right; a rail row centres its one icon.
+    private string RowAlignment => IsExpanded ? "justify-start" : "justify-center";
 
     // Folder rows indent under their header; no icons — the header carries the group.
     private string FolderItemClass(bool isActive)

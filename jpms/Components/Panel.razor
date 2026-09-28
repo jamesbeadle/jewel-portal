@@ -8,7 +8,8 @@
 <section class="panel @Class overflow-hidden">
     @if (Title is not null || HeaderActions is not null)
     {
-        <header class="panel-header flex items-center justify-between gap-3">
+        @* Wraps so a title and its header actions stack on a phone instead of squashing each other. *@
+        <header class="panel-header flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
             <h2 class="text-lg font-semibold text-content">@Title</h2>
             @if (HeaderActions is not null)
             {
