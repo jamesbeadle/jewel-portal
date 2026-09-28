@@ -188,16 +188,18 @@ public partial class SideNav
         StateHasChanged();
     }
 
+    // Every row is 44px tall on a phone — a thumb's target in the drawer — and the desktop's own
+    // height from md up.
     private string LinkClass(bool isActive)
     {
-        var baseClass = $"flex items-center gap-3 {RowAlignment} px-3 py-2 rounded text-sm transition";
+        var baseClass = $"flex items-center gap-3 {RowAlignment} px-3 py-3.5 md:py-2 rounded text-sm transition";
         if (isActive) return $"{baseClass} text-content font-semibold";
         return $"{baseClass} text-content-subtle font-medium hover:text-content hover:bg-surface-raised";
     }
 
     // Muted twin of LinkClass for unresolvable top-level rows (flat rendering only).
     private string DisabledLinkClass =>
-        $"flex items-center gap-3 {RowAlignment} px-3 py-2 rounded text-sm text-content-subtle font-medium opacity-50 cursor-default";
+        $"flex items-center gap-3 {RowAlignment} px-3 py-3.5 md:py-2 rounded text-sm text-content-subtle font-medium opacity-50 cursor-default";
 
     // A labelled row reads left to right; a rail row centres its one icon.
     private string RowAlignment => IsExpanded ? "justify-start" : "justify-center";
@@ -205,13 +207,13 @@ public partial class SideNav
     // Folder rows indent under their header; no icons — the header carries the group.
     private string FolderItemClass(bool isActive)
     {
-        var baseClass = "block pl-7 pr-3 py-1.5 rounded text-sm transition truncate";
+        var baseClass = "block pl-7 pr-3 py-3.5 md:py-1.5 rounded text-sm transition truncate";
         if (isActive) return $"{baseClass} text-content font-semibold";
         return $"{baseClass} text-content-subtle hover:text-content hover:bg-surface-raised";
     }
 
     private string DisabledRowClass =>
-        "block pl-7 pr-3 py-1.5 rounded text-sm text-content-subtle opacity-50 cursor-default truncate";
+        "block pl-7 pr-3 py-3.5 md:py-1.5 rounded text-sm text-content-subtle opacity-50 cursor-default truncate";
 
     private Task HandleNavigate() => OnNavigate.InvokeAsync();
 

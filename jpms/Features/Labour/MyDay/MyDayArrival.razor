@@ -10,7 +10,7 @@
         <button type="button" class="btn-primary btn-lg w-full" disabled="@isBusy" @onclick="SignInAsync">
             @(isBusy ? "Signing in…" : "Sign in")
         </button>
-        <button type="button" class="btn-ghost btn-lg w-full" disabled="@isBusy" @onclick="() => isRecordingDayOff = true">Not on site today</button>
+        <button type="button" class="btn-ghost w-full" disabled="@isBusy" @onclick="() => isRecordingDayOff = true">Not on site today</button>
         @if (error is not null)
         {
             <p class="text-sm text-negative" role="alert">@error</p>

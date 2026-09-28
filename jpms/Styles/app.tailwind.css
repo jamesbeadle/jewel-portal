@@ -93,9 +93,11 @@
     }
 
     /* Buttons come in TWO sizes only. Small (this, 32px / 14px) is every in-view action; Large
-       (`btn-lg`, 52px / 16px) is a dialog or form submit. 4px radius, 4px icon gap. */
+       (`btn-lg`, 52px / 16px) is a dialog or form submit. 4px radius, 4px icon gap. Below md the
+       Small size stands 44px tall — a thumb's target on a phone — and is otherwise the same
+       button; a view never sizes a button for a phone itself. Large is 52px at every width. */
     .btn {
-        @apply inline-flex items-center justify-center gap-1 h-8 rounded px-4 py-2 text-sm font-medium transition;
+        @apply inline-flex items-center justify-center gap-1 h-11 md:h-8 rounded px-4 py-2 text-sm font-medium transition;
     }
 
     /* Green means "do it", once: one solid accent control per view or per dialog footer.
@@ -162,7 +164,7 @@
     }
 
     .chip {
-        @apply inline-flex items-center gap-1.5 h-8 px-3 rounded border border-line bg-transparent text-sm font-medium text-content-muted hover:text-content hover:border-line-strong transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed;
+        @apply inline-flex items-center gap-1.5 h-11 md:h-8 px-3 rounded border border-line bg-transparent text-sm font-medium text-content-muted hover:text-content hover:border-line-strong transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed;
     }
 
     .chip-active {
@@ -181,11 +183,12 @@
         @apply ml-1 rounded bg-surface-raised px-1.5 py-0.5 text-xs text-content-subtle;
     }
 
-    /* A Toolbar's icon button: the Minimal button at a fixed 32px square, glyph in currentColor.
-       Disabled styling is built in because toolbars are exactly where "can't right now" is
-       common — an export with no rows, a refresh already in flight. */
+    /* A Toolbar's icon button: the Minimal button at a fixed 32px square (44px below md, like
+       every Small button), glyph in currentColor. Disabled styling is built in because toolbars
+       are exactly where "can't right now" is common — an export with no rows, a refresh already
+       in flight. */
     .btn-icon {
-        @apply inline-flex items-center justify-center w-8 h-8 rounded border border-line bg-transparent text-content transition hover:border-line-strong hover:bg-surface-raised disabled:text-content-faint disabled:cursor-not-allowed disabled:hover:border-line disabled:hover:bg-transparent shrink-0;
+        @apply inline-flex items-center justify-center w-11 h-11 md:w-8 md:h-8 rounded border border-line bg-transparent text-content transition hover:border-line-strong hover:bg-surface-raised disabled:text-content-faint disabled:cursor-not-allowed disabled:hover:border-line disabled:hover:bg-transparent shrink-0;
     }
 
     /* The Figma `Table Wrapper`: header row on the CANVAS colour in white SemiBold, body rows on
@@ -339,6 +342,7 @@
        The closed drawer is also hidden from the tab order and the accessibility tree. */
     .nav-drawer {
         transition: transform 200ms ease-out, visibility 0s linear 200ms;
+        padding-bottom: env(safe-area-inset-bottom);
     }
 
     .nav-drawer-closed {

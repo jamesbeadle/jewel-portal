@@ -14,7 +14,7 @@
 {
     <div class="nav-drawer-scrim md:hidden" @onclick="CloseAsync" aria-hidden="true"></div>
 }
-<aside class="@AsideClass" tabindex="-1" @ref="drawer">
+<aside class="@AsideClass" tabindex="-1" aria-label="Navigation" @ref="drawer">
     <SideNav IsExpanded="IsExpanded" OnToggleExpand="OnToggleExpand" OnNavigate="CloseAsync" OnClose="CloseAsync" />
 </aside>
 
@@ -30,14 +30,14 @@
     private bool wasOpen;
 
     // The aside carries the surface colour itself so the safe-area strip under the nav (an
-    // iPhone's home bar) is drawn, not a gap the page shows through.
+    // iPhone's home bar, padded by .nav-drawer) is drawn, not a gap the page shows through.
     private string AsideClass
     {
         get
         {
             var slide = IsOpen ? "nav-drawer-open" : "nav-drawer-closed";
-            var desktopWidth = IsExpanded ? "md:w-64" : "md:w-16";
-            return $"nav-drawer {slide} fixed top-0 bottom-0 left-0 z-40 w-72 max-w-[85vw] md:max-w-none {desktopWidth} border-r border-line bg-surface outline-none pb-[env(safe-area-inset-bottom)]";
+            var width = IsExpanded ? "w-72 max-w-[85vw] md:max-w-none md:w-64" : "w-72 max-w-[85vw] md:max-w-none md:w-16";
+            return $"nav-drawer {slide} {width} fixed top-0 bottom-0 left-0 z-40 border-r border-line bg-surface outline-none";
         }
     }
 

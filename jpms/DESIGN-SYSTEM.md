@@ -62,7 +62,9 @@ For the common repeated idioms, use the class instead of re-typing utilities:
 
 **Buttons come in two sizes and two looks, and that is all.** Small (`btn-*`, 32px, 14/Med) for
 every in-view action; Large (`btn-lg`, 52px, 16/Med) for dialog and form submits — a `Modal`'s
-footer upsizes its buttons itself (`[data-modal-footer]`). **Green means "do it", once**: one
+footer upsizes its buttons itself (`[data-modal-footer]`). Below `md` the Small size, the icon
+button and the chip stand 44px tall — a thumb's target — by the recipe, never by a view: a view
+never writes `h-11 md:h-8` on a button. **Green means "do it", once**: one
 `btn-primary` per view or per dialog footer; everything else is `btn-secondary` — grey-outlined,
 white text, no green. Action vs dismiss is carried by position and label (green on the right,
 dismiss to its left), exactly as in the design. Destructive acts add `text-negative` to a
@@ -135,8 +137,10 @@ the shell. `max-w-3xl` after a note's type is a hand-rolled `TableNote` with its
 the empty column down the right of the CVR pages, 2026-09-21; a note is as wide as the table it
 explains. The prospect-facing pages (`Imagine`, `Privacy`) keep their centred reading column, and a
 card or a deliberately narrow table keeps its width — those are not notes. `fixed inset-0` catches a hand-rolled dropdown backdrop — the panel-from-a-toggle is
-always `DropdownMenu`, which dismisses itself without swallowing the press; `Modal` owns the one
-legitimate full-screen scrim.)
+always `DropdownMenu`, which dismisses itself without swallowing the press; the two legitimate
+full-screen scrims are `Modal`'s and the phone navigation drawer's (`.nav-drawer-scrim`, a recipe
+like `.modal-overlay`), and the drawer's is meant to swallow the press: a tap beside a navigation
+drawer puts it away and does nothing else.)
 
 Still to read from the Figma (`docs/ui/open-book-design-rules.md` §8): row hover/select fill,
 the row-action dropdown, tabs vs pills, toggle switch, date picker, login page, button

@@ -1069,13 +1069,18 @@ so the first CI build is the compile check, and this tool is what stands in for 
   one `SideNav` in both shapes: from `md` up the fixed column (expanded or the rail, the desktop
   toggle), below `md` the whole labelled nav — Home, the project picker, the folders — sliding in
   over a scrim from the header's menu button, and leaving on a pick, its own X, a press on the
-  scrim or the browser's Back. Opening it also expands the sidebar, so the drawer is always the
-  labelled nav. The slide and the scrim are recipes in `app.tailwind.css` (`.nav-drawer*`), the
-  OPEN state is `transform: none` so the picker's fixed panel keeps the viewport as its containing
-  block, and the shell's padding is `md:pl-*` only. A phone never shows the rail, so no ROW in
-  `SideNav` carries a breakpoint class any more — the only two left are the header's buttons,
-  the desktop collapse toggle (`hidden md:inline-flex`) and the drawer's X (`md:hidden`); a row
-  that should not show on a phone is a decision to write here, not a breakpoint class. The site floor's buttons on Home (`MyDay*`) are the
+  scrim or any change of location (the browser's Back included — it does not hold a history entry
+  of its own). Opening it also expands the sidebar, so the drawer is always the labelled nav, and
+  moves focus into it; Escape is not wired (a phone has no keyboard) and the page behind still
+  scrolls. The slide and the scrim are recipes in `app.tailwind.css` (`.nav-drawer*`), the OPEN
+  state is `transform: none` so the picker's fixed panel keeps the viewport as its containing
+  block, and the shell's padding is `md:pl-*` only. A phone never shows the rail, so no row in
+  `SideNav` is hidden by a breakpoint any more — the only `hidden md:…` / `md:hidden` left are the
+  header's two buttons, the desktop collapse toggle and the drawer's X; a row that should not
+  show on a phone is a decision to write here, not a breakpoint class. Below `md` every nav row is
+  44px (`py-3.5 md:py-2`) and so is every Small button, icon button and chip, by their recipes in
+  `app.tailwind.css` (`h-11 md:h-8`): a thumb's target, and the desktop's own height from `md` up.
+  A view never sizes a control for a phone itself. The site floor's buttons on Home (`MyDay*`) are the
   design's Large size (`btn-lg`, 52px): a `.btn` is 32px tall whatever padding a view adds to it,
   which is what the earlier `py-3.5` had silently produced. The Half day / Full day choice is
   `FilterChips Large` (`chip-lg`, 44px).
@@ -1219,7 +1224,10 @@ finds drift.
   `SearchSelect` is the one deliberate exception, being a form control rather than a menu — but
   it is not an exception to the dismissal rule: since 2026-09-18 it registers with the same
   watcher in `wwwroot/js/dropdown-menu.js`, so "a press outside closes it" has one definition in
-  the codebase and no component hand-rolls its own. That watcher is the shared thing, not the
+  the codebase and no component hand-rolls its own. The phone's navigation drawer
+  (`NavigationDrawer`, below) is not a menu and not a `DropdownMenu`: its scrim swallows the press
+  that closes it on purpose, because a tap beside a navigation drawer means "put it away" and
+  never "and press what was underneath". That watcher is the shared thing, not the
   component; a fixed popup asks it for the scroll close too (`shouldCloseOnScroll`), which an
   absolutely positioned panel must never do or it would close on its own container scrolling.
 - **`FormField`** wraps every labelled control — label (14/Med white), the control wearing the

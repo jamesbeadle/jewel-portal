@@ -8,7 +8,7 @@
     <button type="button" class="btn-primary btn-lg w-full" disabled="@isBusy" @onclick="RecordAsync">
         @(isBusy ? "Recording…" : "Record day off")
     </button>
-    <button type="button" class="btn-ghost btn-lg w-full" disabled="@isBusy" @onclick="() => OnCancel.InvokeAsync()">Back</button>
+    <button type="button" class="btn-ghost w-full" disabled="@isBusy" @onclick="() => OnCancel.InvokeAsync()">Back</button>
 </div>
 
 @code {
