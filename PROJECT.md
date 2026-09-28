@@ -1072,9 +1072,10 @@ so the first CI build is the compile check, and this tool is what stands in for 
   scrim or any change of location (the browser's Back included — it does not hold a history entry
   of its own). Opening it also expands the sidebar, so the drawer is always the labelled nav, and
   moves focus into it; Escape is not wired (a phone has no keyboard) and the page behind still
-  scrolls. The slide and the scrim are recipes in `app.tailwind.css` (`.nav-drawer*`), the OPEN
-  state is `transform: none` so the picker's fixed panel keeps the viewport as its containing
-  block, and the shell's padding is `md:pl-*` only. A phone never shows the rail, so no row in
+  scrolls. The slide and the scrim are recipes in `app.tailwind.css` (`.nav-drawer*`); the slide
+  is on `left`, never a transform, so the picker's fixed panel keeps the viewport as its
+  containing block at every frame; the desktop toggle puts the drawer away too; and the shell's
+  padding is `md:pl-*` only. A phone never shows the rail, so no row in
   `SideNav` is hidden by a breakpoint any more — the only `hidden md:…` / `md:hidden` left are the
   header's two buttons, the desktop collapse toggle and the drawer's X; a row that should not
   show on a phone is a decision to write here, not a breakpoint class. Below `md` every nav row is

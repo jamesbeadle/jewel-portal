@@ -102,7 +102,13 @@
         Versions.OnChange += Repaint;
     }
 
-    private void ToggleSideNav() => isSideNavExpanded = !isSideNavExpanded;
+    // The toggle exists from md up only, where the drawer means nothing — so it also puts the
+    // drawer away, and a phone turned to landscape and back never finds it still open.
+    private void ToggleSideNav()
+    {
+        isPhoneNavOpen = false;
+        isSideNavExpanded = !isSideNavExpanded;
+    }
 
     // The drawer is always the labelled nav: opening it on a phone also expands the sidebar, so a
     // desktop that collapsed it to the rail and then shrank never shows a drawer of bare icons.

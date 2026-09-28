@@ -334,24 +334,24 @@
        the left edge until the header's menu button opens it, then the whole labelled nav — Home,
        the project picker, the folders — slides in over a scrim and leaves on a pick, its X, a
        press on the scrim or Back. From md up the same element is the fixed sidebar and never
-       moves, so every rule here is undone at that width. The slide lives here rather than as a
-       translate utility for the reason the chat panel's does (the colour lint's substring), and
-       the OPEN state is `transform: none`, not translateX(0): a transformed ancestor becomes the
-       containing block of every position:fixed descendant, and the project picker's panel is one
-       — drawn against the viewport so no scroll box clips it, which a transform would undo.
-       The closed drawer is also hidden from the tab order and the accessibility tree. */
+       moves, so every rule here is undone at that width. The slide is on `left`, never a
+       transform: a transformed ancestor — at rest or at any frame of a transition — becomes the
+       containing block of every position:fixed descendant, and the project picker's panel is one,
+       drawn against the viewport from its toggle's measured rect so no scroll box clips it. The
+       recipe owns `left` at every width, so the aside carries no left-* utility. The closed
+       drawer is also hidden from the tab order and the accessibility tree. */
     .nav-drawer {
-        transition: transform 200ms ease-out, visibility 0s linear 200ms;
+        transition: left 200ms ease-out, visibility 0s linear 200ms;
         padding-bottom: env(safe-area-inset-bottom);
     }
 
     .nav-drawer-closed {
-        transform: translateX(-100%);
+        left: -100%;
         visibility: hidden;
     }
 
     .nav-drawer-open {
-        transform: none;
+        left: 0;
         visibility: visible;
         transition-delay: 0s;
     }
@@ -367,7 +367,7 @@
 
     @media (min-width: 768px) {
         .nav-drawer, .nav-drawer-closed, .nav-drawer-open {
-            transform: none;
+            left: 0;
             visibility: visible;
             transition: none;
         }
