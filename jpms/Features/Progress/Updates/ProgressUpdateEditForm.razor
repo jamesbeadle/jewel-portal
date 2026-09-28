@@ -1,0 +1,69 @@
+@namespace Jewel.JPMS.Features.Progress.Updates
+@inject IProgressStore ProgressStore
+
+<EditForm Model="this" OnValidSubmit="HandleSubmit" class="border border-line bg-surface-raised p-4 space-y-3">
+    <FormField Label="Title" Required>
+        <input type="text" @bind="title" required maxlength="@StoredTextLengths.Title" class="field" />
+    </FormField>
+    <FormField Label="Description">
+        <textarea @bind="description" rows="4" class="field"></textarea>
+    </FormField>
+    <FormField Label="Date of works">
+        <input type="date" @bind="workDate" class="field" />
+    </FormField>
+    <ProgressWeatherFields @ref="weatherFields" Initial="@Update.Weather" />
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative">@error</Notice>
+    }
+    <div class="flex flex-wrap items-center gap-2">
+        <button type="submit" disabled="@busy" class="btn-primary">@(busy ? "Saving…" : "Save changes")</button>
+        <button type="button" disabled="@busy" @onclick="() => OnCancelled.InvokeAsync()" class="btn-secondary">Cancel</button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired] public ProgressUpdate Update { get; set; } = default!;
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancelled { get; set; }
+
+    private ProgressWeatherFields? weatherFields;
+    private string title = "";
+    private string description = "";
+    private DateTime? workDate;
+    private bool busy;
+    private string? error;
+
+    private string ProjectId => Update.ProjectId;
+    private string UpdateId => Update.ProgressUpdateId;
+
+    protected override void OnInitialized()
+    {
+        title = Update.Title;
+        description = Update.Description;
+        workDate = EnteredDates.AsEntered(Update.WorkDate);
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(title)) { error = "Enter a title."; return; }
+        busy = true;
+        error = null;
+        try
+        {
+            var weather = weatherFields?.Build();
+            await ProgressStore.UpdateUpdateAsync(
+                ProjectId, UpdateId, title.Trim(), description.Trim(),
+                EnteredDates.AsRecorded(workDate), weather, CancellationToken.None);
+            await OnSaved.InvokeAsync();
+        }
+        catch (Exception exception)
+        {
+            error = $"Could not save the changes: {exception.Message}";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

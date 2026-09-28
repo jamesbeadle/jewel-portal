@@ -81,6 +81,15 @@ public sealed class HttpProgressStore : IProgressStore
     private static async Task<ProgressPhotoBatchResult> ReadBatchAsync(HttpResponseMessage response, CancellationToken cancellationToken) =>
         (await response.Content.ReadFromJsonAsync<ProgressPhotoBatchResult>(cancellationToken: cancellationToken))!;
 
+    public async Task CreateNoteAsync(
+        string projectId, string title, string description, DateTimeOffset workDate,
+        ProgressWeather? weather, CancellationToken cancellationToken)
+    {
+        var note = new CreateProgressUpdate(projectId, title, description, workDate, weather, CreatedByEmail: "");
+        await commands.SendAsync(note, cancellationToken);
+        RefreshInBackground(projectId);
+    }
+
     public async Task UpdateUpdateAsync(
         string projectId, string progressUpdateId, string title, string description,
         DateTimeOffset? workDate, ProgressWeather? weather, CancellationToken cancellationToken)

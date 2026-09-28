@@ -229,6 +229,19 @@ The project-process kit writes this file once and never touches it again, and `C
   archived. Filing an archived photo is refused (`SitePhotoFilingRefusals`) until
   `restore_site_photo` / the card's Restore. The page's Archived chip lists them with the reason.
   Pinned by `SitePhotoArchiveTests` and `SitePhotosConnectorTests`.
+- **A day is filed from the Progress page with or without a photograph, and its author corrects
+  it there** (2026-09-28, for the Jack Eastly daily-log fortnight on the portal as it stands).
+  `ProgressUpdateForm` (now `jpms/Features/Progress/Updates`, with the card, the edit form, the
+  photo strip and the weather fields beside it) sends the words-only `CreateProgressUpdate`
+  (`IProgressStore.CreateNoteAsync`) when no photograph is chosen — a description and a date are
+  then required, as that create requires — and the multipart create when one is; photographs join
+  a day later through the strip's Add photos. `ProgressUpdateCard` carries Edit
+  (`ProgressUpdateEditForm` → the existing `UpdateProgressUpdate`) beside Delete, keeps the
+  description's line breaks, and shows the photo delete on a phone (no hover there). The weather
+  block is folded behind one tap (`ProgressWeatherFields`) and stays optional; its bounds are
+  `ProgressWeatherLimits` (contracts), read by `ProgressWeatherRules` and the inputs alike. The
+  gates did not change: who may record progress may edit it, and correcting only one's own day is
+  the test's convention, not a rule the API enforces.
 
 ## The Sales pane: an enquiry tagged to its lead, and the estimate on it (api + jpms)
 

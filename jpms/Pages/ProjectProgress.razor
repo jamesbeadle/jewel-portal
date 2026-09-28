@@ -1,4 +1,5 @@
 @page "/projects/{ProjectId}/progress"
+@using Jewel.JPMS.Features.Progress.Updates
 @inject AuthService Auth
 @inject SessionService Session
 @inject IProgressStore ProgressStore
@@ -125,64 +126,7 @@
             <ul class="space-y-4">
                 @foreach (var update in Updates)
                 {
-                    <li id="@($"update-{update.ProgressUpdateId}")" class="border border-line bg-surface p-4">
-                        <div class="flex flex-wrap items-start justify-between gap-3 mb-2">
-                            <div class="min-w-0">
-                                <p class="text-sm font-semibold text-content">@update.Title</p>
-                                <p class="text-xs text-content-subtle">
-                                    @(update.WorkDate?.ToString("dd MMM yyyy") ?? DateText(update.CreatedAt))
-                                    · @update.Photos.Count photo@(update.Photos.Count == 1 ? "" : "s")
-                                    · @update.CreatedByEmail
-                                </p>
-                            </div>
-                            @if (CanContribute)
-                            {
-                                <button type="button" @onclick="() => DeleteUpdateAsync(update.ProgressUpdateId)"
-                                        class="rounded border text-xs px-2.5 py-1.5 transition shrink-0 @(pendingUpdateDelete == update.ProgressUpdateId ?"border-negative/30 bg-negative/10 text-negative" : "border-line-strong text-content-subtle hover:bg-surface-raised")">
-                                    @(pendingUpdateDelete == update.ProgressUpdateId ? "Confirm delete" : "Delete")
-                                </button>
-                            }
-                        </div>
-
-                        @if (!string.IsNullOrWhiteSpace(update.Description))
-                        {
-                            <p class="text-sm text-content-muted mb-3">@update.Description</p>
-                        }
-
-                        @if (update.Weather is { } weather)
-                        {
-                            <p class="text-xs text-content-subtle mb-3">@WeatherLine(weather)</p>
-                        }
-
-                        <div class="flex flex-wrap gap-2">
-                            @foreach (var photo in update.Photos)
-                            {
-                                <div class="relative group">
-                                    <a href="@($"/api/progress-photos/{photo.ProgressPhotoId}/file")" title="@photo.FileName">
-                                        <img src="@($"/api/progress-photos/{photo.ProgressPhotoId}/file?inline=1")"
-                                             alt="@photo.FileName" loading="lazy"
-                                             class="h-28 w-36 object-cover rounded border border-line" />
-                                    </a>
-                                    @if (CanContribute)
-                                    {
-                                        <button type="button" @onclick="() => DeletePhotoAsync(update.ProgressUpdateId, photo.ProgressPhotoId)"
-                                                aria-label="Delete photo" title="@(pendingPhotoDelete == photo.ProgressPhotoId ? "Click again to confirm" : "Delete photo")"
-                                                class="absolute top-1 right-1 rounded text-xs px-1.5 py-0.5 transition @(pendingPhotoDelete == photo.ProgressPhotoId ?"bg-red-600 text-white" : "bg-black/50 text-white opacity-0 group-hover:opacity-100")">
-                                            ✕
-                                        </button>
-                                    }
-                                </div>
-                            }
-                            @if (CanContribute)
-                            {
-                                <label class="h-28 w-36 rounded border border-dashed border-line-strong flex flex-col items-center justify-center text-content-subtle text-xs cursor-pointer hover:bg-surface-raised transition">
-                                    <span class="text-lg leading-none mb-1">+</span>
-                                    <span>@(addingPhotosTo == update.ProgressUpdateId ? "Uploading…" : "Add photos")</span>
-                                    <InputFile OnChange="@(e => AddPhotosAsync(update.ProgressUpdateId, e))" multiple accept="image/*" class="hidden" />
-                                </label>
-                            }
-                        </div>
-                    </li>
+                    <ProgressUpdateCard @key="update.ProgressUpdateId" Update="update" CanContribute="@CanContribute" />
                 }
             </ul>
         }
@@ -196,8 +140,6 @@
 </Page>
 
 @code {
-    private const int MaxPhotosPerBatch = 30;
-
     [Parameter] public string ProjectId { get; set; } = "";
 
     // Session checked and the user is signed in — not "the data is here". The page chrome shows
@@ -206,9 +148,6 @@
     private bool isBuildingReport;
     private ProgressReport? editingReport;
     private string? pendingReportDelete;
-    private string? pendingUpdateDelete;
-    private string? pendingPhotoDelete;
-    private string? addingPhotosTo;
     private string? actionError;
 
     private IReadOnlyList<ProgressUpdate> Updates => ProgressStore.UpdatesFor(ProjectId);
@@ -234,26 +173,6 @@
         ProgressStore.Refresh(ProjectId);
     }
 
-    // One compact line, only the recorded parts: "Partly cloudy · 17°C / 9°C · Wind 6 mph · …"
-    private static string WeatherLine(ProgressWeather weather)
-    {
-        var parts = new List<string>();
-        if (!string.IsNullOrWhiteSpace(weather.Summary)) parts.Add(weather.Summary);
-        var temps = (weather.TempHighC, weather.TempLowC) switch
-        {
-            ({ } high, { } low) => $"{high}°C / {low}°C",
-            ({ } high, null) => $"{high}°C",
-            (null, { } low) => $"{low}°C",
-            _ => null
-        };
-        if (temps is not null) parts.Add(temps);
-        if (weather.WindMph is { } wind) parts.Add($"Wind {wind} mph");
-        if (weather.HumidityPercent is { } humidity) parts.Add($"Humidity {humidity}%");
-        if (weather.PrecipInches is { } precip) parts.Add($"Precip {precip:0.##}\"");
-        if (weather.ObservedAt is { } observedAt) parts.Add($"observed {observedAt:ddd dd MMM, HH:mm}");
-        return string.Join(" · ", parts);
-    }
-
     private static string Period(ProgressReport report) => (report.PeriodStart, report.PeriodEnd) switch
     {
         ({ } start, { } end) => $"{start:dd MMM yyyy} – {end:dd MMM yyyy}",
@@ -268,29 +187,6 @@
         if (pendingReportDelete != progressReportId) { pendingReportDelete = progressReportId; return; }
         pendingReportDelete = null;
         await RunAsync(() => ProgressStore.DeleteReportAsync(ProjectId, progressReportId, CancellationToken.None));
-    }
-
-    private async Task DeleteUpdateAsync(string progressUpdateId)
-    {
-        if (pendingUpdateDelete != progressUpdateId) { pendingUpdateDelete = progressUpdateId; return; }
-        pendingUpdateDelete = null;
-        await RunAsync(() => ProgressStore.DeleteUpdateAsync(ProjectId, progressUpdateId, CancellationToken.None));
-    }
-
-    private async Task DeletePhotoAsync(string progressUpdateId, string progressPhotoId)
-    {
-        if (pendingPhotoDelete != progressPhotoId) { pendingPhotoDelete = progressPhotoId; return; }
-        pendingPhotoDelete = null;
-        await RunAsync(() => ProgressStore.DeletePhotoAsync(ProjectId, progressUpdateId, progressPhotoId, CancellationToken.None));
-    }
-
-    private async Task AddPhotosAsync(string progressUpdateId, InputFileChangeEventArgs e)
-    {
-        var files = e.GetMultipleFiles(MaxPhotosPerBatch);
-        if (files.Count == 0) return;
-        addingPhotosTo = progressUpdateId;
-        await RunAsync(() => ProgressStore.AddPhotosAsync(ProjectId, progressUpdateId, files, CancellationToken.None));
-        addingPhotosTo = null;
     }
 
     private async Task RunAsync(Func<Task> action)
