@@ -1,0 +1,58 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+@inject ILabourStore Labour
+
+@if (HasRejected)
+{
+    <Panel Title="Sent back to you — needs another look" Class="mb-4 border border-negative/40" BodyClass="p-4" Prominent="false">
+        @if (error is not null)
+        {
+            <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
+        }
+        @foreach (var rejected in Rejected)
+        {
+            <div class="border-t border-line/60 py-2">
+                <p class="text-sm font-medium text-content">“@ReasonOf(rejected)”</p>
+                <p class="text-xs text-content-subtle mb-1.5">@rejected.WorkedOn.ToString("ddd dd MMM") — @rejected.ProjectName · @rejected.CostCode</p>
+                <div class="flex items-end gap-2">
+                    <FormField Label="Hours" Class="w-28">
+                        <input class="field h-11 text-base" type="number" step="0.5" min="0.5" value="@HoursFor(rejected)"
+                               @onchange="args => SetHours(rejected, args.Value)" />
+                    </FormField>
+                    <button type="button" class="btn-secondary h-11 px-5" disabled="@isBusy" @onclick="() => ResubmitAsync(rejected)">Resubmit</button>
+                </div>
+            </div>
+        }
+    </Panel>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<MyRejectedTimesheet> Rejected { get; set; } = Array.Empty<MyRejectedTimesheet>();
+
+    private readonly Dictionary<string, decimal> hoursByTimesheet = new();
+    private bool isBusy;
+    private string? error;
+
+    private bool HasRejected => Rejected.Count > 0;
+
+    private static string ReasonOf(MyRejectedTimesheet rejected) =>
+        string.IsNullOrWhiteSpace(rejected.RejectionReason) ? "No reason given — check with the office" : rejected.RejectionReason;
+
+    private decimal HoursFor(MyRejectedTimesheet rejected) =>
+        hoursByTimesheet.TryGetValue(rejected.TimesheetId, out var hours) ? hours : rejected.Hours;
+
+    private void SetHours(MyRejectedTimesheet rejected, object? value)
+    {
+        var isNumber = decimal.TryParse(value?.ToString(), out var hours);
+        hoursByTimesheet[rejected.TimesheetId] = isNumber ? hours : rejected.Hours;
+    }
+
+    private async Task ResubmitAsync(MyRejectedTimesheet rejected)
+    {
+        error = null;
+        isBusy = true;
+        try { await Labour.MyResubmitAsync(rejected.TimesheetId, HoursFor(rejected), rejected.CostCode); }
+        catch (CommandFailedException refusal) { error = refusal.Message; }
+        catch (Exception) { error = "Resubmit didn't go through — check the hours and try again."; }
+        finally { isBusy = false; }
+    }
+}

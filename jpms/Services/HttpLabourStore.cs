@@ -154,17 +154,18 @@ public sealed class HttpLabourStore : ILabourStore
 
     public Task RefreshMyDayAsync() => myDayReadModel.RefreshAsync(CancellationToken.None);
 
-    public async Task MySignInAsync(string projectId)
+    public async Task MySignInAsync(string projectId, DateTimeOffset? signedInAt)
     {
-        await commands.SendAsync(new MySiteSignIn(projectId), CancellationToken.None);
+        await commands.SendAsync(new MySiteSignIn(projectId, signedInAt), CancellationToken.None);
         await myDayReadModel.RefreshAsync(CancellationToken.None);
     }
 
-    public async Task MySignOutAsync(string projectId, IReadOnlyList<SiteSignOutEntry> entries)
-    {
-        await commands.SendAsync(new MySiteSignOut(projectId, entries), CancellationToken.None);
-        await myDayReadModel.RefreshAsync(CancellationToken.None);
-    }
+    public Task<MySiteDayLogged> MySignOutAsync(
+        string projectId, IReadOnlyList<SiteSignOutEntry> entries, string description, DateTimeOffset? signedOutAt) =>
+        commands.SendAsync(new MySiteSignOut(projectId, entries, description, signedOutAt), CancellationToken.None);
+
+    public Task<MySiteDayLogged> MyDayOffAsync(string projectId, string description) =>
+        commands.SendAsync(new MySiteDayOff(projectId, description), CancellationToken.None);
 
     public async Task MyResubmitAsync(string timesheetId, decimal hours, string costCode)
     {

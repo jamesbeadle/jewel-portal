@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Jewel.JPMS.Contracts.Progress;
 using Jewel.JPMS.Features.Progress;
@@ -8,9 +7,6 @@ namespace Jewel.JPMS.Services;
 
 public sealed class HttpProgressStore : IProgressStore
 {
-    // Phone photos run 5–15 MB; this bounds a single file, not the batch.
-    private const long MaxUploadBytes = 100L * 1024 * 1024;
-
     private readonly ProgressReadModel readModel;
     private readonly ICommandSender commands;
     private readonly HttpClient httpClient;
@@ -54,10 +50,10 @@ public sealed class HttpProgressStore : IProgressStore
         content.Add(new StringContent(description), "description");
         if (workDate is { } date) content.Add(new StringContent(date.ToString("O")), "workDate");
         AddWeatherFields(content, weather);
-        AddFiles(content, photos, cancellationToken);
+        PhotoUploads.AddFiles(content, photos, cancellationToken);
 
         var response = await httpClient.PostAsync($"api/projects/{projectId}/progress-updates", content, cancellationToken);
-        await ThrowIfFailedAsync(response, cancellationToken);
+        await PhotoUploads.ThrowIfFailedAsync(response, cancellationToken);
 
         // The write has been committed. Refresh caches in the background so a slow or stalled
         // refresh cannot keep the upload UI stuck on "Uploading…".
@@ -70,10 +66,10 @@ public sealed class HttpProgressStore : IProgressStore
         IReadOnlyList<IBrowserFile> photos, CancellationToken cancellationToken)
     {
         using var content = new MultipartFormDataContent();
-        AddFiles(content, photos, cancellationToken);
+        PhotoUploads.AddFiles(content, photos, cancellationToken);
 
         var response = await httpClient.PostAsync($"api/progress-updates/{progressUpdateId}/photos", content, cancellationToken);
-        await ThrowIfFailedAsync(response, cancellationToken);
+        await PhotoUploads.ThrowIfFailedAsync(response, cancellationToken);
         RefreshInBackground(projectId);
         return await ReadBatchAsync(response, cancellationToken);
     }
@@ -153,26 +149,6 @@ public sealed class HttpProgressStore : IProgressStore
         if (weather.WindMph is { } windMph) content.Add(new StringContent(windMph.ToString(CultureInfo.InvariantCulture)), "weatherWindMph");
         if (weather.HumidityPercent is { } humidity) content.Add(new StringContent(humidity.ToString(CultureInfo.InvariantCulture)), "weatherHumidityPercent");
         if (weather.PrecipInches is { } precip) content.Add(new StringContent(precip.ToString(CultureInfo.InvariantCulture)), "weatherPrecipInches");
-    }
-
-    private static void AddFiles(MultipartFormDataContent content, IReadOnlyList<IBrowserFile> photos, CancellationToken cancellationToken)
-    {
-        foreach (var photo in photos)
-        {
-            var fileContent = new StreamContent(photo.OpenReadStream(MaxUploadBytes, cancellationToken));
-            fileContent.Headers.ContentType = new MediaTypeHeaderValue(
-                string.IsNullOrWhiteSpace(photo.ContentType) ? "application/octet-stream" : photo.ContentType);
-            content.Add(fileContent, "files", photo.Name);
-        }
-    }
-
-    private static async Task ThrowIfFailedAsync(HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        if (response.IsSuccessStatusCode) return;
-        // Surface the server's message (e.g. a storage error) rather than a bare status code.
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-        throw new InvalidOperationException(
-            string.IsNullOrWhiteSpace(body) ? $"Server returned {(int)response.StatusCode}." : body.Trim('"'));
     }
 
     // Refreshes updates then reports without blocking the caller. Views update via

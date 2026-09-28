@@ -1,0 +1,43 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+
+<Panel Title="@Project.ProjectName" Class="mb-4" BodyClass="p-4" Prominent="false">
+    <HeaderActions>
+        @if (Project.IsLoggedToday)
+        {
+            <Pill Tone="Tone.Positive">Logged ✓</Pill>
+        }
+        @if (IsOnSite)
+        {
+            <Pill Tone="Tone.Info">On site since @TimeText(SignedInAt)</Pill>
+        }
+    </HeaderActions>
+    <ChildContent>
+        @if (photoProblem is not null)
+        {
+            <Notice Tone="Tone.Warning" Class="mb-3" Dismissible OnDismiss="() => photoProblem = null">@photoProblem</Notice>
+        }
+        @if (IsArriving)
+        {
+            <MyDayArrival ProjectId="@Project.ProjectId" />
+        }
+        @if (IsOnSite)
+        {
+            <MyDayLogForm Project="Project" OnPhotoProblem="problem => photoProblem = problem" />
+        }
+        @if (Project.IsLoggedToday)
+        {
+            <MyDayLoggedSummary Project="Project" TodaysHours="TodaysHours" />
+        }
+    </ChildContent>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public MyLabourProject Project { get; set; } = default!;
+    [Parameter] public IReadOnlyList<MyRecentTimesheet> TodaysHours { get; set; } = Array.Empty<MyRecentTimesheet>();
+
+    private string? photoProblem;
+
+    private bool IsArriving => !Project.IsSignedInToday && !Project.IsLoggedToday;
+    private bool IsOnSite => Project.IsSignedInToday && !Project.IsLoggedToday;
+    private DateTimeOffset SignedInAt => Project.SignedInAt ?? DateTimeOffset.Now;
+}

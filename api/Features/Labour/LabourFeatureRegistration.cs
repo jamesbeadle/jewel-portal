@@ -61,9 +61,14 @@ public static class LabourFeatureRegistration
 
         // My Day — the worker's own authenticated timesheet surface. Handlers are resolved
         // concretely because they need the signed-in email alongside the command.
+        services.AddScoped<MyDayCostCodes>();
+        services.AddScoped<MyDayNotesToday>();
+        services.AddScoped<MyDayProjects>();
         services.AddScoped<GetMyLabourDayHandler>();
         services.AddScoped<MySiteSignInHandler>();
         services.AddScoped<MySiteSignOutHandler>();
+        services.AddScoped<MySiteDayOffHandler>();
+        services.AddScoped<MyDayPhotosHandler>();
         services.AddScoped<MyResubmitTimesheetHandler>();
 
         // Labour tab: week grid, adjust / approve / reject.

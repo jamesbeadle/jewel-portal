@@ -1,0 +1,24 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+
+@if (HasHistory)
+{
+    <Panel Title="Recent days" Class="mb-4" BodyClass="p-4" Prominent="false">
+        @foreach (var entry in History.Take(MostRecentShown))
+        {
+            <div class="flex items-center justify-between border-t border-line/60 py-1.5 text-sm">
+                <span class="text-content-subtle">@entry.WorkedOn.ToString("ddd dd") · @entry.ProjectName · @entry.CostCode</span>
+                <span><span class="text-content font-medium">@entry.Hours h</span> <StatusPill Status="@entry.Status" /></span>
+            </div>
+        }
+    </Panel>
+}
+
+@code {
+    private const int MostRecentShown = 20;
+
+    [Parameter, EditorRequired] public IReadOnlyList<MyRecentTimesheet> Recent { get; set; } = Array.Empty<MyRecentTimesheet>();
+    [Parameter, EditorRequired] public DateTimeOffset WorkDate { get; set; }
+
+    private IEnumerable<MyRecentTimesheet> History => Recent.Where(entry => entry.WorkedOn < WorkDate);
+    private bool HasHistory => History.Any();
+}

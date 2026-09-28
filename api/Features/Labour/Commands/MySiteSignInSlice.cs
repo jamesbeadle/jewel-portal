@@ -4,7 +4,8 @@ using Jewel.JPMS.Contracts.Labour;
 namespace Jewel.JPMS.Api.Features.Labour.Commands;
 
 // The signed-in worker signs in on arrival — creates today's site-register row for the chosen
-// project. Idempotent per day. Worker resolved from the session email; no impersonation.
+// project, at the time now or the earlier time they give. Idempotent per day. Worker resolved
+// from the session email; no impersonation.
 
 public sealed class MySiteSignInEndpoint
 {
@@ -57,13 +58,14 @@ public sealed class MySiteSignInHandler : ICommandHandler<MySiteSignIn, Acknowle
                           && attendance.WorkDate == today, cancellationToken);
         if (existing is not null) return new Acknowledgement(existing.SiteAttendanceId);
 
+        var signedInAt = MyDayMoments.Resolve(command.SignedInAt, today, "sign-in");
         var attendance = new SiteAttendanceEntity
         {
             SiteAttendanceId = LabourIdentifierFactory.NextSiteAttendanceId(),
             ProjectId = command.ProjectId,
             WorkerId = worker.WorkerId,
             WorkDate = today,
-            SignedInAt = DateTimeOffset.UtcNow,
+            SignedInAt = signedInAt,
         };
         context.SiteAttendances.Add(attendance);
         await context.SaveChangesAsync(cancellationToken);

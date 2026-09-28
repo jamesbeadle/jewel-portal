@@ -1,12 +1,15 @@
 using Jewel.JPMS.Api.Data.Entities;
-using Jewel.JPMS.Api.Features.Commercial;
+using Jewel.JPMS.Api.Features.Progress;
+using Jewel.JPMS.Api.Features.Progress.Commands;
 using Jewel.JPMS.Contracts.Labour;
 
 namespace Jewel.JPMS.Api.Features.Labour.Commands;
 
-// End-of-day allocation + sign-out for the signed-in worker: one Submitted timesheet per cost
-// code, attendance closed, single SaveChanges. One sign-out per project per day.
-
+/// <summary>
+/// POST /api/my/labour/sign-out — the worker's day, logged once: one Submitted timesheet per cost
+/// code, the attendance closed at the sign-out time, and the day's note written onto the project's
+/// progress feed in the worker's own name, in one save. One sign-out per project per day.
+/// </summary>
 public sealed class MySiteSignOutEndpoint
 {
     private readonly SignedInUserResolver users;
@@ -17,14 +20,16 @@ public sealed class MySiteSignOutEndpoint
     [Function(nameof(MySiteSignOut))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "my/labour/sign-out")] HttpRequest request)
     {
-        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        var httpContext = request.HttpContext;
+        var cancellationToken = httpContext.RequestAborted;
+        var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!LabourRoleSets.LogOwnTime.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
-        var command = await request.ReadFromJsonAsync<MySiteSignOut>();
+        var command = await request.ReadFromJsonAsync<MySiteSignOut>(cancellationToken);
         if (command is null || string.IsNullOrWhiteSpace(command.ProjectId) || command.Entries is null) return new BadRequestResult();
         try
         {
-            return new OkObjectResult(await handler.HandleAsync(command, signedInUser.Email, request.HttpContext.RequestAborted));
+            return new OkObjectResult(await handler.HandleAsync(command, signedInUser.Email, cancellationToken));
         }
         catch (InvalidOperationException rejection)
         {
@@ -33,60 +38,47 @@ public sealed class MySiteSignOutEndpoint
     }
 }
 
-public sealed class MySiteSignOutHandler : ICommandHandler<MySiteSignOut, Acknowledgement>
+public sealed class MySiteSignOutHandler : ICommandHandler<MySiteSignOut, MySiteDayLogged>
 {
     private readonly JpmsContext context;
-    public MySiteSignOutHandler(JpmsContext context) { this.context = context; }
+    private readonly MyDayCostCodes costCodes;
+    public MySiteSignOutHandler(JpmsContext context, MyDayCostCodes costCodes) { this.context = context; this.costCodes = costCodes; }
 
-    public Task<Acknowledgement> HandleAsync(MySiteSignOut command, CancellationToken cancellationToken) =>
+    public Task<MySiteDayLogged> HandleAsync(MySiteSignOut command, CancellationToken cancellationToken) =>
         throw new InvalidOperationException("MySiteSignOut requires the signed-in email — use the endpoint.");
 
-    public async Task<Acknowledgement> HandleAsync(MySiteSignOut command, string email, CancellationToken cancellationToken)
+    public async Task<MySiteDayLogged> HandleAsync(MySiteSignOut command, string email, CancellationToken cancellationToken)
     {
         var worker = await WorkerByEmail.ResolveAsync(context, email, cancellationToken);
-
         var today = SiteClock.Today();
-        var attendance = await context.SiteAttendances.FirstOrDefaultAsync(
-            row => row.ProjectId == command.ProjectId
-                   && row.WorkerId == worker.WorkerId
-                   && row.WorkDate == today, cancellationToken)
-            ?? throw new InvalidOperationException("You haven't signed in today — sign in first.");
-
-        if (attendance.SignedOutAt is not null)
-            throw new InvalidOperationException("You've already signed out today. Contact your Project Manager if you need to amend your hours.");
-
-        var budgetedCodes = await context.CostCodeBudgets
-            .Where(budget => budget.ProjectId == command.ProjectId)
-            .Select(budget => budget.CostCode)
-            .ToListAsync(cancellationToken);
-        var allowedCodes = budgetedCodes.Count > 0
-            ? budgetedCodes.ToHashSet(StringComparer.OrdinalIgnoreCase)
-            : (await context.CostCenters.Where(centre => centre.IsActive)
-                .Select(centre => centre.Code).ToListAsync(cancellationToken))
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
+        var attendance = await OpenAttendanceAsync(command.ProjectId, worker, today, cancellationToken);
+        var allowedCodes = await costCodes.AllowedForAsync(command.ProjectId, cancellationToken);
         var errors = LabourRules.CheckSignOutEntries(command.Entries, allowedCodes);
         if (errors.Count > 0) throw new InvalidOperationException(string.Join(" ", errors));
+        if (!MyDayNotes.IsGiven(command.Description))
+            throw new InvalidOperationException("Say what was done today — the words are the day's record.");
+        var signedOutAt = MyDayMoments.Resolve(command.SignedOutAt, today, "sign-out");
+        if (signedOutAt < attendance.SignedInAt)
+            throw new InvalidOperationException("The sign-out time cannot be before the sign-in time.");
 
         foreach (var entry in command.Entries)
-        {
-            context.Timesheets.Add(new TimesheetEntity
-            {
-                TimesheetId = CommercialIdentifierFactory.NextTimesheetId(),
-                ProjectId = command.ProjectId,
-                PersonEmail = email,
-                WorkerId = worker.WorkerId,
-                SiteAttendanceId = attendance.SiteAttendanceId,
-                WorkedOn = today,
-                Hours = entry.Hours,
-                CostCode = entry.CostCode,
-                Status = (int)TimesheetStatus.Submitted,
-                IsApproved = false,
-            });
-        }
-
-        attendance.SignedOutAt = DateTimeOffset.UtcNow;
+            context.Timesheets.Add(MyDayTimesheets.Submitted(command.ProjectId, entry, worker, attendance, email, today));
+        var note = ProgressUpdateRows.New(
+            ProgressIdentifierFactory.NextProgressUpdateId(), command.ProjectId, MyDayNotes.LogTitle(worker),
+            command.Description, today, null, email, DateTimeOffset.UtcNow);
+        context.ProgressUpdates.Add(note);
+        attendance.SignedOutAt = signedOutAt;
         await context.SaveChangesAsync(cancellationToken);
-        return new Acknowledgement(attendance.SiteAttendanceId);
+        return new MySiteDayLogged(attendance.SiteAttendanceId, note.ProgressUpdateId);
+    }
+
+    private async Task<SiteAttendanceEntity> OpenAttendanceAsync(string projectId, WorkerEntity worker, DateTimeOffset today, CancellationToken cancellationToken)
+    {
+        var attendance = await context.SiteAttendances.FirstOrDefaultAsync(
+            row => row.ProjectId == projectId && row.WorkerId == worker.WorkerId && row.WorkDate == today, cancellationToken)
+            ?? throw new InvalidOperationException("You haven't signed in today — sign in first.");
+        if (attendance.SignedOutAt is not null)
+            throw new InvalidOperationException("You've already signed out today. Contact your Project Manager if you need to amend your hours.");
+        return attendance;
     }
 }

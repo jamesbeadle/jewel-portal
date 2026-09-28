@@ -61,7 +61,8 @@ public static class LabourRouteRegistration
                 command => $"/api/projects/{((SetProjectWorkerAssignment)command).ProjectId}/labour/assignments"));
 
         commands.Register<MySiteSignIn, Acknowledgement>(CommandRoute.Post("/api/my/labour/sign-in"));
-        commands.Register<MySiteSignOut, Acknowledgement>(CommandRoute.Post("/api/my/labour/sign-out"));
+        commands.Register<MySiteSignOut, MySiteDayLogged>(CommandRoute.Post("/api/my/labour/sign-out"));
+        commands.Register<MySiteDayOff, MySiteDayLogged>(CommandRoute.Post("/api/my/labour/day-off"));
         commands.Register<MyResubmitTimesheet, Acknowledgement>(CommandRoute.Post("/api/my/labour/resubmit"));
 
         commands.Register<AddWorkerTimesheet, TimesheetDetail>(

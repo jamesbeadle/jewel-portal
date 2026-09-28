@@ -1,0 +1,70 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+@inject ILabourStore Labour
+@inject MyDayPhotoUploader Photos
+
+<div class="space-y-3 text-sm">
+    @if (IsOffDay)
+    {
+        <p class="text-content-subtle">Off today.</p>
+    }
+    @if (HasAttendance)
+    {
+        <p class="text-content-subtle">On site @TimeText(SignedInAt) – @TimeText(SignedOutAt)</p>
+    }
+    @foreach (var entry in TodaysHours)
+    {
+        <div class="flex items-center justify-between border-t border-line/60 py-1.5">
+            <span class="text-content-subtle">@entry.CostCode</span>
+            <span><span class="text-content font-medium">@entry.Hours h</span> <StatusPill Status="@entry.Status" /></span>
+        </div>
+    }
+    @if (Project.TodaysNote is { } note)
+    {
+        <p class="text-content whitespace-pre-line border-t border-line/60 pt-2">@note.Description</p>
+        <p class="text-xs text-content-subtle">@PhotoCountText(note)</p>
+        <FormField Label="Add photos" Hint="They go onto today's log.">
+            <InputFile OnChange="AddPhotosAsync" multiple accept="image/*" class="w-full text-sm text-content-muted" disabled="@isUploading" />
+        </FormField>
+        @if (isUploading)
+        {
+            <p class="text-xs text-content-subtle">Uploading…</p>
+        }
+        @if (error is not null)
+        {
+            <p class="text-sm text-negative" role="alert">@error</p>
+        }
+    }
+    @if (HasAttendance)
+    {
+        <p class="text-xs text-content-subtle">Your hours are with the Project Manager — contact them if anything needs amending.</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public MyLabourProject Project { get; set; } = default!;
+    [Parameter] public IReadOnlyList<MyRecentTimesheet> TodaysHours { get; set; } = Array.Empty<MyRecentTimesheet>();
+
+    private bool isUploading;
+    private string? error;
+
+    private bool HasAttendance => Project.HasSignedOutToday;
+    private bool IsOffDay => !Project.HasSignedOutToday;
+    private DateTimeOffset SignedInAt => Project.SignedInAt ?? DateTimeOffset.Now;
+    private DateTimeOffset SignedOutAt => Project.SignedOutAt ?? DateTimeOffset.Now;
+
+    private static string PhotoCountText(MyDayNote note) => note.PhotoCount == 1 ? "1 photo" : $"{note.PhotoCount} photos";
+
+    private async Task AddPhotosAsync(InputFileChangeEventArgs change)
+    {
+        if (Project.TodaysNote is not { } note) return;
+        error = null;
+        isUploading = true;
+        try
+        {
+            await Photos.UploadAsync(note.ProgressUpdateId, change.GetMultipleFiles(MyDayPhotoUploader.MaxPerBatch), CancellationToken.None);
+            await Labour.RefreshMyDayAsync();
+        }
+        catch (Exception exception) { error = $"The photos didn't upload: {exception.Message}"; }
+        finally { isUploading = false; }
+    }
+}
