@@ -75,7 +75,7 @@
         {
             @* Site-floor roles do their day here: sign in, hours against cost codes, and any
                timesheet sent back for correction. *@
-            <MyDayWorkspace />
+            <MyDayWorkspace Email="@Email" IsAlwaysShown="@IsHomeForTheDay" />
         }
 
         @if (ShowMyTodos)
