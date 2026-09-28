@@ -2,6 +2,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject StoreChangeHub Stores
+@inject AppVersionService Versions
 @implements IDisposable
 
 <div class="min-h-dvh bg-canvas text-content antialiased">
@@ -10,7 +11,7 @@
        that gets reported as "it just doesn't work". *@
     <ErrorToast />
 
-    @* The informative one: a newer JPMS has been deployed than the build this tab is running.
+    @* The informative one: a newer JBB Portal has been deployed than the build this tab is running.
        Sits under ErrorToast in the stack, because something being broken outranks something
        being newer. *@
     <UpdateToast />
@@ -59,9 +60,10 @@
         <footer class="border-t border-line">
             <div class="px-4 py-3 text-xs text-content-subtle flex items-center justify-between">
                 <span>Jewel Bespoke Build</span>
-                @* The deploy's run number ("v473"), stamped by the workflow; "dev" locally. The
-                   footer is the first place to look when asking "which build is this user on?" *@
-                <span>JPMS @BuildVersion.Display</span>
+                @* The version the API announces ("v473"), adopted from the first response this
+                   tab sees; "dev" until one lands. The footer is the first place to look when asking
+                   "which build is this user on?", and it says the same number as the update toast. *@
+                <span>JBB Portal @Versions.RunningDisplay</span>
             </div>
         </footer>
     </div>
@@ -101,6 +103,7 @@
         // load, so views that read lazily-loaded data fill in on their own instead
         // of staying empty until the user navigates away and back.
         Stores.OnAnyChange += Repaint;
+        Versions.OnChange += Repaint;
     }
 
     private void ToggleSideNav() => isSideNavExpanded = !isSideNavExpanded;
@@ -112,5 +115,6 @@
         Auth.OnChange -= StateHasChanged;
         Session.OnChange -= StateHasChanged;
         Stores.OnAnyChange -= Repaint;
+        Versions.OnChange -= Repaint;
     }
 }

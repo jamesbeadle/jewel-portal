@@ -117,13 +117,13 @@
     /// status as last synced or stamped by a write — and what the portal's write-back did.</summary>
     private BadgeModel? WriteBackBadge => Line.WriteBackStatus switch
     {
-        XeroWriteBackStatus.Approved => new("✓ Approved in Xero by JPMS",
+        XeroWriteBackStatus.Approved => new("✓ Approved in Xero by JBB Portal",
             DateTimeText(Line.WriteBackAtUtc?.ToLocalTime()), "text-positive"),
         XeroWriteBackStatus.Failed => new("⚠ Xero write-back failed — still " + XeroStatusWord + " in Xero",
             Line.WriteBackError, "text-negative"),
         _ when IsAwaitingApproval(Line) => new("Draft in Xero — approves once the whole bill is allocated",
             null, "text-warning"),
-        _ => new(XeroStatusWord + " in Xero (outside JPMS)", "The bill was approved or paid in Xero without the portal's write-back", "text-content-subtle")
+        _ => new(XeroStatusWord + " in Xero (outside JBB Portal)", "The bill was approved or paid in Xero without the portal's write-back", "text-content-subtle")
     };
 
     private string XeroStatusWord => Line.InvoiceStatus.ToUpperInvariant() switch

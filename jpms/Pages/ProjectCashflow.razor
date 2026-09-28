@@ -14,7 +14,7 @@
 @inject NavigationManager Nav
 @implements IDisposable
 
-<PageTitle>Project Cashflow · JPMS</PageTitle>
+<PageTitle>Project Cashflow · JBB Portal</PageTitle>
 
 <Page OpenTo="JpmsRoleSets.AllInternal">
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="cashflow">
@@ -111,7 +111,7 @@
                         @if (UnallocatedOutstandingNet != 0m)
                         {
                             <p class="text-xs text-negative mt-0.5"
-                               title="Unpaid bills whose Xero Sites tracking points at this project but which nobody has allocated in JPMS — not counted in this figure. The magnifier lists them; allocate them on the Xero allocation screen.">
+                               title="Unpaid bills whose Xero Sites tracking points at this project but which nobody has allocated in JBB Portal — not counted in this figure. The magnifier lists them; allocate them on the Xero allocation screen.">
                                 ⚠ @Money(UnallocatedOutstandingNet) tracked to this site in Xero is not yet allocated
                             </p>
                         }
@@ -270,7 +270,7 @@
                 purchase invoices</span> is the net still owed on allocated purchase lines,
                 part-payment aware: each bill's outstanding amount is read from Xero on every
                 sync, so a part-paid bill counts only its remainder and the figure tracks the
-                aged payables. Bills tracked to this site in Xero but not yet allocated in JPMS
+                aged payables. Bills tracked to this site in Xero but not yet allocated in JBB Portal
                 are warned about on the row rather than silently missed.
             </p>
             <p class="text-xs text-content-subtle">

@@ -13,7 +13,7 @@
 @inject NavigationManager Nav
 @implements IDisposable
 
-<PageTitle>Cost allocation · JPMS</PageTitle>
+<PageTitle>Cost allocation · JBB Portal</PageTitle>
 
 <Page OpenTo="XeroLedgerRoles.AllowedToAllocate">
     @* Full-width (no max-w cap): the allocation table is the whole page. A capped,
@@ -283,7 +283,7 @@
                     Allocating every line of a draft bill writes its Sites / Cost Code tracking back to Xero
                     and approves it. Moving a line between projects (Set, or Send to project) rewrites its
                     Xero Sites tracking on draft and approved bills alike; paid bills are locked in Xero
-                    and move in JPMS only. A disputed line waits on the Disputed tab — its bill is never
+                    and move in JBB Portal only. A disputed line waits on the Disputed tab — its bill is never
                     auto-approved — until either side returns it to allocation. A bill from a supplier
                     with an open work order waits on the Work Order bills tab, coded from the order, for
                     one Approve.
@@ -333,7 +333,7 @@
                         SkippedReason="split across more than one project, so there's no single project to keep"
                         DestinationNoun="cost centre"
                         KeepNote="Each line keeps its project — only the cost centre changes; a line previously split across centres moves whole."
-                        XeroNote="Bills still awaiting approval have their new coding confirmed back to Xero; bills already approved in Xero are re-coded in JPMS only."
+                        XeroNote="Bills still awaiting approval have their new coding confirmed back to Xero; bills already approved in Xero are re-coded in JBB Portal only."
                         Options="@CostCenterOptions" Placeholder="Cost centre…"
                         @bind-Value="sendCostCenterCode"
                         OnConfirm="SendToCostCentreAsync" OnCancel="CloseSendToCostCentre" />
@@ -349,7 +349,7 @@
                         SkippedReason="split across cost centres, so there's no single centre to keep"
                         DestinationNoun="project"
                         KeepNote="Each line keeps its cost centre — only the project changes."
-                        XeroNote="The Xero Sites tracking is rewritten to the new project's site on draft and approved bills alike; paid bills are locked in Xero and move in JPMS only."
+                        XeroNote="The Xero Sites tracking is rewritten to the new project's site on draft and approved bills alike; paid bills are locked in Xero and move in JBB Portal only."
                         Options="@ProjectOptions" Placeholder="Project…"
                         @bind-Value="sendProjectId"
                         OnConfirm="SendToProjectAsync" OnCancel="CloseSendToProject" />

@@ -62,7 +62,7 @@ public partial class XeroAllocation
 
     private static string WriteBackText(XeroLedgerLine line) => line.WriteBackStatus switch
     {
-        XeroWriteBackStatus.Approved => "Approved by JPMS" + (line.WriteBackFailedAtUtc is { } failedAt ? $" (after a failure on {DateText(failedAt.ToLocalTime())})" : ""),
+        XeroWriteBackStatus.Approved => "Approved by JBB Portal" + (line.WriteBackFailedAtUtc is { } failedAt ? $" (after a failure on {DateText(failedAt.ToLocalTime())})" : ""),
         XeroWriteBackStatus.Failed => "Failed",
         _ when IsAwaitingApproval(line) => "Not yet written",
         _ => "Not needed"
