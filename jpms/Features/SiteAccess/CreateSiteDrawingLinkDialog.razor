@@ -1,0 +1,88 @@
+@namespace Jewel.JPMS.Features.SiteAccess
+@using Jewel.JPMS.Contracts.SiteAccess
+@using static Jewel.JPMS.Models.SiteDrawingLinkLimits
+@inject ISiteDrawingLinkStore Links
+
+<Modal IsOpen="IsOpen"
+       Title="@(issued is null ? "Create site link" : "Site link created")"
+       ShowFooter="@(issued is null)"
+       ConfirmLabel="@(busy ? "Creating…" : "Create site link")"
+       ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(label))"
+       DismissOnOverlayClick="false"
+       OnCancel="CloseAsync"
+       OnConfirm="CreateAsync">
+    @if (issued is null)
+    {
+        <div class="space-y-3">
+            <DrawingFolderPicker @ref="folderPicker" ProjectId="@ProjectId" />
+            <FormField Label="Poster label" Required Hint="What the poster says, e.g. Structural — Plot 2">
+                <input type="text" @bind="label" @bind:event="oninput" maxlength="@LabelLength" class="field" />
+            </FormField>
+            <Checkbox @bind-Value="includeSubFolders" Label="Include the folders inside it" />
+            <FormField Label="Expires in (days)" Hint="@ExpiryHint">
+                <input type="number" @bind="expiresInDays" min="@ShortestExpiryDays" max="@LongestExpiryDays" class="field w-32" />
+            </FormField>
+            @if (error is not null)
+            {
+                <Notice Tone="Tone.Negative">@error</Notice>
+            }
+        </div>
+    }
+    @if (issued is not null)
+    {
+        <SiteDrawingLinkIssued Issued="issued" OnDone="CloseAsync" />
+    }
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback OnClosed { get; set; }
+
+    private DrawingFolderPicker? folderPicker;
+    private string label = "";
+    private bool includeSubFolders = true;
+    private int expiresInDays = DefaultExpiryDays;
+    private bool busy;
+    private string? error;
+    private SiteDrawingLinkCreated? issued;
+
+    private string ExpiryHint =>
+        $"Between {ShortestExpiryDays} and {LongestExpiryDays} days; {DefaultExpiryDays} unless the site runs longer.";
+
+    private async Task CreateAsync()
+    {
+        error = folderPicker?.Problem;
+        if (error is not null) return;
+        busy = true;
+        try
+        {
+            var folderId = await ChosenFolderAsync();
+            if (folderId is null) { error = "Choose the folder the poster opens."; return; }
+            var command = new CreateSiteDrawingLink(ProjectId, folderId, label.Trim(), includeSubFolders, expiresInDays);
+            issued = await Links.CreateAsync(command, CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            error = exception.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private Task<string?> ChosenFolderAsync() =>
+        folderPicker is null ? Task.FromResult<string?>(null) : folderPicker.ResolveFolderAsync(CancellationToken.None);
+
+    private async Task CloseAsync()
+    {
+        label = "";
+        includeSubFolders = true;
+        expiresInDays = DefaultExpiryDays;
+        error = null;
+        issued = null;
+        folderPicker?.Reset();
+        await OnClosed.InvokeAsync();
+    }
+}

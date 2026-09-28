@@ -7,6 +7,7 @@ public partial class ProjectDrawings
     [Parameter] public string ProjectId { get; set; } = "";
 
     private bool isUploading;
+    private bool isManagingSiteLinks;
     private bool confirmingExtractAll;
     private bool extractAllBusy;
     private string? extractAllError;

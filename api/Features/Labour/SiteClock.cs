@@ -18,4 +18,6 @@ public static class SiteClock
         new(TimeZoneInfo.ConvertTime(moment, UkTime).Date, TimeSpan.Zero);
 
     public static DateTimeOffset Today() => WorkDateOf(DateTimeOffset.UtcNow);
+
+    public static DateTimeOffset InUkTime(DateTimeOffset moment) => TimeZoneInfo.ConvertTime(moment, UkTime);
 }

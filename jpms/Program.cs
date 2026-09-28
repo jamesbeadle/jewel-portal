@@ -21,6 +21,7 @@ using Jewel.JPMS.Features.Cvr;
 using Jewel.JPMS.Features.Directory;
 using Jewel.JPMS.Features.DocumentControl;
 using Jewel.JPMS.Features.Drawings;
+using Jewel.JPMS.Features.SiteAccess;
 using Jewel.JPMS.Features.Forms;
 using Jewel.JPMS.Features.Hs;
 using Jewel.JPMS.Features.Hs.Audits;
@@ -116,6 +117,7 @@ builder.Services.AddScoped<IPaymentCertificateStore, HttpPaymentCertificateStore
 builder.Services.AddScoped<IProjectContractStore, HttpProjectContractStore>();
 builder.Services.AddScoped<IProgressStore, HttpProgressStore>();
 builder.Services.AddScoped<Jewel.JPMS.Features.Progress.SitePhotos.ISitePhotoStore, Jewel.JPMS.Features.Progress.SitePhotos.HttpSitePhotoStore>();
+builder.Services.AddScoped<ISiteDrawingLinkStore, HttpSiteDrawingLinkStore>();
 builder.Services.AddScoped<ISubcontractorStore, HttpSubcontractorStore>();
 builder.Services.AddScoped<IPortalStore, HttpPortalStore>();
 builder.Services.AddScoped<IHsRegister, HttpHsRegister>();
@@ -190,6 +192,7 @@ using (var routeScope = app.Services.CreateScope())
     BoqRouteRegistration.RegisterBoqRoutes(queryRoutes, commandRoutes);
     RatesRouteRegistration.RegisterRatesRoutes(queryRoutes, commandRoutes);
     DrawingsRouteRegistration.RegisterDrawingsRoutes(queryRoutes, commandRoutes);
+    SiteDrawingLinkRouteRegistration.RegisterSiteDrawingLinkRoutes(queryRoutes, commandRoutes);
     Jewel.JPMS.Features.Bluebeam.BluebeamRouteRegistration.RegisterBluebeamRoutes(queryRoutes, commandRoutes);
     DocumentControlRouteRegistration.RegisterDocumentControlRoutes(queryRoutes, commandRoutes);
     ProgressRouteRegistration.RegisterProgressRoutes(queryRoutes, commandRoutes);

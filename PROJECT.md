@@ -243,6 +243,49 @@ The project-process kit writes this file once and never touches it again, and `C
   gates did not change: who may record progress may edit it, and correcting only one's own day is
   the test's convention, not a rule the API enforces.
 
+## Site QR drawing access: a poster opens one folder's current drawings (contracts + api + jpms)
+
+- **A site link is a QR poster onto ONE folder of a project's document register** (2026-09-28,
+  the "Site QR Codes for Drawing Access" brief of 2026-09-04, measure 6 of the Site Daily Logs
+  goal: nobody asks on WhatsApp which revision is current). `SiteDrawingLinkEntity` (table
+  `SiteDrawingLinks`, unique on `TokenHash`, migration `AddSiteDrawingLinks`, script
+  `add-site-drawing-links.sql`) holds the folder, `IncludeSubFolders`, the poster's label, who
+  minted it, `ExpiresAt` (`SiteDrawingLinkLimits`: 90 days unless asked, 1–365), `RevokedAt`,
+  `ScanCount` and `LastScannedAt` — and only the SHA-256 of the secret. The secret is sixteen
+  bytes (`AuthTokens.NewSecret(byteCount)`, `SiteDrawingLinkSecrets`), so the QR prints legibly.
+  `CreateSiteDrawingLink` (POST `projects/{id}/site-links`, `SiteDrawingLinkRoles.Curators` = the
+  folder gate: Director, PM, Estimator) answers `SiteDrawingLinkCreated` — the link, the raw URL,
+  the QR PNG and the A4 poster PDF (`SiteDrawingLinkPosterRenderer`, QRCoder's pure-managed
+  `PngByteQRCode`) — ONCE: nothing stored can reproduce them, so the brief's separate poster
+  endpoint was not built, the dialog (`CreateSiteDrawingLinkDialog` → `SiteDrawingLinkIssued`)
+  shows the QR and downloads the poster from the answer, and a lost poster means revoke and mint
+  again. `RevokeSiteDrawingLink` (POST `site-links/{id}/revoke`) stops it at once. Both are audit
+  rows (`SiteDrawingLinkCreated` / `SiteDrawingLinkRevoked`). The register's "Site links" button
+  (Documents tab, `SiteDrawingLinksPanel`, the page's CanManage roles) lists them with scans and
+  Revoke. Deliberately NOT on the connector: a poster is a printed file the connector cannot carry.
+- **`api/Features/SiteAccess/Site/` is the ENTIRE anonymous surface of the drawing system.**
+  `GET site/{token}` (`SiteDrawingsPageEndpoint`) is server-rendered HTML — inline CSS, no script,
+  no request beyond its own files, no link back into the app (`SiteDrawingsPageHtml`), because a
+  phone on site on bad signal must not pull the 17 MB WASM app — listing the folder's drawings
+  (and the folders beneath it when the link includes them, `SiteDrawingFolders`) with the
+  APPROVED revision of each, else the newest received badged "Not approved"
+  (`SiteDrawingRevisionChoice`); a scan bumps `ScanCount` (`SiteLinkScans`). `GET
+  site/{token}/file/{revisionId}` streams the file exactly as the signed-in download does, after
+  the containment check (`SiteDrawingReach.RevisionWithinAsync`: the revision's drawing must sit in
+  the link's folders on the link's project), and `?inline=1` — the page's own taps — never bumps
+  the revision's `ViewCount`. `SiteLinkResolver` is the ONE resolution: unknown, revoked and expired
+  answer the same plain 404 with no body (`Refuse`), logged with the caller's address and never the
+  token; nothing is cached, so a revoke bites on the next scan. Every response says no-store,
+  noindex/nofollow, no-referrer and nosniff (`SiteResponseHeaders`). The accepted residual risk,
+  a decision not an oversight: anyone holding the link reads that folder until it expires or is
+  revoked. **The surface is read-only** — the only writes are the scan and view counts. The
+  per-person site-entry links (task 702c52ab) would be the first write through it; if they are
+  built, amend this rule in writing here and record the residual risk the same way. Pinned by
+  `SiteDrawingLinkTests` and `SiteDrawingReachTests`.
+- **The By France caveat stands** (brief §9): a folder whose drawings have no approved revision
+  shows every drawing at its newest revision, badged not approved — the QR page only earns its keep
+  once new issues are uploaded as revisions of the existing drawing and someone approves them.
+
 ## The Sales pane: an enquiry tagged to its lead, and the estimate on it (api + jpms)
 
 - **A fifth pathway, Sales** (Nigel, 2026-09-15, the estimating brief): an estimate enquiry

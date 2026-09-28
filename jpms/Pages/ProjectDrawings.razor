@@ -6,6 +6,7 @@
 @inject NavigationManager Nav
 @implements IDisposable
 @using Jewel.JPMS.Features.Drawings
+@using Jewel.JPMS.Features.SiteAccess
 
 <PageTitle>Documents · JPMS</PageTitle>
 
@@ -58,6 +59,11 @@
                             Extract all
                         </button>
                     }
+                    <button type="button" @onclick="() => isManagingSiteLinks = !isManagingSiteLinks"
+                            class="btn-secondary"
+                            title="QR posters that open one folder's current drawings on site, with no sign-in">
+                        @(isManagingSiteLinks ? "Hide site links" : "Site links")
+                    </button>
                     <button type="button" @onclick="OpenNewFolder"
                             class="btn-secondary">
                         + New folder
@@ -79,6 +85,11 @@
                                    InitialFolderId="@uploadIntoFolder?.DrawingFolderId"
                                    OnUploaded="CloseUploadPanel" />
             </div>
+        }
+
+        @if (isManagingSiteLinks)
+        {
+            <SiteDrawingLinksPanel ProjectId="@ProjectId" />
         }
 
         @if (VisibleDrawings.Count == 0 && Folders.Count == 0)

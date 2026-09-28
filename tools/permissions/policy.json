@@ -81,6 +81,8 @@
     "imagine/{token}/proposal/decline",
     "imagine/{token}/keep-in-touch/stop",
     "work-orders/accept/{token}",
+    "site/{token}",
+    "site/{token}/file/{revisionId}",
     "public-forms/{slug}",
     "public-forms/{slug}/uploads",
     "public-forms/{slug}/submit",

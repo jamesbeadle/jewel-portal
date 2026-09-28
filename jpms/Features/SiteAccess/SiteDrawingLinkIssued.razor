@@ -1,0 +1,47 @@
+@namespace Jewel.JPMS.Features.SiteAccess
+@inject IJSRuntime Js
+
+<div class="space-y-4">
+    <Notice Tone="Tone.Warning">
+        This link is shown once and stored nowhere. Download the poster now; if it is lost, revoke
+        this link and create another.
+    </Notice>
+    <div class="flex flex-col items-center gap-3">
+        <img src="@QrSource" alt="QR code for the site link" class="w-48 h-48 rounded border border-line bg-white" />
+        <a href="@PosterSource" download="@PosterFileName" class="btn-primary">Download poster (A4 PDF)</a>
+    </div>
+    <FormField Label="Link" Hint="Copy it if the poster is being made elsewhere.">
+        <div class="flex gap-2">
+            <input type="text" readonly value="@Issued.Url" class="field flex-1 text-xs" />
+            <button type="button" class="btn-secondary" @onclick="CopyAsync">@(isCopied ? "Copied" : "Copy")</button>
+        </div>
+    </FormField>
+    <div class="flex justify-end">
+        <button type="button" class="btn-secondary" @onclick="() => OnDone.InvokeAsync()">Done</button>
+    </div>
+</div>
+
+@code {
+    private const string PosterFileName = "site-drawings-poster.pdf";
+
+    [Parameter, EditorRequired] public SiteDrawingLinkCreated Issued { get; set; } = default!;
+    [Parameter] public EventCallback OnDone { get; set; }
+
+    private bool isCopied;
+
+    private string QrSource => "data:image/png;base64," + Issued.QrPngBase64;
+    private string PosterSource => "data:application/pdf;base64," + Issued.PosterPdfBase64;
+
+    private async Task CopyAsync()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("navigator.clipboard.writeText", Issued.Url);
+            isCopied = true;
+        }
+        catch (JSException)
+        {
+            isCopied = false;
+        }
+    }
+}

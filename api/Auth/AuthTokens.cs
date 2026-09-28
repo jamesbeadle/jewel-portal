@@ -14,8 +14,12 @@ public static class AuthTokens
     private const int SecretBytes = 32;
 
     /// <summary>A new URL-safe random secret to embed in a link or cookie.</summary>
-    public static string NewSecret() =>
-        Base64Url(RandomNumberGenerator.GetBytes(SecretBytes));
+    public static string NewSecret() => NewSecret(SecretBytes);
+
+    /// <summary>A secret of a chosen size: a QR poster's link needs fewer bytes than an invite so
+    /// the code prints legibly, and the strength is stated where the link is minted.</summary>
+    public static string NewSecret(int byteCount) =>
+        Base64Url(RandomNumberGenerator.GetBytes(byteCount));
 
     /// <summary>SHA-256 (lowercase hex) of a secret — the value stored and looked up by.</summary>
     public static string Hash(string secret)

@@ -52,6 +52,7 @@ public sealed partial class JpmsContext : DbContext
     public DbSet<DrawingRevisionEntity> DrawingRevisions => Set<DrawingRevisionEntity>();
     public DbSet<DrawingIssueRecordEntity> DrawingIssueRecords => Set<DrawingIssueRecordEntity>();
     public DbSet<DrawingFolderEntity> DrawingFolders => Set<DrawingFolderEntity>();
+    public DbSet<SiteDrawingLinkEntity> SiteDrawingLinks => Set<SiteDrawingLinkEntity>();
     public DbSet<BluebeamConnectionEntity> BluebeamConnections => Set<BluebeamConnectionEntity>();
     public DbSet<DrawingExtractionEntity> DrawingExtractions => Set<DrawingExtractionEntity>();
     public DbSet<DrawingMarkupEntity> DrawingMarkups => Set<DrawingMarkupEntity>();
