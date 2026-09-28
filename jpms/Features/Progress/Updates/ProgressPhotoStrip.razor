@@ -1,0 +1,75 @@
+@namespace Jewel.JPMS.Features.Progress.Updates
+@inject IProgressStore ProgressStore
+
+<div class="flex flex-wrap gap-2">
+    @foreach (var photo in Update.Photos)
+    {
+        <div class="relative group">
+            <a href="@($"/api/progress-photos/{photo.ProgressPhotoId}/file")" title="@photo.FileName">
+                <img src="@($"/api/progress-photos/{photo.ProgressPhotoId}/file?inline=1")"
+                     alt="@photo.FileName" loading="lazy"
+                     class="h-28 w-36 object-cover rounded border border-line" />
+            </a>
+            @if (CanContribute)
+            {
+                <button type="button" @onclick="() => DeletePhotoAsync(photo.ProgressPhotoId)"
+                        aria-label="Delete photo" title="@(IsArmed(photo) ? "Click again to confirm" : "Delete photo")"
+                        class="absolute top-1 right-1 rounded text-xs px-1.5 py-0.5 transition @(IsArmed(photo) ? "bg-red-600 text-white" : "bg-black/50 text-white sm:opacity-0 sm:group-hover:opacity-100")">
+                    ✕
+                </button>
+            }
+        </div>
+    }
+    @if (CanContribute)
+    {
+        <label class="h-28 w-36 rounded border border-dashed border-line-strong flex flex-col items-center justify-center text-content-subtle text-xs cursor-pointer hover:bg-surface-raised transition">
+            <span class="text-lg leading-none mb-1">+</span>
+            <span>@(isAddingPhotos ? "Uploading…" : "Add photos")</span>
+            <InputFile OnChange="AddPhotosAsync" multiple accept="image/*" class="hidden" />
+        </label>
+    }
+</div>
+
+@if (error is not null)
+{
+    <Notice Tone="Tone.Negative" Class="mt-3">@error</Notice>
+}
+
+@code {
+    private const int MaxPhotosPerBatch = 30;
+
+    [Parameter, EditorRequired] public ProgressUpdate Update { get; set; } = default!;
+    [Parameter] public bool CanContribute { get; set; }
+
+    private bool isAddingPhotos;
+    private string? pendingPhotoDelete;
+    private string? error;
+
+    private string ProjectId => Update.ProjectId;
+    private string UpdateId => Update.ProgressUpdateId;
+
+    private bool IsArmed(ProgressPhoto photo) => pendingPhotoDelete == photo.ProgressPhotoId;
+
+    private async Task DeletePhotoAsync(string progressPhotoId)
+    {
+        if (pendingPhotoDelete != progressPhotoId) { pendingPhotoDelete = progressPhotoId; return; }
+        pendingPhotoDelete = null;
+        await RunAsync(() => ProgressStore.DeletePhotoAsync(ProjectId, UpdateId, progressPhotoId, CancellationToken.None));
+    }
+
+    private async Task AddPhotosAsync(InputFileChangeEventArgs change)
+    {
+        var files = change.GetMultipleFiles(MaxPhotosPerBatch);
+        if (!files.Any()) return;
+        isAddingPhotos = true;
+        await RunAsync(() => ProgressStore.AddPhotosAsync(ProjectId, UpdateId, files, CancellationToken.None));
+        isAddingPhotos = false;
+    }
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        error = null;
+        try { await action(); }
+        catch (Exception exception) { error = exception.Message; }
+    }
+}

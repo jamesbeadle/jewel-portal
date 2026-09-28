@@ -1,0 +1,89 @@
+@namespace Jewel.JPMS.Features.Progress.Updates
+@using static Jewel.JPMS.Models.ProgressWeatherLimits
+
+@if (!isOpen)
+{
+    <button type="button" class="btn-ghost text-sm" @onclick="() => isOpen = true">+ Weather conditions (optional)</button>
+}
+@if (isOpen)
+{
+    <div class="border border-line p-3 space-y-3">
+        <p class="eyebrow">
+            Weather conditions <span class="normal-case font-normal tracking-normal">— optional, printed on the client report</span>
+        </p>
+        <FormField Label="Summary">
+            <input type="text" @bind="summary" maxlength="@SummaryLength" placeholder="Partly cloudy with showers" class="field" />
+        </FormField>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <FormField Label="High (°C)">
+                <input type="number" min="@LowestTemperatureC" max="@HighestTemperatureC" @bind="tempHighC" class="field" />
+            </FormField>
+            <FormField Label="Low (°C)">
+                <input type="number" min="@LowestTemperatureC" max="@HighestTemperatureC" @bind="tempLowC" class="field" />
+            </FormField>
+            <FormField Label="Wind (mph)">
+                <input type="number" min="@LowestWindMph" max="@HighestWindMph" @bind="windMph" class="field" />
+            </FormField>
+            <FormField Label="Humidity (%)">
+                <input type="number" min="@LowestHumidityPercent" max="@HighestHumidityPercent" @bind="humidityPercent" class="field" />
+            </FormField>
+            <FormField Label="Precip (inches)">
+                <input type="number" min="@LowestPrecipInches" max="@HighestPrecipInches" step="@PrecipStepInches" @bind="precipInches" class="field" />
+            </FormField>
+            <FormField Label="Observed at">
+                <input type="datetime-local" @bind="observedAt" class="field" />
+            </FormField>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public ProgressWeather? Initial { get; set; }
+
+    private bool isOpen;
+    private string summary = "";
+    private DateTime? observedAt;
+    private int? tempHighC;
+    private int? tempLowC;
+    private int? windMph;
+    private int? humidityPercent;
+    private decimal? precipInches;
+
+    protected override void OnInitialized()
+    {
+        if (Initial is null) return;
+        isOpen = true;
+        summary = Initial.Summary;
+        observedAt = EnteredDates.AsEntered(Initial.ObservedAt);
+        tempHighC = Initial.TempHighC;
+        tempLowC = Initial.TempLowC;
+        windMph = Initial.WindMph;
+        humidityPercent = Initial.HumidityPercent;
+        precipInches = Initial.PrecipInches;
+    }
+
+    public ProgressWeather? Build()
+    {
+        var recorded = new ProgressWeather(
+            summary.Trim(), EnteredDates.AsRecorded(observedAt),
+            tempHighC, tempLowC, windMph, humidityPercent, precipInches);
+        return IsBlank(recorded) ? null : recorded;
+    }
+
+    public void Clear()
+    {
+        summary = "";
+        observedAt = null;
+        tempHighC = null;
+        tempLowC = null;
+        windMph = null;
+        humidityPercent = null;
+        precipInches = null;
+        StateHasChanged();
+    }
+
+    private static bool IsBlank(ProgressWeather weather) =>
+        string.IsNullOrWhiteSpace(weather.Summary) && weather.ObservedAt is null
+        && weather.TempHighC is null && weather.TempLowC is null && weather.WindMph is null
+        && weather.HumidityPercent is null && weather.PrecipInches is null;
+}

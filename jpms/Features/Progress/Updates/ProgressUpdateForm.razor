@@ -1,0 +1,99 @@
+@namespace Jewel.JPMS.Features.Progress.Updates
+@inject IProgressStore ProgressStore
+
+<EditForm Model="this" OnValidSubmit="HandleSubmit" class="border border-line bg-surface p-5 space-y-3">
+    <FormField Label="Title" Required>
+        <input type="text" @bind="title" required maxlength="@StoredTextLengths.Title" placeholder="Daily log — your name" class="field" />
+    </FormField>
+    <FormField Label="Description" Hint="What was done, which areas, anything worth knowing — in your own words.">
+        <textarea @bind="description" rows="4" class="field"></textarea>
+    </FormField>
+    <FormField Label="Date of works" Required>
+        <input type="date" @bind="workDate" required class="field" />
+    </FormField>
+    <FormField Label="Photos" Hint="@PhotosHint">
+        <InputFile OnChange="OnFilesSelected" multiple accept="image/*" class="w-full text-sm text-content-muted" />
+    </FormField>
+    <ProgressWeatherFields @ref="weatherFields" />
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative">@error</Notice>
+    }
+    <button type="submit" disabled="@busy" class="btn-primary w-full">
+        @(busy ? "Saving…" : "Record progress")
+    </button>
+</EditForm>
+
+@code {
+    private const int MaxPhotosPerUpdate = 30;
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private ProgressWeatherFields? weatherFields;
+    private IReadOnlyList<IBrowserFile> selectedFiles = Array.Empty<IBrowserFile>();
+    private string title = "";
+    private string description = "";
+    private DateTime? workDate = DateTime.Today;
+    private bool busy;
+    private string? error;
+    private bool HasPhotos => selectedFiles.Count > 0;
+    private bool HasWords => !string.IsNullOrWhiteSpace(description);
+
+    private string PhotosHint => HasPhotos
+        ? $"{selectedFiles.Count} photo{(selectedFiles.Count == 1 ? "" : "s")} · {FormatSize(selectedFiles.Sum(file => file.Size))}"
+        : $"Camera or gallery, up to {MaxPhotosPerUpdate} at a time. A day can be filed without them and they can be added to it later.";
+
+    private void OnFilesSelected(InputFileChangeEventArgs change)
+    {
+        selectedFiles = change.GetMultipleFiles(MaxPhotosPerUpdate);
+        error = null;
+    }
+
+    private async Task HandleSubmit()
+    {
+        error = Refusal();
+        if (error is not null) return;
+        busy = true;
+        try
+        {
+            await SaveAsync();
+            Reset();
+            await OnSaved.InvokeAsync();
+        }
+        catch (Exception exception)
+        {
+            error = $"Could not record progress: {exception.Message}";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private string? Refusal()
+    {
+        if (string.IsNullOrWhiteSpace(title)) return "Enter a title.";
+        if (workDate is null) return "Enter the date of the works.";
+        if (!HasWords && !HasPhotos) return "Write what was done, or choose at least one photo.";
+        return null;
+    }
+
+    private Task SaveAsync()
+    {
+        var heading = title.Trim();
+        var words = description.Trim();
+        var date = EnteredDates.AsRecorded(workDate ?? DateTime.Today);
+        var weather = weatherFields?.Build();
+        if (!HasPhotos) return ProgressStore.CreateNoteAsync(ProjectId, heading, words, date, weather, CancellationToken.None);
+        return ProgressStore.CreateUpdateAsync(ProjectId, heading, words, date, weather, selectedFiles, CancellationToken.None);
+    }
+
+    private void Reset()
+    {
+        selectedFiles = Array.Empty<IBrowserFile>();
+        title = "";
+        description = "";
+        workDate = DateTime.Today;
+        weatherFields?.Clear();
+    }
+}

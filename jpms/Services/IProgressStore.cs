@@ -28,6 +28,13 @@ public interface IProgressStore
         string projectId, string title, string description, DateTimeOffset? workDate,
         ProgressWeather? weather, IReadOnlyList<IBrowserFile> photos, CancellationToken cancellationToken);
 
+    /// <summary>Creates a progress update from its words alone — a dated site note with no
+    /// photographs yet; they join it later through <see cref="AddPhotosAsync"/>. The API stamps
+    /// the signed-in user as its author.</summary>
+    Task CreateNoteAsync(
+        string projectId, string title, string description, DateTimeOffset workDate,
+        ProgressWeather? weather, CancellationToken cancellationToken);
+
     /// <summary>Appends photos to an existing progress update, with an outcome per photo.</summary>
     Task<ProgressPhotoBatchResult> AddPhotosAsync(
         string projectId, string progressUpdateId,

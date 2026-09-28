@@ -1,0 +1,65 @@
+@namespace Jewel.JPMS.Features.Progress.Updates
+@inject IProgressStore ProgressStore
+
+<li id="@($"update-{Update.ProgressUpdateId}")" class="border border-line bg-surface p-4">
+    @if (isEditing)
+    {
+        <ProgressUpdateEditForm Update="Update" OnSaved="StopEditing" OnCancelled="StopEditing" />
+    }
+    @if (!isEditing)
+    {
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-2">
+            <div class="min-w-0">
+                <p class="text-sm font-semibold text-content">@Update.Title</p>
+                <p class="text-xs text-content-subtle">
+                    @(Update.WorkDate?.ToString("dd MMM yyyy") ?? DateText(Update.CreatedAt))
+                    · @Update.Photos.Count photo@(Update.Photos.Count == 1 ? "" : "s")
+                    · @Update.CreatedByEmail
+                </p>
+            </div>
+            @if (CanContribute)
+            {
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" @onclick="() => isEditing = true" class="btn-secondary text-xs">Edit</button>
+                    <InlineConfirm Label="Delete" Question="Delete this update and its photos? Click again to confirm"
+                                   Class="text-xs" OnConfirm="DeleteAsync" />
+                </div>
+            }
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Update.Description))
+        {
+            <p class="text-sm text-content-muted mb-3 whitespace-pre-line">@Update.Description</p>
+        }
+        @if (Update.Weather is { } weather)
+        {
+            <p class="text-xs text-content-subtle mb-3">@ProgressWeatherLine.Of(weather)</p>
+        }
+    }
+
+    <ProgressPhotoStrip Update="Update" CanContribute="CanContribute" />
+
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mt-3">@error</Notice>
+    }
+</li>
+
+@code {
+    [Parameter, EditorRequired] public ProgressUpdate Update { get; set; } = default!;
+    [Parameter] public bool CanContribute { get; set; }
+
+    private bool isEditing;
+    private string? error;
+
+    private string ProjectId => Update.ProjectId;
+    private string UpdateId => Update.ProgressUpdateId;
+
+    private void StopEditing() => isEditing = false;
+
+    private async Task DeleteAsync()
+    {
+        error = null;
+        try { await ProgressStore.DeleteUpdateAsync(ProjectId, UpdateId, CancellationToken.None); }
+        catch (Exception exception) { error = exception.Message; }
+    }
+}

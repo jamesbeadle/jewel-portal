@@ -1,3 +1,4 @@
+@using Jewel.JPMS.Features.Progress.Updates
 @inject IProgressStore ProgressStore
 
 <EditForm Model="this" OnValidSubmit="HandleSubmit"
@@ -153,14 +154,8 @@
         error = null;
         try
         {
-            // SpecifyKind: the DateTimeOffset ctor throws when a Local-kind DateTime disagrees
-            // with the given offset (i.e. whenever the UK is on BST).
-            DateTimeOffset? start = periodStart is { } s
-                ? new DateTimeOffset(DateTime.SpecifyKind(s, DateTimeKind.Unspecified), TimeSpan.Zero)
-                : null;
-            DateTimeOffset? end = periodEnd is { } e
-                ? new DateTimeOffset(DateTime.SpecifyKind(e, DateTimeKind.Unspecified), TimeSpan.Zero)
-                : null;
+            var start = EnteredDates.AsRecorded(periodStart);
+            var end = EnteredDates.AsRecorded(periodEnd);
 
             if (Existing is null)
             {
