@@ -27,7 +27,10 @@
             {
                 @if (HasNoProjects(day))
                 {
-                    <p class="text-sm text-content-subtle italic">You're not on any project's worker list yet — ask your Project Manager.</p>
+                    <Notice Title="You're not on a project's worker list yet" Class="mb-4">
+                        Ask your Project Manager to add you on the project's Labour tab. Your sign-in card
+                        appears here once they have.
+                    </Notice>
                 }
                 @foreach (var project in day.Projects)
                 {
