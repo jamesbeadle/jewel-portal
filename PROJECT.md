@@ -1323,7 +1323,11 @@ leaves the day unlinked. The day is the finance director's model (2026-09-28), a
   a missing one.
 - **The day read back** (`GetMyLabourDay`) — `MyDayProjects` builds one `MyLabourProject` per assignment with
   today's `SignedInAt`/`SignedOutAt`, the codes and `TodaysNote` (`MyDayNotesToday`: the worker's own note on
-  today's date with its photo count); `IsLoggedToday` is signed out **or** noted.
+  today's date with its photo count); `IsLoggedToday` is signed out **or** noted. Its sorted reads sort the
+  entities first and build the record last (`MyDayProjects.AssignedTo`, `GetMyLabourDayHandler.OwnTimesheets`):
+  SQL Server cannot sort on a record made by its constructor, the in-memory tests cannot see that, and so
+  `MyDayLogTests` translates both with the SQL Server provider (`ToQueryString`, no database). The day failed
+  to load for every linked worker until it did (JPMS-392A43, 2026-09-28).
 
 Onboarding a worker (Jeremy's recipe): invite them with the **Site Operative** role, add a **Worker** record on
 /labour/workers with the same email, and assign them to each project's worker list on its Labour tab; the

@@ -20,6 +20,8 @@ public sealed class MyDayLogTests
     private const string UnlinkedEmail = "jack.easty@example.com";
     private const string Project = "p-abbot-road";
     private const string Code = "LAB";
+    private const string NeverOpened = "Server=unused;Database=unused";
+    private const string SortedInTheDatabase = "ORDER BY";
 
     [Fact]
     public async Task SigningOut_writesTheHours_theNote_andClosesTheAttendance_inOneSave()
@@ -133,6 +135,19 @@ public sealed class MyDayLogTests
     }
 
     [Fact]
+    public void TheDaysSortedReads_translateForSqlServer_notOnlyInMemory()
+    {
+        using var context = new JpmsContext(new DbContextOptionsBuilder<JpmsContext>().UseSqlServer(NeverOpened).Options);
+        var worker = new WorkerEntity { WorkerId = "w-jack" };
+
+        var assigned = DayProjects(context).AssignedTo(worker).ToQueryString();
+        var timesheets = DayHandler(context).OwnTimesheets(worker, sheet => sheet.Hours > WorkingDayChunks.Off).ToQueryString();
+
+        Assert.Contains(SortedInTheDatabase, assigned);
+        Assert.Contains(SortedInTheDatabase, timesheets);
+    }
+
+    [Fact]
     public void TheDayInChunks_isOff_half_andFull()
     {
         Assert.Equal(0m, WorkingDayChunks.Off);
@@ -144,8 +159,10 @@ public sealed class MyDayLogTests
 
     private static MySiteSignOutHandler SignOutHandler(JpmsContext context) => new(context, new MyDayCostCodes(context));
 
-    private static GetMyLabourDayHandler DayHandler(JpmsContext context) =>
-        new(context, new MyDayProjects(context, new MyDayCostCodes(context), new MyDayNotesToday(context)));
+    private static MyDayProjects DayProjects(JpmsContext context) =>
+        new(context, new MyDayCostCodes(context), new MyDayNotesToday(context));
+
+    private static GetMyLabourDayHandler DayHandler(JpmsContext context) => new(context, DayProjects(context));
 
     private static async Task<JpmsContext> SeededAsync()
     {
