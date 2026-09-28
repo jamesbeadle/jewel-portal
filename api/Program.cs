@@ -96,6 +96,7 @@ var host = new HostBuilder()
         services.AddScoped<InviteDirectoryWriter>();
         services.AddScoped<UserInviter>();
         services.AddScoped<PasswordResetSender>();
+        services.AddScoped<PasswordSetter>();
         RegisterInviteNotifier(services, context.Configuration);
         services.AddDirectoryFeature();
         services.AddDataProtectionFeature();

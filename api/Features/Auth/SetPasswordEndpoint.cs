@@ -1,29 +1,26 @@
 using Jewel.JPMS.Api.Auth;
-using Jewel.JPMS.Api.Data.Entities;
-using Jewel.JPMS.Api.Features.Connect;
 using Jewel.JPMS.Contracts.Auth;
 
 namespace Jewel.JPMS.Api.Features.Auth;
 
 /// <summary>
 /// POST /api/auth/set-password — completes an invite (or reset). Validates the single-use token,
-/// applies the password policy, stores the hash, marks the account active, ends every other
-/// session and connected tool the person had (a reset is the answer to "someone else has my
-/// password", so nothing opened before it survives) and signs the user in.
+/// applies the password policy and hands the password to PasswordSetter — which consumes this link
+/// with every other live one, stores the hash, marks the account active and ends every session and
+/// connected tool the person had (a reset is the answer to "someone else has my password", so
+/// nothing opened before it survives) — then signs the user in.
 /// </summary>
 public sealed class SetPasswordEndpoint
 {
     private readonly JpmsContext context;
     private readonly SessionManager sessions;
-    private readonly OAuthTokenManager tokens;
-    private readonly SignedInUserCache userCache;
+    private readonly PasswordSetter passwords;
 
-    public SetPasswordEndpoint(JpmsContext context, SessionManager sessions, OAuthTokenManager tokens, SignedInUserCache userCache)
+    public SetPasswordEndpoint(JpmsContext context, SessionManager sessions, PasswordSetter passwords)
     {
         this.context = context;
         this.sessions = sessions;
-        this.tokens = tokens;
-        this.userCache = userCache;
+        this.passwords = passwords;
     }
 
     [Function("AuthSetPassword")]
@@ -51,23 +48,7 @@ public sealed class SetPasswordEndpoint
             return new BadRequestObjectResult(new { error = "This link is invalid or has expired. Ask an administrator for a new invite." });
 
         var email = token.Email;
-        var credential = await context.UserCredentials
-            .FirstOrDefaultAsync(row => row.Email == email, cancellationToken);
-        if (credential is null)
-        {
-            credential = new UserCredentialEntity { Email = email, CreatedAt = now };
-            context.UserCredentials.Add(credential);
-        }
-
-        credential.PasswordHash = PasswordHasher.Hash(body.Password!);
-        credential.Status = (int)CredentialStatus.Active;
-        credential.PasswordSetAt = now;
-        credential.FailedAttempts = 0;
-        credential.LockedUntil = null;
-
-        token.ConsumedAt = now;
-        await context.SaveChangesAsync(cancellationToken);
-        await EndEverythingOpenedBeforeAsync(email, now, cancellationToken);
+        await passwords.SetAsync(email, body.Password!, cancellationToken);
 
         var secret = await sessions.CreateAsync(email, cancellationToken);
         SessionCookie.Set(request.HttpContext.Response, secret);
@@ -80,16 +61,5 @@ public sealed class SetPasswordEndpoint
         return new OkObjectResult(new AuthenticatedUserResponse(email, displayName, roles, directoryUser?.SubcontractorId,
             HomeRoleSelection.From(directoryRoles), directoryUser?.RevertToOwnRole ?? false, directoryUser?.ClientId,
             directoryUser?.ArchitectId));
-    }
-
-    private async Task EndEverythingOpenedBeforeAsync(string email, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        var liveSessions = await context.UserSessions
-            .Where(row => row.Email == email && row.RevokedAt == null)
-            .ToListAsync(cancellationToken);
-        foreach (var session in liveSessions) session.RevokedAt = now;
-        await context.SaveChangesAsync(cancellationToken);
-        await tokens.RevokeAllForUserAsync(email, cancellationToken);
-        userCache.InvalidateEmail(email);
     }
 }
