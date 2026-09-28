@@ -17,6 +17,7 @@ namespace Jewel.JPMS.Tests;
 public sealed class MyDayLogTests
 {
     private const string Email = "jack@example.com";
+    private const string UnlinkedEmail = "jack.easty@example.com";
     private const string Project = "p-abbot-road";
     private const string Code = "LAB";
 
@@ -109,6 +110,7 @@ public sealed class MyDayLogTests
 
         var day = await DayHandler(context).HandleAsync(Email, CancellationToken.None);
 
+        Assert.True(day.IsLinked);
         var card = Assert.Single(day.Projects);
         Assert.True(card.IsLoggedToday);
         Assert.NotNull(card.SignedInAt);
@@ -117,6 +119,17 @@ public sealed class MyDayLogTests
         Assert.Equal(0, card.TodaysNote?.PhotoCount);
         Assert.Equal(Code, Assert.Single(card.CostCodes).Code);
         Assert.Equal(WorkingDayChunks.HalfDay, Assert.Single(day.Recent).Hours);
+    }
+
+    [Fact]
+    public async Task ALoginWithNoWorkerRecord_isAnsweredWithAnUnlinkedDay_notAnError()
+    {
+        await using var context = await SeededAsync();
+
+        var day = await DayHandler(context).HandleAsync(UnlinkedEmail, CancellationToken.None);
+
+        Assert.False(day.IsLinked);
+        Assert.Empty(day.Projects);
     }
 
     [Fact]
