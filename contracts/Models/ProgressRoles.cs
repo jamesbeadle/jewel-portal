@@ -2,9 +2,9 @@
 namespace Jewel.JPMS.Models;
 
 /// <summary>
-/// Role sets for the progress feature. Site Managers, Project Managers and the Managing Director
-/// collate progress updates and assemble reports (the MD may help out); administrators pass every
-/// gate. Reads are open to the whole internal team — progress photos are useful well beyond the
+/// Role sets for the progress feature. Site Managers, Project Managers and both directors collate
+/// progress updates and assemble reports (the Finance Director runs the weekly Contractor's Report,
+/// 2026-09-28); administrators pass every gate. Reads are open to the whole internal team — progress photos are useful well beyond the
 /// authors — but never to external roles, because reports are assembled for clients deliberately,
 /// not exposed raw.
 /// </summary>
@@ -13,6 +13,7 @@ public static class ProgressRoles
     public static readonly RoleSet Contributors = RoleSet.Of(
         Role.Admin,
         JpmsRoles.Director,
+        JpmsRoles.FinanceDirector,
         JpmsRoles.ProjectManager,
         JpmsRoles.SiteManager);
 

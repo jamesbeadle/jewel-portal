@@ -160,8 +160,7 @@
 
     // Site Managers collate progress on site; Project Managers and the Managing Director may
     // contribute too (the MD helps out). Administrators pass every gate.
-    private bool CanContribute =>
-        Auth.CurrentRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager);
+    private bool CanContribute => ProgressRoles.Contributors.IncludesAny(Auth.CurrentRoles);
 
     protected override async Task OnInitializedAsync()
     {
