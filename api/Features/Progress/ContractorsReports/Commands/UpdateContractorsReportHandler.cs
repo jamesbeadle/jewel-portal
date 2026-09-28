@@ -25,6 +25,7 @@ public sealed class UpdateContractorsReportHandler : ICommandHandler<UpdateContr
         entity.SelectedUpdateIdsJson = ContractorsReportJson.Write(command.SelectedUpdateIds.Distinct().ToList());
         if (command.BuildingControlContact is { } contact) entity.BuildingControlContact = contact.Trim();
         if (command.ExcludedPhotoIds is { } excluded) entity.ExcludedPhotoIdsJson = ExcludedJson(excluded);
+        if (command.Rewrite is { } rewrite) entity.RewriteJson = ContractorsReportJson.WriteOne(rewrite);
         entity.UpdatedAt = DateTimeOffset.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();

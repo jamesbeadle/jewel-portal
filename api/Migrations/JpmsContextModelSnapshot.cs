@@ -1601,6 +1601,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<string>("RewriteJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("SelectedUpdateIdsJson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");

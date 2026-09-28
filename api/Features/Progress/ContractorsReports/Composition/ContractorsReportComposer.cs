@@ -36,7 +36,7 @@ public sealed class ContractorsReportComposer
 
         var draft = new ContractorsReportDocument(
             Header: await HeaderAsync(report, cancellationToken),
-            Progress: ContractorsReportDays.Group(week, selected),
+            Progress: ContractorsReportRewrittenDays.Apply(ContractorsReportDays.Group(week, selected), report.Rewrite),
             InstructionsReceived: await ContractorsReportInstructions.ReceivedAsync(context, report.ProjectId, week, cancellationToken),
             LookAhead: report.LookAhead,
             Decisions: await ContractorsReportRegisterReader.DecisionsAsync(context, report.ProjectId, cancellationToken),
@@ -47,7 +47,22 @@ public sealed class ContractorsReportComposer
             BuildingControl: await ContractorsReportRegisterReader.BuildingControlAsync(context, report, cancellationToken),
             Subcontractors: onSite.Where(order => order.AttendanceDays is > 0).ToList(),
             Findings: Array.Empty<ContractorsReportFinding>());
-        return draft with { Findings = ContractorsReportWording.Check(ContractorsReportLines.Of(draft)) };
+        var findings = ContractorsReportWording.Check(ContractorsReportLines.Of(draft))
+            .Concat(ContractorsReportRewrittenDays.OpenFlags(report.Rewrite))
+            .ToList();
+        return draft with { Findings = findings };
+    }
+
+    public async Task<ContractorsReportRawWeek?> RawWeekAsync(string contractorsReportId, CancellationToken cancellationToken)
+    {
+        var entity = await context.ContractorsReports.AsNoTracking()
+            .FirstOrDefaultAsync(row => row.ContractorsReportId == contractorsReportId, cancellationToken);
+        if (entity is null) return null;
+        var report = entity.ToModel();
+        var week = new ReportingWeek(report.PeriodStart, report.PeriodEnd);
+        var updates = await ContractorsReportProgressReader.UpdatesInPeriodAsync(context, report.ProjectId, week, cancellationToken);
+        var selected = ContractorsReportPhotoChoices.Printed(report, updates);
+        return new ContractorsReportRawWeek(await HeaderAsync(report, cancellationToken), ContractorsReportDays.Group(week, selected), week);
     }
 
     private async Task<ContractorsReportHeader> HeaderAsync(ContractorsReport report, CancellationToken cancellationToken)

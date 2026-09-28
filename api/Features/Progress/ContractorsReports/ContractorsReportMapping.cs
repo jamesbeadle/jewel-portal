@@ -26,5 +26,6 @@ internal static class ContractorsReportMapping
         ContractorsReportJson.Read<string>(entity.ExcludedPhotoIdsJson),
         entity.CreatedByEmail,
         entity.CreatedAt,
-        entity.UpdatedAt);
+        entity.UpdatedAt,
+        ContractorsReportJson.ReadOne<ContractorsReportRewrite>(entity.RewriteJson));
 }

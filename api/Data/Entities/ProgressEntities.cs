@@ -108,4 +108,7 @@ public sealed class ContractorsReportEntity
     [MaxLength(256)]     public string CreatedByEmail { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+    /// <summary>The week rewritten in house language with its flags (ContractorsReportRewrite as
+    /// JSON), null until asked for. Added by AddContractorsReportRewrite.</summary>
+    public string? RewriteJson { get; set; }
 }

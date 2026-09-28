@@ -17,11 +17,11 @@
                         @filing.FiledBy
                         @if (filing.Kind == ContractorsReportFilingKind.OffDay)
                         {
-                            <Pill Tone="Tone.Neutral">Off</Pill>
+                            <Pill Tone="Tone.Muted">Off</Pill>
                         }
                         @if (filing.Kind == ContractorsReportFilingKind.Note)
                         {
-                            <Pill Tone="Tone.Neutral">Note</Pill>
+                            <Pill Tone="Tone.Muted">Note</Pill>
                         }
                         @if (!filing.IsSelected)
                         {

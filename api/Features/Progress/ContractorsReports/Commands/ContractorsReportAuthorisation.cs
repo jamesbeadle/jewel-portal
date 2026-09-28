@@ -20,3 +20,15 @@ public sealed class DeleteContractorsReportAuthorisation
     public bool Allows(SignedInUser user) => ProgressRoles.Contributors.IncludesAny(user.Roles);
     public bool Allows(SignedInUser user, DeleteContractorsReport command) => Allows(user);
 }
+
+public sealed class RewriteContractorsReportWeekAuthorisation
+{
+    public bool Allows(SignedInUser user) => ProgressRoles.Contributors.IncludesAny(user.Roles);
+    public bool Allows(SignedInUser user, RewriteContractorsReportWeek command) => Allows(user);
+}
+
+public sealed class DiscardContractorsReportRewriteAuthorisation
+{
+    public bool Allows(SignedInUser user) => ProgressRoles.Contributors.IncludesAny(user.Roles);
+    public bool Allows(SignedInUser user, DiscardContractorsReportRewrite command) => Allows(user);
+}

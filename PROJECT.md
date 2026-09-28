@@ -208,6 +208,31 @@ The project-process kit writes this file once and never touches it again, and `C
   says the firm was on site, not which order the day belongs to. The neighbours / H&S roll-up and
   Look Ahead candidates of the 17 Sep brief are not built: the 21 Sep log asks none of them, so
   those sections stay entered on the page. Pinned by `ContractorsReportWeekTests`.
+- **The portal rewrites the week and flags what the report must not say — at composition, never on
+  the phone** (2026-09-28, Jeremy's 21 Sep answer to the wording-gate question: "the gate does not
+  soften and it does not refuse the site manager either"). `RewriteContractorsReportWeek` (POST
+  `contractors-reports/{id}/rewrite`, `ProgressRoles.Contributors`; connector
+  `rewrite_contractors_report_week`) asks Claude (`ContractorsReportRewritePrompt`, the sonnet tier,
+  strict JSON) for the selected days as `ContractorsReportRewrite` — per day a summary and the
+  bullets in house language, the unfinished halves as Look Ahead candidates, and the flag list
+  (`ContractorsReportFlag`: Changed, Compliance, Hedge, Omitted, Conflict, Scope) — stored as the
+  report's `RewriteJson` (migration `AddContractorsReportRewrite`, script
+  `add-contractors-report-rewrite.sql`) with every flag OPEN. The rules are the task's acceptance
+  criteria, in the prompt: the site's material and method words are kept ("foamed" is never
+  "fire stopped", flagged Compliance instead), hedges are stripped and the unfinished half moved to
+  Look Ahead, nothing completed is dropped silently, two people disagreeing is a Conflict not a
+  choice, and scope is written narrow and flagged. The raw notes are NEVER changed — the rewrite is
+  asked from `ContractorsReportComposer.RawWeekAsync`, so asking again never rewrites a rewrite. The
+  composer prints a rewritten day as one entry of its bullets, keeping the day's photographs for
+  Section 9 (`ContractorsReportRewrittenDays.Apply`), and adds a finding while any flag is open
+  (`OpenFlags`), so the PDF is refused until the office has cleared them: the page's panel *1 · In
+  house language* (`ContractorsReportRewritePanel`) edits the bullets one a line, adds a candidate
+  to Look Ahead, ticks each flag cleared (saved through `UpdateContractorsReport.Rewrite`, null =
+  keep) and offers *Discard the rewrite* (`DiscardContractorsReportRewrite`), which prints the raw
+  notes again. An unconfigured key or an unusable answer is a refusal the page shows, never a
+  silent report. Jeremy's benchmark — the hand-written translation logs of Reports 25, 27 and 28 —
+  is his to judge the first runs against. Pinned by `ContractorsReportRewriteTests` (a hand-rolled
+  `IClaudeClient` stub, the house style: no mocking library).
 - **The site photo pool: photographs reach the report run by FINGERPRINT, never through the
   model** (2026-09-16, James, after the connector could not take Jeremy's Downloads folder:
   "a big dumping ground for photos and any project … jeremy can do his normal weekly report mcp

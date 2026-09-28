@@ -82,5 +82,13 @@ public static class ProgressRouteRegistration
         commands.Register<DeleteContractorsReport, Acknowledgement>(
             new CommandRoute("DELETE", "/api/contractors-reports/{contractorsReportId}",
                 command => $"/api/contractors-reports/{((DeleteContractorsReport)command).ContractorsReportId}"));
+
+        commands.Register<RewriteContractorsReportWeek, ContractorsReport>(
+            new CommandRoute("POST", "/api/contractors-reports/{contractorsReportId}/rewrite",
+                command => $"/api/contractors-reports/{((RewriteContractorsReportWeek)command).ContractorsReportId}/rewrite"));
+
+        commands.Register<DiscardContractorsReportRewrite, ContractorsReport>(
+            new CommandRoute("POST", "/api/contractors-reports/{contractorsReportId}/rewrite/discard",
+                command => $"/api/contractors-reports/{((DiscardContractorsReportRewrite)command).ContractorsReportId}/rewrite/discard"));
     }
 }

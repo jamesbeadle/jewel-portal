@@ -1,0 +1,88 @@
+@using Jewel.JPMS.Contracts.Progress
+
+@if (Draft.Rewrite is not { } rewrite)
+{
+    <p class="text-sm text-content-muted mb-3">
+        The site's own words print as written until the week is rewritten. The rewrite keeps the site's material and method words, moves unfinished halves to Look Ahead, and flags anything it changed, left out or could not settle.
+    </p>
+    <button type="button" class="btn-secondary" disabled="@IsBusy" @onclick="OnRewrite">Rewrite the week in house language</button>
+}
+else
+{
+    <div class="space-y-4">
+        <p class="text-xs text-content-subtle">Rewritten @DateTimeText(rewrite.RequestedAt.ToLocalTime()) · edit the bullets below, one a line, then Save. Discard to print the raw notes again.</p>
+        @foreach (var day in rewrite.Days)
+        {
+            <FormField Label="@day.Date.ToString(DayFormat)" Hint="@day.Summary">
+                <textarea class="field" rows="@RowsFor(day)" value="@day.BulletsText" @onchange="e => day.BulletsText = e.Value?.ToString() ?? string.Empty"></textarea>
+            </FormField>
+        }
+        @if (rewrite.LookAheadCandidates.Count > 0)
+        {
+            <div>
+                <p class="eyebrow mb-1">Look Ahead candidates — the unfinished halves</p>
+                <ul class="space-y-1">
+                    @foreach (var candidate in rewrite.LookAheadCandidates)
+                    {
+                        <li class="flex items-center gap-3 text-sm">
+                            <span class="min-w-0 flex-1">@candidate</span>
+                            <button type="button" class="btn-secondary" disabled="@IsAlreadyInLookAhead(candidate)" @onclick="() => AddToLookAhead(candidate)">Add to Look Ahead</button>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+        <div>
+            <p class="eyebrow mb-1">Flags — @FlagCountText(rewrite)</p>
+            <ul class="space-y-2">
+                @foreach (var flag in rewrite.Flags)
+                {
+                    <li class="flex items-start gap-3 text-sm">
+                        <Checkbox Value="@flag.IsCleared" ValueChanged="value => flag.IsCleared = value" Title="Cleared — read and accepted" />
+                        <span class="min-w-0 flex-1 @(flag.IsCleared ? "text-content-subtle" : "")">
+                            <Pill Tone="@ToneFor(flag.Kind)">@flag.Kind</Pill>
+                            @if (flag.Day is { } day)
+                            {
+                                <span class="text-content-subtle"> @day.ToString(DayFormat) ·</span>
+                            }
+                            @flag.Text
+                        </span>
+                    </li>
+                }
+            </ul>
+        </div>
+        <div class="flex gap-3">
+            <button type="button" class="btn-secondary" disabled="@IsBusy" @onclick="OnRewrite">Rewrite again</button>
+            <button type="button" class="btn-secondary text-negative" disabled="@IsBusy" @onclick="OnDiscard">Discard the rewrite</button>
+        </div>
+    </div>
+}
+
+@code {
+    private const string DayFormat = "dddd d MMMM";
+    private const int MinimumRows = 2;
+
+    [Parameter, EditorRequired] public ContractorsReportDraft Draft { get; set; } = default!;
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public EventCallback OnRewrite { get; set; }
+    [Parameter] public EventCallback OnDiscard { get; set; }
+
+    private static int RowsFor(ContractorsReportRewrittenDayDraft day) =>
+        Math.Max(MinimumRows, ContractorsReportPrintedText.Bullets(day.BulletsText).Count + 1);
+
+    private static string FlagCountText(ContractorsReportRewriteDraft rewrite) =>
+        rewrite.OpenFlagCount == 0 ? "all cleared" : $"{rewrite.OpenFlagCount} still to clear before the PDF can be built";
+
+    private static Tone ToneFor(ContractorsReportFlagKind kind) => kind switch
+    {
+        ContractorsReportFlagKind.Compliance => Tone.Negative,
+        ContractorsReportFlagKind.Conflict => Tone.Warning,
+        ContractorsReportFlagKind.Omitted => Tone.Warning,
+        _ => Tone.Muted
+    };
+
+    private bool IsAlreadyInLookAhead(string candidate) =>
+        Draft.LookAhead.Any(line => string.Equals(line.Text, candidate, StringComparison.OrdinalIgnoreCase));
+
+    private void AddToLookAhead(string candidate) => Draft.LookAhead.Add(new ContractorsReportLookAheadLine { Text = candidate });
+}

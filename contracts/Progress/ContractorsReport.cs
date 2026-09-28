@@ -11,7 +11,8 @@ namespace Jewel.JPMS.Contracts.Progress;
 /// PDF are downloaded and issued by a person. <see cref="BuildingControlContact"/> is Section 7's
 /// contact line for a project with no Building Control case, carried week to week ("Bromley
 /// Building Control — buildingcontrol@bromley.gov.uk", Report 30); <see cref="ExcludedPhotoIds"/>
-/// are the photographs on the selected updates Section 9 leaves out — the updates keep them.
+/// are the photographs on the selected updates Section 9 leaves out — the updates keep them;
+/// <see cref="Rewrite"/> is the week in house language with its flags, null until asked for.
 /// </summary>
 public sealed record ContractorsReport(
     string ContractorsReportId,
@@ -42,9 +43,11 @@ public sealed record ContractorsReport(
     IReadOnlyList<string> ExcludedPhotoIds,
     string CreatedByEmail,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt)
+    DateTimeOffset UpdatedAt,
+    ContractorsReportRewrite? Rewrite = null)
 {
     public string DisplayTitle => $"Contractor's Report No. {Number}";
+    public bool HasRewrite => Rewrite is not null;
 }
 
 /// <summary>A Look Ahead line; struck (IsDone) when the work happened, so the next report seeds
