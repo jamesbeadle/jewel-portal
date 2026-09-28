@@ -1,3 +1,4 @@
+using Jewel.JPMS.Models;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 
 namespace Jewel.JPMS.Tests;

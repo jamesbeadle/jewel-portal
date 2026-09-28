@@ -113,6 +113,12 @@ public static class SitePageGuides
             + "folder\" and each folder's + / pencil / bin buttons add a sub-folder, rename or "
             + "delete it (contents move up a level); Export to Excel exports the register; opening "
             + "a row goes to the document's detail page for revision history and the viewer. "
+            + "\"Site links\" (Admin/MD/PM) lists the project's QR posters — each opens ONE folder's "
+            + "current drawings on a phone with no sign-in (the approved revision, else the newest "
+            + "badged not approved), expires, counts its scans and is revoked here in one click; "
+            + "\"+ Create site link\" shows the URL, the QR code and the A4 poster ONCE, since nothing "
+            + "stored can reproduce them — a lost poster means revoke and create another. Not on the "
+            + "connector: a poster is a printed file. "
             + "Incoming files from correspondence are filed to this register from Document "
             + "Triage, not uploaded here. Was \"Drawings\" at /drawings until 2026-09-03 — the "
             + "old URL redirects.",

@@ -27,6 +27,7 @@ using Jewel.JPMS.Api.Features.DataProtection;
 using Jewel.JPMS.Api.Features.Directory;
 using Jewel.JPMS.Api.Features.DocumentControl;
 using Jewel.JPMS.Api.Features.Drawings;
+using Jewel.JPMS.Api.Features.SiteAccess;
 using Jewel.JPMS.Api.Features.Hs;
 using Jewel.JPMS.Api.Features.Hs.Audits;
 using Jewel.JPMS.Api.Features.Inventory;
@@ -108,6 +109,7 @@ var host = new HostBuilder()
         services.AddBoqFeature();
         services.AddRatesFeature();
         services.AddDrawingsFeature(context.Configuration);
+        services.AddSiteAccessFeature();
         services.AddDocumentControlFeature(context.Configuration);
         services.AddProgressFeature(context.Configuration);
         services.AddProcurementFeature(context.Configuration);

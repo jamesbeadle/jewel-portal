@@ -1,0 +1,40 @@
+@namespace Jewel.JPMS.Features.SiteAccess
+
+<li class="panel px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+    <div class="min-w-0">
+        <p class="text-sm font-medium text-content">
+            @Link.Label
+            <Pill Tone="@StatusTone" Class="ml-2">@StatusText</Pill>
+        </p>
+        <p class="text-xs text-content-subtle">
+            @FolderPath · created @DateText(Link.CreatedAt) by @Link.CreatedByEmail
+            · expires @DateText(Link.ExpiresAt) · @ScansText
+        </p>
+    </div>
+    @if (Link.IsActive)
+    {
+        <InlineConfirm Label="Revoke" Question="Stop this poster working? Click again to confirm"
+                       Busy="@Busy" Class="text-xs" OnConfirm="OnRevoke" />
+    }
+</li>
+
+@code {
+    [Parameter, EditorRequired] public SiteDrawingLink Link { get; set; } = default!;
+    [Parameter] public string FolderPath { get; set; } = "";
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback OnRevoke { get; set; }
+
+    private Tone StatusTone => Link.IsActive ? Tone.Positive : Tone.Muted;
+
+    private string StatusText
+    {
+        get
+        {
+            if (Link.IsRevoked) return "Revoked";
+            if (Link.HasExpired) return "Expired";
+            return "Active";
+        }
+    }
+
+    private string ScansText => $"{Link.ScanCount} scan{(Link.ScanCount == 1 ? "" : "s")}";
+}

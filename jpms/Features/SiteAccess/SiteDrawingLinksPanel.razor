@@ -1,0 +1,81 @@
+@namespace Jewel.JPMS.Features.SiteAccess
+@using Jewel.JPMS.Features.Drawings
+@inject ISiteDrawingLinkStore Links
+@inject IDrawingStore DrawingStore
+
+<Panel Title="Site links" Class="mb-5" IsLoading="@(links is null)" LoadingLabel="Loading site links">
+    <HeaderActions>
+        <button type="button" class="btn-primary" @onclick="() => isCreating = true">+ Create site link</button>
+    </HeaderActions>
+    <ChildContent>
+        <p class="text-sm text-content-muted mb-4">
+            A QR poster opens one folder's current drawings on a phone with no sign-in. Each link
+            expires, can be revoked here at once, and counts its scans. Its URL is shown once, when
+            it is created.
+        </p>
+        @if (error is not null)
+        {
+            <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
+        }
+        @if (HasNoLinks)
+        {
+            <EmptyState Message="No site links yet." />
+        }
+        @if (HasLinks)
+        {
+            <ul class="space-y-2">
+                @foreach (var link in links!)
+                {
+                    <SiteDrawingLinkRow @key="link.SiteDrawingLinkId" Link="link" FolderPath="@FolderPathOf(link)"
+                                        Busy="@(revoking == link.SiteDrawingLinkId)"
+                                        OnRevoke="() => RevokeAsync(link.SiteDrawingLinkId)" />
+                }
+            </ul>
+        }
+    </ChildContent>
+</Panel>
+
+<CreateSiteDrawingLinkDialog ProjectId="@ProjectId" IsOpen="isCreating" OnClosed="CloseCreateAsync" />
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    private IReadOnlyList<SiteDrawingLink>? links;
+    private bool isCreating;
+    private string? revoking;
+    private string? error;
+
+    private bool HasLinks => links is { Count: > 0 };
+    private bool HasNoLinks => links is { Count: 0 };
+    private DrawingFolderTree Tree => new(DrawingStore.FoldersFor(ProjectId));
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private string FolderPathOf(SiteDrawingLink link)
+    {
+        var path = Tree.PathOf(link.DrawingFolderId);
+        return path.Length == 0 ? "Folder no longer on the register" : path;
+    }
+
+    private async Task LoadAsync()
+    {
+        error = null;
+        try { links = await Links.ListAsync(ProjectId, CancellationToken.None); }
+        catch (Exception exception) { error = exception.Message; links = Array.Empty<SiteDrawingLink>(); }
+    }
+
+    private async Task RevokeAsync(string siteDrawingLinkId)
+    {
+        revoking = siteDrawingLinkId;
+        try { await Links.RevokeAsync(siteDrawingLinkId, CancellationToken.None); }
+        catch (Exception exception) { error = exception.Message; }
+        finally { revoking = null; }
+        await LoadAsync();
+    }
+
+    private async Task CloseCreateAsync()
+    {
+        isCreating = false;
+        await LoadAsync();
+    }
+}

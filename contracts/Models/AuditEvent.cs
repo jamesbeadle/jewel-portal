@@ -176,7 +176,11 @@ public enum AuditEventType
     /// <summary>A forms folder's leaving or vehicle-returned date was recorded or changed, old and new — the dates retention runs from.</summary>
     FormFolderDatesRecorded = 53,
     /// <summary>A Contractor's Report PDF was exported over the connector as a download link; the row names the report and who asked.</summary>
-    ContractorsReportExported = 54
+    ContractorsReportExported = 54,
+    /// <summary>A QR poster's link was minted for one folder of a project's document register; the row names the folder, the label and the expiry. Not client-facing: Pathway is "".</summary>
+    SiteDrawingLinkCreated = 55,
+    /// <summary>A QR poster's link was revoked, with the scans it had counted. Not client-facing: Pathway is "".</summary>
+    SiteDrawingLinkRevoked = 56
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the
