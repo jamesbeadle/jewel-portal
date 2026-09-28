@@ -7,7 +7,7 @@
         <FormField Label="Arrived at" Hint="The time now — change it if you forgot at the gate.">
             <input type="time" class="field h-12 text-lg" value="@arrivedAt" @onchange="args => arrivedAt = args.Value?.ToString() ?? string.Empty" />
         </FormField>
-        <button type="button" class="btn-primary w-full py-3.5 text-base font-semibold" disabled="@isBusy" @onclick="SignInAsync">
+        <button type="button" class="btn-primary btn-lg w-full" disabled="@isBusy" @onclick="SignInAsync">
             @(isBusy ? "Signing in…" : "Sign in")
         </button>
         <button type="button" class="btn-ghost w-full" disabled="@isBusy" @onclick="() => isRecordingDayOff = true">Not on site today</button>

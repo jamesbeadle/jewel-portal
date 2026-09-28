@@ -109,6 +109,14 @@ test('a fixed popup asks for the scroll close and gets it', () => {
     assert.deepStrictEqual(reference.closes, ['CloseFromOutside']);
 });
 
+test('a scroll inside the fixed popup itself — its own list of projects — leaves it open', () => {
+    const { watcher, documentBox } = loadWatcher();
+    const reference = menuReference(1);
+    watcher.watch(root, reference, true);
+    documentBox.fire('scroll', { composedPath: () => ['list', root], target: 'list' });
+    assert.deepStrictEqual(reference.closes, []);
+});
+
 test('an absolutely positioned panel does not, so its own container scrolling leaves it open', () => {
     const { watcher, documentBox } = loadWatcher();
     const reference = menuReference(1);

@@ -5,7 +5,7 @@
     <FormField Label="Why not on site today?" Required Hint="Rain, holiday, no works on site — a recorded day off is never a missing day." Error="@error">
         <textarea class="field" rows="3" @bind="description" placeholder="Rained off"></textarea>
     </FormField>
-    <button type="button" class="btn-primary w-full py-3.5 text-base font-semibold" disabled="@isBusy" @onclick="RecordAsync">
+    <button type="button" class="btn-primary btn-lg w-full" disabled="@isBusy" @onclick="RecordAsync">
         @(isBusy ? "Recording…" : "Record day off")
     </button>
     <button type="button" class="btn-ghost w-full" disabled="@isBusy" @onclick="() => OnCancel.InvokeAsync()">Back</button>

@@ -13,9 +13,9 @@
     }
     @foreach (var entry in TodaysHours)
     {
-        <div class="flex items-center justify-between border-t border-line/60 py-1.5">
-            <span class="text-content-subtle">@entry.CostCode</span>
-            <span><span class="text-content font-medium">@entry.Hours h</span> <StatusPill Status="@entry.Status" /></span>
+        <div class="flex items-center justify-between gap-3 border-t border-line/60 py-1.5">
+            <span class="text-content-subtle min-w-0 truncate">@entry.CostCode</span>
+            <span class="shrink-0 whitespace-nowrap"><span class="text-content font-medium">@entry.Hours h</span> <StatusPill Status="@entry.Status" /></span>
         </div>
     }
     @if (Project.TodaysNote is { } note)

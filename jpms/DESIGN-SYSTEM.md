@@ -56,11 +56,15 @@ For the common repeated idioms, use the class instead of re-typing utilities:
 | `btn-ghost` | Quiet text-only dismissals |
 | `btn-icon` | A Toolbar's square icon button (32px, `line` border, no fill, disabled styling built in) |
 | `data-table` | The Figma table: header on `canvas` in white SemiBold, body on `surface` in `content-muted`, `line-strong` cell borders, 40/48px rows, 24/16 cell padding |
-| `modal-overlay` / `modal-panel` | Full-screen overlay + the dialog: 600 wide, on `canvas`, `rounded-lg`, `line-strong` border, the design's one shadow |
+| `modal-overlay` / `modal-panel` | Full-screen overlay + the dialog: 600 wide, on `canvas`, `rounded-lg`, `line-strong` border, the design's one shadow. Below `md` the dialog's padding comes in to 20px and its footer wraps |
+| `chip-lg` | The Large chip (44px, 16px type) — what `btn-lg` is to `btn` — for a choice made by thumb on a phone. `FilterChips Large` renders it |
+| `nav-drawer` / `nav-drawer-open` / `nav-drawer-closed` / `nav-drawer-scrim` | The sidebar as a phone drawer (`NavigationDrawer`): the slide and the scrim behind it below `md`; from `md` up the same element is the fixed sidebar and none of these do anything |
 
 **Buttons come in two sizes and two looks, and that is all.** Small (`btn-*`, 32px, 14/Med) for
 every in-view action; Large (`btn-lg`, 52px, 16/Med) for dialog and form submits — a `Modal`'s
-footer upsizes its buttons itself (`[data-modal-footer]`). **Green means "do it", once**: one
+footer upsizes its buttons itself (`[data-modal-footer]`). Below `md` the Small size, the icon
+button and the chip stand 44px tall — a thumb's target — by the recipe, never by a view: a view
+never writes `h-11 md:h-8` on a button. **Green means "do it", once**: one
 `btn-primary` per view or per dialog footer; everything else is `btn-secondary` — grey-outlined,
 white text, no green. Action vs dismiss is carried by position and label (green on the right,
 dismiss to its left), exactly as in the design. Destructive acts add `text-negative` to a
@@ -113,6 +117,7 @@ behind each: `docs/ui/stage-1-components.md`.
 | `JewelIcon` / `NavIcon` / `ActionIcon` | The brand mark / rail icons / action glyphs |
 | `LoadGate` | THE loading mark: `IsLoading` covers a region with nothing to show yet, `Overlay="true"` veils content being refreshed. A gate silences every gate nested inside it, so a screen shows one jewel (`CLAUDE.md` → *Loading states*). The whole-page mark is the boot screen in `index.html`; `JewelSpinner` is the gate's own part and is never written in a view |
 | `DropdownMenu` | The row/record actions menu |
+| `NavigationDrawer` (Layout) | The sidebar in both shapes: the fixed column from `md` up, and below `md` a drawer over a scrim that the header's menu button opens and a pick, its X, the scrim or Back closes |
 | `DateText` / `DateTimeText` / `Money` / `WholeMoney` | Not components — the global helpers every date and figure renders through |
 
 ## 5. Keeping future work consistent
@@ -132,8 +137,10 @@ the shell. `max-w-3xl` after a note's type is a hand-rolled `TableNote` with its
 the empty column down the right of the CVR pages, 2026-09-21; a note is as wide as the table it
 explains. The prospect-facing pages (`Imagine`, `Privacy`) keep their centred reading column, and a
 card or a deliberately narrow table keeps its width — those are not notes. `fixed inset-0` catches a hand-rolled dropdown backdrop — the panel-from-a-toggle is
-always `DropdownMenu`, which dismisses itself without swallowing the press; `Modal` owns the one
-legitimate full-screen scrim.)
+always `DropdownMenu`, which dismisses itself without swallowing the press; the two legitimate
+full-screen scrims are `Modal`'s and the phone navigation drawer's (`.nav-drawer-scrim`, a recipe
+like `.modal-overlay`), and the drawer's is meant to swallow the press: a tap beside a navigation
+drawer puts it away and does nothing else.)
 
 Still to read from the Figma (`docs/ui/open-book-design-rules.md` §8): row hover/select fill,
 the row-action dropdown, tabs vs pills, toggle switch, date picker, login page, button

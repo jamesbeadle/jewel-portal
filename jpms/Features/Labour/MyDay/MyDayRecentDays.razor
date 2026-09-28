@@ -5,9 +5,13 @@
     <Panel Title="Recent days" Class="mb-4" BodyClass="p-4" Prominent="false">
         @foreach (var entry in History.Take(MostRecentShown))
         {
-            <div class="flex items-center justify-between border-t border-line/60 py-1.5 text-sm">
-                <span class="text-content-subtle">@entry.WorkedOn.ToString("ddd dd") · @entry.ProjectName · @entry.CostCode</span>
-                <span><span class="text-content font-medium">@entry.Hours h</span> <StatusPill Status="@entry.Status" /></span>
+            <div class="flex items-center justify-between gap-3 border-t border-line/60 py-1.5 text-sm">
+                <span class="text-content-subtle min-w-0">
+                    @entry.WorkedOn.ToString("ddd dd") · @entry.ProjectName · <span class="whitespace-nowrap">@entry.CostCode</span>
+                </span>
+                <span class="shrink-0 whitespace-nowrap">
+                    <span class="text-content font-medium">@entry.Hours h</span> <StatusPill Status="@entry.Status" />
+                </span>
             </div>
         }
     </Panel>

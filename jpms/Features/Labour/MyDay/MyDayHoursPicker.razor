@@ -1,7 +1,7 @@
 @namespace Jewel.JPMS.Features.Labour.MyDay
 @using Jewel.JPMS.Contracts.Labour
 
-<FilterChips Items="Chunks" Selected="@SelectedChunk" OnSelect="PickChunkAsync" AriaLabel="The day in chunks" Disabled="@Disabled" />
+<FilterChips Items="Chunks" Selected="@SelectedChunk" OnSelect="PickChunkAsync" AriaLabel="The day in chunks" Disabled="@Disabled" Large="true" />
 <div class="flex items-center gap-4 mt-3">
     <button type="button" class="btn-secondary w-12 h-12 text-xl leading-none" aria-label="Half an hour less" disabled="@Disabled" @onclick="() => StepAsync(-HalfHour)">−</button>
     <span class="text-content font-semibold text-2xl tabular-nums w-20 text-center">@HoursText h</span>
