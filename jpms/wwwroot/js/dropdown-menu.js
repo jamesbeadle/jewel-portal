@@ -13,6 +13,8 @@
 // scrolls it points at nothing. Such a consumer asks for shouldCloseOnScroll; one whose panel is
 // absolutely positioned moves with its container and must not, or it would close on its own
 // scrolling. Passing it is safe against a stale cached shell, which simply ignores the argument.
+// A scroll inside the popup itself (its own list of options) is never the page moving under it,
+// so it is ignored either way.
 //
 // Keyed by the reference's id, not the proxy object — see the same note in app-update.js: each
 // interop call materialises a fresh proxy, so a Map keyed on the object never finds its entry.
@@ -43,15 +45,20 @@ window.jpmsDropdownMenu = {
         window.jpmsDropdownMenu.unwatch(dotnetRef);
         if (!root) return;
         const close = () => dotnetRef.invokeMethodAsync('CloseFromOutside').catch(() => { });
-        const onPointerDown = e => {
+        const isInsideRoot = e => {
             const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
-            if (path.length ? path.includes(root) : root.contains(e.target)) return;
+            return path.length ? path.includes(root) : root.contains(e.target);
+        };
+        const onPointerDown = e => {
+            if (isInsideRoot(e)) return;
             close();
         };
         const onKeyDown = e => {
             if (e.key === 'Escape') close();
         };
-        const onScroll = shouldCloseOnScroll ? () => close() : null;
+        // A scroll INSIDE the root is the panel's own list scrolling — the project picker's
+        // projects under a thumb — and the panel has not moved from its toggle, so it stays.
+        const onScroll = shouldCloseOnScroll ? e => { if (isInsideRoot(e)) return; close(); } : null;
         document.addEventListener('pointerdown', onPointerDown, true);
         document.addEventListener('keydown', onKeyDown, true);
         if (onScroll) {

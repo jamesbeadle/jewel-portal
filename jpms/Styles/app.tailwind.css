@@ -399,6 +399,11 @@
        0 4px 16px black @80%. Header / body / footer padding lives in Modal.razor. */
     .modal-panel {
         @apply w-full max-w-[600px] rounded-lg border border-line-strong bg-canvas shadow-[0_4px_16px_rgba(0,0,0,0.8)];
+        /* The height follows the DYNAMIC viewport where the browser has one, so a phone keyboard
+           shrinks the dialog instead of pushing its footer off screen; the plain viewport is the
+           fallback for a browser that has not (the second declaration wins where it is understood). */
+        max-height: 85vh;
+        max-height: 85dvh;
     }
 }
 

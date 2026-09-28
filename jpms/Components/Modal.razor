@@ -4,13 +4,12 @@
 @if (IsOpen)
 {
     <div class="@OverlayClass" data-modal-overlay @onclick="HandleOverlayClick">
-        <div class="modal-panel @Class flex flex-col max-h-[85dvh] outline-none" tabindex="-1"
+        <div class="modal-panel @Class flex flex-col outline-none" tabindex="-1"
              @ref="panelRef" @onclick:stopPropagation="true">
             @* The Figma modal: 32px padding, 24/Semi title, a hairline under the header, Large buttons
                in the footer (see .modal-panel and [data-modal-footer] in app.tailwind.css). Below md
                the padding comes in to 20px and the footer wraps, so the dialog and both of its
-               buttons fit a 360px phone; the height is the dynamic viewport, so a phone keyboard
-               shrinks the dialog rather than pushing its footer off screen. *@
+               buttons fit a 360px phone; the height cap is .modal-panel's, on the dynamic viewport. *@
             <header class="shrink-0 flex items-center justify-between gap-3 px-5 pt-6 md:px-8 md:pt-8 pb-4 border-b border-line-strong">
                 <h2 class="text-2xl font-semibold text-content">@Title</h2>
                 <button type="button" @onclick="OnCancel" aria-label="Close"

@@ -1069,9 +1069,10 @@ so the first CI build is the compile check, and this tool is what stands in for 
   scrim or the browser's Back. Opening it also expands the sidebar, so the drawer is always the
   labelled nav. The slide and the scrim are recipes in `app.tailwind.css` (`.nav-drawer*`), the
   OPEN state is `transform: none` so the picker's fixed panel keeps the viewport as its containing
-  block, and the shell's padding is `md:pl-*` only. A phone never shows the rail, so nothing in
-  `SideNav` is `hidden md:…` any more: a row that should not show on a phone is a decision to
-  write here, not a breakpoint class. The site floor's buttons on Home (`MyDay*`) are the
+  block, and the shell's padding is `md:pl-*` only. A phone never shows the rail, so no ROW in
+  `SideNav` carries a breakpoint class any more — the only two left are the header's buttons,
+  the desktop collapse toggle (`hidden md:inline-flex`) and the drawer's X (`md:hidden`); a row
+  that should not show on a phone is a decision to write here, not a breakpoint class. The site floor's buttons on Home (`MyDay*`) are the
   design's Large size (`btn-lg`, 52px): a `.btn` is 32px tall whatever padding a view adds to it,
   which is what the earlier `py-3.5` had silently produced. The Half day / Full day choice is
   `FilterChips Large` (`chip-lg`, 44px).
