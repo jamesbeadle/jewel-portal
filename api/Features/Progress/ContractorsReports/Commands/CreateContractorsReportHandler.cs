@@ -7,8 +7,9 @@ namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Commands;
 // Opens the week's report with everything a person would otherwise copy from last week: the
 // number, the header fields and standing lines that carry forward, Look Ahead's unstruck items,
 // the current valuation as the Valuation No., the Friday after the period as the date of issue,
-// Neighbours' default line, and every update in the period selected. Section 4 is deliberately
-// NOT carried — it is read from the register every build.
+// Neighbours' default line, every update in the period selected, and each firm's days on site
+// ticked from its workers' sign-ins (2026-09-28). Section 4 is deliberately NOT carried — it is
+// read from the register every build.
 public sealed class CreateContractorsReportHandler : ICommandHandler<CreateContractorsReport, ContractorsReport>
 {
     private readonly JpmsContext context;
@@ -49,7 +50,7 @@ public sealed class CreateContractorsReportHandler : ICommandHandler<CreateContr
             HealthAndSafety = previous?.HealthAndSafety ?? "",
             BuildingControlLiaison = previous?.BuildingControlLiaison ?? "",
             BuildingControlContact = previous?.BuildingControlContact ?? "",
-            AttendanceJson = ContractorsReportJson.Write(Array.Empty<ContractorsReportAttendance>()),
+            AttendanceJson = ContractorsReportJson.Write(await AttendanceFromSignInsAsync(project.ProjectId, week, cancellationToken)),
             SelectedUpdateIdsJson = ContractorsReportJson.Write(await UpdatesInPeriodAsync(project.ProjectId, week, cancellationToken)),
             CreatedByEmail = command.CreatedByEmail,
             CreatedAt = now,
@@ -66,6 +67,14 @@ public sealed class CreateContractorsReportHandler : ICommandHandler<CreateContr
             : ContractorsReportJson.Read<ContractorsReportLookAheadItem>(previous.LookAheadJson)
                 .Where(item => !item.IsDone)
                 .ToList();
+
+    private async Task<IReadOnlyList<ContractorsReportAttendance>> AttendanceFromSignInsAsync(string projectId, ReportingWeek week, CancellationToken cancellationToken)
+    {
+        var signIns = await ContractorsReportSignIns.InWeekAsync(context, projectId, week, cancellationToken);
+        var nothingEntered = Array.Empty<ContractorsReportAttendance>();
+        var live = await ContractorsReportSubcontractorsReader.ReadAsync(context, projectId, week, nothingEntered, signIns, cancellationToken);
+        return ContractorsReportSubcontractorsReader.FromSignIns(live);
+    }
 
     private async Task<IReadOnlyList<string>> UpdatesInPeriodAsync(string projectId, ReportingWeek week, CancellationToken cancellationToken) =>
         (await ContractorsReportProgressReader.UpdatesInPeriodAsync(context, projectId, week, cancellationToken))

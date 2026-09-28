@@ -5,8 +5,9 @@ using Jewel.JPMS.Contracts.Progress;
 namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
 
 /// <summary>The work orders live on site — Released, or completed within the week — with the
-/// supplier named from the directory and the attendance the report's author entered. These are
-/// what attendance is entered against; Section 8 prints the ones that attended.</summary>
+/// supplier named from the directory, the attendance the report's author entered, and the days
+/// the firm's own workers signed in on the site register. These are what attendance is entered
+/// against; Section 8 prints the ones that attended.</summary>
 internal static class ContractorsReportSubcontractorsReader
 {
     public static async Task<IReadOnlyList<ContractorsReportSubcontractor>> ReadAsync(
@@ -14,6 +15,7 @@ internal static class ContractorsReportSubcontractorsReader
         string projectId,
         ReportingWeek week,
         IReadOnlyList<ContractorsReportAttendance> attendance,
+        IReadOnlyList<ContractorsReportSignIn> signIns,
         CancellationToken cancellationToken)
     {
         var orders = await context.WorkOrders.AsNoTracking()
@@ -41,9 +43,31 @@ internal static class ContractorsReportSubcontractorsReader
                 order.ScheduledCompletion is { } completion ? DateOnly.FromDateTime(completion.Date) : null,
                 AttendanceDaysOf(entered.GetValueOrDefault(order.WorkOrderId)),
                 entered.TryGetValue(order.WorkOrderId, out var nominated) && nominated.IsClientNominated,
-                DaysOnSiteOf(entered.GetValueOrDefault(order.WorkOrderId))))
+                DaysOnSiteOf(entered.GetValueOrDefault(order.WorkOrderId)),
+                DaysSignedInBy(order.SubcontractorId, signIns)))
             .ToList();
     }
+
+    /// <summary>The firm's days on site off the register: every day one of its workers signed in.</summary>
+    public static IReadOnlyList<DateOnly> DaysSignedInBy(string subcontractorId, IReadOnlyList<ContractorsReportSignIn> signIns) =>
+        signIns
+            .Where(signIn => signIn.SubcontractorId == subcontractorId)
+            .Select(signIn => signIn.Date)
+            .Distinct()
+            .Order()
+            .ToList();
+
+    /// <summary>The attendance a new report opens with: the sign-ins ticked onto a firm's one live
+    /// order. A firm with several live orders is left to the person — the register says the firm
+    /// was on site, not which order the day belongs to.</summary>
+    public static IReadOnlyList<ContractorsReportAttendance> FromSignIns(IReadOnlyList<ContractorsReportSubcontractor> live) =>
+        live
+            .Where(order => order.DaysSignedIn.Any())
+            .GroupBy(order => order.Supplier)
+            .Where(firm => firm.Count() == 1)
+            .Select(firm => firm.Single())
+            .Select(order => new ContractorsReportAttendance(order.WorkOrderId, order.DaysSignedIn.Count, false, "", order.DaysSignedIn))
+            .ToList();
 
     private static IReadOnlyList<DateOnly> DaysOnSiteOf(ContractorsReportAttendance? attendance) =>
         attendance?.DaysOnSite ?? Array.Empty<DateOnly>();

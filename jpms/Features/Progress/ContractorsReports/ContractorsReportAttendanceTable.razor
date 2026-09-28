@@ -37,6 +37,13 @@
                     {
                         <p class="text-xs text-content-subtle mt-1">@line.AttendanceDays days recorded — tick which.</p>
                     }
+                    @if (subcontractor.DaysSignedIn.Any())
+                    {
+                        <p class="text-xs text-content-subtle mt-1">
+                            Signed in @SignedInText(subcontractor)
+                            <button type="button" class="ml-2 underline underline-offset-4 hover:text-content" @onclick="() => line.TickSignedIn(subcontractor.DaysSignedIn)">Tick those</button>
+                        </p>
+                    }
                 </td>
                 <td><Checkbox Value="@line.IsClientNominated" ValueChanged="value => line.IsClientNominated = value" /></td>
             </tr>
@@ -46,6 +53,9 @@
 
 @code {
     private const string ShortDayFormat = "ddd";
+
+    private static string SignedInText(ContractorsReportSubcontractor subcontractor) =>
+        string.Join(", ", subcontractor.DaysSignedIn.Select(day => day.ToString(ShortDayFormat)));
 
     [Parameter, EditorRequired] public ContractorsReportDraft Draft { get; set; } = default!;
     [Parameter, EditorRequired] public IReadOnlyList<DateOnly> WorkingDays { get; set; } = Array.Empty<DateOnly>();

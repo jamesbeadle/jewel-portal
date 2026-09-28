@@ -53,6 +53,9 @@
                             <Panel Title="Header">
                                 <ContractorsReportHeaderFields Draft="@entered" Header="@report.Document.Header" />
                             </Panel>
+                            <Panel Title="The week — who filed">
+                                <ContractorsReportWeekPanel Week="@report.Week" />
+                            </Panel>
                             <Panel Title="1 · Progress Against Programme — the week's updates">
                                 <ContractorsReportUpdatePicker Draft="@entered" Updates="@report.UpdatesInPeriod" />
                             </Panel>

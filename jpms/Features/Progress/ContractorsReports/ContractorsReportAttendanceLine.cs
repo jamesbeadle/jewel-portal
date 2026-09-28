@@ -20,6 +20,9 @@ public sealed class ContractorsReportAttendanceLine
         DaysOnSite.Remove(day);
     }
 
+    /// <summary>The days the firm's workers signed in become the days ticked on site.</summary>
+    public void TickSignedIn(IReadOnlyList<DateOnly> signedIn) => DaysOnSite.UnionWith(signedIn);
+
     public static ContractorsReportAttendanceLine From(ContractorsReportAttendance attendance)
     {
         var line = new ContractorsReportAttendanceLine

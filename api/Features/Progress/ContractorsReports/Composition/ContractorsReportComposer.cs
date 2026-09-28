@@ -20,9 +20,11 @@ public sealed class ContractorsReportComposer
         var report = entity.ToModel();
         var week = new ReportingWeek(report.PeriodStart, report.PeriodEnd);
         var updates = await ContractorsReportProgressReader.UpdatesInPeriodAsync(context, report.ProjectId, week, cancellationToken);
-        var onSite = await ContractorsReportSubcontractorsReader.ReadAsync(context, report.ProjectId, week, report.Attendance, cancellationToken);
+        var signIns = await ContractorsReportSignIns.InWeekAsync(context, report.ProjectId, week, cancellationToken);
+        var onSite = await ContractorsReportSubcontractorsReader.ReadAsync(context, report.ProjectId, week, report.Attendance, signIns, cancellationToken);
         var document = await ComposeAsync(report, week, updates, onSite, cancellationToken);
-        return new ContractorsReportView(report, document, Choices(report, updates), onSite, ContractorsReportPhotoChoices.For(report, updates));
+        var days = await ContractorsReportWeekReader.ReadAsync(context, week, updates, signIns, report.SelectedUpdateIds, cancellationToken);
+        return new ContractorsReportView(report, document, Choices(report, updates), onSite, ContractorsReportPhotoChoices.For(report, updates), days);
     }
 
     private async Task<ContractorsReportDocument> ComposeAsync(

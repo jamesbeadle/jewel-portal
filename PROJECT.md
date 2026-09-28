@@ -187,6 +187,27 @@ The project-process kit writes this file once and never touches it again, and `C
   `update_contractors_report`, `delete_contractors_report` (confirm-first); pinned by
   `ContractorsReports_reachTheConnector`, rules by `ContractorsReportTests`. Do not extend the
   three-box `ProgressReport` into any of this.
+- **The week composes from the workers' own logs, and the report page is the Friday screen**
+  (2026-09-28, brief items 4 and 5 as Jeremy re-cut them on 21 Sep: no day-close, no notification
+  service — "the chase is the composer's list on the Friday"). `ContractorsReportView.Week` is one
+  `ContractorsReportWeekDay` per day of the period (`ContractorsReportWeekReader`, pure `Days(...)`
+  over the updates and the week's sign-ins): who filed (`ContractorsReportFiling` — a worker's
+  *DailyLog*, their recorded *OffDay*, or an office *Note*; a filing is a worker's when its author's
+  email is a worker record's, named through it, else by email), who signed in on the site register
+  and filed nothing (`OnSiteNotFiled`), the photographs, and `NeedsAsking` for a working day that is
+  not whole — a day off IS whole, never missing. The page shows it as the panel *The week — who
+  filed* above Section 1 (`ContractorsReportWeekPanel`); the connector's `get_contractors_report`
+  answers `week[]`. Section 1 already merges every person's entries under the day with no titles,
+  so two trades on one day are two logs under one heading. **Attendance is read off the register**:
+  `ContractorsReportSignIns.InWeekAsync` reads the week's `SiteAttendances` through `Workers`
+  (name, email, firm) once per composition; each order's `DaysSignedIn` is the days its firm's
+  workers signed in (`ContractorsReportSubcontractorsReader.DaysSignedInBy`), shown under the ticks
+  with *Tick those* (`ContractorsReportAttendanceLine.TickSignedIn`); `CreateContractorsReport`
+  opens the report with those days already ticked for a firm with ONE live order
+  (`FromSignIns`) — a firm with several live orders is left to the person, because the register
+  says the firm was on site, not which order the day belongs to. The neighbours / H&S roll-up and
+  Look Ahead candidates of the 17 Sep brief are not built: the 21 Sep log asks none of them, so
+  those sections stay entered on the page. Pinned by `ContractorsReportWeekTests`.
 - **The site photo pool: photographs reach the report run by FINGERPRINT, never through the
   model** (2026-09-16, James, after the connector could not take Jeremy's Downloads folder:
   "a big dumping ground for photos and any project … jeremy can do his normal weekly report mcp
