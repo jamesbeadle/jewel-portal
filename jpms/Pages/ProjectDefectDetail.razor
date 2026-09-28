@@ -134,7 +134,13 @@
                             </div>
                             <div>
                                 <dt class="eyebrow">Raised</dt>
-                                <dd class="text-content mt-0.5">@DateText(defect.RaisedAt)</dd>
+                                <dd class="text-content mt-0.5">
+                                    @DateText(defect.RaisedAt)
+                                    @if (defect.IsFromTheDailyLog)
+                                    {
+                                        <span class="text-content-subtle"> — from the daily log of @defect.RaisedByEmail</span>
+                                    }
+                                </dd>
                             </div>
                             @if (defect.ResolvedAt is { } resolvedAt)
                             {

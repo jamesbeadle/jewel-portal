@@ -63,6 +63,7 @@ public static class LabourFeatureRegistration
         // concretely because they need the signed-in email alongside the command.
         services.AddScoped<MyDayCostCodes>();
         services.AddScoped<MyDayNotesToday>();
+        services.AddScoped<MyDayRaisedRecords>();
         services.AddScoped<MyDayProjects>();
         services.AddScoped<GetMyLabourDayHandler>();
         services.AddScoped<MySiteSignInHandler>();

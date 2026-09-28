@@ -102,7 +102,17 @@
                         var isExpanded = expandedId == row.SiteInstructionId;
                         <tr @key="row.SiteInstructionId" class="border-b border-line last:border-0 align-top">
                             <td class="font-mono text-xs whitespace-nowrap">@row.Reference</td>
-                            <td class="text-content">@row.Title</td>
+                            <td class="text-content">
+                                @row.Title
+                                @if (row.IsFromTheDailyLog)
+                                {
+                                    <p class="text-xs text-content-subtle mt-1">Given by @row.GivenBy on @DateText(row.GivenOn ?? row.CreatedAt) — from the daily log</p>
+                                }
+                                @if (row.NeedsWrittenConfirmation)
+                                {
+                                    <Pill Tone="Tone.Warning">Verbal — confirm in writing</Pill>
+                                }
+                            </td>
                             <td class="max-w-lg whitespace-pre-wrap">@row.Instruction</td>
                             <td class="max-w-xs">@row.Location</td>
                             <td class="whitespace-nowrap" title="@DateTimeText(row.CreatedAt.ToLocalTime())">

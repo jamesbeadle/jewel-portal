@@ -16,4 +16,18 @@ public sealed record SiteInstruction(
     DateTimeOffset CreatedAt,
     // Sequential human reference ("SI-0001") — also the mailbox tag stem ("JPMS/SI-0001").
     // Defaulted last so existing construction sites keep compiling; the server always mints it.
-    string Reference = "");
+    string Reference = "",
+    // Given on site (the worker's daily log, 2026-09-28): who gave it, on which working day, and
+    // whether it was said rather than written — a verbal direction is not an instruction until it
+    // is confirmed in writing, so the register shows it as needing that. Blank on one raised in
+    // the office.
+    string GivenBy = "",
+    bool IsVerbal = false,
+    DateTimeOffset? GivenOn = null,
+    // The day's note (progress update) it was raised from, and by whom, when it came off a log.
+    string? ProgressUpdateId = null,
+    string RaisedByEmail = "")
+{
+    public bool IsFromTheDailyLog => ProgressUpdateId is not null;
+    public bool NeedsWrittenConfirmation => IsVerbal;
+}

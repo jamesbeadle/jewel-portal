@@ -10,10 +10,7 @@ public sealed class AddSiteInstructionHandler : ICommandHandler<AddSiteInstructi
 
     public async Task<SiteInstruction> HandleAsync(AddSiteInstruction command, CancellationToken cancellationToken)
     {
-        // Global sequence (like defect and inventory numbers): max + 1, never a row count —
-        // deleted rows must not re-issue a number, because the number is the mailbox tag stem
-        // ("JPMS/SI-0001").
-        var nextNumber = (await context.SiteInstructions.MaxAsync(row => (int?)row.Number, cancellationToken) ?? 0) + 1;
+        var nextNumber = await SiteInstructionNumbers.NextAsync(context, cancellationToken);
 
         var entity = new SiteInstructionEntity
         {

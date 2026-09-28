@@ -2000,6 +2000,10 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<int>("Number")
                         .HasColumnType("int");
 
+                    b.Property<string>("ProgressUpdateId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("ProjectId")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -2007,6 +2011,11 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.Property<DateTimeOffset>("RaisedAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("RaisedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<DateTimeOffset?>("ResolvedAt")
                         .HasColumnType("datetimeoffset");
@@ -2029,6 +2038,8 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.HasIndex("ProjectId")
                         .HasDatabaseName("IX_Defects_ProjectId");
+
+                    b.HasIndex(new[] { "ProgressUpdateId" }, "IX_Defects_ProgressUpdateId");
 
                     b.ToTable("Defects");
                 });
@@ -7105,12 +7116,10 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.HasKey("SiteDrawingLinkId");
 
-                    b.HasIndex("ProjectId")
-                        .HasDatabaseName("IX_SiteDrawingLinks_ProjectId");
+                    b.HasIndex(new[] { "ProjectId" }, "IX_SiteDrawingLinks_ProjectId");
 
-                    b.HasIndex("TokenHash")
-                        .IsUnique()
-                        .HasDatabaseName("IX_SiteDrawingLinks_TokenHash");
+                    b.HasIndex(new[] { "TokenHash" }, "IX_SiteDrawingLinks_TokenHash")
+                        .IsUnique();
 
                     b.ToTable("SiteDrawingLinks");
                 });
@@ -7124,9 +7133,20 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("GivenBy")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset?>("GivenOn")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("Instruction")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsVerbal")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Location")
                         .IsRequired()
@@ -7136,10 +7156,19 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<int>("Number")
                         .HasColumnType("int");
 
+                    b.Property<string>("ProgressUpdateId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("ProjectId")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("RaisedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -7153,6 +7182,8 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.HasIndex("ProjectId")
                         .HasDatabaseName("IX_SiteInstructions_ProjectId");
+
+                    b.HasIndex(new[] { "ProgressUpdateId" }, "IX_SiteInstructions_ProgressUpdateId");
 
                     b.ToTable("SiteInstructions");
                 });

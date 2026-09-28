@@ -22,6 +22,10 @@
     {
         <p class="text-content whitespace-pre-line border-t border-line/60 pt-2">@note.Description</p>
         <p class="text-xs text-content-subtle">@PhotoCountText(note)</p>
+        @if (HasRaisedRecords(note))
+        {
+            <p class="text-xs text-content-subtle">To the office: @RaisedRecordsText(note)</p>
+        }
         <FormField Label="Add photos" Hint="They go onto today's log.">
             <InputFile OnChange="AddPhotosAsync" multiple accept="image/*" class="w-full text-sm text-content-muted" disabled="@isUploading" />
         </FormField>
@@ -53,6 +57,16 @@
     private DateTimeOffset SignedOutAt => Project.SignedOutAt ?? DateTimeOffset.Now;
 
     private static string PhotoCountText(MyDayNote note) => note.PhotoCount == 1 ? "1 photo" : $"{note.PhotoCount} photos";
+
+    private static bool HasRaisedRecords(MyDayNote note) => RaisedRecords(note).Any();
+
+    private static string RaisedRecordsText(MyDayNote note) => string.Join(" · ", RaisedRecords(note));
+
+    private static IEnumerable<string> RaisedRecords(MyDayNote note)
+    {
+        if (note.SiteInstructionReference.Length > 0) yield return $"{note.SiteInstructionReference} instruction";
+        if (note.DefectReference.Length > 0) yield return $"{note.DefectReference} defect";
+    }
 
     private async Task AddPhotosAsync(InputFileChangeEventArgs change)
     {

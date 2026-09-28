@@ -42,7 +42,9 @@ public sealed class MySiteSignOutHandler : ICommandHandler<MySiteSignOut, MySite
 {
     private readonly JpmsContext context;
     private readonly MyDayCostCodes costCodes;
-    public MySiteSignOutHandler(JpmsContext context, MyDayCostCodes costCodes) { this.context = context; this.costCodes = costCodes; }
+    private readonly MyDayRaisedRecords raisedRecords;
+    public MySiteSignOutHandler(JpmsContext context, MyDayCostCodes costCodes, MyDayRaisedRecords raisedRecords)
+    { this.context = context; this.costCodes = costCodes; this.raisedRecords = raisedRecords; }
 
     public Task<MySiteDayLogged> HandleAsync(MySiteSignOut command, CancellationToken cancellationToken) =>
         throw new InvalidOperationException("MySiteSignOut requires the signed-in email — use the endpoint.");
@@ -52,11 +54,7 @@ public sealed class MySiteSignOutHandler : ICommandHandler<MySiteSignOut, MySite
         var worker = await WorkerByEmail.ResolveAsync(context, email, cancellationToken);
         var today = SiteClock.Today();
         var attendance = await OpenAttendanceAsync(command.ProjectId, worker, today, cancellationToken);
-        var allowedCodes = await costCodes.AllowedForAsync(command.ProjectId, cancellationToken);
-        var errors = LabourRules.CheckSignOutEntries(command.Entries, allowedCodes);
-        if (errors.Count > 0) throw new InvalidOperationException(string.Join(" ", errors));
-        if (!MyDayNotes.IsGiven(command.Description))
-            throw new InvalidOperationException("Say what was done today — the words are the day's record.");
+        await CheckAsync(command, cancellationToken);
         var signedOutAt = MyDayMoments.Resolve(command.SignedOutAt, today, "sign-out");
         if (signedOutAt < attendance.SignedInAt)
             throw new InvalidOperationException("The sign-out time cannot be before the sign-in time.");
@@ -67,9 +65,21 @@ public sealed class MySiteSignOutHandler : ICommandHandler<MySiteSignOut, MySite
             ProgressIdentifierFactory.NextProgressUpdateId(), command.ProjectId, MyDayNotes.LogTitle(worker),
             command.Description, today, null, email, DateTimeOffset.UtcNow);
         context.ProgressUpdates.Add(note);
+        var instructionReference = await raisedRecords.RaiseInstructionAsync(command.Instruction, note, email, cancellationToken);
+        var defectReference = await raisedRecords.RaiseDefectAsync(command.Defect, note, email, cancellationToken);
         attendance.SignedOutAt = signedOutAt;
         await context.SaveChangesAsync(cancellationToken);
-        return new MySiteDayLogged(attendance.SiteAttendanceId, note.ProgressUpdateId);
+        return new MySiteDayLogged(attendance.SiteAttendanceId, note.ProgressUpdateId, instructionReference, defectReference);
+    }
+
+    private async Task CheckAsync(MySiteSignOut command, CancellationToken cancellationToken)
+    {
+        var allowedCodes = await costCodes.AllowedForAsync(command.ProjectId, cancellationToken);
+        var errors = LabourRules.CheckSignOutEntries(command.Entries, allowedCodes).ToList();
+        if (!MyDayNotes.IsGiven(command.Description))
+            errors.Add("Say what was done today — the words are the day's record.");
+        errors.AddRange(SiteLogRules.CheckInstruction(command.Instruction));
+        if (errors.Count > 0) throw new InvalidOperationException(string.Join(" ", errors));
     }
 
     private async Task<SiteAttendanceEntity> OpenAttendanceAsync(string projectId, WorkerEntity worker, DateTimeOffset today, CancellationToken cancellationToken)

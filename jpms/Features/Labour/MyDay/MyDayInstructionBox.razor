@@ -1,0 +1,77 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+@using Jewel.JPMS.Contracts.Labour
+@using Jewel.JPMS.Contracts.SiteInstructions
+
+@if (!IsOpen)
+{
+    <button type="button" class="btn-secondary w-full" disabled="@Disabled" @onclick="OpenAsync">+ Instruction given on site</button>
+}
+else
+{
+    <div class="border border-line p-3 space-y-3">
+        <div class="flex items-center justify-between gap-3">
+            <span class="eyebrow">Instruction given on site</span>
+            <button type="button" class="btn-ghost" disabled="@Disabled" @onclick="RemoveAsync">Remove</button>
+        </div>
+        <FormField Label="What was asked" Required Hint="Goes to the office as a Site Instruction — not into the day's words.">
+            <textarea class="field" rows="3" value="@instruction" @oninput="OnInstructionTyped" disabled="@Disabled" placeholder="Move the boiler flue to the rear elevation…"></textarea>
+        </FormField>
+        <FormField Label="Who gave it" Required>
+            <input type="text" class="field h-12 text-base" maxlength="@SiteInstructionLimits.GivenByMaxLength" value="@givenBy" @oninput="OnGivenByTyped" disabled="@Disabled" placeholder="Name, and who they are" />
+        </FormField>
+        <FormField Label="How it was given" Hint="A verbal instruction is confirmed in writing by the office.">
+            <FilterChips Items="Ways" Selected="@SelectedWay" OnSelect="PickWayAsync" AriaLabel="Verbal or in writing" Disabled="@Disabled" Large="true" />
+        </FormField>
+    </div>
+}
+
+@code {
+    private const string VerbalKey = "verbal";
+    private const string WrittenKey = "written";
+    private static readonly IReadOnlyList<TabItem> Ways = new[]
+    {
+        new TabItem(VerbalKey, "Said to me"),
+        new TabItem(WrittenKey, "In writing"),
+    };
+
+    [Parameter] public SiteLogInstruction? Instruction { get; set; }
+    [Parameter] public EventCallback<SiteLogInstruction?> InstructionChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    private string instruction = "";
+    private string givenBy = "";
+    private bool isVerbal = true;
+
+    private bool IsOpen => Instruction is not null;
+    private string SelectedWay => isVerbal ? VerbalKey : WrittenKey;
+
+    private Task OpenAsync() => EmitAsync();
+
+    private Task RemoveAsync()
+    {
+        instruction = "";
+        givenBy = "";
+        isVerbal = true;
+        return InstructionChanged.InvokeAsync(null);
+    }
+
+    private Task OnInstructionTyped(ChangeEventArgs change)
+    {
+        instruction = change.Value?.ToString() ?? "";
+        return EmitAsync();
+    }
+
+    private Task OnGivenByTyped(ChangeEventArgs change)
+    {
+        givenBy = change.Value?.ToString() ?? "";
+        return EmitAsync();
+    }
+
+    private Task PickWayAsync(string key)
+    {
+        isVerbal = key == VerbalKey;
+        return EmitAsync();
+    }
+
+    private Task EmitAsync() => InstructionChanged.InvokeAsync(new SiteLogInstruction(instruction, givenBy, isVerbal));
+}

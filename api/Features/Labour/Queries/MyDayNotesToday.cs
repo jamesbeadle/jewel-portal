@@ -3,8 +3,9 @@ using Jewel.JPMS.Contracts.Labour;
 namespace Jewel.JPMS.Api.Features.Labour.Queries;
 
 /// <summary>The notes a worker has already written today, project by project: the progress
-/// updates filed in their own name on today's working date, each with its photograph count, so
-/// the day's card can show the log and offer to add photographs to it.</summary>
+/// updates filed in their own name on today's working date, each with its photograph count and
+/// the references of the records its log raised, so the day's card can show the log, say what
+/// went to the office, and offer to add photographs to it.</summary>
 public sealed class MyDayNotesToday
 {
     private readonly JpmsContext context;
@@ -24,13 +25,16 @@ public sealed class MyDayNotesToday
             .GroupBy(photo => photo.ProgressUpdateId)
             .Select(group => new { ProgressUpdateId = group.Key, Count = group.Count() })
             .ToDictionaryAsync(group => group.ProgressUpdateId, group => group.Count, cancellationToken);
+        var raised = await MyDayRaisedReferences.ForNotesAsync(context, noteIds, cancellationToken);
 
         var byProject = new Dictionary<string, MyDayNote>();
         foreach (var note in notes)
         {
             if (byProject.ContainsKey(note.ProjectId)) continue;
             var photoCount = photoCounts.GetValueOrDefault(note.ProgressUpdateId);
-            byProject[note.ProjectId] = new MyDayNote(note.ProgressUpdateId, note.Title, note.Description, photoCount);
+            var references = raised.For(note.ProgressUpdateId);
+            byProject[note.ProjectId] = new MyDayNote(
+                note.ProgressUpdateId, note.Title, note.Description, photoCount, references.SiteInstruction, references.Defect);
         }
         return byProject;
     }

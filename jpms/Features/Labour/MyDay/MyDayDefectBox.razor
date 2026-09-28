@@ -1,0 +1,36 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+
+@if (!IsOpen)
+{
+    <button type="button" class="btn-secondary w-full" disabled="@Disabled" @onclick="OpenAsync">+ Defect or making good</button>
+}
+else
+{
+    <div class="border border-line p-3 space-y-3">
+        <div class="flex items-center justify-between gap-3">
+            <span class="eyebrow">Defect or making good</span>
+            <button type="button" class="btn-ghost" disabled="@Disabled" @onclick="RemoveAsync">Remove</button>
+        </div>
+        <FormField Label="What needs putting right" Required Hint="Goes to the defects register — never into the weekly report.">
+            <textarea class="field" rows="3" value="@Defect" @oninput="OnDefectTyped" disabled="@Disabled" placeholder="Made good the ceiling in the plot 2 hall after the leak…"></textarea>
+        </FormField>
+    </div>
+}
+
+@code {
+    [Parameter] public string Defect { get; set; } = "";
+    [Parameter] public EventCallback<string> DefectChanged { get; set; }
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    private Task OpenAsync() => IsOpenChanged.InvokeAsync(true);
+
+    private async Task RemoveAsync()
+    {
+        await DefectChanged.InvokeAsync("");
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private Task OnDefectTyped(ChangeEventArgs change) => DefectChanged.InvokeAsync(change.Value?.ToString() ?? "");
+}

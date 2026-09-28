@@ -167,9 +167,10 @@ The project-process kit writes this file once and never touches it again, and `C
   header fields carried, unstruck Look Ahead carried, Valuation No. = the highest payment
   certificate on the register — `ContractorsReportCertificates.Highest`, numeric-aware —
   Neighbours' default line, every update in the week selected) and refuses a second report for
-  the same period. **The wording gate** (`ContractorsReportWording`: remedial, remedial works,
-  making good, rectify, rectification, snagging, defects, rework — whole words, any case) runs
-  over every printable line; a hit is a `ContractorsReportFinding` naming section + line, the
+  the same period. **The wording gate** (`ContractorsReportWording`, reading the one shared list
+  `ReportWordingRule` in contracts: remedial, remedial works, making good, made good, rectify,
+  rectification, snagging, defects, rework — whole words, any case; the worker's phone reads the
+  same list as he types, see My Day) runs over every printable line; a hit is a `ContractorsReportFinding` naming section + line, the
   page shows them, and `GET contractors-reports/{id}/pdf` / `/docx` answer 422 with the
   findings — never reworded silently. PDF is MigraDoc on `JewelDocumentStyle`
   (`ContractorsReportPdfRenderer`); Word is the Open XML SDK (`DocumentFormat.OpenXml` 3.1.1,
@@ -1321,6 +1322,28 @@ leaves the day unlinked. The day is the finance director's model (2026-09-28), a
 - **Not on site today** (`MySiteDayOff`) — a note alone, titled `Off — {worker name}`: no attendance, no hours;
   refused once the worker has signed in today or already logged today, so an off day is a recorded day, never
   a missing one.
+- **What the day raises beside its note, and never inside it** (2026-09-28, brief items 7 and 8 as Jeremy
+  settled them on 21 Sep: "Site Instruction always … triaged in the office"; the defect box "never the day
+  description"). Two folded boxes on the log form, closed on a normal day: **Instruction given on site**
+  (`SiteLogInstruction`: what was asked, who gave it — `SiteInstructionLimits.GivenByMaxLength` — and *Said to
+  me* / *In writing*) and **Defect or making good** (words alone). `MyDayRaisedRecords` writes them in the
+  day's one save, in the worker's name and linked to the note: a `SiteInstructionEntity` (SI-####, `GivenBy`,
+  `IsVerbal`, `GivenOn` = the work date, `ProgressUpdateId`, `RaisedByEmail`; titled *Given on site by X,
+  date*; the register shows *Given by … from the daily log* and a *Verbal — confirm in writing* pill, because
+  a verbal direction is not an instruction until it is confirmed) and a `DefectEntity` (DEF-####, Open, no
+  supplier; `ProgressUpdateId`, `RaisedByEmail`; the defect page says *from the daily log of …*). Both
+  registers are written server-side because a site operative's roles are outside their raise gates, and the
+  numbers come from the one minter each (`SiteInstructionNumbers`, `DefectNumbers`, shared with the office
+  doors). An instruction without who gave it is refused with the day (`SiteLogRules`, read by the form too).
+  `MySiteDayLogged` and `MyDayNote` carry the references, so the logged card reads *To the office: SI-0012
+  instruction · DEF-0034 defect*. Migration `AddSiteLogRaisedRecords`, script `add-site-log-raised-records.sql`.
+- **The report's banned words are caught as the worker types, and block nothing** (2026-09-28). ONE list,
+  `ReportWordingRule` (contracts/Progress: remedial, remedial works, making good, **made good** — the past
+  tense the brief's own example uses — rectify, rectification, snagging, defects, rework): the Contractor's
+  Report gate (`ContractorsReportWording`) refuses a build on it, and `MyDayWordsBox` reads the same list on
+  every keystroke — a hit shows a warning naming the word, opens the defect box, and the day still saves as
+  written. Never a second copy of the list, and never a gate on the phone: a worker who is refused as he types
+  learns to write less, which costs the site record (Jeremy, 21 Sep 2026).
 - **The day read back** (`GetMyLabourDay`) — `MyDayProjects` builds one `MyLabourProject` per assignment with
   today's `SignedInAt`/`SignedOutAt`, the codes and `TodaysNote` (`MyDayNotesToday`: the worker's own note on
   today's date with its photo count); `IsLoggedToday` is signed out **or** noted. Its sorted reads sort the

@@ -19,12 +19,16 @@ public sealed record MySiteSignIn(string ProjectId, DateTimeOffset? SignedInAt =
 /// words of what was done — required, because they are the day's note on the project's progress
 /// feed in the worker's own name, which the Contractor's Report reads — and the sign-out time,
 /// now unless adjusted. Photographs follow onto the note. One sign-out per project per day.
+/// Beside the note, and never inside its words: an instruction given on site is raised as a
+/// Site Instruction and a defect as a defect, both in the worker's name for the office to triage.
 /// </summary>
 public sealed record MySiteSignOut(
     string ProjectId,
     IReadOnlyList<SiteSignOutEntry> Entries,
     string Description = "",
-    DateTimeOffset? SignedOutAt = null) : ICommand<MySiteDayLogged>;
+    DateTimeOffset? SignedOutAt = null,
+    SiteLogInstruction? Instruction = null,
+    string Defect = "") : ICommand<MySiteDayLogged>;
 
 /// <summary>A day off, recorded as a day: the words say why (rain, holiday, no works on site) and
 /// nothing else is written — no attendance, no hours. A recorded off day is never a missing day.</summary>
