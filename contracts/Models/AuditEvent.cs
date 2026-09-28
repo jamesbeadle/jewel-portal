@@ -180,7 +180,9 @@ public enum AuditEventType
     /// <summary>A QR poster's link was minted for one folder of a project's document register; the row names the folder, the label and the expiry. Not client-facing: Pathway is "".</summary>
     SiteDrawingLinkCreated = 55,
     /// <summary>A QR poster's link was revoked, with the scans it had counted. Not client-facing: Pathway is "".</summary>
-    SiteDrawingLinkRevoked = 56
+    SiteDrawingLinkRevoked = 56,
+    /// <summary>An administrator set a user's password by hand on Admin → Users; the row names whose password and who set it, never the password. Not client-facing: Pathway is "".</summary>
+    PasswordSetByAdministrator = 57
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

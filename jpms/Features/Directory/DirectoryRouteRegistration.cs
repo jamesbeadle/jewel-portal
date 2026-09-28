@@ -36,6 +36,7 @@ public static class DirectoryRouteRegistration
     {
         commands.Register<UpsertDirectoryUser, DirectoryUser>(CommandRoute.Post("/api/directory"));
         commands.Register<SetLoginProjects, Acknowledgement>(CommandRoute.Post("/api/directory/projects"));
+        commands.Register<SetUserPassword, Acknowledgement>(CommandRoute.Post("/api/directory/password"));
         commands.Register<RemoveDirectoryUser, Acknowledgement>(new CommandRoute(
             "DELETE",
             "/api/directory/{email}",

@@ -515,7 +515,10 @@ ageing toggle due date ↔ invoice date; Refresh, Excel export. Read-only.
 ## Admin folder
 
 - **Users** — `/admin/users` (+ `/admin/users/revoked`): invites, role
-  assignments; revoke → restore or permanent delete from the revoked list.
+  assignments, Send reset (emails a reset link) and Set password (an
+  administrator types the new password on the row and tells the person — it is
+  never emailed and never set over the connector); revoke → restore or
+  permanent delete from the revoked list.
 - **System** — `/admin/system`: "Publish update" raises the refresh bar on
   every signed-in tab after a deploy; Tender T&Cs panel holds the single
   standard T&C PDF auto-attached to every tender-invite email.

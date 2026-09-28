@@ -57,7 +57,7 @@ public sealed class PasswordResetSender
         if (!bypassThrottle && await WasRequestedRecentlyAsync(trimmed, now, cancellationToken))
             return new Result(Outcome.TooSoon, null);
 
-        await VoidLiveTokensAsync(trimmed, now, cancellationToken);
+        await PasswordLinks.VoidEveryLiveLinkAsync(context, trimmed, now, cancellationToken);
 
         var secret = AuthTokens.NewSecret();
         var expiresAt = now.Add(ResetSettings.ResetLifetime);
@@ -89,14 +89,6 @@ public sealed class PasswordResetSender
                 && row.ConsumedAt == null
                 && row.CreatedAt > since,
             cancellationToken);
-    }
-
-    private async Task VoidLiveTokensAsync(string email, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        var live = await context.PasswordResetTokens
-            .Where(row => row.Email == email && row.ConsumedAt == null && row.ExpiresAt > now)
-            .ToListAsync(cancellationToken);
-        foreach (var token in live) token.ConsumedAt = now;
     }
 
     private async Task<string> ResolveDisplayNameAsync(string email, CancellationToken cancellationToken)

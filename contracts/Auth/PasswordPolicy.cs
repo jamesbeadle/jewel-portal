@@ -1,8 +1,10 @@
-namespace Jewel.JPMS.Api.Auth;
+namespace Jewel.JPMS.Contracts.Auth;
 
 /// <summary>
-/// Minimum password strength rules enforced when a user sets or resets a password.
+/// Minimum password strength rules enforced whenever a password is set — by a user from their
+/// invite or reset link, or by an administrator by hand on Admin → Users.
 /// Length 12–128, with at least one lowercase letter, one uppercase letter and one digit.
+/// Declared once here so the API's check and the forms that mirror it read the same limits.
 /// </summary>
 public static class PasswordPolicy
 {

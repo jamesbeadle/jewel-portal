@@ -9,19 +9,26 @@ public static class DirectoryFeatureRegistration
 {
     public static IServiceCollection AddDirectoryFeature(this IServiceCollection services)
     {
+        AddQueries(services);
+        AddUserRecordCommands(services);
+        AddLoginCommands(services);
+        return services;
+    }
+
+    private static void AddQueries(IServiceCollection services)
+    {
         services.AddScoped<IQueryHandler<ListDirectoryUsers, IReadOnlyList<DirectoryUser>>, ListDirectoryUsersHandler>();
         services.AddScoped<IQueryHandler<ListRevokedDirectoryUsers, IReadOnlyList<RevokedDirectoryUser>>, ListRevokedDirectoryUsersHandler>();
         services.AddScoped<IQueryHandler<GetDirectoryUser, DirectoryUser?>, GetDirectoryUserHandler>();
         services.AddScoped<IQueryHandler<ListEmailRecipients, IReadOnlyList<EmailRecipient>>, ListEmailRecipientsHandler>();
+    }
 
+    private static void AddUserRecordCommands(IServiceCollection services)
+    {
         services.AddScoped<ICommandHandler<UpsertDirectoryUser, DirectoryUser>, UpsertDirectoryUserHandler>();
         services.AddScoped<UpsertDirectoryUserAuthorisation>();
         services.AddScoped<UpsertDirectoryUserValidation>();
         services.AddScoped<ScopedRoleGrants>();
-
-        services.AddScoped<ICommandHandler<SetLoginProjects, Acknowledgement>, SetLoginProjectsHandler>();
-        services.AddScoped<SetLoginProjectsAuthorisation>();
-        services.AddScoped<SetLoginProjectsValidation>();
 
         services.AddScoped<ICommandHandler<RemoveDirectoryUser, Acknowledgement>, RemoveDirectoryUserHandler>();
         services.AddScoped<RemoveDirectoryUserAuthorisation>();
@@ -34,7 +41,16 @@ public static class DirectoryFeatureRegistration
         services.AddScoped<ICommandHandler<DeleteDirectoryUser, Acknowledgement>, DeleteDirectoryUserHandler>();
         services.AddScoped<DeleteDirectoryUserAuthorisation>();
         services.AddScoped<DeleteDirectoryUserValidation>();
+    }
 
-        return services;
+    private static void AddLoginCommands(IServiceCollection services)
+    {
+        services.AddScoped<ICommandHandler<SetLoginProjects, Acknowledgement>, SetLoginProjectsHandler>();
+        services.AddScoped<SetLoginProjectsAuthorisation>();
+        services.AddScoped<SetLoginProjectsValidation>();
+
+        services.AddScoped<ICommandHandler<SetUserPassword, Acknowledgement>, SetUserPasswordHandler>();
+        services.AddScoped<SetUserPasswordAuthorisation>();
+        services.AddScoped<SetUserPasswordValidation>();
     }
 }

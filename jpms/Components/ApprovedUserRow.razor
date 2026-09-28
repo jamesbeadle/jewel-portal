@@ -1,3 +1,4 @@
+@using Jewel.JPMS.Features.Directory
 @inject IUserDirectory UserDirectory
 @inject UserInviteService Invites
 @inject IJSRuntime Js
@@ -34,6 +35,11 @@
                         title="Email this user a single-use link to choose a new password"
                         class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4 disabled:opacity-50">
                     @(sendingReset ? "Sending…" : "Send reset")
+                </button>
+                <button type="button" @onclick="() => settingPassword = true" disabled="@busy"
+                        title="Choose this user's password yourself, for someone who can't use an emailed link"
+                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4 disabled:opacity-50">
+                    Set password
                 </button>
                 <button type="button" @onclick="Revoke" disabled="@busy"
                         class="text-xs font-medium text-content-subtle hover:text-negative underline underline-offset-4 disabled:opacity-50">
@@ -91,8 +97,8 @@
 
     @if (roles.Contains(Role.Architect))
     {
-        <Jewel.JPMS.Features.Directory.ArchitectProjectsPicker Email="@User.Email" DisplayName="@User.DisplayName"
-                                                               ProjectIds="@User.ProjectIds" CanEdit="@CanEdit" />
+        <ArchitectProjectsPicker Email="@User.Email" DisplayName="@User.DisplayName"
+                                 ProjectIds="@User.ProjectIds" CanEdit="@CanEdit" />
     }
 
     @if (roles.Count > 1 && OwnRoleName is { } ownRole)
@@ -136,6 +142,9 @@
             </div>
         </div>
     }
+
+    <SetUserPasswordDialog Email="@User.Email" DisplayName="@User.DisplayName"
+                           IsOpen="settingPassword" OnClosed="() => settingPassword = false" />
 </li>
 
 @code {
@@ -151,6 +160,7 @@
 
     private bool busy;
     private bool sendingReset;
+    private bool settingPassword;
     private string? error;
     private string? resetLink;
     private string resetExpiry = "";
