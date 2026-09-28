@@ -57,7 +57,7 @@ public sealed record ErrorReport(
     public string ToUserText()
     {
         var text = new StringBuilder();
-        text.AppendLine($"JPMS error {Reference}");
+        text.AppendLine($"JBB Portal error {Reference}");
         // Local time with its real offset, then the UTC clock — StandardName says "GMT" all year,
         // which in summer mislabels a BST time by an hour for anyone matching it against Azure logs.
         var local = OccurredAt.ToLocalTime();

@@ -71,8 +71,13 @@ public sealed class AppVersionService
         }
 
         // First sighting: a stamped bundle knows its own number; a "dev" bundle adopts what the
-        // API is announcing right now as the version it was served under.
-        baseline ??= long.TryParse(BuildVersion.Value, out var built) ? built : reported;
+        // API is announcing right now as the version it was served under — and says so, because
+        // the footer's RunningDisplay has just changed from "dev" to a number.
+        if (baseline is null)
+        {
+            baseline = long.TryParse(BuildVersion.Value, out var built) ? built : reported;
+            OnChange?.Invoke();
+        }
         if (reported <= baseline) return;
 
         LatestVersion = reported.ToString();

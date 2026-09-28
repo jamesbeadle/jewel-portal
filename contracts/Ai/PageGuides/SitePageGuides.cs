@@ -140,7 +140,7 @@ public static class SitePageGuides
             Aliases: new[] { "/projects/{project}/drawings/{drawingId}" }),
 
         new("/projects/{project}/documents/ambiguous", "Ambiguous document revisions",
-            "The queue of uploaded document revisions JPMS couldn't auto-classify — filenames that "
+            "The queue of uploaded document revisions JBB Portal couldn't auto-classify — filenames that "
             + "didn't match the expected revision pattern, awaiting PM action. It renders the same "
             + "revision list as the register; a breadcrumb links back to the document register, "
             + "whose header badge shows the pending count. Reached by URL, not from the sidebar.",

@@ -143,7 +143,7 @@ public sealed class AuthService
     public async Task<string> RequestPasswordResetAsync(string email)
     {
         const string neutral =
-            "If that email address has a JPMS account, a reset link is on its way. " +
+            "If that email address has a JBB Portal account, a reset link is on its way. " +
             "Check your inbox — and your spam folder — then follow the link to choose a new password.";
         try
         {

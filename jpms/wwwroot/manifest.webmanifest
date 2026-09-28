@@ -1,6 +1,6 @@
 {
   "name": "Jewel Project Management System",
-  "short_name": "JPMS",
+  "short_name": "JBB Portal",
   "id": "/",
   "start_url": "/",
   "scope": "/",
@@ -8,7 +8,7 @@
   "orientation": "any",
   "background_color": "#101111",
   "theme_color": "#101111",
-  "description": "JPMS — the Jewel Project Management System. The production client web app for Jewel Bespoke Build.",
+  "description": "JBB Portal — the Jewel Project Management System. The production client web app for Jewel Bespoke Build.",
   "prefer_related_applications": false,
   "icons": [
     {
