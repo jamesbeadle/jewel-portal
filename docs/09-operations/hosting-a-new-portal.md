@@ -1,5 +1,9 @@
 # Hosting a new portal on Azure without the lag
 
+The instruction set an AI session follows to do this for any customer, with the parameters,
+the commands, the costs and the acceptance checks, is `hosting-brief-for-any-new-portal.md`.
+This page is the reasoning behind it.
+
 The Jewel portal spent September 2026 moving its API off Static Web Apps managed functions
 because of four things nobody chose on purpose: a cold start after 20 minutes idle, a restart
 for everyone on every release, the API in a different region from its database, and a 100 MB
