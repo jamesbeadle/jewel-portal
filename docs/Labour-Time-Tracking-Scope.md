@@ -68,11 +68,12 @@ Constraints (from PM spec, kept): 0.5-hour increments, min 0.5; at least one ent
 
 **Decision (July 2026, revised): no anonymous QR capture.** Workers are normal portal users — one RBAC system everywhere. Each worker is invited as a user with the **Site Operative** role, sets a password like anyone else, and their account is linked to their worker record by email on the Workers page.
 
-Their whole portal experience is the mobile-first **My day** page (`/my-day`):
+Their whole portal experience is the mobile-first **My day** workspace on the Dashboard (`jpms/Features/Labour/MyDay/`, the retired `/my-day` route redirects there). Revised 2026-09-28 to the finance director's model of the day:
 
-1. **Sign in** — tap Sign in on the project card → `SiteAttendance` row created (the site register).
-2. **Sign out** — enter hours per cost code (0.5 steppers), running total, soft >12 hr warning, Submit & sign out → attendance closed, timesheet rows created with Status = Submitted.
-3. **Rejected days** appear on the same page for correction and resubmission. No £ anywhere in the worker UI, ever.
+1. **Sign in** — the arrival time is suggested as now and adjustable (forgot at the gate) → `SiteAttendance` row created: the health-and-safety record and the site register.
+2. **Submit & sign out** — the day logged once: hours as chunks (Half day 4h, Full day 8h) or half-hour steps, the one cost code the work was, the words of what was done (required — they become a progress update titled *Daily log — {name}* in the worker's own name, which the Contractor's Report reads), photographs onto that note, and the leaving time (now, adjustable) → attendance closed, one Submitted timesheet, the note, in one save. Soft >12 hr warning.
+3. **Not on site today** — a day off in words (*Off — {name}* on the progress feed): no attendance, no hours, and never a missing day.
+4. **Rejected days** appear on the same page for correction and resubmission. No £ anywhere in the worker UI, ever.
 
 Missed sign-outs: attendance left open overnight is flagged in the PM approval view; the PM enters hours on the worker's behalf (manual entry on the Labour tab).
 

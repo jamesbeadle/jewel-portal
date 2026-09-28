@@ -1235,6 +1235,38 @@ finds drift.
   frame is read); nothing below `text-xs`; no `uppercase`/`tracking-*` — a label is the `eyebrow`
   class (14/Med G5) or `FormField`'s label.
 
+## The worker's day (My Day)
+
+The site worker's whole portal is the **My day** workspace on the Dashboard (`jpms/Features/Labour/MyDay/`,
+`RoleHome` shows it for Site Operative, Foreman and Site Manager; nothing renders for an account with no
+linked, active worker record). The day is the finance director's model (2026-09-28), and the API's
+`my/labour/*` commands are its only doors:
+
+- **Sign in** (`MySiteSignIn`, `SignedInAt` optional) — the health-and-safety record. The time is the phone's
+  clock now unless the worker adjusts it; `MyDayMoments.Resolve` refuses any time not on today's UK working
+  day or later than now (five minutes' clock allowance). Idempotent per project per day.
+- **Submit & sign out** (`MySiteSignOut` → `MySiteDayLogged`) — the day logged once, in one save: one Submitted
+  timesheet per cost code (the form sends one; a PM recodes on the Labour tab), the attendance closed at the
+  sign-out time (never before the sign-in), and the words — **required** — written as a progress update titled
+  `Daily log — {worker name}` in the worker's own email (`MyDayNotes`), on today's work date with no weather,
+  which is what the Contractor's Report reads. Hours come as chunks (`WorkingDayChunks`: Off 0, HalfDay 4,
+  FullDay 8 = `ForecastRules.StandardHoursPerDay`) or half-hour steps; the allowed codes are
+  `MyDayCostCodes` — the project's budgeted codes, else every active cost centre.
+- **Photos** (`POST my/labour/notes/{progressUpdateId}/photos`, `MyDayPhotosEndpoint`) — the same multipart
+  intake as the Progress tab (`ProgressPhotoBatches`), accepted only onto a note whose `CreatedByEmail` is the
+  caller's; anything else is 404. The form uploads them after the day is saved and then refreshes; the logged
+  card offers *Add photos* for later. `PhotoUploads` (jpms) is the one multipart writer every photo store uses.
+- **Not on site today** (`MySiteDayOff`) — a note alone, titled `Off — {worker name}`: no attendance, no hours;
+  refused once the worker has signed in today or already logged today, so an off day is a recorded day, never
+  a missing one.
+- **The day read back** (`GetMyLabourDay`) — `MyDayProjects` builds one `MyLabourProject` per assignment with
+  today's `SignedInAt`/`SignedOutAt`, the codes and `TodaysNote` (`MyDayNotesToday`: the worker's own note on
+  today's date with its photo count); `IsLoggedToday` is signed out **or** noted.
+
+Onboarding a worker (Jeremy's recipe): invite them with the **Site Operative** role, add a **Worker** record on
+/labour/workers with the same email, and assign them to each project's worker list on its Labour tab; the
+project's cost-code budgets are the list they choose from.
+
 ## Labour settlement & the Xero coding run (api)
 
 - **The run codes one settlement party at a time, never one worker.** `RunXeroCodingHandler`

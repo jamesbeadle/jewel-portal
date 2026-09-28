@@ -143,7 +143,25 @@ public sealed record MyLabourProject(
     string ProjectName,
     bool IsSignedInToday,
     bool HasSignedOutToday,
-    IReadOnlyList<SiteSheetCostCode> CostCodes);
+    IReadOnlyList<SiteSheetCostCode> CostCodes,
+    DateTimeOffset? SignedInAt = null,
+    DateTimeOffset? SignedOutAt = null,
+    MyDayNote? TodaysNote = null)
+{
+    public bool IsLoggedToday => HasSignedOutToday || TodaysNote is not null;
+}
+
+/// <summary>The day's note as the worker logged it — the progress update in their own name that
+/// the Contractor's Report reads — with how many photographs it holds so far.</summary>
+public sealed record MyDayNote(
+    string ProgressUpdateId,
+    string Title,
+    string Description,
+    int PhotoCount);
+
+/// <summary>What logging a day answers: the attendance closed (empty on an off day) and the note
+/// the photographs go onto.</summary>
+public sealed record MySiteDayLogged(string SiteAttendanceId, string ProgressUpdateId);
 
 /// <summary>One of the caller's rejected timesheets — re-opened for correction. Hours only.</summary>
 public sealed record MyRejectedTimesheet(

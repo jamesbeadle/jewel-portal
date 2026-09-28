@@ -1,0 +1,63 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+@inject ILabourStore Labour
+@implements IDisposable
+
+@*
+    The worker's own day on the Dashboard (docs/Labour-Time-Tracking-Scope.md §5): sign in on
+    arrival, log the day at sign-out or record a day off, fix anything sent back. Never shows £, and
+    renders nothing for an account with no linked worker record, so staff dashboards stay clean.
+*@
+
+@if (Labour.MyDay() is { WorkerId: not "" } day)
+{
+    <div class="max-w-md">
+        <SectionHeader Title="My day" Subtitle="@DayLine(day)">
+            <Actions>
+                <ToolbarButton Icon="refresh" Label="Refresh" Busy="@isRefreshing" OnClick="RefreshSafelyAsync" />
+            </Actions>
+        </SectionHeader>
+        @if (loadError is not null)
+        {
+            <Notice Tone="Tone.Negative" Class="mb-3">@loadError</Notice>
+        }
+        @if (HasNoProjects(day))
+        {
+            <p class="text-sm text-content-subtle italic">You're not on any project's worker list yet — ask your Project Manager.</p>
+        }
+        @foreach (var project in day.Projects)
+        {
+            <MyDayProjectCard @key="project.ProjectId" Project="project" TodaysHours="TodaysHoursFor(day, project)" />
+        }
+        <MyDayRecentDays Recent="day.Recent" WorkDate="day.WorkDate" />
+        <MyDayRejectedPanel Rejected="day.Rejected" />
+    </div>
+}
+
+@code {
+    private bool isRefreshing;
+    private string? loadError;
+
+    protected override void OnInitialized()
+    {
+        Labour.OnChange += StateHasChanged;
+        _ = RefreshSafelyAsync();
+    }
+
+    public void Dispose() => Labour.OnChange -= StateHasChanged;
+
+    private static string DayLine(MyLabourDay day) => $"{day.WorkerName} · {day.WorkDate:dddd dd MMMM}";
+
+    private static bool HasNoProjects(MyLabourDay day) => day.Projects.Count == 0;
+
+    private static List<MyRecentTimesheet> TodaysHoursFor(MyLabourDay day, MyLabourProject project) =>
+        day.Recent.Where(entry => entry.ProjectId == project.ProjectId && entry.WorkedOn == day.WorkDate).ToList();
+
+    private async Task RefreshSafelyAsync()
+    {
+        loadError = null;
+        isRefreshing = true;
+        try { await Labour.RefreshMyDayAsync(); }
+        catch (Exception) { loadError = "Could not load your day — check your signal and tap Refresh."; }
+        finally { isRefreshing = false; StateHasChanged(); }
+    }
+}

@@ -1,0 +1,40 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+@using Jewel.JPMS.Contracts.Labour
+
+<FilterChips Items="Chunks" Selected="@SelectedChunk" OnSelect="PickChunkAsync" AriaLabel="The day in chunks" Disabled="@Disabled" />
+<div class="flex items-center gap-4 mt-3">
+    <button type="button" class="btn-secondary w-12 h-12 text-xl leading-none" aria-label="Half an hour less" disabled="@Disabled" @onclick="() => StepAsync(-HalfHour)">−</button>
+    <span class="text-content font-semibold text-2xl tabular-nums w-20 text-center">@HoursText h</span>
+    <button type="button" class="btn-secondary w-12 h-12 text-xl leading-none" aria-label="Half an hour more" disabled="@Disabled" @onclick="() => StepAsync(HalfHour)">+</button>
+</div>
+
+@code {
+    private const decimal HalfHour = 0.5m;
+    private const string HalfDayKey = "half";
+    private const string FullDayKey = "full";
+    private const string HoursFormat = "0.#";
+    private static readonly IReadOnlyList<TabItem> Chunks = new[]
+    {
+        new TabItem(HalfDayKey, $"Half day · {WorkingDayChunks.HalfDay.ToString(HoursFormat)}h"),
+        new TabItem(FullDayKey, $"Full day · {WorkingDayChunks.FullDay.ToString(HoursFormat)}h"),
+    };
+
+    [Parameter] public decimal Hours { get; set; }
+    [Parameter] public EventCallback<decimal> HoursChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    private string HoursText => Hours.ToString(HoursFormat);
+
+    private string? SelectedChunk => Hours switch
+    {
+        _ when Hours == WorkingDayChunks.HalfDay => HalfDayKey,
+        _ when Hours == WorkingDayChunks.FullDay => FullDayKey,
+        _ => null
+    };
+
+    private Task PickChunkAsync(string key) =>
+        HoursChanged.InvokeAsync(key == HalfDayKey ? WorkingDayChunks.HalfDay : WorkingDayChunks.FullDay);
+
+    private Task StepAsync(decimal delta) =>
+        HoursChanged.InvokeAsync(Math.Max(WorkingDayChunks.Off, Hours + delta));
+}

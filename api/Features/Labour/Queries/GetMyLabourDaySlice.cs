@@ -1,11 +1,13 @@
+using System.Linq.Expressions;
+using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.Labour;
 
 namespace Jewel.JPMS.Api.Features.Labour.Queries;
 
-// The signed-in worker's own day: their assigned projects with today's sign-in/out state and
-// allocation cost codes, plus rejected timesheets awaiting correction. The caller is a normal
-// portal user; their Worker record is resolved by email. Hours only — no rates, no £.
-
+/// <summary>GET /api/my/labour/day — the signed-in worker's own day: their project cards with
+/// today's sign-in and sign-out, cost codes and note, the timesheets sent back to them, and their
+/// last two weeks. The caller is a normal portal user resolved to their Worker record by email;
+/// an account with no linked, active record gets an unlinked day, never an error. Hours only.</summary>
 public sealed class GetMyLabourDayEndpoint
 {
     private readonly SignedInUserResolver users;
@@ -16,12 +18,14 @@ public sealed class GetMyLabourDayEndpoint
     [Function(nameof(GetMyLabourDay))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "my/labour/day")] HttpRequest request)
     {
-        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        var httpContext = request.HttpContext;
+        var cancellationToken = httpContext.RequestAborted;
+        var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!LabourRoleSets.LogOwnTime.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         try
         {
-            return new OkObjectResult(await handler.HandleAsync(signedInUser.Email, request.HttpContext.RequestAborted));
+            return new OkObjectResult(await handler.HandleAsync(signedInUser.Email, cancellationToken));
         }
         catch (InvalidOperationException rejection)
         {
@@ -32,92 +36,42 @@ public sealed class GetMyLabourDayEndpoint
 
 public sealed class GetMyLabourDayHandler : IQueryHandler<GetMyLabourDay, MyLabourDay>
 {
+    private const int RecentDays = 13;
     private readonly JpmsContext context;
-    public GetMyLabourDayHandler(JpmsContext context) { this.context = context; }
+    private readonly MyDayProjects projects;
+    public GetMyLabourDayHandler(JpmsContext context, MyDayProjects projects) { this.context = context; this.projects = projects; }
 
     public Task<MyLabourDay> HandleAsync(GetMyLabourDay query, CancellationToken cancellationToken) =>
         throw new InvalidOperationException("GetMyLabourDay requires the signed-in email — use the endpoint.");
 
     public async Task<MyLabourDay> HandleAsync(string email, CancellationToken cancellationToken)
     {
-        // No worker record for this email is an expected state (admins, staff browsing the
-        // page, a worker not yet linked) — return an unlinked day rather than an error; the
-        // page explains what to do. Write actions still require a linked, active record.
-        var unlinked = await context.Workers.FirstOrDefaultAsync(
-            candidate => candidate.ContactEmail == email, cancellationToken);
-        if (unlinked is null || !unlinked.IsActive)
-            return new MyLabourDay("", "", SiteClock.Today(),
-                Array.Empty<MyLabourProject>(), Array.Empty<MyRejectedTimesheet>(),
-                Array.Empty<MyRecentTimesheet>());
-
-        var worker = unlinked;
         var today = SiteClock.Today();
+        var worker = await context.Workers.FirstOrDefaultAsync(candidate => candidate.ContactEmail == email, cancellationToken);
+        if (worker is null || !worker.IsActive)
+            return new MyLabourDay("", "", today, Array.Empty<MyLabourProject>(), Array.Empty<MyRejectedTimesheet>(), Array.Empty<MyRecentTimesheet>());
 
-        var assignments = await context.ProjectWorkerAssignments
-            .Where(assignment => assignment.WorkerId == worker.WorkerId && assignment.IsActive)
-            .Join(context.Projects, assignment => assignment.ProjectId, project => project.ProjectId,
-                (assignment, project) => new { project.ProjectId, project.Name })
-            .OrderBy(project => project.Name)
-            .ToListAsync(cancellationToken);
-        var projectIds = assignments.Select(project => project.ProjectId).ToList();
-
-        var attendanceToday = await context.SiteAttendances
-            .Where(attendance => attendance.WorkerId == worker.WorkerId
-                                 && attendance.WorkDate == today
-                                 && projectIds.Contains(attendance.ProjectId))
-            .ToListAsync(cancellationToken);
-
-        // Allocation list per project: budgeted cost codes; whole active master list if nothing
-        // is budgeted yet, so the page never dead-ends.
-        var budgets = await context.CostCodeBudgets
-            .Where(budget => projectIds.Contains(budget.ProjectId))
-            .Select(budget => new { budget.ProjectId, budget.CostCode })
-            .ToListAsync(cancellationToken);
-        var centres = await context.CostCenters
-            .Where(centre => centre.IsActive)
-            .OrderBy(centre => centre.SortOrder)
-            .Select(centre => new SiteSheetCostCode(centre.Code, centre.Name))
-            .ToListAsync(cancellationToken);
-
-        var projects = assignments.Select(project =>
-        {
-            var attendance = attendanceToday.FirstOrDefault(row => row.ProjectId == project.ProjectId);
-            var budgeted = budgets.Where(budget => budget.ProjectId == project.ProjectId)
-                .Select(budget => budget.CostCode)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var codes = budgeted.Count > 0
-                ? centres.Where(centre => budgeted.Contains(centre.Code)).ToList()
-                : centres;
-            return new MyLabourProject(project.ProjectId, project.Name,
-                attendance is not null, attendance?.SignedOutAt is not null, codes);
-        }).ToList();
-
-        var rejected = await context.Timesheets
-            .Where(timesheet => timesheet.WorkerId == worker.WorkerId
-                                && timesheet.Status == (int)TimesheetStatus.Rejected)
-            .Join(context.Projects, timesheet => timesheet.ProjectId, project => project.ProjectId,
-                (timesheet, project) => new { timesheet, project.Name })
-            .OrderByDescending(row => row.timesheet.WorkedOn)
-            .ToListAsync(cancellationToken);
-
-        // The worker's own recent history (last two weeks, any status) — lets them confirm
-        // what they submitted today and see approvals land, without ever showing £.
-        var recentSince = today.AddDays(-13);
-        var recent = await context.Timesheets
-            .Where(timesheet => timesheet.WorkerId == worker.WorkerId
-                                && timesheet.WorkedOn >= recentSince)
-            .Join(context.Projects, timesheet => timesheet.ProjectId, project => project.ProjectId,
-                (timesheet, project) => new { timesheet, project.Name })
-            .OrderByDescending(row => row.timesheet.WorkedOn)
-            .ToListAsync(cancellationToken);
-
+        var cards = await projects.ForAsync(worker, email, today, cancellationToken);
+        var rejected = await OwnTimesheetsAsync(worker, sheet => sheet.Status == (int)TimesheetStatus.Rejected, cancellationToken);
+        var recentSince = today.AddDays(-RecentDays);
+        var recent = await OwnTimesheetsAsync(worker, sheet => sheet.WorkedOn >= recentSince, cancellationToken);
         return new MyLabourDay(
-            worker.WorkerId, worker.Name, today, projects,
+            worker.WorkerId, worker.Name, today, cards,
             rejected.Select(row => new MyRejectedTimesheet(
-                row.timesheet.TimesheetId, row.timesheet.ProjectId, row.Name, row.timesheet.WorkedOn,
-                row.timesheet.Hours, row.timesheet.CostCode, row.timesheet.RejectionReason)).ToList(),
+                row.TimesheetId, row.ProjectId, row.ProjectName, row.WorkedOn, row.Hours, row.CostCode, row.RejectionReason)).ToList(),
             recent.Select(row => new MyRecentTimesheet(
-                row.timesheet.TimesheetId, row.timesheet.ProjectId, row.Name, row.timesheet.WorkedOn,
-                row.timesheet.Hours, row.timesheet.CostCode, (TimesheetStatus)row.timesheet.Status)).ToList());
+                row.TimesheetId, row.ProjectId, row.ProjectName, row.WorkedOn, row.Hours, row.CostCode, (TimesheetStatus)row.Status)).ToList());
     }
+
+    private Task<List<OwnTimesheet>> OwnTimesheetsAsync(
+        WorkerEntity worker, Expression<Func<TimesheetEntity, bool>> within, CancellationToken cancellationToken) =>
+        context.Timesheets
+            .Where(timesheet => timesheet.WorkerId == worker.WorkerId)
+            .Where(within)
+            .Join(context.Projects, timesheet => timesheet.ProjectId, project => project.ProjectId,
+                (timesheet, project) => new OwnTimesheet(
+                    timesheet.TimesheetId, timesheet.ProjectId, project.Name, timesheet.WorkedOn,
+                    timesheet.Hours, timesheet.CostCode, timesheet.Status, timesheet.RejectionReason))
+            .OrderByDescending(row => row.WorkedOn)
+            .ToListAsync(cancellationToken);
 }

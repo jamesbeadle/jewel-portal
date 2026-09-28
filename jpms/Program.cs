@@ -15,6 +15,7 @@ using Jewel.JPMS.Features.Calendar;
 using Jewel.JPMS.Features.BuildingControl;
 using Jewel.JPMS.Features.Commercial;
 using Jewel.JPMS.Features.Labour;
+using Jewel.JPMS.Features.Labour.MyDay;
 using Jewel.JPMS.Features.Registers;
 using Jewel.JPMS.Features.CommercialInputs;
 using Jewel.JPMS.Features.Cvr;
@@ -141,6 +142,7 @@ builder.Services.AddScoped<IUsefulInformationStore, HttpUsefulInformationStore>(
 builder.Services.AddScoped<ISiteStore, HttpSiteStore>();
 builder.Services.AddScoped<ICommercialStore, HttpCommercialStore>();
 builder.Services.AddScoped<ILabourStore, HttpLabourStore>();
+builder.Services.AddScoped<MyDayPhotoUploader>();
 builder.Services.AddScoped<IValuationReportStore, HttpValuationReportStore>();
 builder.Services.AddScoped<IClientCostReferenceStore, HttpClientCostReferenceStore>();
 builder.Services.AddScoped<ICvrStore, HttpCvrStore>();

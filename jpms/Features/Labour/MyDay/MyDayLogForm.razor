@@ -1,0 +1,126 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+@using Jewel.JPMS.Contracts.Labour
+@inject ILabourStore Labour
+@inject MyDayPhotoUploader Photos
+
+<div class="space-y-4">
+    <FormField Label="Hours today" Hint="Half-hour steps for anything in between.">
+        <MyDayHoursPicker @bind-Hours="hours" Disabled="@isBusy" />
+    </FormField>
+    <FormField Label="What the work was" Required>
+        <select class="field h-12 text-base" @bind="costCode" disabled="@isBusy">
+            @foreach (var choice in Project.CostCodes)
+            {
+                <option value="@choice.Code">@choice.Name</option>
+            }
+        </select>
+    </FormField>
+    <FormField Label="What was done today" Required Hint="In your own words — this is the day's record and goes into the weekly report.">
+        <textarea class="field" rows="4" @bind="description" disabled="@isBusy" placeholder="Second fix to the plot 3 bathrooms, skirting in the hall…"></textarea>
+    </FormField>
+    <FormField Label="Photos" Hint="@PhotosHint">
+        <InputFile OnChange="OnPhotosChosen" multiple accept="image/*" class="w-full text-sm text-content-muted" disabled="@isBusy" />
+    </FormField>
+    <FormField Label="Leaving at" Hint="The time now — change it if you're logging the day later.">
+        <input type="time" class="field h-12 text-lg" value="@leftAt" @onchange="args => leftAt = args.Value?.ToString() ?? string.Empty" disabled="@isBusy" />
+    </FormField>
+    @if (IsLongDay)
+    {
+        <p class="text-xs text-warning">Over @LongDayHours hours — fine if it's right, just double-check.</p>
+    }
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative">@error</Notice>
+    }
+    <button type="button" class="btn-primary w-full py-3.5 text-base font-semibold" disabled="@isBusy" @onclick="SubmitAsync">@SubmitLabel()</button>
+</div>
+
+@code {
+    private const decimal LongDayHours = 12m;
+
+    [Parameter, EditorRequired] public MyLabourProject Project { get; set; } = default!;
+    [Parameter] public EventCallback<string?> OnPhotoProblem { get; set; }
+
+    private decimal hours = WorkingDayChunks.FullDay;
+    private string costCode = "";
+    private string description = "";
+    private string leftAt = MyDayTimes.Now();
+    private IReadOnlyList<IBrowserFile> photos = Array.Empty<IBrowserFile>();
+    private bool isBusy;
+    private bool isUploadingPhotos;
+    private string? error;
+
+    private bool HasPhotos => photos.Count > 0;
+    private bool HasWords => !string.IsNullOrWhiteSpace(description);
+    private bool HasHours => hours > WorkingDayChunks.Off;
+    private bool IsLongDay => hours > LongDayHours;
+    private string PhotoCountText => photos.Count == 1 ? "1 photo" : $"{photos.Count} photos";
+    private string PhotosHint => HasPhotos
+        ? $"{PhotoCountText} · {FormatSize(photos.Sum(photo => photo.Size))}"
+        : $"Camera or gallery, up to {MyDayPhotoUploader.MaxPerBatch}. They go onto today's log; more can be added after.";
+
+    protected override void OnInitialized()
+    {
+        var firstCode = Project.CostCodes.FirstOrDefault();
+        costCode = firstCode?.Code ?? "";
+    }
+
+    private void OnPhotosChosen(InputFileChangeEventArgs change) => photos = change.GetMultipleFiles(MyDayPhotoUploader.MaxPerBatch);
+
+    private string SubmitLabel()
+    {
+        if (isUploadingPhotos) return $"Uploading {PhotoCountText}…";
+        if (isBusy) return "Saving your day…";
+        return "Submit & sign out";
+    }
+
+    private string? Refusal()
+    {
+        if (!HasHours) return "Give the day its hours — half a day, a full day, or half-hour steps.";
+        if (string.IsNullOrWhiteSpace(costCode)) return "Choose what the work was.";
+        if (!HasWords) return "Say what was done today — the words are the day's record.";
+        return null;
+    }
+
+    private async Task SubmitAsync()
+    {
+        error = Refusal();
+        if (error is not null) return;
+        isBusy = true;
+        try
+        {
+            var logged = await SaveDayAsync();
+            if (logged is null) return;
+            await UploadPhotosAsync(logged);
+            await RefreshQuietlyAsync();
+        }
+        finally { isBusy = false; isUploadingPhotos = false; }
+    }
+
+    private async Task<MySiteDayLogged?> SaveDayAsync()
+    {
+        var entries = new[] { new SiteSignOutEntry(costCode, hours) };
+        try { return await Labour.MySignOutAsync(Project.ProjectId, entries, description.Trim(), MyDayTimes.TodayAt(leftAt)); }
+        catch (CommandFailedException refusal) { error = refusal.Message; }
+        catch (Exception) { error = "Your day didn't go through — check your signal and try again."; }
+        return null;
+    }
+
+    private async Task UploadPhotosAsync(MySiteDayLogged logged)
+    {
+        if (!HasPhotos) return;
+        isUploadingPhotos = true;
+        StateHasChanged();
+        try { await Photos.UploadAsync(logged.ProgressUpdateId, photos, CancellationToken.None); }
+        catch (Exception exception)
+        {
+            await OnPhotoProblem.InvokeAsync($"Your day is saved, but the photos didn't upload ({exception.Message}). Add them from today's log below.");
+        }
+    }
+
+    private async Task RefreshQuietlyAsync()
+    {
+        try { await Labour.RefreshMyDayAsync(); }
+        catch (Exception) { error = "Your day is saved — tap Refresh to see it."; }
+    }
+}
