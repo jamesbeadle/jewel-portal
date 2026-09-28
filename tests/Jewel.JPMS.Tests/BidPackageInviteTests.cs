@@ -143,7 +143,7 @@ public sealed class BidPackageInviteTests
         var fixture = await Fixture.CreateAsync();
 
         var outcome = await fixture.SendHandler.HandleAsync(
-            new SendBidPackageInvite(PackageId, "Invitation to tender", "<p>Please price.</p>", Bcc: "acme@example.com"),
+            new SendBidPackageInvite(PackageId, "Invitation to tender", "<p>Please price.</p>", Bcc: new[] { "acme@example.com" }),
             CancellationToken.None);
 
         Assert.True(outcome.Sent);
