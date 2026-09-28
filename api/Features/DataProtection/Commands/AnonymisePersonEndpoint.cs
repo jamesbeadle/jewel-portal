@@ -2,7 +2,7 @@ using Jewel.JPMS.Contracts.DataProtection;
 
 namespace Jewel.JPMS.Api.Features.DataProtection.Commands;
 
-/// <summary>POST /api/admin/people/anonymise — erase a person's details and pseudonymise their trail.</summary>
+/// <summary>POST /api/data-protection/people/anonymise — erase a person's details and pseudonymise their trail.</summary>
 public sealed class AnonymisePersonEndpoint
 {
     private readonly SignedInUserResolver users;
@@ -22,7 +22,7 @@ public sealed class AnonymisePersonEndpoint
 
     [Function(nameof(AnonymisePerson))]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "admin/people/anonymise")] HttpRequest request)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "data-protection/people/anonymise")] HttpRequest request)
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
