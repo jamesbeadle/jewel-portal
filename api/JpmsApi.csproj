@@ -19,10 +19,13 @@
           ("Function Runtime Information. OS: windows"), so win, win-x64 and win-x86 are kept —
           both bitnesses because the worker process bitness on that host is not under our control.
       Override PublishRuntimesToKeep (semicolon list) or set KeepAllRuntimes=true if the host changes.
-      The trim is for the SWA host ONLY. The MCP connector host (func-jpms-mcp-prod) is LINUX and has
-      no package cap, so .github/workflows/jpms-mcp.yml publishes with -p:KeepAllRuntimes=true:
-      trimming there removed runtimes/unix (the Linux Microsoft.Data.SqlClient) and every database
-      call on the connector failed with a 500 (2026-09-16).
+      The trim is for the SWA host ONLY. The portal API on Flex Consumption (Linux, North Europe)
+      lost runtimes/unix — the Linux Microsoft.Data.SqlClient — to this trim and every database read
+      threw FileNotFoundException, so .github/workflows/jpms-api.yml publishes with
+      -p:KeepAllRuntimes=true (2026-09-27). The MCP connector host (func-jpms-mcp-prod, Linux B1)
+      publishes through .github/workflows/jpms-mcp.yml WITHOUT the flag and its database reads were
+      verified working on 2026-09-28 through the connector itself; keeping every runtime there is
+      optional, not a repair.
     -->
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <PublishRuntimesToKeep Condition="'$(PublishRuntimesToKeep)' == ''">win;win-x64;win-x86</PublishRuntimesToKeep>
