@@ -31,6 +31,10 @@ public partial class TodoDetail
     private bool CanSeeAll =>
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector);
 
+    // The project list endpoint's own gate: a read it would refuse (an Accounts login's) is never
+    // made, because a refused read puts a permission error across the top of the page.
+    private bool CanListProjects => Session.CanOpen(JpmsRoleSets.DeliveryTeamAndParties);
+
     // Mirrors the API's JpmsRoleSets.AllInternal — who may read to-dos (and send from the
     // projects mailbox, the compose gate widened to match on 2026-08-10).
     private bool HasInternalRole =>
@@ -61,9 +65,10 @@ public partial class TodoDetail
         StateHasChanged();
         if (!Session.IsApproved || !HasInternalRole) { itemLoading = false; return; }
 
-        // The item, the project labels and the assignee pool are independent — they go out
+        // The item, the project pool and the assignee pool are independent — they go out
         // together rather than one after another.
-        var loads = new List<Task> { LoadItemAsync(), LoadProjectLabelsAsync() };
+        var loads = new List<Task> { LoadItemAsync() };
+        if (CanListProjects) loads.Add(LoadProjectPoolAsync());
         if (CanManage) loads.Add(LoadAssigneeOptionsAsync());
         await Task.WhenAll(loads);
     }
@@ -75,8 +80,7 @@ public partial class TodoDetail
         finally { itemLoading = false; }
     }
 
-    // Labels only — a failed project read degrades the scope line, never the page.
-    private async Task LoadProjectLabelsAsync()
+    private async Task LoadProjectPoolAsync()
     {
         try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); } catch { }
     }
@@ -97,12 +101,8 @@ public partial class TodoDetail
     private IReadOnlyList<Project> ProjectPool =>
         Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>();
 
-    private string ScopeLabel(TodoItem forItem)
-    {
-        if (string.IsNullOrWhiteSpace(forItem.ProjectId)) return "Company-wide";
-        var project = ProjectPool.FirstOrDefault(candidate => candidate.ProjectId == forItem.ProjectId);
-        return project is null ? "Project" : $"{project.Reference} — {project.Name}";
-    }
+    private static string ScopeLabel(TodoItem forItem) =>
+        forItem.IsGeneral ? "Company-wide" : forItem.ProjectLabel ?? "Project";
 
     // The move picker's destination pool: every project the item could go to (minus wherever it is
     // now — every offered row is a real move) and, for the MD / administrators only, the

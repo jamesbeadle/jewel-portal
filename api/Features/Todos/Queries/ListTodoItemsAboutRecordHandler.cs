@@ -19,9 +19,10 @@ public sealed class ListTodoItemsAboutRecordHandler : IQueryHandler<ListTodoItem
 
         var personNames = await context.PersonNamesForAsync(entities, cancellationToken);
         var aboutReferences = await aboutRecords.ReferencesForAsync(entities, cancellationToken);
+        var projectLabels = await context.ProjectLabelsForAsync(entities, cancellationToken);
         return entities
             .InListOrder()
-            .Select(t => t.ToModel(personNames, aboutReferences))
+            .Select(t => t.ToModel(personNames, aboutReferences, projectLabels))
             .ToList()
             .AsReadOnly();
     }

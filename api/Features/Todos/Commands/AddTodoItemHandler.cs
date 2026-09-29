@@ -49,7 +49,7 @@ public sealed class AddTodoItemHandler : ICommandHandler<AddTodoItem, TodoItem>
         var aboutReferences = about is null
             ? null
             : new Dictionary<string, string> { [TodoAboutRecords.Key((int)about.Type, about.RecordId)] = about.Reference };
-        return entity.ToModel(await context.PersonNamesForAsync(new[] { entity }, cancellationToken), aboutReferences);
+        return await context.ToModelAsync(entity, cancellationToken, aboutReferences);
     }
 
     private static string Clamp(string value, int maxLength) =>

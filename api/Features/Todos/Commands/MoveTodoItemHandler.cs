@@ -31,6 +31,6 @@ public sealed class MoveTodoItemHandler : ICommandHandler<MoveTodoItem, TodoItem
         entity.ProjectId = projectId;
         activity.Record(entity, TodoActivityKind.Moved, TodoActivitySummaries.MovedSummary(projectLabel));
         await context.SaveChangesAsync(cancellationToken);
-        return entity.ToModel(await context.PersonNamesForAsync(new[] { entity }, cancellationToken));
+        return await context.ToModelAsync(entity, cancellationToken);
     }
 }

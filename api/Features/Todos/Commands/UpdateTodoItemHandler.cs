@@ -48,7 +48,7 @@ public sealed class UpdateTodoItemHandler : ICommandHandler<UpdateTodoItem, Todo
         if (!wasComplete && command.IsComplete)
             await completionTagger.TagSourceEmailsAsync(entity, actorEmail: null, cancellationToken);
 
-        return entity.ToModel(await context.PersonNamesForAsync(new[] { entity }, cancellationToken));
+        return await context.ToModelAsync(entity, cancellationToken);
     }
 
     // Reopening puts the item back to Open, not In progress: whoever picks it up again says so.

@@ -38,7 +38,7 @@ public sealed class AddGeneralTodoItemHandler : ICommandHandler<AddGeneralTodoIt
         context.TodoItems.Add(entity);
         activity.Record(entity, TodoActivityKind.Created, TodoActivitySummaries.CreatedSummary(entity), command.CreatedByEmail);
         await context.SaveChangesAsync(cancellationToken);
-        return entity.ToModel(await context.PersonNamesForAsync(new[] { entity }, cancellationToken));
+        return await context.ToModelAsync(entity, cancellationToken);
     }
 
     private static string Clamp(string value, int maxLength) =>

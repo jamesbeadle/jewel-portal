@@ -20,9 +20,10 @@ public sealed class ListTodoLinkCandidatesHandler : IQueryHandler<ListTodoLinkCa
             .ToListAsync(cancellationToken);
 
         var personNames = await context.PersonNamesForAsync(entities, cancellationToken);
+        var projectLabels = await context.ProjectLabelsForAsync(entities, cancellationToken);
         return entities
             .InListOrder()
-            .Select(entity => entity.ToModel(personNames))
+            .Select(entity => entity.ToModel(personNames, projectLabels: projectLabels))
             .ToList()
             .AsReadOnly();
     }

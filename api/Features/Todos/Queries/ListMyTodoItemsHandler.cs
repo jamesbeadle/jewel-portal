@@ -25,9 +25,10 @@ public sealed class ListMyTodoItemsHandler : IQueryHandler<ListMyTodoItems, IRea
             .ToListAsync(cancellationToken);
 
         var personNames = await context.PersonNamesForAsync(entities, cancellationToken);
+        var projectLabels = await context.ProjectLabelsForAsync(entities, cancellationToken);
         return entities
             .InListOrder()
-            .Select(t => t.ToModel(personNames))
+            .Select(t => t.ToModel(personNames, projectLabels: projectLabels))
             .ToList()
             .AsReadOnly();
     }

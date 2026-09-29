@@ -24,9 +24,10 @@ public sealed class ListLinkedTodoItemsHandler : IQueryHandler<ListLinkedTodoIte
         if (entities.Count == 0) return Array.Empty<TodoItem>();
 
         var personNames = await context.PersonNamesForAsync(entities, cancellationToken);
+        var projectLabels = await context.ProjectLabelsForAsync(entities, cancellationToken);
         return entities
             .InListOrder()
-            .Select(entity => entity.ToModel(personNames))
+            .Select(entity => entity.ToModel(personNames, projectLabels: projectLabels))
             .ToList()
             .AsReadOnly();
     }

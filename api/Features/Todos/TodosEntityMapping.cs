@@ -7,7 +7,8 @@ internal static class TodosEntityMapping
     public static TodoItem ToModel(
         this TodoItemEntity entity,
         IReadOnlyDictionary<string, string>? personNames = null,
-        IReadOnlyDictionary<string, string>? aboutReferences = null) =>
+        IReadOnlyDictionary<string, string>? aboutReferences = null,
+        IReadOnlyDictionary<string, TodoProjectLabel>? projectLabels = null) =>
         new(entity.TodoItemId,
             entity.ProjectId,
             entity.Reference,
@@ -15,8 +16,7 @@ internal static class TodosEntityMapping
             entity.Notes,
             entity.AssigneeRole is int role ? (Role?)role : null,
             entity.AssigneePersonEmail,
-            AssigneePersonName: entity.AssigneePersonEmail is string email && personNames is not null
-                && personNames.TryGetValue(email, out var name) ? name : null,
+            AssigneePersonName: PersonNameFor(entity, personNames),
             entity.CreatedByEmail,
             entity.IsComplete,
             entity.CreatedAt,
@@ -26,9 +26,22 @@ internal static class TodosEntityMapping
             entity.StartedByEmail,
             AboutRecordType: entity.AboutRecordType is int aboutType ? (RecordType?)aboutType : null,
             AboutRecordId: entity.AboutRecordId,
-            AboutRecordReference: entity.AboutRecordId is string aboutId && aboutReferences is not null
-                && aboutReferences.TryGetValue(TodoAboutRecords.Key(entity.AboutRecordType, aboutId), out var aboutReference)
-                ? aboutReference : null);
+            AboutRecordReference: AboutReferenceFor(entity, aboutReferences),
+            ProjectReference: ProjectLabelFor(entity, projectLabels)?.Reference,
+            ProjectName: ProjectLabelFor(entity, projectLabels)?.Name);
+
+    private static string? PersonNameFor(TodoItemEntity entity, IReadOnlyDictionary<string, string>? personNames) =>
+        entity.AssigneePersonEmail is string email && personNames is not null
+            && personNames.TryGetValue(email, out var name) ? name : null;
+
+    private static string? AboutReferenceFor(TodoItemEntity entity, IReadOnlyDictionary<string, string>? aboutReferences) =>
+        entity.AboutRecordId is string aboutId && aboutReferences is not null
+            && aboutReferences.TryGetValue(TodoAboutRecords.Key(entity.AboutRecordType, aboutId), out var aboutReference)
+            ? aboutReference : null;
+
+    private static TodoProjectLabel? ProjectLabelFor(
+        TodoItemEntity entity, IReadOnlyDictionary<string, TodoProjectLabel>? projectLabels) =>
+        projectLabels is not null && projectLabels.TryGetValue(entity.ProjectId, out var label) ? label : null;
 
     public static TodoActivity ToModel(this TodoItemActivityEntity entity) =>
         new(entity.TodoItemActivityId,
