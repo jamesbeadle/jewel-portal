@@ -34,6 +34,18 @@ public sealed record MySiteSignOut(
 /// nothing else is written — no attendance, no hours. A recorded off day is never a missing day.</summary>
 public sealed record MySiteDayOff(string ProjectId, string Description) : ICommand<MySiteDayLogged>;
 
+/// <summary>Amends a day the worker has logged, until the office has approved it: the hours and
+/// cost code of that day's timesheet, the words of its note and its sign-out time, in one save
+/// (Jeremy on Jack's phone, 29 Sep 2026: "I can't amend or change something on this entry?").
+/// An approved day is refused — that is the Project Manager's to change. The day's instruction
+/// and defect were raised when it was logged and are not re-raised here.</summary>
+public sealed record MyAmendSiteDay(
+    string TimesheetId,
+    decimal Hours,
+    string CostCode,
+    string Description,
+    DateTimeOffset? SignedOutAt = null) : ICommand<Acknowledgement>;
+
 /// <summary>Resubmits one of the caller's own rejected timesheets (back to Submitted).</summary>
 public sealed record MyResubmitTimesheet(string TimesheetId, decimal Hours, string CostCode)
     : ICommand<Acknowledgement>;

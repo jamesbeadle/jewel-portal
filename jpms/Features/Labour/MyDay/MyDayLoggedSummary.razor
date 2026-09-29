@@ -2,6 +2,11 @@
 @inject ILabourStore Labour
 @inject MyDayPhotoUploader Photos
 
+@if (isAmending && TodaysDay is { } amended)
+{
+    <MyDayAmendForm Day="amended" Codes="Project.CostCodes" RecentCodes="RecentCodes" OnDone="() => isAmending = false" />
+    return;
+}
 <div class="space-y-3 text-sm">
     @if (IsOffDay)
     {
@@ -15,7 +20,7 @@
     {
         <div class="flex items-center justify-between gap-3 border-t border-line/60 py-1.5">
             <span class="text-content-subtle min-w-0 truncate">@entry.CostCode</span>
-            <span class="shrink-0 whitespace-nowrap"><span class="text-content font-medium">@entry.Hours h</span> <StatusPill Status="@entry.Status" /></span>
+            <span class="shrink-0 whitespace-nowrap"><span class="text-content font-medium">@MyDayHoursText.Of(entry.Hours)</span> <StatusPill Status="@entry.Status" /></span>
         </div>
     }
     @if (Project.TodaysNote is { } note)
@@ -38,17 +43,24 @@
             <p class="text-sm text-negative" role="alert">@error</p>
         }
     }
-    @if (HasAttendance)
+    @if (TodaysDay is { CanBeAmended: true } today)
     {
-        <p class="text-xs text-content-subtle">Your hours are with the Project Manager — contact them if anything needs amending.</p>
+        <button type="button" class="btn-secondary w-full" @onclick="() => isAmending = true">Amend today</button>
+    }
+    @if (HasAttendance && TodaysDay is not { CanBeAmended: true })
+    {
+        <p class="text-xs text-content-subtle">The office has this day — contact your Project Manager if anything needs amending.</p>
     }
 </div>
 
 @code {
     [Parameter, EditorRequired] public MyLabourProject Project { get; set; } = default!;
     [Parameter] public IReadOnlyList<MyRecentTimesheet> TodaysHours { get; set; } = Array.Empty<MyRecentTimesheet>();
+    [Parameter] public MyWeekDay? TodaysDay { get; set; }
+    [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
 
     private bool isUploading;
+    private bool isAmending;
     private string? error;
 
     private bool HasAttendance => Project.HasSignedOutToday;

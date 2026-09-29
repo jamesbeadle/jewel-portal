@@ -64,6 +64,8 @@ public static class LabourFeatureRegistration
         services.AddScoped<MyDayCostCodes>();
         services.AddScoped<MyDayNotesToday>();
         services.AddScoped<MyDayRaisedRecords>();
+        services.AddScoped<MyDayWeek>();
+        services.AddScoped<MyAmendSiteDayHandler>();
         services.AddScoped<MyDayProjects>();
         services.AddScoped<GetMyLabourDayHandler>();
         services.AddScoped<MySiteSignInHandler>();

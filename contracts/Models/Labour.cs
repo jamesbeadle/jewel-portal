@@ -127,9 +127,34 @@ public sealed record MyLabourDay(
     DateTimeOffset WorkDate,
     IReadOnlyList<MyLabourProject> Projects,
     IReadOnlyList<MyRejectedTimesheet> Rejected,
-    IReadOnlyList<MyRecentTimesheet> Recent)
+    IReadOnlyList<MyRecentTimesheet> Recent,
+    IReadOnlyList<MyWeekDay> Week)
 {
     public bool IsLinked => !string.IsNullOrEmpty(WorkerId);
+}
+
+/// <summary>What one site holds for one day of the worker's week: a logged day, a recorded day
+/// off, or nothing at all.</summary>
+public enum MyWeekDayKind { Logged, Off, Nothing }
+
+/// <summary>One site on one day of the worker's week, Monday to today, as My day lists it so the
+/// worker sees what they have and have not filed before Friday. A logged day carries what its
+/// amend form pre-fills; it may be amended until the office has approved it.</summary>
+public sealed record MyWeekDay(
+    string ProjectId,
+    string ProjectName,
+    DateTimeOffset Date,
+    MyWeekDayKind Kind,
+    string TimesheetId = "",
+    decimal Hours = 0m,
+    string CostCode = "",
+    TimesheetStatus? Status = null,
+    string Words = "",
+    int PhotoCount = 0,
+    DateTimeOffset? SignedOutAt = null)
+{
+    public bool IsLogged => Kind == MyWeekDayKind.Logged;
+    public bool CanBeAmended => IsLogged && Status is not TimesheetStatus.Approved;
 }
 
 /// <summary>One of the caller's recent timesheets (last two weeks) — hours and status only.</summary>

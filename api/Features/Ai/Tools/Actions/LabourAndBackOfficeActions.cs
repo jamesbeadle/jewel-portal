@@ -70,7 +70,7 @@ internal sealed partial class LabourAndBackOfficeActions : IAiActionSource
     // Skipped: SubmitWorkerWeek — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only); the connector enters weeks through SubmitWorkerWeekByName (submit_worker_week above), which delegates to the same handler. (Distinct from the legacy Commercial SubmitTimesheet — action removed from CommercialActions and slices deleted, both 2026-08-28.)
     // Skipped: MySiteSignIn — no Authorisation class (inline LabourRoleSets.LogOwnTime check only).
     // Skipped: MySiteSignOut — no Authorisation class (inline LabourRoleSets.LogOwnTime check only).
-    // Skipped: MyResubmitTimesheet — no Authorisation class (inline LabourRoleSets.LogOwnTime check only).
+    // Skipped: MyResubmitTimesheet, MyAmendSiteDay — no Authorisation class (inline LabourRoleSets.LogOwnTime check only); the worker's own day, keyed by opaque TimesheetId.
     // (SignOffLabourWeek is no longer connector-unreachable — the connector signs off through SignOffWorkerWeekByName (sign_off_labour_week above, confirm-first), which resolves the worker name and delegates to SignOffLabourWeekHandler's signedOffByEmail overload via the EmailStamps parameter, converting WeekNotSignableException to the gateway's message convention. The id-keyed SignOffLabourWeek itself stays unmirrored: opaque WorkerId.)
     // (RemoveLabourWeekSignOff likewise — remove_labour_week_sign_off above resolves the name and delegates to the registered handler. The id-keyed command stays unmirrored: opaque WorkerId.)
     // Skipped: SetProjectWorkerAssignment — no Authorisation class (inline LabourRoleSets.ManageWorkers check only).

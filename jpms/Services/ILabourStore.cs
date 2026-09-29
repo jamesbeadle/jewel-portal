@@ -52,6 +52,8 @@ public interface ILabourStore
     /// <summary>Records a day off in the worker's words; the caller refreshes the day.</summary>
     Task<MySiteDayLogged> MyDayOffAsync(string projectId, string description);
     Task MyResubmitAsync(string timesheetId, decimal hours, string costCode);
+    /// <summary>Amends a day the worker logged, until the office has approved it; refreshes the day.</summary>
+    Task MyAmendAsync(MyAmendSiteDay amendment);
 
     // Timesheets + register.
     IReadOnlyList<TimesheetDetail> TimesheetsFor(string projectId);

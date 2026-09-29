@@ -1,0 +1,67 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+@using Jewel.JPMS.Contracts.Labour
+@inject ILabourStore Labour
+
+<div class="space-y-4">
+    <p class="text-sm text-content-subtle">Amending @Day.ProjectName, @Day.Date.ToString(DayFormat). The office sees the day as you leave it here.</p>
+    <FormField Label="Hours" Hint="Half-hour steps for anything in between.">
+        <MyDayHoursPicker @bind-Hours="hours" Disabled="@isBusy" />
+    </FormField>
+    <MyDayCostCodePicker Codes="Codes" RecentCodes="RecentCodes" @bind-CostCode="costCode" Disabled="@isBusy" />
+    <MyDayWordsBox @bind-Words="words" Disabled="@isBusy" HasDefectBox="false" />
+    <MyDayClock Label="Left at" Hint="Change it if the leaving time was wrong." @bind-Time="leftAt" Disabled="@isBusy" />
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative">@error</Notice>
+    }
+    <button type="button" class="btn-primary btn-lg w-full" disabled="@isBusy" @onclick="SaveAsync">@(isBusy ? "Saving…" : "Save the day")</button>
+    <button type="button" class="btn-ghost w-full" disabled="@isBusy" @onclick="OnDone">Leave it as it was</button>
+</div>
+
+@code {
+    private const string DayFormat = "dddd d MMMM";
+    private const string ClockFormat = "HH:mm";
+
+    [Parameter, EditorRequired] public MyWeekDay Day { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<SiteSheetCostCode> Codes { get; set; } = Array.Empty<SiteSheetCostCode>();
+    [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
+    [Parameter] public EventCallback OnDone { get; set; }
+
+    private decimal hours;
+    private string costCode = "";
+    private string words = "";
+    private string leftAt = "";
+    private bool isBusy;
+    private string? error;
+
+    protected override void OnInitialized()
+    {
+        hours = Day.Hours;
+        costCode = Day.CostCode;
+        words = Day.Words;
+        leftAt = Day.SignedOutAt?.ToLocalTime().ToString(ClockFormat) ?? "";
+    }
+
+    private string? Refusal()
+    {
+        if (hours <= WorkingDayChunks.Off) return "Give the day its hours — half a day, a full day, or half-hour steps.";
+        if (string.IsNullOrWhiteSpace(costCode)) return "Choose what the work was.";
+        if (string.IsNullOrWhiteSpace(words)) return "Say what was done that day — the words are the day's record.";
+        return null;
+    }
+
+    private async Task SaveAsync()
+    {
+        error = Refusal();
+        if (error is not null) return;
+        isBusy = true;
+        try
+        {
+            await Labour.MyAmendAsync(new MyAmendSiteDay(Day.TimesheetId, hours, costCode, words.Trim(), MyDayTimes.TodayAt(leftAt)));
+            await OnDone.InvokeAsync();
+        }
+        catch (CommandFailedException refusal) { error = refusal.Message; }
+        catch (Exception) { error = "The change didn't go through — check your signal and try again."; }
+        finally { isBusy = false; }
+    }
+}
