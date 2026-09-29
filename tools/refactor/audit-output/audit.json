@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-29T13:41:48+00:00",
+  "generatedAt": "2026-09-29T15:39:42+00:00",
   "kitVersion": "1.12.0",
   "score": {
     "overall": 71.5,
@@ -16,7 +16,7 @@
       },
       {
         "group": "Prose",
-        "score": 93.4,
+        "score": 93.5,
         "weight": 20
       },
       {
@@ -39,8 +39,8 @@
         "zeroAt": 0.5,
         "unit": "files",
         "isMeasured": true,
-        "offenders": 786,
-        "measuredAgainst": 4799,
+        "offenders": 788,
+        "measuredAgainst": 4809,
         "score": 67.2
       },
       {
@@ -64,8 +64,8 @@
         "unit": "functions",
         "isMeasured": true,
         "offenders": 836,
-        "measuredAgainst": 9432,
-        "score": 64.5
+        "measuredAgainst": 9453,
+        "score": 64.6
       },
       {
         "key": "elseBlocks",
@@ -76,7 +76,7 @@
         "unit": "branches",
         "isMeasured": true,
         "offenders": 1181,
-        "measuredAgainst": 13103,
+        "measuredAgainst": 13128,
         "score": 82.0
       },
       {
@@ -99,8 +99,8 @@
         "zeroAt": 50,
         "unit": "thousand lines",
         "isMeasured": true,
-        "offenders": 16306,
-        "measuredAgainst": 306.75,
+        "offenders": 16302,
+        "measuredAgainst": 307.28,
         "score": 0.0
       },
       {
@@ -112,7 +112,7 @@
         "unit": "thousand lines",
         "isMeasured": true,
         "offenders": 135,
-        "measuredAgainst": 306.75,
+        "measuredAgainst": 307.28,
         "score": 97.8
       },
       {
@@ -124,7 +124,7 @@
         "unit": "components and functions",
         "isMeasured": true,
         "offenders": 27,
-        "measuredAgainst": 9580,
+        "measuredAgainst": 9603,
         "score": 97.2
       },
       {
@@ -136,8 +136,8 @@
         "unit": "thousand lines",
         "isMeasured": true,
         "offenders": 4112,
-        "measuredAgainst": 306.75,
-        "score": 55.3
+        "measuredAgainst": 307.28,
+        "score": 55.4
       },
       {
         "key": "deepIndentation",
@@ -148,8 +148,8 @@
         "unit": "thousand lines",
         "isMeasured": true,
         "offenders": 3064,
-        "measuredAgainst": 306.75,
-        "score": 66.7
+        "measuredAgainst": 307.28,
+        "score": 66.8
       },
       {
         "key": "functionNames",
@@ -160,7 +160,7 @@
         "unit": "functions",
         "isMeasured": true,
         "offenders": 57,
-        "measuredAgainst": 9432,
+        "measuredAgainst": 9453,
         "score": 94.0
       },
       {
@@ -172,7 +172,7 @@
         "unit": "predicted files",
         "isMeasured": true,
         "offenders": 186,
-        "measuredAgainst": 2459,
+        "measuredAgainst": 2467,
         "score": 84.9
       },
       {
@@ -195,9 +195,9 @@
         "zeroAt": 0.25,
         "unit": "branches",
         "isMeasured": true,
-        "offenders": 276,
-        "measuredAgainst": 13103,
-        "score": 91.6
+        "offenders": 274,
+        "measuredAgainst": 13128,
+        "score": 91.7
       },
       {
         "key": "literalComparisons",
@@ -207,9 +207,9 @@
         "zeroAt": 0.25,
         "unit": "branches",
         "isMeasured": true,
-        "offenders": 235,
-        "measuredAgainst": 13103,
-        "score": 92.8
+        "offenders": 234,
+        "measuredAgainst": 13128,
+        "score": 92.9
       },
       {
         "key": "gluedAccessors",
@@ -220,7 +220,7 @@
         "unit": "functions",
         "isMeasured": true,
         "offenders": 34,
-        "measuredAgainst": 9432,
+        "measuredAgainst": 9453,
         "score": 96.4
       },
       {
@@ -231,8 +231,8 @@
         "zeroAt": 0.5,
         "unit": "widget slots",
         "isMeasured": true,
-        "offenders": 697,
-        "measuredAgainst": 2667,
+        "offenders": 699,
+        "measuredAgainst": 2673,
         "score": 47.7
       },
       {
@@ -243,8 +243,8 @@
         "zeroAt": 0.5,
         "unit": "write doors",
         "isMeasured": true,
-        "offenders": 16551,
-        "measuredAgainst": 711,
+        "offenders": 11489,
+        "measuredAgainst": 713,
         "score": 0.0
       }
     ]
@@ -252,18 +252,18 @@
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 786,
-      "totalFiles": 4799,
-      "totalLines": 306750,
+      "filesOverLimit": 788,
+      "totalFiles": 4809,
+      "totalLines": 307277,
       "worstFileLines": 551,
       "worstFileTimesOverLimit": 4.51
     },
     "functionShape": {
       "limit": 30,
       "functionsOverLimit": 836,
-      "totalFunctions": 9432,
+      "totalFunctions": 9453,
       "elseBlocks": 1181,
-      "ifBlocks": 13103,
+      "ifBlocks": 13128,
       "measurementIsHeuristic": true
     },
     "functionNames": {
@@ -284,11 +284,11 @@
     },
     "naming": {
       "bannedAbbreviationHits": 777,
-      "unprefixedBooleans": 2041
+      "unprefixedBooleans": 2047
     },
     "comments": {
-      "explanatoryCommentLines": 16306,
-      "filesWithComments": 2302,
+      "explanatoryCommentLines": 16302,
+      "filesWithComments": 2301,
       "taskMarkers": 52
     },
     "magicValues": {
@@ -299,21 +299,21 @@
     "prose": {
       "longMemberChainLines": 4112,
       "deeplyIndentedLines": 3064,
-      "overlongLines": 1952,
+      "overlongLines": 1958,
       "measurementIsHeuristic": true
     },
     "conditions": {
-      "tangledConditionLines": 276,
-      "literalComparisonLines": 235,
+      "tangledConditionLines": 274,
+      "literalComparisonLines": 234,
       "measurementIsHeuristic": true
     },
     "orphans": {
       "orphanFunctions": 21,
-      "functionsExamined": 9432
+      "functionsExamined": 9453
     },
     "designPatterns": {
       "roleFamilies": 187,
-      "predictedFiles": 2459,
+      "predictedFiles": 2467,
       "predictedFilesMissing": 186,
       "entities": 19,
       "entitiesOutOfRange": 0,
@@ -321,19 +321,19 @@
     },
     "inventory": {
       "pages": 119,
-      "components": 148,
+      "components": 150,
       "orphanComponents": 6,
       "averagePageLines": 173
     },
     "siteDefinition": {
       "routes": 132,
-      "views": 688,
-      "siteComponents": 657,
+      "views": 690,
+      "siteComponents": 659,
       "catalogue": 34,
-      "widgetUsages": 1970,
-      "handRolledElements": 697,
-      "widgetSlots": 2667,
-      "viewsWithHandRolled": 315,
+      "widgetUsages": 1974,
+      "handRolledElements": 699,
+      "widgetSlots": 2673,
+      "viewsWithHandRolled": 316,
       "designSheets": 0,
       "designsLastChecked": "never",
       "brandCheckedAt": "never"
@@ -341,9 +341,9 @@
     "inputValidation": {
       "schemaTables": 216,
       "limitedColumns": 1301,
-      "writeDoors": 711,
+      "writeDoors": 713,
       "unvalidatedDoors": 0,
-      "looserLimits": 16551
+      "looserLimits": 11489
     },
     "fileAreas": {
       "totalFiles": 5874,
@@ -365,9 +365,9 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 786,
-        "totalFiles": 4799,
-        "totalLines": 306750,
+        "filesOverLimit": 788,
+        "totalFiles": 4809,
+        "totalLines": 307277,
         "worstFileLines": 551,
         "worstFileTimesOverLimit": 4.51
       },
@@ -405,12 +405,12 @@
           "lines": 428
         },
         {
-          "file": "jpms/Pages/SubcontractorDetail.razor",
-          "lines": 422
+          "file": "jpms/Pages/ProjectValuation.razor",
+          "lines": 423
         },
         {
-          "file": "jpms/Pages/ProjectValuation.razor",
-          "lines": 421
+          "file": "jpms/Pages/SubcontractorDetail.razor",
+          "lines": 422
         },
         {
           "file": "jpms/Pages/CostCodes.razor",
@@ -729,6 +729,10 @@
           "lines": 299
         },
         {
+          "file": "jpms/Pages/ProjectValuation.razor.cs",
+          "lines": 299
+        },
+        {
           "file": "jpms/Pages/Clients.razor",
           "lines": 299
         },
@@ -773,10 +777,6 @@
           "lines": 295
         },
         {
-          "file": "jpms/Pages/ProjectValuation.razor.cs",
-          "lines": 294
-        },
-        {
           "file": "jpms/Pages/TriageQueue.razor.cs",
           "lines": 294
         },
@@ -815,6 +815,10 @@
         {
           "file": "api/Data/JpmsContext.cs",
           "lines": 282
+        },
+        {
+          "file": "api/Features/Ai/Tools/Actions/CommercialActions.ClaimsAndValuations.cs",
+          "lines": 281
         },
         {
           "file": "jpms/Components/ProjectTodoList.razor.cs",
@@ -997,10 +1001,6 @@
           "lines": 256
         },
         {
-          "file": "api/Features/Ai/Tools/Actions/CommercialActions.ClaimsAndValuations.cs",
-          "lines": 255
-        },
-        {
           "file": "jpms/Pages/ProjectDrawingDetail.razor",
           "lines": 255
         },
@@ -1030,6 +1030,10 @@
         },
         {
           "file": "jpms/Pages/ProjectCashflow.razor.cs",
+          "lines": 249
+        },
+        {
+          "file": "jpms/Components/DropdownMenu.razor",
           "lines": 249
         },
         {
@@ -1103,10 +1107,6 @@
         {
           "file": "jpms/Pages/AdminIntegrations.razor",
           "lines": 244
-        },
-        {
-          "file": "jpms/Components/DropdownMenu.razor",
-          "lines": 243
         },
         {
           "file": "jpms/Components/SubcontractorStatementModal.razor",
@@ -1597,6 +1597,10 @@
           "lines": 193
         },
         {
+          "file": "jpms/Services/HttpValuationReportStore.cs",
+          "lines": 193
+        },
+        {
           "file": "jpms/Components/ValuationLineForm.razor",
           "lines": 193
         },
@@ -1682,10 +1686,6 @@
         },
         {
           "file": "jpms/Pages/ProjectBidPackageInviteDetail.Invites.cs",
-          "lines": 185
-        },
-        {
-          "file": "jpms/Services/HttpValuationReportStore.cs",
           "lines": 185
         },
         {
@@ -2117,6 +2117,10 @@
           "lines": 156
         },
         {
+          "file": "api/Features/Commercial/CommercialFeatureRegistration.cs",
+          "lines": 155
+        },
+        {
           "file": "jpms/Features/Sales/LeadHouseModelPanel.razor",
           "lines": 155
         },
@@ -2202,10 +2206,6 @@
         },
         {
           "file": "api/Features/Ai/Tools/AiKpiTools.cs",
-          "lines": 151
-        },
-        {
-          "file": "api/Features/Commercial/CommercialFeatureRegistration.cs",
           "lines": 151
         },
         {
@@ -3117,6 +3117,10 @@
           "lines": 111
         },
         {
+          "file": "jpms/Components/ClaimRestatementDialog.razor.cs",
+          "lines": 111
+        },
+        {
           "file": "jpms/Features/Subcontractors/SubcontractorsRouteRegistration.cs",
           "lines": 111
         },
@@ -3493,6 +3497,10 @@
           "lines": 101
         },
         {
+          "file": "api/Features/Commercial/Commands/RestateValuationClaimLinesHandler.cs",
+          "lines": 101
+        },
+        {
           "file": "api/Features/RecordLinks/Providers/DefectLinkProvider.cs",
           "lines": 101
         },
@@ -3523,9 +3531,9 @@
       "summary": {
         "limit": 30,
         "functionsOverLimit": 836,
-        "totalFunctions": 9432,
+        "totalFunctions": 9453,
         "elseBlocks": 1181,
-        "ifBlocks": 13103,
+        "ifBlocks": 13128,
         "measurementIsHeuristic": true
       },
       "offenders": [
@@ -3614,6 +3622,12 @@
           "line": 71
         },
         {
+          "file": "api/Features/Ai/Tools/Actions/CommercialActions.ClaimsAndValuations.cs",
+          "lines": 267,
+          "name": "ClaimsAndValuationsActions",
+          "line": 14
+        },
+        {
           "file": "api/Features/Ai/Tools/AiValuationInvoiceTools.cs",
           "lines": 260,
           "name": "ProjectId",
@@ -3624,12 +3638,6 @@
           "lines": 250,
           "name": "WorkOrdersActions",
           "line": 8
-        },
-        {
-          "file": "api/Features/Ai/Tools/Actions/CommercialActions.ClaimsAndValuations.cs",
-          "lines": 241,
-          "name": "ClaimsAndValuationsActions",
-          "line": 14
         },
         {
           "file": "api/Features/Ai/Tools/Actions/SiteAndProgressActions.ProgressProgramme.cs",
@@ -4274,7 +4282,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 777,
-        "unprefixedBooleans": 2041
+        "unprefixedBooleans": 2047
       },
       "offenders": {
         "abbreviations": [
@@ -4736,8 +4744,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 16306,
-        "filesWithComments": 2302,
+        "explanatoryCommentLines": 16302,
+        "filesWithComments": 2301,
         "taskMarkers": 52
       },
       "offenders": [
@@ -5318,7 +5326,7 @@
         "repeatedLiterals": [
           {
             "literal": "button",
-            "occurrences": 958
+            "occurrences": 959
           },
           {
             "literal": "text-xs text-content-subtle",
@@ -5346,7 +5354,7 @@
           },
           {
             "literal": "number",
-            "occurrences": 150
+            "occurrences": 151
           },
           {
             "literal": "btn-primary",
@@ -5354,7 +5362,7 @@
           },
           {
             "literal": "text-content-subtle",
-            "occurrences": 146
+            "occurrences": 147
           },
           {
             "literal": "btn-secondary",
@@ -5362,7 +5370,7 @@
           },
           {
             "literal": "eyebrow",
-            "occurrences": 138
+            "occurrences": 139
           },
           {
             "literal": "text-content-muted",
@@ -5430,11 +5438,11 @@
           },
           {
             "literal": "SaveAsync",
-            "occurrences": 55
+            "occurrences": 56
           },
           {
             "literal": "Cancel",
-            "occurrences": 53
+            "occurrences": 54
           }
         ]
       }
@@ -5444,7 +5452,7 @@
       "summary": {
         "longMemberChainLines": 4112,
         "deeplyIndentedLines": 3064,
-        "overlongLines": 1952,
+        "overlongLines": 1958,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -6059,8 +6067,8 @@
     "conditions": {
       "name": "conditions",
       "summary": {
-        "tangledConditionLines": 276,
-        "literalComparisonLines": 235,
+        "tangledConditionLines": 274,
+        "literalComparisonLines": 234,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -6104,14 +6112,6 @@
           {
             "file": "api/Features/Commercial/Commands/AddValuationLineItemValidation.cs",
             "line": 14
-          },
-          {
-            "file": "api/Features/Commercial/Commands/RecordClaimEntriesValidation.cs",
-            "line": 19
-          },
-          {
-            "file": "api/Features/Commercial/Commands/RecordClaimEntriesValidation.cs",
-            "line": 25
           },
           {
             "file": "api/Features/Commercial/Commands/SaveReconciliationPackageHandler.cs",
@@ -6264,6 +6264,14 @@
           {
             "file": "api/Features/Labour/Commands/SubmitWorkerWeekSlice.cs",
             "line": 48
+          },
+          {
+            "file": "api/Features/Labour/Commands/WorkerWeekApprovalByNameSlices.cs",
+            "line": 28
+          },
+          {
+            "file": "api/Features/Labour/Commands/XeroCoding/RunXeroCodingHandler.Gates.cs",
+            "line": 29
           }
         ],
         "literalComparisons": [
@@ -6392,10 +6400,6 @@
             "line": 13
           },
           {
-            "file": "api/Features/Commercial/Commands/RecordClaimEntriesValidation.cs",
-            "line": 23
-          },
-          {
             "file": "api/Features/Commercial/Commands/RecordClaimEntryValidation.cs",
             "line": 14
           },
@@ -6466,6 +6470,10 @@
           {
             "file": "api/Features/Drawings/Geometry/DrawingRevisionTableReader.cs",
             "line": 38
+          },
+          {
+            "file": "api/Features/Drawings/Geometry/DrawingScaleCalibrator.cs",
+            "line": 76
           }
         ]
       }
@@ -6474,7 +6482,7 @@
       "name": "orphans",
       "summary": {
         "orphanFunctions": 21,
-        "functionsExamined": 9432
+        "functionsExamined": 9453
       },
       "offenders": [
         {
@@ -6588,7 +6596,7 @@
       "name": "designPatterns",
       "summary": {
         "roleFamilies": 187,
-        "predictedFiles": 2459,
+        "predictedFiles": 2467,
         "predictedFilesMissing": 186,
         "entities": 19,
         "entitiesOutOfRange": 0,
@@ -6604,7 +6612,7 @@
           "attachment": 4,
           "attachments": 6,
           "audit": 6,
-          "authorisation": 243,
+          "authorisation": 244,
           "badge": 5,
           "bar": 9,
           "bill": 4,
@@ -6627,7 +6635,7 @@
           "control": 7,
           "detail": 20,
           "details": 8,
-          "dialog": 21,
+          "dialog": 22,
           "directory": 7,
           "display": 12,
           "document": 10,
@@ -6637,7 +6645,7 @@
           "editor": 16,
           "email": 16,
           "emails": 13,
-          "endpoint": 489,
+          "endpoint": 490,
           "endpoints": 52,
           "entities": 46,
           "entity": 27,
@@ -6660,7 +6668,7 @@
           "guard": 4,
           "guards": 4,
           "guides": 9,
-          "handler": 488,
+          "handler": 489,
           "handlers": 19,
           "header": 14,
           "helpers": 6,
@@ -6679,7 +6687,7 @@
           "lifecycle": 5,
           "limits": 6,
           "line": 17,
-          "lines": 13,
+          "lines": 14,
           "link": 5,
           "links": 12,
           "list": 21,
@@ -6720,7 +6728,7 @@
           "queries": 9,
           "queue": 11,
           "queues": 4,
-          "razor": 142,
+          "razor": 143,
           "reader": 14,
           "reading": 6,
           "reads": 8,
@@ -6773,7 +6781,7 @@
           "ups": 5,
           "user": 9,
           "users": 5,
-          "validation": 241,
+          "validation": 242,
           "valuation": 6,
           "variations": 6,
           "view": 13,
@@ -6787,7 +6795,7 @@
         "patterns": [
           {
             "pattern": "every handler has a endpoint",
-            "predicted": 488,
+            "predicted": 489,
             "missing": [
               "api/Features/Subcontractors/Commands/AddComplianceDocumentVersionEndpoint.cs",
               "api/Features/Kpi/Commands/AddKpiPersonEndpoint.cs",
@@ -6842,7 +6850,7 @@
           },
           {
             "pattern": "every authorisation has a handler",
-            "predicted": 243,
+            "predicted": 244,
             "missing": [
               "api/Features/Progress/ContractorsReports/Commands/ContractorsReportHandler.cs",
               "api/Features/Drawings/Commands/DrawingFolderCommandHandler.cs",
@@ -6860,7 +6868,7 @@
           },
           {
             "pattern": "every authorisation has a endpoint",
-            "predicted": 243,
+            "predicted": 244,
             "missing": [
               "api/Features/ProjectContracts/Commands/AttachProjectContractAmendmentEndpoint.cs",
               "api/Features/ProjectContracts/Commands/AttachProjectContractDocumentEndpoint.cs",
@@ -6883,7 +6891,7 @@
           },
           {
             "pattern": "every authorisation has a validation",
-            "predicted": 243,
+            "predicted": 244,
             "missing": [
               "api/Features/WeeklyCashflow/Commands/ArchiveWeeklyCashflowItemValidation.cs",
               "api/Features/Calendar/Commands/DeleteCalendarEventValidation.cs",
@@ -6910,7 +6918,7 @@
           },
           {
             "pattern": "every endpoint has a handler",
-            "predicted": 489,
+            "predicted": 490,
             "missing": [
               "api/Features/Portal/Commands/AcceptMyWorkOrderHandler.cs",
               "api/Features/Connect/ApproveAuthorizationHandler.cs",
@@ -6966,7 +6974,7 @@
           },
           {
             "pattern": "every validation has a handler",
-            "predicted": 241,
+            "predicted": 242,
             "missing": [
               "api/Features/Progress/ContractorsReports/Commands/ContractorsReportHandler.cs",
               "api/Features/Drawings/Commands/DrawingFolderCommandHandler.cs",
@@ -6975,7 +6983,7 @@
           },
           {
             "pattern": "every validation has a authorisation",
-            "predicted": 241,
+            "predicted": 242,
             "missing": [
               "api/Features/Commercial/Commands/AddValuationLineItemAuthorisation.cs",
               "api/Features/Site/Commands/ApplyProgrammeDraftAuthorisation.cs",
@@ -7000,7 +7008,7 @@
           },
           {
             "pattern": "every validation has a endpoint",
-            "predicted": 241,
+            "predicted": 242,
             "missing": [
               "api/Features/ProjectContracts/Commands/AttachProjectContractAmendmentEndpoint.cs",
               "api/Features/ProjectContracts/Commands/AttachProjectContractDocumentEndpoint.cs",
@@ -7286,7 +7294,7 @@
       "name": "inventory",
       "summary": {
         "pages": 119,
-        "components": 148,
+        "components": 150,
         "orphanComponents": 6,
         "averagePageLines": 173
       },
@@ -7313,6 +7321,17 @@
             ]
           },
           {
+            "page": "jpms/Pages/ProjectValuation.razor",
+            "lines": 423,
+            "widgets": [
+              "modal",
+              "form",
+              "loadGate",
+              "dropdown",
+              "export"
+            ]
+          },
+          {
             "page": "jpms/Pages/SubcontractorDetail.razor",
             "lines": 422,
             "widgets": [
@@ -7321,17 +7340,6 @@
               "form",
               "loadGate",
               "panel"
-            ]
-          },
-          {
-            "page": "jpms/Pages/ProjectValuation.razor",
-            "lines": 421,
-            "widgets": [
-              "modal",
-              "form",
-              "loadGate",
-              "dropdown",
-              "export"
             ]
           },
           {
@@ -8241,7 +8249,7 @@
         "componentReuse": [
           {
             "component": "jpms/Components/Notice.razor",
-            "reusedBy": 234
+            "reusedBy": 235
           },
           {
             "component": "jpms/Components/FormField.razor",
@@ -8253,7 +8261,7 @@
           },
           {
             "component": "jpms/Components/Modal.razor",
-            "reusedBy": 134
+            "reusedBy": 135
           },
           {
             "component": "jpms/Components/LoadGate.razor",
@@ -8269,7 +8277,7 @@
           },
           {
             "component": "jpms/Components/SearchSelect.razor",
-            "reusedBy": 67
+            "reusedBy": 69
           },
           {
             "component": "jpms/Components/EmptyState.razor",
@@ -8541,6 +8549,14 @@
           },
           {
             "component": "jpms/Components/ClaimProgressDialog.razor",
+            "reusedBy": 1
+          },
+          {
+            "component": "jpms/Components/ClaimRestatementBalance.razor",
+            "reusedBy": 1
+          },
+          {
+            "component": "jpms/Components/ClaimRestatementDialog.razor",
             "reusedBy": 1
           },
           {
@@ -8846,13 +8862,13 @@
       "name": "siteDefinition",
       "summary": {
         "routes": 132,
-        "views": 688,
-        "siteComponents": 657,
+        "views": 690,
+        "siteComponents": 659,
         "catalogue": 34,
-        "widgetUsages": 1970,
-        "handRolledElements": 697,
-        "widgetSlots": 2667,
-        "viewsWithHandRolled": 315,
+        "widgetUsages": 1974,
+        "handRolledElements": 699,
+        "widgetSlots": 2673,
+        "viewsWithHandRolled": 316,
         "designSheets": 0,
         "designsLastChecked": "never",
         "brandCheckedAt": "never"
@@ -9198,6 +9214,18 @@
           {
             "file": "jpms/Components/ClaimProgressDialog.razor",
             "line": 53,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Components/ClaimRestatementDialog.razor",
+            "line": 48,
+            "element": "input",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Components/ClaimRestatementDialog.razor",
+            "line": 51,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -13327,11 +13355,12 @@
         "byWidget": [
           {
             "ownedBy": "Button",
-            "count": 304,
+            "count": 305,
             "files": [
               "jpms/Components/ApprovedUserRow.razor",
               "jpms/Components/ApprovedUsersPanel.razor",
               "jpms/Components/ClaimProgressDialog.razor",
+              "jpms/Components/ClaimRestatementDialog.razor",
               "jpms/Components/ConversationComposer.razor",
               "jpms/Components/ConversationMessageCard.razor",
               "jpms/Components/DirectoryContactForm.razor",
@@ -13505,10 +13534,11 @@
           },
           {
             "ownedBy": "FormField",
-            "count": 154,
+            "count": 155,
             "files": [
               "jpms/Components/ApprovedUserRow.razor",
               "jpms/Components/ClaimProgressDialog.razor",
+              "jpms/Components/ClaimRestatementDialog.razor",
               "jpms/Components/ConversationComposer.razor",
               "jpms/Components/DirectoryContactForm.razor",
               "jpms/Components/DrawingFolderPicker.razor",
@@ -14483,8 +14513,8 @@
         {
           "route": "/projects/{ProjectId}/valuation",
           "file": "jpms/Pages/ProjectValuation.razor",
-          "definition": "Page{ ProjectPageShell{ SectionHeader{ Toolbar{ ToolbarButton, ExportToExcelButton, ?CanMapClientReferences: ( ToolbarDivider, ToolbarButton ) }, ( ?!ClaimReady: \u26a0select\u2192FormField | ?Claims.Count > 0: \u26a0select\u2192FormField ) }, ?actionError is not null: Notice{ \u26a0button\u2192Button }, ?xeroRaiseNote is not null: Notice, ValuationInvoiceXeroRaiseModal, ?programmeDraftOpened is { } pro\u2026: Notice, LoadGate{ ClaimProgressDialog, ?Selected is { } s: [ Pill [ ?s.IsLocked: Toolbar{ (2) ToolbarButton, ?CanEmailStatement: ToolbarButton } ?CanManageClaims: DropdownMenu ] ], ValuationReportTable{ ValuationInvoicesSection, ValuationClaimCorrespondenceSection } }, Modal{ ValuationLineForm }, ?showClientReferences: ClientCostReferencesModal, Modal{ ?viewingStatementClaimId is not \u2026: ValuationStatementViewer }, ValuationStatementEmailModal, Modal{ (2) FormField }, Modal{ FormField }, (2) Modal } }",
-          "expanded": "Page{ ProjectPageShell=( ( ?Projects.Current is null: LoadGate | ?Project is null: PageHeader | PageHeader{ ?Neighbour(-1) is { } previous: \u26a0button\u2192Button, ?Neighbour(1) is { } next: \u26a0button\u2192Button, ProjectStageBadge } ) ){ SectionHeader{ Toolbar{ ToolbarButton, ExportToExcelButton, ?CanMapClientReferences: ( ToolbarDivider, ToolbarButton ) }, ( ?!ClaimReady: \u26a0select\u2192FormField | ?Claims.Count > 0: \u26a0select\u2192FormField ) }, ?actionError is not null: Notice{ \u26a0button\u2192Button }, ?xeroRaiseNote is not null: Notice, ValuationInvoiceXeroRaiseModal=( Modal{ ?error is not null: Notice, [ (2) FormField ], LoadGate{ ?preview is not null: ( LoadGate{ (n) Notice, ValuationInvoiceXeroRaiseSummary=( \u26a0dl\u2192KeyValueList ) }, FormField ) } } ), ?programmeDraftOpened is { } pro\u2026: Notice, LoadGate{ ClaimProgressDialog=( Modal{ ?!ClaimIsDraft: Notice, ?error is not null: Notice, (n) ( \u26a0input\u2192FormField, \u26a0button\u2192Button ), SearchSelect } ), ?Selected is { } s: [ Pill [ ?s.IsLocked: Toolbar{ (2) ToolbarButton, ?CanEmailStatement: ToolbarButton } ?CanManageClaims: DropdownMenu ] ], ValuationReportTable=( ( ?CanEditEntries: BulkPercentToolbar, (n) ( ValuationSectionHeader=( \u26a0button\u2192Button ), ?isOpen: \u26a0table\u2192RecordsTable ) ), ?lines.Count > 0: ValuationSummaryPanel=( \u26a0h3\u2192SectionHeader, \u26a0dl\u2192KeyValueList ) ){ ValuationInvoicesSection=( [ \u26a0button\u2192Button Toolbar{ ?CanManage: ( ToolbarButton, ToolbarDivider ), ExportToExcelButton } ], ?isOpen: ( ?xeroRaiseNote is not null: Notice, \u26a0table\u2192RecordsTable, ?CanManage: [ (2) FormField ?newIsHistoric: (2) FormField ] ), ValuationInvoiceXeroRaiseModal=( Modal{ ?error is not null: Notice, [ (2) FormField ], LoadGate{ ?preview is not null: ( LoadGate{ (n) Notice, ValuationInvoiceXeroRaiseSummary=( \u26a0dl\u2192KeyValueList ) }, FormField ) } } ), ValuationInvoicePaymentSyncModal=( Modal{ ?error is not null: Notice, LoadGate{ ?preview is not null: ( (n) Notice, ?preview.Blockers.Count == 0: LoadGate{ RecordsTable{ (n) Pill } } ) } } ), (3) Modal{ FormField }, Modal{ ?editInvoice is not null: ( (2) FormField, ?editInvoice.IsManual: FormField, FormField ) } ), ValuationClaimCorrespondenceSection=( \u26a0button\u2192Button, ( ?isOpen: ( ?Claim is null: EmptyState | LoadGate{ ?loadError is not null: Notice } ) | ?emails is not null: CorrespondenceThreadList ) ) } }, Modal{ ValuationLineForm=( [ (2) FormField ], [ ?elementType == ValuationElement\u2026: (2) FormField (2) FormField ], [ FormField{ SearchSelect } (2) FormField ], [ (3) FormField ], FormField ) }, ?showClientReferences: ClientCostReferencesModal=( Modal{ LoadGate{ EmptyState, \u26a0table\u2192RecordsTable } } ), Modal{ ?viewingStatementClaimId is not \u2026: ValuationStatementViewer=( ( ( ?detail.IsDraft: Notice | Notice ), Toolbar{ ToolbarButton, ExportToExcelButton, ?OnEmailRequested.HasDelegate &&\u2026: ( ToolbarDivider, ToolbarButton ) }, (n) ?valuationSection.Lines.Count > 0: \u26a0table\u2192RecordsTable ), \u26a0h3\u2192SectionHeader, \u26a0dl\u2192KeyValueList, \u26a0h3\u2192SectionHeader, LoadGate{ ?emailsError is not null: Notice, CorrespondenceThreadList } ) }, ValuationStatementEmailModal=( Modal{ ?Claim is { } snapshot: ( RecordsTable, ( ?drafted: Notice | ( RecordEmailPreviewPanel=( ?Error is not null: Notice, \u26a0dl\u2192KeyValueList ), FormField, FormField{ RichTextEditor } ) ), ?error is not null: Notice ) } ), Modal{ (2) FormField }, Modal{ FormField }, (2) Modal } }"
+          "definition": "Page{ ProjectPageShell{ SectionHeader{ Toolbar{ ToolbarButton, ExportToExcelButton, ?CanMapClientReferences: ( ToolbarDivider, ToolbarButton ) }, ( ?!ClaimReady: \u26a0select\u2192FormField | ?Claims.Count > 0: \u26a0select\u2192FormField ) }, ?actionError is not null: Notice{ \u26a0button\u2192Button }, ?xeroRaiseNote is not null: Notice, ValuationInvoiceXeroRaiseModal, ?programmeDraftOpened is { } pro\u2026: Notice, LoadGate{ ClaimProgressDialog, ClaimRestatementDialog, ?Selected is { } s: [ Pill [ ?s.IsLocked: Toolbar{ (2) ToolbarButton, ?CanEmailStatement: ToolbarButton } ?CanManageClaims: DropdownMenu ] ], ValuationReportTable{ ValuationInvoicesSection, ValuationClaimCorrespondenceSection } }, Modal{ ValuationLineForm }, ?showClientReferences: ClientCostReferencesModal, Modal{ ?viewingStatementClaimId is not \u2026: ValuationStatementViewer }, ValuationStatementEmailModal, Modal{ (2) FormField }, Modal{ FormField }, (2) Modal } }",
+          "expanded": "Page{ ProjectPageShell=( ( ?Projects.Current is null: LoadGate | ?Project is null: PageHeader | PageHeader{ ?Neighbour(-1) is { } previous: \u26a0button\u2192Button, ?Neighbour(1) is { } next: \u26a0button\u2192Button, ProjectStageBadge } ) ){ SectionHeader{ Toolbar{ ToolbarButton, ExportToExcelButton, ?CanMapClientReferences: ( ToolbarDivider, ToolbarButton ) }, ( ?!ClaimReady: \u26a0select\u2192FormField | ?Claims.Count > 0: \u26a0select\u2192FormField ) }, ?actionError is not null: Notice{ \u26a0button\u2192Button }, ?xeroRaiseNote is not null: Notice, ValuationInvoiceXeroRaiseModal=( Modal{ ?error is not null: Notice, [ (2) FormField ], LoadGate{ ?preview is not null: ( LoadGate{ (n) Notice, ValuationInvoiceXeroRaiseSummary=( \u26a0dl\u2192KeyValueList ) }, FormField ) } } ), ?programmeDraftOpened is { } pro\u2026: Notice, LoadGate{ ClaimProgressDialog=( Modal{ ?!ClaimIsDraft: Notice, ?error is not null: Notice, (n) ( \u26a0input\u2192FormField, \u26a0button\u2192Button ), SearchSelect } ), ClaimRestatementDialog=( Modal{ ?!ClaimIsLocked: Notice, ?error is not null: Notice, (n) ( \u26a0input\u2192FormField, \u26a0button\u2192Button ), SearchSelect, ?Pending.Count > 0: ClaimRestatementBalance } ), ?Selected is { } s: [ Pill [ ?s.IsLocked: Toolbar{ (2) ToolbarButton, ?CanEmailStatement: ToolbarButton } ?CanManageClaims: DropdownMenu ] ], ValuationReportTable=( ( ?CanEditEntries: BulkPercentToolbar, (n) ( ValuationSectionHeader=( \u26a0button\u2192Button ), ?isOpen: \u26a0table\u2192RecordsTable ) ), ?lines.Count > 0: ValuationSummaryPanel=( \u26a0h3\u2192SectionHeader, \u26a0dl\u2192KeyValueList ) ){ ValuationInvoicesSection=( [ \u26a0button\u2192Button Toolbar{ ?CanManage: ( ToolbarButton, ToolbarDivider ), ExportToExcelButton } ], ?isOpen: ( ?xeroRaiseNote is not null: Notice, \u26a0table\u2192RecordsTable, ?CanManage: [ (2) FormField ?newIsHistoric: (2) FormField ] ), ValuationInvoiceXeroRaiseModal=( Modal{ ?error is not null: Notice, [ (2) FormField ], LoadGate{ ?preview is not null: ( LoadGate{ (n) Notice, ValuationInvoiceXeroRaiseSummary=( \u26a0dl\u2192KeyValueList ) }, FormField ) } } ), ValuationInvoicePaymentSyncModal=( Modal{ ?error is not null: Notice, LoadGate{ ?preview is not null: ( (n) Notice, ?preview.Blockers.Count == 0: LoadGate{ RecordsTable{ (n) Pill } } ) } } ), (3) Modal{ FormField }, Modal{ ?editInvoice is not null: ( (2) FormField, ?editInvoice.IsManual: FormField, FormField ) } ), ValuationClaimCorrespondenceSection=( \u26a0button\u2192Button, ( ?isOpen: ( ?Claim is null: EmptyState | LoadGate{ ?loadError is not null: Notice } ) | ?emails is not null: CorrespondenceThreadList ) ) } }, Modal{ ValuationLineForm=( [ (2) FormField ], [ ?elementType == ValuationElement\u2026: (2) FormField (2) FormField ], [ FormField{ SearchSelect } (2) FormField ], [ (3) FormField ], FormField ) }, ?showClientReferences: ClientCostReferencesModal=( Modal{ LoadGate{ EmptyState, \u26a0table\u2192RecordsTable } } ), Modal{ ?viewingStatementClaimId is not \u2026: ValuationStatementViewer=( ( ( ?detail.IsDraft: Notice | Notice ), Toolbar{ ToolbarButton, ExportToExcelButton, ?OnEmailRequested.HasDelegate &&\u2026: ( ToolbarDivider, ToolbarButton ) }, (n) ?valuationSection.Lines.Count > 0: \u26a0table\u2192RecordsTable ), \u26a0h3\u2192SectionHeader, \u26a0dl\u2192KeyValueList, \u26a0h3\u2192SectionHeader, LoadGate{ ?emailsError is not null: Notice, CorrespondenceThreadList } ) }, ValuationStatementEmailModal=( Modal{ ?Claim is { } snapshot: ( RecordsTable, ( ?drafted: Notice | ( RecordEmailPreviewPanel=( ?Error is not null: Notice, \u26a0dl\u2192KeyValueList ), FormField, FormField{ RichTextEditor } ) ), ?error is not null: Notice ) } ), Modal{ (2) FormField }, Modal{ FormField }, (2) Modal } }"
         },
         {
           "route": "/projects/{ProjectId}/valuation-snapshots",
@@ -15338,6 +15368,18 @@
           "component": "ClaimProgressDialog",
           "file": "jpms/Components/ClaimProgressDialog.razor",
           "definition": "Modal{ ?!ClaimIsDraft: Notice, ?error is not null: Notice, (n) ( \u26a0input\u2192FormField, \u26a0button\u2192Button ), SearchSelect }",
+          "usedBy": 1
+        },
+        {
+          "component": "ClaimRestatementBalance",
+          "file": "jpms/Components/ClaimRestatementBalance.razor",
+          "definition": "",
+          "usedBy": 1
+        },
+        {
+          "component": "ClaimRestatementDialog",
+          "file": "jpms/Components/ClaimRestatementDialog.razor",
+          "definition": "Modal{ ?!ClaimIsLocked: Notice, ?error is not null: Notice, (n) ( \u26a0input\u2192FormField, \u26a0button\u2192Button ), SearchSelect, ?Pending.Count > 0: ClaimRestatementBalance }",
           "usedBy": 1
         },
         {
@@ -18217,7 +18259,7 @@
         {
           "component": "ProjectValuation",
           "file": "jpms/Pages/ProjectValuation.razor",
-          "definition": "Page{ ProjectPageShell{ SectionHeader{ Toolbar{ ToolbarButton, ExportToExcelButton, ?CanMapClientReferences: ( ToolbarDivider, ToolbarButton ) }, ( ?!ClaimReady: \u26a0select\u2192FormField | ?Claims.Count > 0: \u26a0select\u2192FormField ) }, ?actionError is not null: Notice{ \u26a0button\u2192Button }, ?xeroRaiseNote is not null: Notice, ValuationInvoiceXeroRaiseModal, ?programmeDraftOpened is { } pro\u2026: Notice, LoadGate{ ClaimProgressDialog, ?Selected is { } s: [ Pill [ ?s.IsLocked: Toolbar{ (2) ToolbarButton, ?CanEmailStatement: ToolbarButton } ?CanManageClaims: DropdownMenu ] ], ValuationReportTable{ ValuationInvoicesSection, ValuationClaimCorrespondenceSection } }, Modal{ ValuationLineForm }, ?showClientReferences: ClientCostReferencesModal, Modal{ ?viewingStatementClaimId is not \u2026: ValuationStatementViewer }, ValuationStatementEmailModal, Modal{ (2) FormField }, Modal{ FormField }, (2) Modal } }",
+          "definition": "Page{ ProjectPageShell{ SectionHeader{ Toolbar{ ToolbarButton, ExportToExcelButton, ?CanMapClientReferences: ( ToolbarDivider, ToolbarButton ) }, ( ?!ClaimReady: \u26a0select\u2192FormField | ?Claims.Count > 0: \u26a0select\u2192FormField ) }, ?actionError is not null: Notice{ \u26a0button\u2192Button }, ?xeroRaiseNote is not null: Notice, ValuationInvoiceXeroRaiseModal, ?programmeDraftOpened is { } pro\u2026: Notice, LoadGate{ ClaimProgressDialog, ClaimRestatementDialog, ?Selected is { } s: [ Pill [ ?s.IsLocked: Toolbar{ (2) ToolbarButton, ?CanEmailStatement: ToolbarButton } ?CanManageClaims: DropdownMenu ] ], ValuationReportTable{ ValuationInvoicesSection, ValuationClaimCorrespondenceSection } }, Modal{ ValuationLineForm }, ?showClientReferences: ClientCostReferencesModal, Modal{ ?viewingStatementClaimId is not \u2026: ValuationStatementViewer }, ValuationStatementEmailModal, Modal{ (2) FormField }, Modal{ FormField }, (2) Modal } }",
           "usedBy": 0
         },
         {
@@ -18620,20 +18662,20 @@
         {
           "area": "api",
           "files": 2438,
-          "sourceFiles": 2433,
-          "sourceLines": 122315
+          "sourceFiles": 2438,
+          "sourceLines": 122504
         },
         {
           "area": "frontend",
           "files": 1445,
-          "sourceFiles": 1335,
-          "sourceLines": 128805
+          "sourceFiles": 1338,
+          "sourceLines": 129051
         },
         {
           "area": "contracts",
           "files": 763,
-          "sourceFiles": 763,
-          "sourceLines": 27931
+          "sourceFiles": 765,
+          "sourceLines": 27997
         },
         {
           "area": "database",
@@ -18645,7 +18687,7 @@
           "area": "connector",
           "files": 254,
           "sourceFiles": 254,
-          "sourceLines": 26875
+          "sourceLines": 26901
         },
         {
           "area": "docs",
@@ -18690,117 +18732,19 @@
       "summary": {
         "schemaTables": 216,
         "limitedColumns": 1301,
-        "writeDoors": 711,
+        "writeDoors": 713,
         "unvalidatedDoors": 0,
-        "looserLimits": 16551
+        "looserLimits": 11489
       },
       "offenders": {
         "unvalidated": [],
         "looserLimits": [
           {
-            "file": "api/Data/Entities/ProjectEntity.cs",
-            "line": 9,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/SalesEntities.cs",
-            "line": 12,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/SalesEntities.cs",
-            "line": 89,
-            "column": "description",
-            "columnLimit": 512,
-            "validatorLimit": 2000
-          },
-          {
-            "file": "api/Data/Entities/SalesEntities.cs",
-            "line": 176,
-            "column": "unit",
-            "columnLimit": 16,
-            "validatorLimit": 32
-          },
-          {
-            "file": "api/Data/Entities/HsAuditEntities.cs",
-            "line": 44,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/ProjectContactEntity.cs",
-            "line": 23,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/RequestMessageEntity.cs",
-            "line": 25,
-            "column": "conversationid",
-            "columnLimit": 512,
-            "validatorLimit": 998
-          },
-          {
-            "file": "api/Data/Entities/LabourEntities.cs",
-            "line": 14,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
             "file": "api/Data/Entities/PeopleEntities.cs",
             "line": 36,
             "column": "postcode",
             "columnLimit": 16,
             "validatorLimit": 32
-          },
-          {
-            "file": "api/Data/Entities/PeopleEntities.cs",
-            "line": 68,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/KpiEntities.cs",
-            "line": 11,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/ProcurementEntities.cs",
-            "line": 76,
-            "column": "unit",
-            "columnLimit": 16,
-            "validatorLimit": 32
-          },
-          {
-            "file": "api/Data/Entities/ProcurementEntities.cs",
-            "line": 148,
-            "column": "unit",
-            "columnLimit": 16,
-            "validatorLimit": 32
-          },
-          {
-            "file": "api/Data/Entities/ProcurementEntities.cs",
-            "line": 248,
-            "column": "unit",
-            "columnLimit": 16,
-            "validatorLimit": 32
-          },
-          {
-            "file": "api/Data/Entities/BuildingControlEntities.cs",
-            "line": 30,
-            "column": "notes",
-            "columnLimit": 4000,
-            "validatorLimit": 4096
           },
           {
             "file": "api/Data/Entities/SkillEntities.cs",
@@ -18822,34 +18766,6 @@
             "column": "description",
             "columnLimit": 512,
             "validatorLimit": 4000
-          },
-          {
-            "file": "api/Data/Entities/CommercialEntities.cs",
-            "line": 192,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/CalendarEventEntities.cs",
-            "line": 33,
-            "column": "notes",
-            "columnLimit": 4000,
-            "validatorLimit": 4096
-          },
-          {
-            "file": "api/Data/Entities/LabourPlanningEntities.cs",
-            "line": 133,
-            "column": "detail",
-            "columnLimit": 1024,
-            "validatorLimit": 2048
-          },
-          {
-            "file": "api/Data/Entities/CostCenterEntity.cs",
-            "line": 9,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
           },
           {
             "file": "api/Data/Entities/XeroLedgerLineEntity.cs",
@@ -18859,104 +18775,6 @@
             "validatorLimit": 256
           },
           {
-            "file": "api/Data/Entities/CoreEntities.cs",
-            "line": 63,
-            "column": "unit",
-            "columnLimit": 16,
-            "validatorLimit": 32
-          },
-          {
-            "file": "api/Data/Entities/PartyContactEntity.cs",
-            "line": 20,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/AgentActivityEntities.cs",
-            "line": 23,
-            "column": "summary",
-            "columnLimit": 512,
-            "validatorLimit": 1024
-          },
-          {
-            "file": "api/Data/Entities/ProjectEntity.cs",
-            "line": 9,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/SalesEntities.cs",
-            "line": 12,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/SalesEntities.cs",
-            "line": 89,
-            "column": "description",
-            "columnLimit": 512,
-            "validatorLimit": 2000
-          },
-          {
-            "file": "api/Data/Entities/SalesEntities.cs",
-            "line": 176,
-            "column": "unit",
-            "columnLimit": 16,
-            "validatorLimit": 32
-          },
-          {
-            "file": "api/Data/Entities/HsAuditEntities.cs",
-            "line": 44,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/ProjectContactEntity.cs",
-            "line": 23,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/RequestMessageEntity.cs",
-            "line": 25,
-            "column": "conversationid",
-            "columnLimit": 512,
-            "validatorLimit": 998
-          },
-          {
-            "file": "api/Data/Entities/LabourEntities.cs",
-            "line": 14,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/PeopleEntities.cs",
-            "line": 36,
-            "column": "postcode",
-            "columnLimit": 16,
-            "validatorLimit": 32
-          },
-          {
-            "file": "api/Data/Entities/PeopleEntities.cs",
-            "line": 68,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/KpiEntities.cs",
-            "line": 11,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
             "file": "api/Data/Entities/ProcurementEntities.cs",
             "line": 76,
             "column": "unit",
@@ -18985,6 +18803,55 @@
             "validatorLimit": 4096
           },
           {
+            "file": "api/Data/Entities/CalendarEventEntities.cs",
+            "line": 33,
+            "column": "notes",
+            "columnLimit": 4000,
+            "validatorLimit": 4096
+          },
+          {
+            "file": "api/Data/Entities/SalesEntities.cs",
+            "line": 89,
+            "column": "description",
+            "columnLimit": 512,
+            "validatorLimit": 2000
+          },
+          {
+            "file": "api/Data/Entities/SalesEntities.cs",
+            "line": 176,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/CoreEntities.cs",
+            "line": 63,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/LabourPlanningEntities.cs",
+            "line": 133,
+            "column": "detail",
+            "columnLimit": 1024,
+            "validatorLimit": 2048
+          },
+          {
+            "file": "api/Data/Entities/RequestMessageEntity.cs",
+            "line": 25,
+            "column": "conversationid",
+            "columnLimit": 512,
+            "validatorLimit": 998
+          },
+          {
+            "file": "api/Data/Entities/PeopleEntities.cs",
+            "line": 36,
+            "column": "postcode",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
             "file": "api/Data/Entities/SkillEntities.cs",
             "line": 25,
             "column": "description",
@@ -19004,34 +18871,6 @@
             "column": "description",
             "columnLimit": 512,
             "validatorLimit": 4000
-          },
-          {
-            "file": "api/Data/Entities/CommercialEntities.cs",
-            "line": 192,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/CalendarEventEntities.cs",
-            "line": 33,
-            "column": "notes",
-            "columnLimit": 4000,
-            "validatorLimit": 4096
-          },
-          {
-            "file": "api/Data/Entities/LabourPlanningEntities.cs",
-            "line": 133,
-            "column": "detail",
-            "columnLimit": 1024,
-            "validatorLimit": 2048
-          },
-          {
-            "file": "api/Data/Entities/CostCenterEntity.cs",
-            "line": 9,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
           },
           {
             "file": "api/Data/Entities/XeroLedgerLineEntity.cs",
@@ -19041,104 +18880,6 @@
             "validatorLimit": 256
           },
           {
-            "file": "api/Data/Entities/CoreEntities.cs",
-            "line": 63,
-            "column": "unit",
-            "columnLimit": 16,
-            "validatorLimit": 32
-          },
-          {
-            "file": "api/Data/Entities/PartyContactEntity.cs",
-            "line": 20,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/AgentActivityEntities.cs",
-            "line": 23,
-            "column": "summary",
-            "columnLimit": 512,
-            "validatorLimit": 1024
-          },
-          {
-            "file": "api/Data/Entities/ProjectEntity.cs",
-            "line": 9,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/SalesEntities.cs",
-            "line": 12,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/SalesEntities.cs",
-            "line": 89,
-            "column": "description",
-            "columnLimit": 512,
-            "validatorLimit": 2000
-          },
-          {
-            "file": "api/Data/Entities/SalesEntities.cs",
-            "line": 176,
-            "column": "unit",
-            "columnLimit": 16,
-            "validatorLimit": 32
-          },
-          {
-            "file": "api/Data/Entities/HsAuditEntities.cs",
-            "line": 44,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/ProjectContactEntity.cs",
-            "line": 23,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/RequestMessageEntity.cs",
-            "line": 25,
-            "column": "conversationid",
-            "columnLimit": 512,
-            "validatorLimit": 998
-          },
-          {
-            "file": "api/Data/Entities/LabourEntities.cs",
-            "line": 14,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/PeopleEntities.cs",
-            "line": 36,
-            "column": "postcode",
-            "columnLimit": 16,
-            "validatorLimit": 32
-          },
-          {
-            "file": "api/Data/Entities/PeopleEntities.cs",
-            "line": 68,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/KpiEntities.cs",
-            "line": 11,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
             "file": "api/Data/Entities/ProcurementEntities.cs",
             "line": 76,
             "column": "unit",
@@ -19167,6 +18908,55 @@
             "validatorLimit": 4096
           },
           {
+            "file": "api/Data/Entities/CalendarEventEntities.cs",
+            "line": 33,
+            "column": "notes",
+            "columnLimit": 4000,
+            "validatorLimit": 4096
+          },
+          {
+            "file": "api/Data/Entities/SalesEntities.cs",
+            "line": 89,
+            "column": "description",
+            "columnLimit": 512,
+            "validatorLimit": 2000
+          },
+          {
+            "file": "api/Data/Entities/SalesEntities.cs",
+            "line": 176,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/CoreEntities.cs",
+            "line": 63,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/LabourPlanningEntities.cs",
+            "line": 133,
+            "column": "detail",
+            "columnLimit": 1024,
+            "validatorLimit": 2048
+          },
+          {
+            "file": "api/Data/Entities/RequestMessageEntity.cs",
+            "line": 25,
+            "column": "conversationid",
+            "columnLimit": 512,
+            "validatorLimit": 998
+          },
+          {
+            "file": "api/Data/Entities/PeopleEntities.cs",
+            "line": 36,
+            "column": "postcode",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
             "file": "api/Data/Entities/SkillEntities.cs",
             "line": 25,
             "column": "description",
@@ -19186,34 +18976,6 @@
             "column": "description",
             "columnLimit": 512,
             "validatorLimit": 4000
-          },
-          {
-            "file": "api/Data/Entities/CommercialEntities.cs",
-            "line": 192,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
-            "file": "api/Data/Entities/CalendarEventEntities.cs",
-            "line": 33,
-            "column": "notes",
-            "columnLimit": 4000,
-            "validatorLimit": 4096
-          },
-          {
-            "file": "api/Data/Entities/LabourPlanningEntities.cs",
-            "line": 133,
-            "column": "detail",
-            "columnLimit": 1024,
-            "validatorLimit": 2048
-          },
-          {
-            "file": "api/Data/Entities/CostCenterEntity.cs",
-            "line": 9,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
           },
           {
             "file": "api/Data/Entities/XeroLedgerLineEntity.cs",
@@ -19223,39 +18985,39 @@
             "validatorLimit": 256
           },
           {
-            "file": "api/Data/Entities/CoreEntities.cs",
-            "line": 63,
+            "file": "api/Data/Entities/ProcurementEntities.cs",
+            "line": 76,
             "column": "unit",
             "columnLimit": 16,
             "validatorLimit": 32
           },
           {
-            "file": "api/Data/Entities/PartyContactEntity.cs",
-            "line": 20,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
+            "file": "api/Data/Entities/ProcurementEntities.cs",
+            "line": 148,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
           },
           {
-            "file": "api/Data/Entities/AgentActivityEntities.cs",
-            "line": 23,
-            "column": "summary",
-            "columnLimit": 512,
-            "validatorLimit": 1024
+            "file": "api/Data/Entities/ProcurementEntities.cs",
+            "line": 248,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
           },
           {
-            "file": "api/Data/Entities/ProjectEntity.cs",
-            "line": 9,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
+            "file": "api/Data/Entities/BuildingControlEntities.cs",
+            "line": 30,
+            "column": "notes",
+            "columnLimit": 4000,
+            "validatorLimit": 4096
           },
           {
-            "file": "api/Data/Entities/SalesEntities.cs",
-            "line": 12,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
+            "file": "api/Data/Entities/CalendarEventEntities.cs",
+            "line": 33,
+            "column": "notes",
+            "columnLimit": 4000,
+            "validatorLimit": 4096
           },
           {
             "file": "api/Data/Entities/SalesEntities.cs",
@@ -19272,18 +19034,18 @@
             "validatorLimit": 32
           },
           {
-            "file": "api/Data/Entities/HsAuditEntities.cs",
-            "line": 44,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
+            "file": "api/Data/Entities/CoreEntities.cs",
+            "line": 63,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
           },
           {
-            "file": "api/Data/Entities/ProjectContactEntity.cs",
-            "line": 23,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
+            "file": "api/Data/Entities/LabourPlanningEntities.cs",
+            "line": 133,
+            "column": "detail",
+            "columnLimit": 1024,
+            "validatorLimit": 2048
           },
           {
             "file": "api/Data/Entities/RequestMessageEntity.cs",
@@ -19293,13 +19055,6 @@
             "validatorLimit": 998
           },
           {
-            "file": "api/Data/Entities/LabourEntities.cs",
-            "line": 14,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
-          },
-          {
             "file": "api/Data/Entities/PeopleEntities.cs",
             "line": 36,
             "column": "postcode",
@@ -19307,17 +19062,31 @@
             "validatorLimit": 32
           },
           {
-            "file": "api/Data/Entities/PeopleEntities.cs",
-            "line": 68,
-            "column": "name",
-            "columnLimit": 128,
-            "validatorLimit": 256
+            "file": "api/Data/Entities/SkillEntities.cs",
+            "line": 25,
+            "column": "description",
+            "columnLimit": 512,
+            "validatorLimit": 4000
           },
           {
-            "file": "api/Data/Entities/KpiEntities.cs",
-            "line": 11,
-            "column": "name",
-            "columnLimit": 128,
+            "file": "api/Data/Entities/SkillEntities.cs",
+            "line": 56,
+            "column": "description",
+            "columnLimit": 512,
+            "validatorLimit": 2000
+          },
+          {
+            "file": "api/Data/Entities/SkillEntities.cs",
+            "line": 74,
+            "column": "description",
+            "columnLimit": 512,
+            "validatorLimit": 4000
+          },
+          {
+            "file": "api/Data/Entities/XeroLedgerLineEntity.cs",
+            "line": 21,
+            "column": "reference",
+            "columnLimit": 64,
             "validatorLimit": 256
           },
           {
@@ -19349,6 +19118,55 @@
             "validatorLimit": 4096
           },
           {
+            "file": "api/Data/Entities/CalendarEventEntities.cs",
+            "line": 33,
+            "column": "notes",
+            "columnLimit": 4000,
+            "validatorLimit": 4096
+          },
+          {
+            "file": "api/Data/Entities/SalesEntities.cs",
+            "line": 89,
+            "column": "description",
+            "columnLimit": 512,
+            "validatorLimit": 2000
+          },
+          {
+            "file": "api/Data/Entities/SalesEntities.cs",
+            "line": 176,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/CoreEntities.cs",
+            "line": 63,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/LabourPlanningEntities.cs",
+            "line": 133,
+            "column": "detail",
+            "columnLimit": 1024,
+            "validatorLimit": 2048
+          },
+          {
+            "file": "api/Data/Entities/RequestMessageEntity.cs",
+            "line": 25,
+            "column": "conversationid",
+            "columnLimit": 512,
+            "validatorLimit": 998
+          },
+          {
+            "file": "api/Data/Entities/PeopleEntities.cs",
+            "line": 36,
+            "column": "postcode",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
             "file": "api/Data/Entities/SkillEntities.cs",
             "line": 25,
             "column": "description",
@@ -19370,11 +19188,39 @@
             "validatorLimit": 4000
           },
           {
-            "file": "api/Data/Entities/CommercialEntities.cs",
-            "line": 192,
-            "column": "name",
-            "columnLimit": 128,
+            "file": "api/Data/Entities/XeroLedgerLineEntity.cs",
+            "line": 21,
+            "column": "reference",
+            "columnLimit": 64,
             "validatorLimit": 256
+          },
+          {
+            "file": "api/Data/Entities/ProcurementEntities.cs",
+            "line": 76,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/ProcurementEntities.cs",
+            "line": 148,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/ProcurementEntities.cs",
+            "line": 248,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/BuildingControlEntities.cs",
+            "line": 30,
+            "column": "notes",
+            "columnLimit": 4000,
+            "validatorLimit": 4096
           },
           {
             "file": "api/Data/Entities/CalendarEventEntities.cs",
@@ -19384,6 +19230,27 @@
             "validatorLimit": 4096
           },
           {
+            "file": "api/Data/Entities/SalesEntities.cs",
+            "line": 89,
+            "column": "description",
+            "columnLimit": 512,
+            "validatorLimit": 2000
+          },
+          {
+            "file": "api/Data/Entities/SalesEntities.cs",
+            "line": 176,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/CoreEntities.cs",
+            "line": 63,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
             "file": "api/Data/Entities/LabourPlanningEntities.cs",
             "line": 133,
             "column": "detail",
@@ -19391,11 +19258,186 @@
             "validatorLimit": 2048
           },
           {
-            "file": "api/Data/Entities/CostCenterEntity.cs",
-            "line": 9,
-            "column": "name",
-            "columnLimit": 128,
+            "file": "api/Data/Entities/RequestMessageEntity.cs",
+            "line": 25,
+            "column": "conversationid",
+            "columnLimit": 512,
+            "validatorLimit": 998
+          },
+          {
+            "file": "api/Data/Entities/PeopleEntities.cs",
+            "line": 36,
+            "column": "postcode",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/SkillEntities.cs",
+            "line": 25,
+            "column": "description",
+            "columnLimit": 512,
+            "validatorLimit": 4000
+          },
+          {
+            "file": "api/Data/Entities/SkillEntities.cs",
+            "line": 56,
+            "column": "description",
+            "columnLimit": 512,
+            "validatorLimit": 2000
+          },
+          {
+            "file": "api/Data/Entities/SkillEntities.cs",
+            "line": 74,
+            "column": "description",
+            "columnLimit": 512,
+            "validatorLimit": 4000
+          },
+          {
+            "file": "api/Data/Entities/XeroLedgerLineEntity.cs",
+            "line": 21,
+            "column": "reference",
+            "columnLimit": 64,
             "validatorLimit": 256
+          },
+          {
+            "file": "api/Data/Entities/ProcurementEntities.cs",
+            "line": 76,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/ProcurementEntities.cs",
+            "line": 148,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/ProcurementEntities.cs",
+            "line": 248,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/BuildingControlEntities.cs",
+            "line": 30,
+            "column": "notes",
+            "columnLimit": 4000,
+            "validatorLimit": 4096
+          },
+          {
+            "file": "api/Data/Entities/CalendarEventEntities.cs",
+            "line": 33,
+            "column": "notes",
+            "columnLimit": 4000,
+            "validatorLimit": 4096
+          },
+          {
+            "file": "api/Data/Entities/SalesEntities.cs",
+            "line": 89,
+            "column": "description",
+            "columnLimit": 512,
+            "validatorLimit": 2000
+          },
+          {
+            "file": "api/Data/Entities/SalesEntities.cs",
+            "line": 176,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/CoreEntities.cs",
+            "line": 63,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/LabourPlanningEntities.cs",
+            "line": 133,
+            "column": "detail",
+            "columnLimit": 1024,
+            "validatorLimit": 2048
+          },
+          {
+            "file": "api/Data/Entities/RequestMessageEntity.cs",
+            "line": 25,
+            "column": "conversationid",
+            "columnLimit": 512,
+            "validatorLimit": 998
+          },
+          {
+            "file": "api/Data/Entities/PeopleEntities.cs",
+            "line": 36,
+            "column": "postcode",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/SkillEntities.cs",
+            "line": 25,
+            "column": "description",
+            "columnLimit": 512,
+            "validatorLimit": 4000
+          },
+          {
+            "file": "api/Data/Entities/SkillEntities.cs",
+            "line": 56,
+            "column": "description",
+            "columnLimit": 512,
+            "validatorLimit": 2000
+          },
+          {
+            "file": "api/Data/Entities/SkillEntities.cs",
+            "line": 74,
+            "column": "description",
+            "columnLimit": 512,
+            "validatorLimit": 4000
+          },
+          {
+            "file": "api/Data/Entities/XeroLedgerLineEntity.cs",
+            "line": 21,
+            "column": "reference",
+            "columnLimit": 64,
+            "validatorLimit": 256
+          },
+          {
+            "file": "api/Data/Entities/ProcurementEntities.cs",
+            "line": 76,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/ProcurementEntities.cs",
+            "line": 148,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/ProcurementEntities.cs",
+            "line": 248,
+            "column": "unit",
+            "columnLimit": 16,
+            "validatorLimit": 32
+          },
+          {
+            "file": "api/Data/Entities/BuildingControlEntities.cs",
+            "line": 30,
+            "column": "notes",
+            "columnLimit": 4000,
+            "validatorLimit": 4096
+          },
+          {
+            "file": "api/Data/Entities/SkillReferenceRevisionEntity.cs",
+            "line": 17,
+            "column": "description",
+            "columnLimit": 512,
+            "validatorLimit": 2000
           }
         ]
       }

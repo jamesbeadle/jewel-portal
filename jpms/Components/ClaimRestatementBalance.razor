@@ -1,0 +1,21 @@
+@using Jewel.JPMS.Commercial
+@using static Jewel.JPMS.Features.Commercial.ValuationReportDisplay
+
+<div class="flex items-center justify-end gap-4 pt-2 text-sm flex-wrap">
+    <span class="@ToneClass(Outcome.TotalMoved)">
+        Total moves @Money(Outcome.TotalMoved)
+    </span>
+    <span class="@ToneClass(Outcome.ContractSideMoved)">
+        Contract side moves @Money(Outcome.ContractSideMoved)
+    </span>
+    @if (Outcome.KeepsTheTotal)
+    {
+        <span class="text-positive">Balanced — the total stays as it is</span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ClaimRestatement.Outcome Outcome { get; set; } = default!;
+
+    private static string ToneClass(decimal moved) => moved == 0m ? "text-content-subtle" : "text-negative font-medium";
+}

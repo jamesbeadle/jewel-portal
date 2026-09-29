@@ -49,6 +49,7 @@ public sealed class ValuationReportAuthorisation
     public bool Allows(SignedInUser user, RecordClaimEntry command) => RolesThatMayRecordClaimEntries.IncludesAny(user.Roles);
     // Bulk entry is the same act as single entry, just batched — identical gate.
     public bool Allows(SignedInUser user, RecordClaimEntries command) => RolesThatMayRecordClaimEntries.IncludesAny(user.Roles);
+    public bool Allows(SignedInUser user, RestateValuationClaimLines command) => MayManageClaimLifecycle(user);
     public bool Allows(SignedInUser user, PreapproveValuationClaim command) => MayManageClaimLifecycle(user);
     public bool Allows(SignedInUser user, ReopenValuationClaim command) => MayManageClaimLifecycle(user);
     public bool Allows(SignedInUser user, ConfirmValuationClaim command) => MayManageClaimLifecycle(user);

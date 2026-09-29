@@ -196,7 +196,8 @@ internal sealed partial class CommercialActions
             Area: "Commercial",
             Description: "Undoes an unintended preapproval: moves a Preapproved claim back to Draft, "
                 + "clearing the frozen totals so amounts compute live from entries again. Confirmed "
-                + "claims are final and cannot be reopened.",
+                + "claims are final and cannot be reopened — restate_valuation_claim_lines moves money "
+                + "between a locked claim's lines without touching its total.",
             CommandType: typeof(ReopenValuationClaim),
             ResultType: typeof(ValuationClaim),
             AuthorisationType: typeof(ValuationReportAuthorisation),
@@ -211,7 +212,8 @@ internal sealed partial class CommercialActions
             Description: "Records that the client has paid: freezes the claim's summary totals and "
                 + "per-row claimed amounts and advances the project's certified-to-date position. "
                 + "The next claim's this-period figures are unaffected — they always measure from the "
-                + "claim immediately before, paid or not. Final — a Confirmed claim cannot be reopened.",
+                + "claim immediately before, paid or not. Final — a Confirmed claim cannot be reopened; "
+                + "its per-line figures can still be restated (restate_valuation_claim_lines).",
             CommandType: typeof(ConfirmValuationClaim),
             ResultType: typeof(ValuationClaim),
             AuthorisationType: typeof(ValuationReportAuthorisation),
@@ -221,6 +223,30 @@ internal sealed partial class CommercialActions
             NameStamps: Array.Empty<string>(),
             RequiresConfirmation: true,
             Notes: "Irreversible. Confirm with the user, naming the claim, before calling."),
+
+        new AiAction(
+            Name: "restate_valuation_claim_lines",
+            Area: "Commercial",
+            Description: "Restates the per-line cumulative % complete on a LOCKED claim (Preapproved or "
+                + "Confirmed) without changing its total: money moves between the claim's own frozen "
+                + "statement rows, never in or out. Refused unless the claim's total works complete and "
+                + "its contract-side works come out to the penny as they were. For a paid claim whose "
+                + "lines were smeared (a variation re-spread at one uniform %), so the next claim's "
+                + "previous / this-period columns measure from the real position. This period is "
+                + "re-derived on this claim and the one after it.",
+            CommandType: typeof(RestateValuationClaimLines),
+            ResultType: typeof(IReadOnlyList<ClaimLine>),
+            AuthorisationType: typeof(RestateValuationClaimLinesAuthorisation),
+            ValidationType: typeof(RestateValuationClaimLinesValidation),
+            VisibleTo: ClaimLifecycleManagers,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
+            Notes: "Only works on a locked claim; a Draft takes record_claim_entries. Each entry pairs a "
+                + "valuationLineItemId the claim carries (get_valuation_context with claimId, or "
+                + "get_valuation_statement) with its new cumulative percentComplete. Work the "
+                + "percentages out so the lines' money adds back to what the claim holds now, show the "
+                + "user the before / after per line and the unchanged total, and take their yes first."),
 
         new AiAction(
             Name: "rename_valuation_claim",

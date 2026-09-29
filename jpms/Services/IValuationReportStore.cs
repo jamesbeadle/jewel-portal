@@ -31,6 +31,9 @@ public interface IValuationReportStore
     /// <summary>Bulk upsert of % complete across many lines of a Draft claim in one round trip —
     /// entering an opening position (mid-project join) or a heavy-update month.</summary>
     Task<IReadOnlyList<ClaimLine>> RecordEntriesAsync(string projectId, RecordClaimEntries command);
+    /// <summary>Moves money between a LOCKED claim's frozen lines, its total unchanged — refused by
+    /// the API when the total or the contract-side works would move.</summary>
+    Task<IReadOnlyList<ClaimLine>> RestateLinesAsync(string projectId, RestateValuationClaimLines command);
     Task<ValuationClaim> PreapproveClaimAsync(string projectId, string claimId);
     /// <summary>Undo an unintended preapproval: Preapproved → Draft, totals compute live again.</summary>
     Task<ValuationClaim> ReopenClaimAsync(string projectId, string claimId);

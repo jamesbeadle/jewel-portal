@@ -23,7 +23,8 @@ internal static class ConnectorNameReferences
         "stage", "remove", "apply", "allocate", "recode", "attach", "register", "schedule",
         "chase", "extract", "submit", "confirm", "withdraw", "draft", "file", "tag", "invite",
         "decline", "accept", "award", "revise", "settle", "void", "restore", "upload", "enable",
-        "query", "rebuild", "disable", "pin", "unpin", "flag", "unflag", "request", "plan", "book"
+        "query", "rebuild", "disable", "pin", "unpin", "flag", "unflag", "request", "plan", "book",
+        "restate"
     };
 
     /// <summary>Suffixes that make a snake_case word an argument rather than a door.</summary>

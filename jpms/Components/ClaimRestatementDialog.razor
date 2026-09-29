@@ -1,0 +1,72 @@
+@inject IValuationReportStore Store
+@using static Jewel.JPMS.Features.Commercial.ValuationReportDisplay
+
+<Modal IsOpen="IsOpen"
+       Title="@($"Restate % per line — {Claim?.DisplayName}")"
+       ConfirmLabel="@(saving ? "Saving…" : $"Restate {Pending.Count} line{(Pending.Count == 1 ? "" : "s")}")"
+       ConfirmDisabled="@(saving || Pending.Count == 0 || !ClaimIsLocked || !KeepsTheTotal)"
+       OnCancel="Cancel"
+       OnConfirm="SaveAsync"
+       Class="max-w-4xl">
+    @if (!ClaimIsLocked)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">
+            @(Claim is null ? "No claim is selected." : $"{Claim.DisplayName} is a Draft — set its % complete instead; only a locked claim is restated.")
+        </Notice>
+    }
+    else
+    {
+        <p class="text-xs text-content-subtle mb-3">
+            @Claim!.DisplayName is locked at @Money(Claim.TotalWorksComplete) works complete. Move money between its
+            lines here — the total, and the split between contract works and variations, must come out exactly as they are.
+        </p>
+    }
+
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
+    }
+
+    <div class="space-y-2">
+        <div class="hidden sm:grid grid-cols-[1fr_5rem_7rem_6rem_7rem_1.5rem] gap-2 px-1">
+            <span class="eyebrow">Line</span>
+            <span class="eyebrow text-right">Now %</span>
+            <span class="eyebrow text-right">Now £</span>
+            <span class="eyebrow text-right">New %</span>
+            <span class="eyebrow text-right">New £</span>
+            <span></span>
+        </div>
+
+        @foreach (var entry in Pending)
+        {
+            var row = entry;
+            var line = LineFor(row.ValuationLineItemId);
+            <div class="grid grid-cols-1 sm:grid-cols-[1fr_5rem_7rem_6rem_7rem_1.5rem] gap-2 items-center">
+                <div class="text-sm text-content truncate" title="@LabelFor(line)">@LabelFor(line)</div>
+                <div class="text-right text-sm font-mono text-content-muted">@Pct(line?.PercentComplete ?? 0m)</div>
+                <div class="text-right text-sm font-mono text-content-muted">@Money(line?.CumulativeClaimed ?? 0m)</div>
+                <input class="field text-right" type="number" step="any"
+                       value="@row.PercentText" @oninput="e => row.PercentText = e.Value?.ToString() ?? string.Empty" />
+                <div class="text-right text-sm font-mono">@Money(NewMoneyFor(row))</div>
+                <button type="button" class="text-content-subtle hover:text-negative" title="Remove"
+                        @onclick="() => Pending.Remove(row)">✕</button>
+            </div>
+        }
+
+        @if (Pending.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic px-1">No lines yet — pick the lines whose money is moving.</p>
+        }
+
+        <div class="flex items-center gap-2 pt-2">
+            <SearchSelect Options="@LineOptions" WidthClass="w-full" Placeholder="Add a line…"
+                          InputClass="bg-surface-field border border-line-strong px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                          Value="@pickedLineId" ValueChanged="AddPicked" />
+        </div>
+
+        @if (Pending.Count > 0)
+        {
+            <ClaimRestatementBalance Outcome="@Outcome" />
+        }
+    </div>
+</Modal>
