@@ -98,7 +98,10 @@ public sealed record ContractorsReportSubcontractor(
     DateOnly? TargetCompletion,
     int? AttendanceDays,
     bool IsClientNominated,
-    IReadOnlyList<DateOnly> DaysOnSite);
+    IReadOnlyList<DateOnly> DaysOnSite,
+    // The days in the week a worker of this order's firm signed in on site (the daily log's
+    // site register) — what the attendance ticks are read off, never entered (2026-09-28).
+    IReadOnlyList<DateOnly> DaysSignedIn);
 
 /// <summary>A line the report may not carry as written — a banned word, named by section and line.</summary>
 public sealed record ContractorsReportFinding(string Section, string Line, string Reason);
@@ -112,11 +115,13 @@ public sealed record ContractorsReportPhotoChoice(
 public sealed record ContractorsReportUpdateChoice(string ProgressUpdateId, DateOnly WorkDate, string Title, int PhotoCount, bool IsSelected);
 
 /// <summary>The report page's one read: the record, the document it composes to, the updates in
-/// its period to choose from, and the work orders on site to enter attendance against — of which
-/// only those that attended reach the document's Section 8.</summary>
+/// its period to choose from, the work orders on site to enter attendance against — of which
+/// only those that attended reach the document's Section 8 — and the week day by day, who filed
+/// and who did not.</summary>
 public sealed record ContractorsReportView(
     ContractorsReport Report,
     ContractorsReportDocument Document,
     IReadOnlyList<ContractorsReportUpdateChoice> UpdatesInPeriod,
     IReadOnlyList<ContractorsReportSubcontractor> WorkOrdersOnSite,
-    IReadOnlyList<ContractorsReportPhotoChoice> PhotosOnSelectedUpdates);
+    IReadOnlyList<ContractorsReportPhotoChoice> PhotosOnSelectedUpdates,
+    IReadOnlyList<ContractorsReportWeekDay> Week);

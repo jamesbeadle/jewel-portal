@@ -45,9 +45,10 @@ public interface ILabourStore
     Task RefreshMyDayAsync();
     /// <summary>Sign in on arrival at the time given, or now when none is; refreshes the day.</summary>
     Task MySignInAsync(string projectId, DateTimeOffset? signedInAt);
-    /// <summary>Logs the day at sign-out and answers with the note the photographs go onto. The
-    /// caller refreshes the day once the photographs are up, so the card changes once.</summary>
-    Task<MySiteDayLogged> MySignOutAsync(string projectId, IReadOnlyList<SiteSignOutEntry> entries, string description, DateTimeOffset? signedOutAt);
+    /// <summary>Logs the day at sign-out and answers with the note the photographs go onto and the
+    /// references of anything the log raised. The caller refreshes the day once the photographs
+    /// are up, so the card changes once.</summary>
+    Task<MySiteDayLogged> MySignOutAsync(MySiteSignOut day);
     /// <summary>Records a day off in the worker's words; the caller refreshes the day.</summary>
     Task<MySiteDayLogged> MyDayOffAsync(string projectId, string description);
     Task MyResubmitAsync(string timesheetId, decimal hours, string costCode);

@@ -160,9 +160,7 @@ public sealed class HttpLabourStore : ILabourStore
         await myDayReadModel.RefreshAsync(CancellationToken.None);
     }
 
-    public Task<MySiteDayLogged> MySignOutAsync(
-        string projectId, IReadOnlyList<SiteSignOutEntry> entries, string description, DateTimeOffset? signedOutAt) =>
-        commands.SendAsync(new MySiteSignOut(projectId, entries, description, signedOutAt), CancellationToken.None);
+    public Task<MySiteDayLogged> MySignOutAsync(MySiteSignOut day) => commands.SendAsync(day, CancellationToken.None);
 
     public Task<MySiteDayLogged> MyDayOffAsync(string projectId, string description) =>
         commands.SendAsync(new MySiteDayOff(projectId, description), CancellationToken.None);

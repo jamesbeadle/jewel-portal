@@ -156,16 +156,23 @@ public sealed record MyLabourProject(
 }
 
 /// <summary>The day's note as the worker logged it — the progress update in their own name that
-/// the Contractor's Report reads — with how many photographs it holds so far.</summary>
+/// the Contractor's Report reads — with how many photographs it holds so far, and the references
+/// of the records the log raised beside it (a Site Instruction, a defect), empty when none.</summary>
 public sealed record MyDayNote(
     string ProgressUpdateId,
     string Title,
     string Description,
-    int PhotoCount);
+    int PhotoCount,
+    string SiteInstructionReference = "",
+    string DefectReference = "");
 
-/// <summary>What logging a day answers: the attendance closed (empty on an off day) and the note
-/// the photographs go onto.</summary>
-public sealed record MySiteDayLogged(string SiteAttendanceId, string ProgressUpdateId);
+/// <summary>What logging a day answers: the attendance closed (empty on an off day), the note the
+/// photographs go onto, and the references of the records raised beside it, empty when none.</summary>
+public sealed record MySiteDayLogged(
+    string SiteAttendanceId,
+    string ProgressUpdateId,
+    string SiteInstructionReference = "",
+    string DefectReference = "");
 
 /// <summary>One of the caller's rejected timesheets — re-opened for correction. Hours only.</summary>
 public sealed record MyRejectedTimesheet(

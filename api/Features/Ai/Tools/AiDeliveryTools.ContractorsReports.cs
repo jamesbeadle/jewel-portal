@@ -51,7 +51,11 @@ internal static partial class AiDeliveryTools
         + "(every order on site, with its workOrderId, reference and target completion, to "
         + "enter attendance against with update_contractors_report — the reference and target "
         + "are for you to match on and are NEVER written into the report: name the "
-        + "subcontractor and the work, no WO number, no target date) and the wording "
+        + "subcontractor and the work, no WO number, no target date; daysSignedIn are the days the "
+        + "firm's own workers signed in on the site register, what its attendance is read off), "
+        + "week[] (every day of the period: who filed — a worker's daily log, a recorded day off, "
+        + "or an office note — who signed in on site and filed nothing, the photographs, and "
+        + "needsAsking for a working day that is not whole) and the wording "
         + "FINDINGS. While findings is non-empty the PDF is refused: the "
         + "report goes to the client's side, so a line naming remedial works, making good, "
         + "rectification, snagging, defects or rework is refused by section and line, never "
@@ -86,6 +90,7 @@ internal static partial class AiDeliveryTools
             updatesInPeriod = view.UpdatesInPeriod,
             workOrdersOnSite = view.WorkOrdersOnSite,
             photosOnSelectedUpdates = view.PhotosOnSelectedUpdates,
+            week = view.Week,
             export = "export_contractors_report builds the PDF and returns a download link"
         });
     }

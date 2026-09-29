@@ -25,7 +25,8 @@ public sealed record CreateContractorsReport(
 
 /// <summary>Every entered field, written as posted — carry forward what should not change. The two
 /// fields added on 24 Sep 2026, <paramref name="BuildingControlContact"/> and
-/// <paramref name="ExcludedPhotoIds"/>, keep their stored value when not supplied (null).</summary>
+/// <paramref name="ExcludedPhotoIds"/>, keep their stored value when not supplied (null), and so
+/// does the <paramref name="Rewrite"/> (its edited bullets and cleared flags travel here).</summary>
 public sealed record UpdateContractorsReport(
     string ContractorsReportId,
     string ValuationNumber,
@@ -40,6 +41,7 @@ public sealed record UpdateContractorsReport(
     IReadOnlyList<ContractorsReportAttendance> Attendance,
     IReadOnlyList<string> SelectedUpdateIds,
     string? BuildingControlContact = null,
-    IReadOnlyList<string>? ExcludedPhotoIds = null) : ICommand<ContractorsReport>;
+    IReadOnlyList<string>? ExcludedPhotoIds = null,
+    ContractorsReportRewrite? Rewrite = null) : ICommand<ContractorsReport>;
 
 public sealed record DeleteContractorsReport(string ContractorsReportId) : ICommand<Acknowledgement>;

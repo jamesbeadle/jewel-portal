@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Data.Entities;
 
@@ -281,6 +282,7 @@ public sealed class TimesheetEntity
     public string RejectionReason { get; set; } = "";
 }
 
+[Index(nameof(ProgressUpdateId), Name = "IX_Defects_ProgressUpdateId")]
 public sealed class DefectEntity
 {
     [Key, MaxLength(64)] public string DefectId { get; set; } = "";
@@ -306,14 +308,22 @@ public sealed class DefectEntity
 
     // Sequential, human-readable defect number (rendered as DEF-0001). Global — like to-do and
     // work-order numbers — so the tag stem is unique across the flat JPMS mailbox-category space.
-    // Minted by RaiseDefectHandler; the AddDefectNumbers migration backfilled existing rows.
+    // Minted by DefectNumbers; the AddDefectNumbers migration backfilled existing rows.
     public int Number { get; set; }
+
+    /// <summary>Raised from a worker's daily log (2026-09-28): the day's note (progress update) it
+    /// came off and whose log it was. Loose string id, no FK, house style. Null / blank on one
+    /// raised in the office or by a client. Added by AddSiteLogRaisedRecords.</summary>
+    [MaxLength(64)]  public string? ProgressUpdateId { get; set; }
+    [MaxLength(256)] public string RaisedByEmail { get; set; } = "";
 
     // The canonical reference this defect's emails are tagged with ("DEF-0001" -> "JPMS/DEF-0001").
     // Computed, not stored. The id-derived fallback covers any unnumbered row (there should be
     // none after the backfill) so two such rows can never share the "DEF-0000" stem.
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string Reference => Number > 0
-        ? $"DEF-{Number:0000}"
+        ? ReferenceFor(Number)
         : $"DEF-{DefectId.PadRight(8, '0')[..8].ToUpperInvariant()}";
+
+    public static string ReferenceFor(int number) => $"DEF-{number:0000}";
 }

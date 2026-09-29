@@ -81,6 +81,11 @@ public static class ProgressFeatureRegistration
 
         services.AddScoped<ICommandHandler<DeleteContractorsReport, Acknowledgement>, DeleteContractorsReportHandler>();
         services.AddScoped<DeleteContractorsReportAuthorisation>();
+
+        services.AddScoped<ICommandHandler<RewriteContractorsReportWeek, ContractorsReport>, RewriteContractorsReportWeekHandler>();
+        services.AddScoped<RewriteContractorsReportWeekAuthorisation>();
+        services.AddScoped<ICommandHandler<DiscardContractorsReportRewrite, ContractorsReport>, DiscardContractorsReportRewriteHandler>();
+        services.AddScoped<DiscardContractorsReportRewriteAuthorisation>();
     }
 
     // The DrawingsStorage fallback matches every other blob feature: prod configures only

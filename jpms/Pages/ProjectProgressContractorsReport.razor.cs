@@ -51,6 +51,26 @@ public partial class ProjectProgressContractorsReport
         });
     }
 
+    private async Task RewriteAsync()
+    {
+        if (draft is null) return;
+        await RunAsync(async () =>
+        {
+            await Commands.SendAsync(draft.ToCommand(ReportId), CancellationToken.None);
+            await Commands.SendAsync(new RewriteContractorsReportWeek(ReportId), CancellationToken.None);
+            await LoadAsync();
+        });
+    }
+
+    private async Task DiscardRewriteAsync()
+    {
+        await RunAsync(async () =>
+        {
+            await Commands.SendAsync(new DiscardContractorsReportRewrite(ReportId), CancellationToken.None);
+            await LoadAsync();
+        });
+    }
+
     private async Task DeleteAsync()
     {
         deleting = false;

@@ -34,8 +34,14 @@ public sealed record Defect(
     DateTimeOffset? SentToSupplierAt = null,
     string? SentToSupplierByEmail = null,
     // The picked supplier's directory contact email, resolved server-side alongside the name.
-    string SupplierContactEmail = "")
+    string SupplierContactEmail = "",
+    // Raised from a worker's daily log (2026-09-28): the day's note (progress update) it came
+    // off, and whose log it was. Null / blank on one raised in the office or by a client.
+    string? ProgressUpdateId = null,
+    string RaisedByEmail = "")
 {
+    public bool IsFromTheDailyLog => ProgressUpdateId is not null;
+
     /// <summary>Where a "send to supplier" email goes: the directory record's contact email when
     /// a supplier is picked, else the legacy free-typed address. Empty = nowhere to send.</summary>
     public string SupplierEmail => string.IsNullOrWhiteSpace(SupplierContactEmail) ? AssignedToEmail : SupplierContactEmail;

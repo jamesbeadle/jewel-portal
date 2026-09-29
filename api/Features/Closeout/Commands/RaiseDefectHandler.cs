@@ -10,9 +10,7 @@ public sealed class RaiseDefectHandler : ICommandHandler<RaiseDefect, Defect>
 
     public async Task<Defect> HandleAsync(RaiseDefect command, CancellationToken cancellationToken)
     {
-        // Global sequence (like to-do numbers): max + 1, never a row count — deleted rows must
-        // not re-issue a number, because the number is the mailbox tag stem ("JPMS/DEF-0001").
-        var nextNumber = (await context.Defects.MaxAsync(d => (int?)d.Number, cancellationToken) ?? 0) + 1;
+        var nextNumber = await DefectNumbers.NextAsync(context, cancellationToken);
 
         // The picked directory record, or the legacy address promoted to one when it matches.
         var subcontractorId = await DefectSupplierLookup.ResolveAsync(

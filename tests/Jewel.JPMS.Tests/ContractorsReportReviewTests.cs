@@ -53,7 +53,7 @@ public sealed class ContractorsReportReviewTests
     public void AFirmsDaysOnSite_readAsTheWeekdays()
     {
         var firm = new ContractorsReportSubcontractor("wo", "WO-0049", "Sussex Tiling", "Tiling", "Tiling", 0m, null, 3, false,
-            new[] { new DateOnly(2026, 9, 23), new DateOnly(2026, 9, 18), new DateOnly(2026, 9, 21) });
+            new[] { new DateOnly(2026, 9, 23), new DateOnly(2026, 9, 18), new DateOnly(2026, 9, 21) }, Array.Empty<DateOnly>());
         Assert.Equal("Friday, Monday, Wednesday", ContractorsReportPrintedText.DaysOnSite(firm));
     }
 

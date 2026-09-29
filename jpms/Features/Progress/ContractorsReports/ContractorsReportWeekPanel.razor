@@ -1,0 +1,52 @@
+@using Jewel.JPMS.Contracts.Progress
+
+@* The week day by day before the report is built: who filed, who signed in and filed nothing,
+   and the photographs each day holds. A recorded day off reads whole; a working day with nothing
+   at all is the one to go and ask about. This list is the missing-day chase — there is no
+   notification service, and Jeremy asked for the composer's list on the Friday instead. *@
+
+<ul class="divide-y divide-line">
+    @foreach (var day in Week)
+    {
+        <li class="flex items-start gap-4 py-2 @(day.IsWorkingDay ? "" : "text-content-subtle")">
+            <span class="w-24 shrink-0 text-sm font-medium">@day.Date.ToString(DayFormat)</span>
+            <div class="min-w-0 flex-1 space-y-1 text-sm">
+                @foreach (var filing in day.Filed)
+                {
+                    <p class="text-content">
+                        @filing.FiledBy
+                        @if (filing.Kind == ContractorsReportFilingKind.OffDay)
+                        {
+                            <Pill Tone="Tone.Muted">Off</Pill>
+                        }
+                        @if (filing.Kind == ContractorsReportFilingKind.Note)
+                        {
+                            <Pill Tone="Tone.Muted">Note</Pill>
+                        }
+                        @if (!filing.IsSelected)
+                        {
+                            <Pill Tone="Tone.Warning">Not in report</Pill>
+                        }
+                    </p>
+                }
+                @if (day.OnSiteNotFiled.Count > 0)
+                {
+                    <p class="text-warning">On site, no log: @string.Join(", ", day.OnSiteNotFiled)</p>
+                }
+                @if (day.HasNothingRecorded)
+                {
+                    <p class="@(day.IsWorkingDay ? "text-warning" : "")">Nothing recorded</p>
+                }
+            </div>
+            <span class="shrink-0 text-xs text-content-subtle">@PhotoText(day)</span>
+        </li>
+    }
+</ul>
+
+@code {
+    private const string DayFormat = "ddd d MMM";
+
+    [Parameter, EditorRequired] public IReadOnlyList<ContractorsReportWeekDay> Week { get; set; } = Array.Empty<ContractorsReportWeekDay>();
+
+    private static string PhotoText(ContractorsReportWeekDay day) => day.PhotoCount == 1 ? "1 photo" : $"{day.PhotoCount} photos";
+}

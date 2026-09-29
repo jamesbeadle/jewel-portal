@@ -15,12 +15,14 @@
             }
         </select>
     </FormField>
-    <FormField Label="What was done today" Required Hint="In your own words — this is the day's record and goes into the weekly report.">
-        <textarea class="field" rows="4" @bind="description" disabled="@isBusy" placeholder="Second fix to the plot 3 bathrooms, skirting in the hall…"></textarea>
-    </FormField>
+    <MyDayWordsBox @bind-Words="description" Disabled="@isBusy" OnReportWordCaught="OpenDefectBox" />
     <FormField Label="Photos" Hint="@PhotosHint">
         <InputFile OnChange="OnPhotosChosen" multiple accept="image/*" class="w-full text-sm text-content-muted" disabled="@isBusy" />
     </FormField>
+    <div class="space-y-2">
+        <MyDayInstructionBox @bind-Instruction="instruction" Disabled="@isBusy" />
+        <MyDayDefectBox @bind-Defect="defect" @bind-IsOpen="isDefectBoxOpen" Disabled="@isBusy" />
+    </div>
     <FormField Label="Leaving at" Hint="The time now — change it if you're logging the day later.">
         <input type="time" class="field h-12 text-lg" value="@leftAt" @onchange="args => leftAt = args.Value?.ToString() ?? string.Empty" disabled="@isBusy" />
     </FormField>
@@ -44,6 +46,9 @@
     private decimal hours = WorkingDayChunks.FullDay;
     private string costCode = "";
     private string description = "";
+    private SiteLogInstruction? instruction;
+    private string defect = "";
+    private bool isDefectBoxOpen;
     private string leftAt = MyDayTimes.Now();
     private IReadOnlyList<IBrowserFile> photos = Array.Empty<IBrowserFile>();
     private bool isBusy;
@@ -67,6 +72,8 @@
 
     private void OnPhotosChosen(InputFileChangeEventArgs change) => photos = change.GetMultipleFiles(MyDayPhotoUploader.MaxPerBatch);
 
+    private void OpenDefectBox() => isDefectBoxOpen = true;
+
     private string SubmitLabel()
     {
         if (isUploadingPhotos) return $"Uploading {PhotoCountText}…";
@@ -79,6 +86,8 @@
         if (!HasHours) return "Give the day its hours — half a day, a full day, or half-hour steps.";
         if (string.IsNullOrWhiteSpace(costCode)) return "Choose what the work was.";
         if (!HasWords) return "Say what was done today — the words are the day's record.";
+        var instructionErrors = SiteLogRules.CheckInstruction(instruction);
+        if (instructionErrors.Count > 0) return string.Join(" ", instructionErrors);
         return null;
     }
 
@@ -100,7 +109,8 @@
     private async Task<MySiteDayLogged?> SaveDayAsync()
     {
         var entries = new[] { new SiteSignOutEntry(costCode, hours) };
-        try { return await Labour.MySignOutAsync(Project.ProjectId, entries, description.Trim(), MyDayTimes.TodayAt(leftAt)); }
+        var day = new MySiteSignOut(Project.ProjectId, entries, description.Trim(), MyDayTimes.TodayAt(leftAt), instruction, defect.Trim());
+        try { return await Labour.MySignOutAsync(day); }
         catch (CommandFailedException refusal) { error = refusal.Message; }
         catch (Exception) { error = "Your day didn't go through — check your signal and try again."; }
         return null;

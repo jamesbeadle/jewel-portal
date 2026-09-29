@@ -19,6 +19,7 @@ public sealed class ContractorsReportDraft
     public HashSet<string> SelectedUpdateIds { get; } = new();
     public string BuildingControlContact { get; set; } = "";
     public HashSet<string> ExcludedPhotoIds { get; } = new();
+    public ContractorsReportRewriteDraft? Rewrite { get; set; }
 
     public static ContractorsReportDraft From(ContractorsReport report)
     {
@@ -39,6 +40,7 @@ public sealed class ContractorsReportDraft
             draft.Attendance[item.WorkOrderId] = ContractorsReportAttendanceLine.From(item);
         draft.SelectedUpdateIds.UnionWith(report.SelectedUpdateIds);
         draft.ExcludedPhotoIds.UnionWith(report.ExcludedPhotoIds);
+        draft.Rewrite = report.Rewrite is { } rewrite ? ContractorsReportRewriteDraft.From(rewrite) : null;
         return draft;
     }
 
@@ -59,7 +61,8 @@ public sealed class ContractorsReportDraft
             .ToList(),
         SelectedUpdateIds.ToList(),
         BuildingControlContact,
-        ExcludedPhotoIds.ToList());
+        ExcludedPhotoIds.ToList(),
+        Rewrite?.ToRewrite());
 
     public ContractorsReportAttendanceLine AttendanceFor(string workOrderId)
     {

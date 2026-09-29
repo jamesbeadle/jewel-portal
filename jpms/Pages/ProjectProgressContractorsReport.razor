@@ -53,8 +53,14 @@
                             <Panel Title="Header">
                                 <ContractorsReportHeaderFields Draft="@entered" Header="@report.Document.Header" />
                             </Panel>
+                            <Panel Title="The week — who filed">
+                                <ContractorsReportWeekPanel Week="@report.Week" />
+                            </Panel>
                             <Panel Title="1 · Progress Against Programme — the week's updates">
                                 <ContractorsReportUpdatePicker Draft="@entered" Updates="@report.UpdatesInPeriod" />
+                            </Panel>
+                            <Panel Title="1 · In house language — the rewrite and its flags">
+                                <ContractorsReportRewritePanel Draft="@entered" IsBusy="@isBusy" OnRewrite="RewriteAsync" OnDiscard="DiscardRewriteAsync" />
                             </Panel>
                             <Panel Title="2 · Look Ahead">
                                 <ContractorsReportLookAheadEditor Draft="@entered" />

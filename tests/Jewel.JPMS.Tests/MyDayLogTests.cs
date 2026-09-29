@@ -4,6 +4,7 @@ using Jewel.JPMS.Api.Features.Labour;
 using Jewel.JPMS.Api.Features.Labour.Commands;
 using Jewel.JPMS.Api.Features.Labour.Queries;
 using Jewel.JPMS.Contracts.Labour;
+using Jewel.JPMS.Contracts.Progress;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -157,7 +158,7 @@ public sealed class MyDayLogTests
 
     private static MySiteSignInHandler SignInHandler(JpmsContext context) => new(context);
 
-    private static MySiteSignOutHandler SignOutHandler(JpmsContext context) => new(context, new MyDayCostCodes(context));
+    private static MySiteSignOutHandler SignOutHandler(JpmsContext context) => new(context, new MyDayCostCodes(context), new MyDayRaisedRecords(context));
 
     private static MyDayProjects DayProjects(JpmsContext context) =>
         new(context, new MyDayCostCodes(context), new MyDayNotesToday(context));
@@ -167,6 +168,128 @@ public sealed class MyDayLogTests
     private static async Task<JpmsContext> SeededAsync()
     {
         var context = new JpmsContext(new DbContextOptionsBuilder<JpmsContext>().UseInMemoryDatabase($"my-day-{Guid.NewGuid():N}").Options);
+        context.Workers.Add(new WorkerEntity { WorkerId = "w-jack", Name = "Jack Eastly", ContactEmail = Email, HourlyRate = 25m });
+        context.Projects.Add(new ProjectEntity { ProjectId = Project, Name = "Abbot Road" });
+        context.ProjectWorkerAssignments.Add(new ProjectWorkerAssignmentEntity { ProjectWorkerAssignmentId = "a-1", ProjectId = Project, WorkerId = "w-jack" });
+        context.CostCenters.Add(new CostCenterEntity { CostCenterId = "cc-lab", Code = Code, Name = "Labour" });
+        await context.SaveChangesAsync();
+        return context;
+    }
+}
+
+// The records the day raises beside its note (2026-09-28, brief items 7 and 8 as Jeremy settled
+// them on 21 Sep): an instruction given on site is a Site Instruction, a defect is a defect, both
+// in the worker's name and linked to the note — and neither is a line in the day's words, which go
+// to the client in the Contractor's Report.
+public sealed class MyDayRaisedRecordTests
+{
+    private const string Email = "jack@example.com";
+    private const string Project = "p-abbot-road";
+    private const string Code = "LAB";
+    private const string Words = "Second fix to the plot 3 bathrooms.";
+    private static readonly SiteSignOutEntry[] FullDay = { new(Code, WorkingDayChunks.FullDay) };
+
+    [Fact]
+    public async Task AnInstructionGivenOnSite_isASiteInstruction_inTheWorkersName_linkedToTheDay()
+    {
+        await using var context = await SeededAsync();
+        var instruction = new SiteLogInstruction("Move the flue to the rear elevation.", "Tom Bates, PLG", IsVerbal: true);
+
+        var logged = await SignOutAsync(context, new MySiteSignOut(Project, FullDay, Words, Instruction: instruction));
+
+        var raised = await context.SiteInstructions.SingleAsync();
+        Assert.Equal("SI-0001", logged.SiteInstructionReference);
+        Assert.Equal(raised.Reference, logged.SiteInstructionReference);
+        Assert.Equal("Move the flue to the rear elevation.", raised.Instruction);
+        Assert.Equal("Tom Bates, PLG", raised.GivenBy);
+        Assert.True(raised.IsVerbal);
+        Assert.Equal(SiteClock.Today(), raised.GivenOn);
+        Assert.Equal(logged.ProgressUpdateId, raised.ProgressUpdateId);
+        Assert.Equal(Email, raised.RaisedByEmail);
+        var note = await context.ProgressUpdates.SingleAsync();
+        Assert.Equal(Words, note.Description);
+    }
+
+    [Fact]
+    public async Task ADefect_isADefect_linkedToTheDay_andNeverInTheDaysWords()
+    {
+        await using var context = await SeededAsync();
+
+        var logged = await SignOutAsync(context, new MySiteSignOut(Project, FullDay, Words, Defect: "Made good the hall ceiling after the leak."));
+
+        var raised = await context.Defects.SingleAsync();
+        Assert.Equal("DEF-0001", logged.DefectReference);
+        Assert.Equal("Made good the hall ceiling after the leak.", raised.Description);
+        Assert.Equal((int)DefectStatus.Open, raised.Status);
+        Assert.Equal(logged.ProgressUpdateId, raised.ProgressUpdateId);
+        Assert.Equal(Email, raised.RaisedByEmail);
+        var note = await context.ProgressUpdates.SingleAsync();
+        Assert.DoesNotContain("ceiling", note.Description);
+        Assert.Empty(await context.SiteInstructions.ToListAsync());
+    }
+
+    [Fact]
+    public async Task ADayWithNeitherBox_raisesNothing_andTheReferencesAreEmpty()
+    {
+        await using var context = await SeededAsync();
+
+        var logged = await SignOutAsync(context, new MySiteSignOut(Project, FullDay, Words, Defect: "   "));
+
+        Assert.Equal("", logged.SiteInstructionReference);
+        Assert.Equal("", logged.DefectReference);
+        Assert.Empty(await context.SiteInstructions.ToListAsync());
+        Assert.Empty(await context.Defects.ToListAsync());
+    }
+
+    [Fact]
+    public async Task AnInstructionWithoutWhoGaveIt_isRefused_andNothingIsWritten()
+    {
+        await using var context = await SeededAsync();
+        var unsigned = new SiteLogInstruction("Move the flue.", "   ");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            SignOutAsync(context, new MySiteSignOut(Project, FullDay, Words, Instruction: unsigned)));
+
+        Assert.Empty(await context.SiteInstructions.ToListAsync());
+        Assert.Empty(await context.ProgressUpdates.ToListAsync());
+        Assert.Empty(await context.Timesheets.ToListAsync());
+    }
+
+    [Fact]
+    public async Task TheDayReadsBack_whatWentToTheOffice()
+    {
+        await using var context = await SeededAsync();
+        var instruction = new SiteLogInstruction("Swap the ironmongery.", "The architect");
+        await SignOutAsync(context, new MySiteSignOut(Project, FullDay, Words, Instruction: instruction, Defect: "Scratched glass, plot 2."));
+
+        var day = await new GetMyLabourDayHandler(context, DayProjects(context)).HandleAsync(Email, CancellationToken.None);
+
+        var note = Assert.Single(day.Projects).TodaysNote;
+        Assert.Equal("SI-0001", note?.SiteInstructionReference);
+        Assert.Equal("DEF-0001", note?.DefectReference);
+    }
+
+    [Fact]
+    public void ThePhoneAndTheReportGate_readTheOneWordList()
+    {
+        Assert.Equal(new[] { "made good" }, ReportWordingRule.BannedWordsIn("Made good the ceiling and hung the doors."));
+        Assert.Empty(ReportWordingRule.BannedWordsIn("Framework reworked? No — the frame was fixed."));
+        Assert.Contains("snagging", ReportWordingRule.BannedPhrases);
+    }
+
+    private static async Task<MySiteDayLogged> SignOutAsync(JpmsContext context, MySiteSignOut day)
+    {
+        await new MySiteSignInHandler(context).HandleAsync(new MySiteSignIn(Project), Email, CancellationToken.None);
+        var handler = new MySiteSignOutHandler(context, new MyDayCostCodes(context), new MyDayRaisedRecords(context));
+        return await handler.HandleAsync(day, Email, CancellationToken.None);
+    }
+
+    private static MyDayProjects DayProjects(JpmsContext context) =>
+        new(context, new MyDayCostCodes(context), new MyDayNotesToday(context));
+
+    private static async Task<JpmsContext> SeededAsync()
+    {
+        var context = new JpmsContext(new DbContextOptionsBuilder<JpmsContext>().UseInMemoryDatabase($"my-day-raised-{Guid.NewGuid():N}").Options);
         context.Workers.Add(new WorkerEntity { WorkerId = "w-jack", Name = "Jack Eastly", ContactEmail = Email, HourlyRate = 25m });
         context.Projects.Add(new ProjectEntity { ProjectId = Project, Name = "Abbot Road" });
         context.ProjectWorkerAssignments.Add(new ProjectWorkerAssignmentEntity { ProjectWorkerAssignmentId = "a-1", ProjectId = Project, WorkerId = "w-jack" });

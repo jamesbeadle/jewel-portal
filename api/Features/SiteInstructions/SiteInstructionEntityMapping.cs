@@ -6,5 +6,6 @@ internal static class SiteInstructionEntityMapping
 {
     public static SiteInstruction ToModel(this SiteInstructionEntity entity) =>
         new(entity.SiteInstructionId, entity.ProjectId, entity.Title, entity.Instruction,
-            entity.Location, entity.CreatedAt, entity.Reference);
+            entity.Location, entity.CreatedAt, entity.Reference,
+            entity.GivenBy, entity.IsVerbal, entity.GivenOn, entity.ProgressUpdateId, entity.RaisedByEmail);
 }

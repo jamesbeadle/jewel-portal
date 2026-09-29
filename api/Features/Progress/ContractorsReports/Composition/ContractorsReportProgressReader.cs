@@ -2,14 +2,15 @@ using Jewel.JPMS.Contracts.Progress;
 
 namespace Jewel.JPMS.Api.Features.Progress.ContractorsReports.Composition;
 
-/// <summary>A progress update in the reporting week, with its photographs, as Sections 1 and 9
-/// read it.</summary>
+/// <summary>A progress update in the reporting week, with its photographs and who filed it, as
+/// Sections 1 and 9 and the week's who-filed list read it.</summary>
 public sealed record ContractorsReportUpdate(
     string ProgressUpdateId,
     DateOnly WorkDate,
     string Title,
     string Description,
-    IReadOnlyList<ContractorsReportPhoto> Photos);
+    IReadOnlyList<ContractorsReportPhoto> Photos,
+    string CreatedByEmail = "");
 
 internal static class ContractorsReportProgressReader
 {
@@ -37,7 +38,8 @@ internal static class ContractorsReportProgressReader
                 update.Description,
                 photosByUpdate[update.ProgressUpdateId]
                     .Select(photo => new ContractorsReportPhoto(photo.ProgressPhotoId, photo.FileName, photo.ContentType))
-                    .ToList()))
+                    .ToList(),
+                update.CreatedByEmail))
             .Where(update => week.Contains(update.WorkDate))
             .ToList();
     }

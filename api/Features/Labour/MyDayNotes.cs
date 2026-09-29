@@ -16,6 +16,8 @@ public static class MyDayNotes
 
     public static bool IsGiven(string description) => !string.IsNullOrWhiteSpace(description);
 
+    public static bool IsOffDay(string title) => title.StartsWith(OffPrefix, StringComparison.Ordinal);
+
     public static bool IsOwnedBy(ProgressUpdateEntity note, string email) =>
         string.Equals(note.CreatedByEmail, email, StringComparison.OrdinalIgnoreCase);
 }

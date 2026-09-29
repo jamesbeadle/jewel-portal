@@ -14,7 +14,9 @@ internal static class CloseoutEntityMapping
             SubcontractorName: supplier?.CompanyName,
             SentToSupplierAt: entity.SentToSupplierAt,
             SentToSupplierByEmail: entity.SentToSupplierByEmail,
-            SupplierContactEmail: supplier?.ContactEmail ?? "");
+            SupplierContactEmail: supplier?.ContactEmail ?? "",
+            ProgressUpdateId: entity.ProgressUpdateId,
+            RaisedByEmail: entity.RaisedByEmail);
 
     public static SettlementRecord ToModel(this SettlementRecordEntity entity) =>
         new(entity.SettlementRecordId, entity.ProjectId, entity.FinalContractValue, entity.FinalCost, entity.FinalMargin, entity.AgreedAt, entity.IsClientSigned);

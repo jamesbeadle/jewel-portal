@@ -62,6 +62,41 @@ internal sealed partial class SiteAndProgressActions
                 + "downloads the PDF from the page (or export_contractors_report hands a link) and sends it."),
 
         new AiAction(
+            Name: "rewrite_contractors_report_week",
+            Area: ContractorsReportArea,
+            Description: "Rewrites the report's selected days in house language for the client's side "
+                + "and flags what the report must not say: Section 1 bullets per day, a summary a day, "
+                + "the unfinished halves as Look Ahead candidates, and the flag list (changed, "
+                + "compliance, hedge, omitted, conflict, scope) saying what it changed and why. The "
+                + "raw notes stay on the record. Every flag opens uncleared, and the PDF is refused "
+                + "until the office has cleared them all on the page (or through "
+                + "update_contractors_report's rewrite, each flag with isCleared).",
+            CommandType: typeof(RewriteContractorsReportWeek),
+            ResultType: typeof(ContractorsReport),
+            AuthorisationType: typeof(RewriteContractorsReportWeekAuthorisation),
+            ValidationType: null,
+            VisibleTo: ProgressRoles.Contributors,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "Save any edits first: the rewrite replaces an earlier one. Read the result with "
+                + "get_contractors_report (report.rewrite and the findings). It keeps the site's "
+                + "own material and method words — \"foamed\" is never upgraded to \"fire stopped\"."),
+
+        new AiAction(
+            Name: "discard_contractors_report_rewrite",
+            Area: ContractorsReportArea,
+            Description: "Drops the report's rewrite so Section 1 prints the raw notes again and no "
+                + "flag gates the build.",
+            CommandType: typeof(DiscardContractorsReportRewrite),
+            ResultType: typeof(ContractorsReport),
+            AuthorisationType: typeof(DiscardContractorsReportRewriteAuthorisation),
+            ValidationType: null,
+            VisibleTo: ProgressRoles.Contributors,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "The edited bullets and cleared flags are lost; the raw notes were never changed."),
+
+        new AiAction(
             Name: "delete_contractors_report",
             Area: ContractorsReportArea,
             Description: "Deletes a Contractor's Report permanently. The progress updates, RFIs, "
