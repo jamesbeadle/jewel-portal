@@ -86,8 +86,8 @@ public static class JpmsRoleSets
         JpmsRoles.Architect);
 
     /// <summary>Drawing readers: internal roles plus the subcontractor, who reads revisions for
-    /// their assigned work (P10). The architect reads drawings through the architect portal's
-    /// scoped reads, never through this set, which is not scoped to a practice's projects.</summary>
+    /// their assigned work (P10), and the architect, who follows a drawing linked on their RFI —
+    /// confined to the projects their login was given by DrawingScope on every drawing read.</summary>
     public static readonly RoleSet DrawingReaders = RoleSet.Of(
         JpmsRoles.Director,
         JpmsRoles.FinanceDirector,
@@ -98,7 +98,8 @@ public static class JpmsRoleSets
         JpmsRoles.OfficeComplianceCoordinator,
         JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing,
         JpmsRoles.Foreman,
-        JpmsRoles.Subcontractor);
+        JpmsRoles.Subcontractor,
+        JpmsRoles.Architect);
 
     /// <summary>The commercial team: money-facing reads (cashflow, Xero, ledger detail) that the
     /// wider site team has no business seeing. Mirrors the Xero/Allocation navigation gates.</summary>

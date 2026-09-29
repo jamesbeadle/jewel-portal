@@ -625,6 +625,28 @@ The project-process kit writes this file once and never touches it again, and `C
 
 ## An external login carries its identity, and every external write is scoped by it (api + jpms)
 
+- **What an architect does in the portal** (2026-09-29, Nigel, ahead of the practices being brought
+  on): three project rows — RFIs, Variation Orders and Architect's Instructions — on the projects
+  their login was given, and nothing through the connector. **Decides a variation**:
+  `VariationApprovalRoles.Deciders` (contracts; `VariationRoles.AllowedToApproveVariations` reads
+  it) adds the architect beside the client; on the variation page a party's one green button is
+  "Approve variation", a `ConfirmDialog` that approves the STAGED build-up exactly as Jewel priced
+  it (`VariationApproval.FromStagedBuildUp` → `ApproveWithLines`; disabled with a sentence saying
+  so while nothing is staged), and its status pill offers "Reject variation…" alone
+  (`ProjectVariationDetail.PartyDecision`). A party never picks a cost centre. **Files, links and
+  deletes an instruction**: `ArchitectInstructionRoles.AllowedToRead` admits the architect and the
+  list, get and file reads consult `ArchitectInstructionScope`; the sidebar row follows
+  (`NavigationRoles.ArchitectInstructionRoles`). **Follows a drawing linked on their RFI**:
+  `JpmsRoleSets.DrawingReaders` admits the architect and `DrawingScope`
+  (`api/Features/Drawings`) confines the register, a drawing, its revisions, the file and the
+  extraction to their projects; staff and the subcontractor read the register as before. Pinned by
+  `DrawingScopeTests` and `ExternalCorrespondenceTests`. **No MCP access**: `ConnectorRoles.
+  AllowedToConnect` = `AllInternal` on `McpEndpoint` (403 with a sentence), on `OAuthApprove` and on
+  the AI Connections page — a party's login uses the site, whose reads are tailored to them; the
+  connector's are the business's own. A party's `UpdateRequestDetails` keeps the request's value and
+  internal notes (`SignedInCaller.IsAParty`, `PartyRequestEditTests`): their read had them stripped,
+  so their write carries nulls that must not land.
+
 - **An architect login sees the projects an administrator ticked for it** (2026-09-25, Nigel:
   "maintain the relationship between architects and projects through the admin" — building it
   through the Directory's practices and contacts was too long a road). Admin → Users gives the

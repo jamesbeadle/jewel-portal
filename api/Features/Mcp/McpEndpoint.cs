@@ -80,6 +80,7 @@ public sealed class McpEndpoint
 
         var user = await AuthenticateAsync(request, cancellationToken);
         if (user is null) return Challenge(request);
+        if (!ConnectorRoles.AllowedToConnect.IncludesAny(user.Roles)) return StaffOnly();
 
         // The identity every audit write inside a tool sees — same wiring as the endpoint gates.
         auditActor.Email = user.Email;
@@ -135,6 +136,14 @@ public sealed class McpEndpoint
         userCache.Set(resolved.TokenHash, user, now.Add(SignedInUserCache.Ttl), now);
         return user;
     }
+
+    private static IActionResult StaffOnly() =>
+        new ObjectResult(new
+        {
+            error = "forbidden",
+            error_description = "The connector is for Jewel staff; a client's or an architect's login uses the portal itself."
+        })
+        { StatusCode = StatusCodes.Status403Forbidden };
 
     /// <summary>The 401 whose WWW-Authenticate header is what sends Claude and Perplexity into
     /// the OAuth flow (RFC 9728 §5.1).</summary>

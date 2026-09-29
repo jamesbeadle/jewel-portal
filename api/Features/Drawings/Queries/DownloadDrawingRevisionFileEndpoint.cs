@@ -37,6 +37,8 @@ public sealed class DownloadDrawingRevisionFileEndpoint
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!RolesThatMayReadDrawings.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await DrawingScope.MayReadRevisionAsync(context, signedInUser, revisionId, cancellationToken))
+            return new StatusCodeResult(403);
 
         var revision = await context.DrawingRevisions
             .FirstOrDefaultAsync(row => row.DrawingRevisionId == revisionId, cancellationToken);

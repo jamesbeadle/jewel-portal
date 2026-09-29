@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Features.Drawings;
 using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Contracts.Drawings;
 
@@ -19,9 +20,10 @@ public sealed class DrawingExtractionEndpoints
     private readonly QueueProjectDrawingExtractionsValidation bulkValidation;
     private readonly ICommandHandler<QueueProjectDrawingExtractions, int> bulkHandler;
     private readonly IQueryHandler<GetDrawingExtraction, DrawingExtractionView?> viewHandler;
+    private readonly JpmsContext context;
 
     public DrawingExtractionEndpoints(
-        SignedInUserResolver users, AuditActor auditActor,
+        SignedInUserResolver users, AuditActor auditActor, JpmsContext context,
         QueueDrawingExtractionAuthorisation queueAuthorisation,
         QueueDrawingExtractionValidation queueValidation,
         ICommandHandler<QueueDrawingExtraction, DrawingExtraction> queueHandler,
@@ -36,6 +38,7 @@ public sealed class DrawingExtractionEndpoints
         this.bulkAuthorisation = bulkAuthorisation; this.bulkValidation = bulkValidation;
         this.bulkHandler = bulkHandler;
         this.viewHandler = viewHandler;
+        this.context = context;
     }
 
     [Function("QueueDrawingExtraction")]
@@ -90,6 +93,8 @@ public sealed class DrawingExtractionEndpoints
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!DrawingExtractionRoles.AllowedToReadExtractions.IncludesAny(signedInUser.Roles))
+            return new StatusCodeResult(403);
+        if (!await DrawingScope.MayReadRevisionAsync(context, signedInUser, revisionId, cancellationToken))
             return new StatusCodeResult(403);
 
         var view = await viewHandler.HandleAsync(new GetDrawingExtraction(revisionId), cancellationToken);

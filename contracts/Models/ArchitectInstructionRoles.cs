@@ -33,5 +33,6 @@ public static class ArchitectInstructionRoles
         JpmsRoles.ProjectManager,
         JpmsRoles.Estimator,         // Quantity Surveyor — prices the instructed work
         JpmsRoles.SiteManager,
-        JpmsRoles.Foreman);
+        JpmsRoles.Foreman,
+        JpmsRoles.Architect);
 }

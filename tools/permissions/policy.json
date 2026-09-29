@@ -49,6 +49,7 @@
     ],
     "SiteOperative": [
       "my/labour/",
+      "manual/views/",
       "auth/"
     ],
     "Architect": [
@@ -157,6 +158,20 @@
         "why": "P09 defects sign-off is the client's; the architect raises alongside them on close-out.",
         "routes": [
           "projects/{projectId}/defects"
+        ]
+      },
+      {
+        "why": "Nigel, 2026-09-29, ahead of the practices being brought on: the architect decides a variation (approves the staged build-up as Jewel priced it, or rejects it — VariationOrderScope), files, reads and deletes their own instructions (ArchitectInstructionScope on every read), and follows a drawing linked on their RFI (DrawingScope confines the register, a drawing, its revisions, the file and the extraction to the projects their login was given). The connector is closed to them (ConnectorRoles).",
+        "routes": [
+          "variation-orders/{voId}/approve",
+          "variation-orders/{voId}/reject",
+          "architect-instructions/{instructionId}/file",
+          "drawings/{drawingId}",
+          "drawings/{drawingId}/revisions",
+          "drawings/revisions/{revisionId}/file",
+          "drawings/revisions/{revisionId}/extraction",
+          "projects/{projectId}/drawings",
+          "projects/{projectId}/drawing-folders"
         ]
       }
     ],

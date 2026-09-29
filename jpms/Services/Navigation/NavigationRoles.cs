@@ -28,10 +28,10 @@ public static class NavigationRoles
 
     // The per-role nav (2026-09-22, Nigel: "review each role and build the appropriate homepage
     // dashboard and side nav for their role") replaced the 2026-08-11 clamp that showed every
-    // row to the directors alone. The hard line is external logins: an architect sees the two
-    // project rows their scoped reads admit (RFIs and Variation Orders, RequestRoles), and clients
-    // and subcontractors see Home alone (their own portal pages). Administrators bypass every set
-    // (DesktopNavigation.CanSee).
+    // row to the directors alone. The hard line is external logins: an architect sees the three
+    // project rows their scoped reads admit (RFIs, Variation Orders, Architect's Instructions), and
+    // clients and subcontractors see Home alone (their own portal pages). Administrators bypass
+    // every set (DesktopNavigation.CanSee).
 
     // The internal office/management roles that can open projects.
     public static readonly Role[] ProjectRoles =
@@ -58,15 +58,17 @@ public static class NavigationRoles
         ProjectRoles.Append(Role.Accounts).ToArray();
 
     // Who sees the Architect's Instruction register. Mirrors the API's ArchitectInstructionRoles:
-    // the project roles that own the commercial consequence of an instruction. The register is
-    // internal — an external login never opens it (2026-09-24).
+    // the project roles that own the commercial consequence of an instruction, and the architect
+    // who issues them (2026-09-29, Nigel: architects file and delete their own), confined to the
+    // projects their login was given.
     public static readonly Role[] ArchitectInstructionRoles =
     {
         Role.ManagingDirector,
         Role.FinanceDirector,
         Role.ProjectManager,
         Role.QuantitySurveyor,
-        Role.SiteManager
+        Role.SiteManager,
+        Role.Architect
     };
 
     public static readonly Role[] FinanceRoles =
