@@ -189,13 +189,7 @@ public sealed partial class JpmsContext
         modelBuilder.Entity<XeroCodingRunEntity>()
             .HasIndex(row => new { row.WorkerId, row.Month })
             .HasDatabaseName("IX_XeroCodingRuns_WorkerId_Month");
-        modelBuilder.Entity<CompanyRegisterItemEntity>()
-            .HasIndex(row => row.Kind)
-            .HasDatabaseName("IX_CompanyRegisterItems_Kind");
-        modelBuilder.Entity<PolicySignOffEntity>()
-            .HasIndex(row => new { row.PolicyDocumentId, row.RecipientEmail })
-            .IsUnique()
-            .HasDatabaseName("IX_PolicySignOffs_PolicyDocumentId_RecipientEmail");
+        ConfigureRegistersAndManual(modelBuilder);
 
         // ---- Project-scoped registers -----------------------------------------------------------
         modelBuilder.Entity<DrawingEntity>()

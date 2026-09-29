@@ -11,3 +11,4 @@ global using Microsoft.EntityFrameworkCore;
 global using Microsoft.Extensions.Logging;
 global using System.Net.Http.Json;
 global using System.Text.Json;
+global using Jewel.JPMS.Contracts.Manual;

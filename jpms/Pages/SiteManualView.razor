@@ -1,0 +1,48 @@
+@page "/manual/view/{View}"
+@using Jewel.JPMS.Features.Manual
+@inject IJSRuntime JavaScript
+
+<PageTitle>@ManualViews.Label(view) · JBB Portal</PageTitle>
+
+
+<Page OpenTo="ManualRoles.AllowedToReadViews" Class="max-w-4xl">
+    <SectionHeader Title="@ManualViews.Label(view)" Subtitle="@IssueLine" Class="print:hidden">
+        <Actions>
+            <a href="/manual" class="btn-ghost">Office master</a>
+            <button type="button" class="btn-secondary" @onclick="PrintAsync">Print or save as PDF</button>
+        </Actions>
+    </SectionHeader>
+    <div class="hidden print:block mb-6">
+        <h1 class="text-2xl font-semibold text-content">Jewel Bespoke Build — @ManualViews.Label(view)</h1>
+        <p class="text-sm text-content-muted">@IssueLine</p>
+    </div>
+
+    <TabRow Items="@ManualViews.Tabs()" ActiveKey="@view.ToString()" AriaLabel="Views" Class="mb-4 print:hidden" />
+
+    @if (note is not null)
+    {
+        <Notice Tone="Tone.Warning" Class="mb-3">@note</Notice>
+    }
+    else if (reading is { OutstandingCount: > 0 } outstanding)
+    {
+        <Notice Tone="Tone.Info" Class="mb-3 print:hidden">@outstanding.OutstandingCount @(outstanding.OutstandingCount == 1 ? "module is" : "modules are") waiting for your acknowledgement.</Notice>
+    }
+
+    <LoadGate IsLoading="@(reading is null && note is null)" Label="Loading the manual">
+    @if (reading is { Modules.Count: 0 })
+    {
+        <EmptyState Message="Nothing has been approved for this view yet." />
+    }
+    else if (reading is not null)
+    {
+        @foreach (var family in reading.Modules.GroupBy(module => module.Family))
+        {
+            <h2 class="text-xs uppercase tracking-wide text-content-subtle mt-6 mb-2">@ManualModuleCodes.FamilyName(family.Key)</h2>
+            @foreach (var module in family)
+            {
+                <ManualModuleReader Module="@module" CanAcknowledge="@CanAcknowledge" SuggestedName="@SuggestedName" OnAcknowledged="ReloadAsync" />
+            }
+        }
+    }
+    </LoadGate>
+</Page>

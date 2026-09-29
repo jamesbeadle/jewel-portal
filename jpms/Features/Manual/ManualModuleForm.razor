@@ -1,0 +1,66 @@
+
+<Modal IsOpen="@IsOpen" Title="@(IsEdit ? "Edit the draft" : "New module")" Class="max-w-3xl"
+       ConfirmLabel="@(isSaving ? "Saving…" : "Save")" ConfirmDisabled="@isSaving" OnCancel="OnClose" OnConfirm="SaveAsync">
+    <div class="space-y-3">
+        @if (!IsEdit)
+        {
+            <FormField Label="Code" Required Hint="A family and a number — GOV, ROLE, MOB, SET, RUN, REP, WFL, RES, STD, COM or REF, then two digits.">
+                <input class="field" @bind="code" maxlength="@ManualLimits.Code" placeholder="RES-07" />
+            </FormField>
+        }
+        <FormField Label="Title" Required>
+            <input class="field" @bind="title" maxlength="@ManualLimits.Title" />
+        </FormField>
+        <FormField Label="Purpose" Hint="One or two sentences on what the module is for.">
+            <textarea class="field mt-1 min-h-16" @bind="purpose" maxlength="@ManualLimits.Purpose"></textarea>
+        </FormField>
+        <FormField Label="Text" Required Hint="Markdown: headings with #, lists with -, tables with |. Bold with **.">
+            <textarea class="field mt-1 min-h-72 font-mono text-xs" @bind="body"></textarea>
+        </FormField>
+        <div class="grid grid-cols-2 gap-3">
+            <FormField Label="Owner (email)" Hint="Who maintains the module.">
+                <input class="field" type="email" @bind="ownerEmail" maxlength="@ManualLimits.Email" />
+            </FormField>
+            <FormField Label="Approver (email)" Hint="Who approves it for the site.">
+                <input class="field" type="email" @bind="approverEmail" maxlength="@ManualLimits.Email" />
+            </FormField>
+        </div>
+        <FormField Label="Next review">
+            <input class="field mt-1" type="date" @bind="nextReview" />
+        </FormField>
+        <FormField Label="Published to">
+            <div class="flex flex-wrap gap-4 mt-1">
+                <Checkbox @bind-Value="isForSiteManagers" Label="Site Manager view" />
+                <Checkbox @bind-Value="isForHealthAndSafetyOfficer" Label="H&S Officer view" />
+                <Checkbox @bind-Value="isForForemen" Label="Foreman quick view" />
+            </div>
+        </FormField>
+        <FormField Label="Linked forms" Hint="The portal forms this module sends people to.">
+            <div class="grid grid-cols-2 gap-x-4 gap-y-1 mt-1">
+                @foreach (var form in FormCatalogue.All)
+                {
+                    <Checkbox Value="@linkedFormSlugs.Contains(form.Slug)" ValueChanged="isLinked => ToggleForm(form.Slug, isLinked)" Label="@form.Title" />
+                }
+            </div>
+        </FormField>
+        <FormField Label="Linked standards" Hint="Module codes this one relies on, comma separated.">
+            <input class="field" @bind="linkedStandards" maxlength="@ManualLimits.LinkedStandards" />
+        </FormField>
+        @if (IsEdit)
+        {
+            <FormField Label="Change summary" Hint="What changed in this version and why — kept with the version when it is approved.">
+                <textarea class="field mt-1 min-h-16" @bind="changeSummary" maxlength="@ManualLimits.ChangeSummary"></textarea>
+            </FormField>
+        }
+        else
+        {
+            <FormField Label="Source sections" Hint="The sections of the May 2026 manual this came from, if any.">
+                <input class="field" @bind="sourceSections" maxlength="@ManualLimits.SourceSections" />
+            </FormField>
+        }
+        @if (problem is not null)
+        {
+            <Notice Tone="Tone.Negative">@problem</Notice>
+        }
+    </div>
+</Modal>

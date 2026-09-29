@@ -1,0 +1,38 @@
+
+<Toolbar>
+    @if (CanManage && Module.Status == ManualModuleStatus.Draft)
+    {
+        <button type="button" class="btn-secondary" @onclick="OnEdit">Edit…</button>
+        <button type="button" class="btn-primary" disabled="@isBusy" @onclick="() => RunAsync(new SubmitManualModuleForReview(Module.ManualModuleId))">Send for review</button>
+    }
+    @if (CanApprove && Module.Status == ManualModuleStatus.InReview)
+    {
+        <button type="button" class="btn-secondary" @onclick="() => isReturning = true">Return to draft…</button>
+        <button type="button" class="btn-primary" disabled="@isBusy" @onclick="() => RunAsync(new ApproveManualModule(Module.ManualModuleId, null))">Approve and publish</button>
+    }
+    @if (CanManage && Module.Status == ManualModuleStatus.Approved)
+    {
+        <button type="button" class="btn-secondary" disabled="@isBusy" @onclick="() => RunAsync(new ReviseManualModule(Module.ManualModuleId))">Revise</button>
+    }
+    @if (CanApprove && !Module.IsRetired)
+    {
+        <button type="button" class="btn-ghost" @onclick="() => isRetiring = true">Retire…</button>
+    }
+</Toolbar>
+
+@if (problem is not null)
+{
+    <Notice Tone="Tone.Negative" Class="mt-3" Dismissible OnDismiss="() => problem = null">@problem</Notice>
+}
+
+<Modal IsOpen="@isReturning" Title="Return to draft" ConfirmLabel="Return" ConfirmDisabled="@(isBusy || string.IsNullOrWhiteSpace(reason))"
+       OnCancel="() => isReturning = false" OnConfirm="ReturnAsync">
+    <FormField Label="Reason" Required Hint="Noted on the module's change summary for its owner.">
+        <textarea class="field mt-1 min-h-24" @bind="reason" maxlength="@ManualLimits.ChangeSummary"></textarea>
+    </FormField>
+</Modal>
+
+<ConfirmDialog IsOpen="@isRetiring" Title="Retire this module?" ConfirmLabel="Retire" Danger Busy="@isBusy"
+               OnConfirm="() => RunAsync(new RetireManualModule(Module.ManualModuleId))" OnCancel="() => isRetiring = false">
+    <p class="text-sm text-content-muted">It leaves every site view. Its versions and acknowledgements stay as the record.</p>
+</ConfirmDialog>

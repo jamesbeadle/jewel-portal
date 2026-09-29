@@ -232,4 +232,14 @@ public static class StatusTones
         ProjectSupplierInvoicePlacement.Allocated => Tone.Muted,
         _ => Tone.Warning
     };
+
+    /// <summary>A manual module: approved is the word in front of the site, in review is someone's to
+    /// act on, a draft is a plain fact and a retired module is history.</summary>
+    public static Tone ToTone(this ManualModuleStatus status) => status switch
+    {
+        ManualModuleStatus.Approved => Tone.Positive,
+        ManualModuleStatus.InReview => Tone.Warning,
+        ManualModuleStatus.Superseded => Tone.Muted,
+        _ => Tone.Info
+    };
 }

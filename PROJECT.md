@@ -61,6 +61,49 @@ The project-process kit writes this file once and never touches it again, and `C
   contracts/Models). RFIs are not on the chart: nothing links an RFI to a task yet.
 
 
+## The site manual is controlled modules, and the site sees only what is approved (contracts + api + jpms)
+
+- **Why** (2026-09-29, Nigel's Site Manuals and Operating Systems request, YBT task in Jewel Bespoke
+  Build Portal): the JBB Site Manager Manual was one ever-changing Word file. It is now one master
+  per module, maintained by the office in the portal, with an owner, an approver, a status, a
+  version and a review date, published as role views. The master lives HERE, not in Coda or
+  SharePoint, so it links to the live forms, records and registers rather than duplicating them;
+  Word or PDF is the print of a view, never the master.
+- **The record**: `ManualModules` (working `Body` under `Status`/`Version`, and beside it the
+  `PublishedBody` at `PublishedVersion` that only an approval writes), `ManualModuleVersions` (every
+  approved version kept whole, closed by `SupersededAt`) and `ManualAcknowledgements` (one per
+  person per version, a typed name and a server time). Migration `AddSiteManual`, script
+  `add-site-manual.sql`. Codes are a family and a number (`ManualModuleCodes`: GOV, ROLE, MOB, SET,
+  RUN, REP, WFL, RES, STD, COM, REF); the family orders the master and the views.
+- **The cycle**: Draft → In review (`SubmitManualModuleForReview`, refused without text, owner and
+  approver) → Approved (`ApproveManualModule`: publishes, snapshots the version, supersedes the
+  last, and every reader acknowledges afresh) or back to Draft with a reason
+  (`ReturnManualModuleToDraft`). `ReviseManualModule` opens the next version as a draft while the
+  approved text stays published; `RetireManualModule` takes it out of every view and keeps the
+  record. Only a Draft is edited (`UpdateManualModuleDraft`). Gates: `ManualRoles.AllowedToManage`
+  (directors, PMs, compliance, office admin, H&S lead) maintain; `AllowedToApprove` (directors,
+  compliance, H&S lead) approve, return and retire; `AllowedToReadViews` (all staff, operatives
+  included) read a view and acknowledge. One gate class (`ManualModuleAuthorisation` /
+  `ManualModuleValidation`) carries an overload per command; every endpoint runs through
+  `ManualCommandGate`. Limits are stated once in `ManualLimits` and the form mirrors them.
+- **The baseline**: `ImportManualBaseline` loads the v0.13 manual (May 2026, a working draft) as 21
+  DRAFT modules from the markdown embedded under `api/Features/Manual/Baseline` (`baseline.json`
+  is the index), skipping any code already present; owners and approvers are blank for the office
+  to name. The manual's WhatsApp, Sitemate and email routes are carried as written — reconciling
+  them with the portal's own daily note, requests, Contractor's Report and forms is the office's
+  edit before approval, not the loader's guess. Standards photographs, the H&S framework groups,
+  the supplier account references and the H&S contacts are marked in the text as gaps to close.
+- **Surfaces**: `/manual` (office master, "New module", "Load the JBB baseline" while empty),
+  `/manual/{id}` (facts, working text, what the site sees during a revision, versions,
+  acknowledgements, the moves), `/manual/view/{view}` (approved modules only, "I have read this",
+  print as the versioned issue). Sidebar "Site manual" beside Policies. Connector:
+  `list_manual_modules`, `get_manual_module`, `get_manual_view`; actions `create_manual_module`,
+  `update_manual_module_draft`, `submit_manual_module_for_review`, `approve_manual_module`,
+  `return_manual_module_to_draft`, `revise_manual_module`, `retire_manual_module`,
+  `acknowledge_manual_module`, `import_manual_baseline`. Markdown renders through the shared
+  `MarkdownText` (`MarkdownRenderer`, with pipe tables); Sales' `SimpleMarkdown` wraps it. Pinned
+  by `SiteManualTests`.
+
 ## A stored skill keeps every version, and any one can be restored (contracts + api + jpms)
 
 - **A save never destroys a version** (2026-09-24, Nigel: "we may need to audit stuff", then

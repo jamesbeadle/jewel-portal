@@ -1,0 +1,43 @@
+@page "/manual/{ManualModuleId}"
+@using Jewel.JPMS.Features.Manual
+
+<PageTitle>@(Module is null ? "Manual module" : $"{Module.Code} {Module.Title}") · JBB Portal</PageTitle>
+
+
+<Page OpenTo="ManualRoles.AllowedToReadMaster" Class="max-w-5xl">
+    <a href="/manual" class="text-xs text-content-subtle hover:text-content underline underline-offset-2">← Site manual</a>
+
+    <LoadGate IsLoading="@isLoading" Prominent="true" Label="Loading the module">
+    @if (detail is null || Module is null)
+    {
+        <div class="mt-4"><PageHeader Title="This module is gone" /></div>
+    }
+    else
+    {
+        <PageHeader Title="@Module.Title" Eyebrow="@Module.Code" Subtitle="@Module.Purpose" />
+
+        <div class="mb-6">
+            <ManualModuleActions Module="@Module" CanManage="@CanManage" CanApprove="@CanApprove"
+                                 OnEdit="() => isEditing = true" OnChanged="ReloadAsync" />
+        </div>
+
+        <ManualModuleFacts Module="@Module" />
+
+        <Panel Title="@WorkingTextTitle" Class="mb-6" BodyClass="p-5">
+            <MarkdownText Text="@Module.Body" />
+        </Panel>
+
+        @if (Module.IsBeingRevised)
+        {
+            <Panel Title="@($"What the site sees now — v{Module.PublishedVersion}")" Class="mb-6" BodyClass="p-5">
+                <MarkdownText Text="@detail.PublishedBody" />
+            </Panel>
+        }
+
+        <ManualVersionHistory Versions="@detail.Versions" />
+        <ManualAcknowledgementsList Acknowledgements="@detail.Acknowledgements" />
+
+        <ManualModuleForm IsOpen="isEditing" Editing="@Module" OnClose="() => isEditing = false" OnSaved="SavedAsync" />
+    }
+    </LoadGate>
+</Page>

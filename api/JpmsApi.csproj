@@ -116,6 +116,7 @@
     <!-- Poppins (OFL, fonts/LICENCE-Poppins.txt): the brand face every generated document is set in
          (2026-09-15). DocumentFontResolver probes the fonts folder beside the application first. -->
     <None Include="fonts\*.ttf;fonts\*.txt" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="Features\Manual\Baseline\baseline.json;Features\Manual\Baseline\*.md" LogicalName="Manual.Baseline.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- See the DEPLOY SIZE note at the top. Runs on every publish, including the Oryx build the

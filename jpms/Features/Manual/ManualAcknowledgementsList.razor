@@ -1,0 +1,27 @@
+<Panel Title="Acknowledgements" Class="mb-6" BodyClass="p-0">
+    <RecordsTable Dense="true" IsEmpty="@(Acknowledgements.Count == 0)" EmptyMessage="Nobody has acknowledged a version yet.">
+        <thead>
+            <tr>
+                <th>Version</th>
+                <th>Who</th>
+                <th>Signed as</th>
+                <th>When</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var acknowledgement in Acknowledgements)
+            {
+                <tr>
+                    <td class="tabular-nums">v@(acknowledgement.Version)</td>
+                    <td class="text-content-muted">@acknowledgement.Email</td>
+                    <td class="text-content">@acknowledgement.TypedName</td>
+                    <td class="whitespace-nowrap">@DateTimeText(acknowledgement.AcknowledgedAt)</td>
+                </tr>
+            }
+        </tbody>
+    </RecordsTable>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ManualAcknowledgement> Acknowledgements { get; set; } = Array.Empty<ManualAcknowledgement>();
+}

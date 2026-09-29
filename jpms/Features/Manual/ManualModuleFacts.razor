@@ -1,0 +1,40 @@
+@using Jewel.JPMS.Features.Manual
+
+<Panel Title="Controls" Class="mb-6" BodyClass="p-5">
+    <dl class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 text-sm">
+        <div><dt class="text-xs text-content-subtle">Status</dt><dd><Pill Tone="@Module.Status.ToTone()">@ManualViews.StatusLabel(Module.Status)</Pill></dd></div>
+        <div><dt class="text-xs text-content-subtle">Working version</dt><dd class="tabular-nums">v@(Module.Version)</dd></div>
+        <div><dt class="text-xs text-content-subtle">Published version</dt><dd class="tabular-nums">@(Module.HasPublishedVersion ? $"v{Module.PublishedVersion}" : "Not yet")</dd></div>
+        <div><dt class="text-xs text-content-subtle">Read by</dt><dd class="tabular-nums">@(Module.HasPublishedVersion ? Module.AcknowledgedCount.ToString() : "—")</dd></div>
+        <div><dt class="text-xs text-content-subtle">Owner</dt><dd>@Text(Module.OwnerEmail)</dd></div>
+        <div><dt class="text-xs text-content-subtle">Approver</dt><dd>@Text(Module.ApproverEmail)</dd></div>
+        <div><dt class="text-xs text-content-subtle">Last approved</dt><dd>@DateText(Module.ApprovedAt) @ApprovedBy</dd></div>
+        <div><dt class="text-xs text-content-subtle">Next review</dt><dd>@DateText(Module.NextReviewAt)</dd></div>
+        <div><dt class="text-xs text-content-subtle">Published to</dt><dd>@AudienceText(Module.Audience)</dd></div>
+        <div><dt class="text-xs text-content-subtle">Linked forms</dt><dd>@LinkedForms</dd></div>
+        <div><dt class="text-xs text-content-subtle">Linked standards</dt><dd>@Text(Module.LinkedStandards)</dd></div>
+        <div><dt class="text-xs text-content-subtle">Source sections</dt><dd>@Text(Module.SourceSections)</dd></div>
+        <div class="col-span-2 md:col-span-4"><dt class="text-xs text-content-subtle">Change summary</dt><dd class="whitespace-pre-line">@Text(Module.ChangeSummary)</dd></div>
+    </dl>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public ManualModule Module { get; set; } = default!;
+
+    private string ApprovedBy => string.IsNullOrEmpty(Module.ApprovedByEmail) ? "" : $"by {Module.ApprovedByEmail}";
+
+    private string LinkedForms => Module.HasLinkedForms
+        ? string.Join(", ", Module.LinkedFormSlugs.Select(FormCatalogue.TitleOf))
+        : "—";
+
+    private static string Text(string value) => value.Length == 0 ? "—" : value;
+
+    private static string AudienceText(ManualAudience audience)
+    {
+        var views = ManualViews.All
+            .Where(view => view != ManualView.Office && audience.Includes(view))
+            .Select(ManualViews.Label)
+            .ToList();
+        return views.Count == 0 ? "The office master only" : string.Join(", ", views);
+    }
+}

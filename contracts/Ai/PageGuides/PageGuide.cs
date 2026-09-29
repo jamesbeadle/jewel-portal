@@ -37,6 +37,7 @@ public static class PageGuideCatalogue
             .Concat(FinancePageGuides.Guides)
             .Concat(SitePageGuides.Guides)
             .Concat(OfficePageGuides.Guides)
+            .Concat(ManualPageGuides.Guides)
             .Concat(FormsPageGuides.Guides)
             .ToList();
 
