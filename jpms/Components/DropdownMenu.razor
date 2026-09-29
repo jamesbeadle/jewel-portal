@@ -73,7 +73,7 @@
                                        download="@(entry.Download ? "" : null)"
                                        role="menuitem"
                                        title="@entry.Hint"
-                                       class="block px-3 py-2 text-sm text-content hover:bg-surface-raised transition"
+                                       class="block px-3 py-3 md:py-2 text-sm text-content hover:bg-surface-raised transition"
                                        @onclick="Close">@entry.Label</a>
                                 }
                                 else
@@ -82,7 +82,7 @@
                                             role="menuitem"
                                             title="@entry.Hint"
                                             disabled="@entry.Disabled"
-                                            class="w-full text-left px-3 py-2 text-sm transition @(entry.Disabled ?"text-content-subtle cursor-default" : entry.Destructive ? "text-negative hover:bg-surface-raised" : "text-content hover:bg-surface-raised")"
+                                            class="w-full text-left px-3 py-3 md:py-2 text-sm transition @(entry.Disabled ?"text-content-subtle cursor-default" : entry.Destructive ? "text-negative hover:bg-surface-raised" : "text-content hover:bg-surface-raised")"
                                             @onclick="() => Run(entry)">
                                         @entry.Label@(entry.Selected ? " ✓" : "")
                                     </button>

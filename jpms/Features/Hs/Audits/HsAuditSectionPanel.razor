@@ -4,21 +4,21 @@
 @*
     One section of the framework on the audit form — the spreadsheet's block of rows, each with
     the officer's comment code, rate, class, minus, time-scale, findings, owner and date rectified.
-    Edits live on the drafts until "Save section" sends the dirty rows; the page owns the drafts
-    so the score chip can read every section at once.
+    From md up it is the sheet's table; on a phone, where the officer fills it in on site, each
+    item is a card and the section's Save sits under the last one. Edits live on the drafts until
+    "Save section" sends the dirty rows; the page owns the drafts so the score chip can read every
+    section at once.
 *@
 
 <Panel Title="@($"{Section.Number}. {Section.Name}")" BodyClass="p-0" Class="mb-5">
     <HeaderActions>
         @if (!ReadOnly)
         {
-            <button type="button" class="btn-secondary" disabled="@(!HasChanges || Busy)" @onclick="SaveAsync">
-                @(HasChanges ? $"Save section ({DirtyCount})" : "Saved")
-            </button>
+            <button type="button" class="btn-secondary" disabled="@(!HasChanges || Busy)" @onclick="SaveAsync">@SaveLabel</button>
         }
     </HeaderActions>
     <ChildContent>
-        <div class="overflow-x-auto">
+        <div class="hidden md:block overflow-x-auto">
             <table class="data-table data-table-dense min-w-[1100px]">
                 <thead>
                     <tr>
@@ -37,72 +37,22 @@
                 <tbody>
                     @foreach (var draft in Drafts)
                     {
-                        <tr @key="draft.HsAuditItemId" class="@(draft.IsDirty ? "bg-surface-raised/50" : "")">
-                            <td class="font-mono text-xs whitespace-nowrap">@draft.Code</td>
-                            <td class="text-content">
-                                @draft.Name
-                                @if (draft.HsRecordId is not null)
-                                {
-                                    <Pill Tone="Tone.Info" Class="ml-2" Title="A corrective action is on the register for this item">Action</Pill>
-                                }
-                            </td>
-                            <td>
-                                <select class="field py-1" disabled="@ReadOnly" value="@EnumValue(draft.Comment)"
-                                        @onchange="e => Edit(() => draft.Comment = ParseEnum<HsAuditComment>(e))">
-                                    <option value="">—</option>
-                                    @foreach (var comment in Enum.GetValues<HsAuditComment>())
-                                    {
-                                        <option value="@((int)comment)" title="@comment.DisplayName()">@comment.Code()</option>
-                                    }
-                                </select>
-                            </td>
-                            <td>
-                                <select class="field py-1" disabled="@ReadOnly" value="@EnumValue(draft.Rate)"
-                                        @onchange="e => Edit(() => draft.Rate = ParseEnum<HsAuditRate>(e))">
-                                    <option value="">—</option>
-                                    @foreach (var rate in Enum.GetValues<HsAuditRate>())
-                                    {
-                                        <option value="@((int)rate)" title="@rate.DisplayName()">@((int)rate)</option>
-                                    }
-                                </select>
-                            </td>
-                            <td>
-                                <select class="field py-1" disabled="@ReadOnly" value="@EnumValue(draft.Class)"
-                                        @onchange="e => Edit(() => draft.Class = ParseEnum<HsAuditClass>(e))">
-                                    <option value="">—</option>
-                                    @foreach (var hsAuditClass in Enum.GetValues<HsAuditClass>())
-                                    {
-                                        <option value="@((int)hsAuditClass)" title="@hsAuditClass.DisplayName()">@hsAuditClass.Letter()</option>
-                                    }
-                                </select>
-                            </td>
-                            <td class="text-right text-content-subtle">@draft.PointsOffText</td>
-                            <td>
-                                <select class="field py-1" disabled="@ReadOnly" value="@EnumValue(draft.TimeScale)"
-                                        @onchange="e => draft.TimeScale = ParseEnum<HsAuditTimeScale>(e)">
-                                    <option value="">—</option>
-                                    @foreach (var timeScale in Enum.GetValues<HsAuditTimeScale>())
-                                    {
-                                        <option value="@((int)timeScale)" title="@timeScale.DisplayName()">@timeScale.Code()</option>
-                                    }
-                                </select>
-                            </td>
-                            <td>
-                                <input type="text" class="field py-1 w-full" disabled="@ReadOnly"
-                                       value="@draft.Findings" @oninput="e => draft.Findings = e.Value?.ToString() ?? string.Empty" />
-                            </td>
-                            <td>
-                                <input type="text" class="field py-1 w-full" maxlength="@StoredTextLengths.Name" disabled="@ReadOnly" placeholder="Name"
-                                       value="@draft.OwnerName" @oninput="e => draft.OwnerName = e.Value?.ToString() ?? string.Empty" />
-                            </td>
-                            <td>
-                                <input type="date" class="field py-1" disabled="@ReadOnly"
-                                       value="@DateInput(draft.DateRectified)" @onchange="e => draft.DateRectified = ParseDate(e)" />
-                            </td>
-                        </tr>
+                        <HsAuditItemRow @key="draft.HsAuditItemId" Draft="draft" ReadOnly="@ReadOnly" OnScoreChanged="OnScoreChanged" />
                     }
                 </tbody>
             </table>
+        </div>
+        <div class="md:hidden">
+            @foreach (var draft in Drafts)
+            {
+                <HsAuditItemCard @key="draft.HsAuditItemId" Draft="draft" ReadOnly="@ReadOnly" OnScoreChanged="OnScoreChanged" />
+            }
+            @if (!ReadOnly)
+            {
+                <div class="px-4 py-3 border-t border-line bg-surface-raised">
+                    <button type="button" class="btn-secondary w-full" disabled="@(!HasChanges || Busy)" @onclick="SaveAsync">@SaveLabel</button>
+                </div>
+            }
         </div>
     </ChildContent>
 </Panel>
@@ -118,27 +68,8 @@
 
     private int DirtyCount => Drafts.Count(draft => draft.IsDirty);
     private bool HasChanges => DirtyCount > 0;
-
-    private Task Edit(Action change)
-    {
-        change();
-        return OnScoreChanged.InvokeAsync();
-    }
+    private string SaveLabel => HasChanges ? $"Save section ({DirtyCount})" : "Saved";
 
     private Task SaveAsync() =>
         OnSave.InvokeAsync(Drafts.Where(draft => draft.IsDirty).Select(draft => draft.ToEntry()).ToList());
-
-    private static string EnumValue<TEnum>(TEnum? value) where TEnum : struct, Enum =>
-        value is { } chosen ? Convert.ToInt32(chosen).ToString() : "";
-
-    private static TEnum? ParseEnum<TEnum>(ChangeEventArgs e) where TEnum : struct, Enum =>
-        int.TryParse(e.Value?.ToString(), out var value) ? (TEnum)Enum.ToObject(typeof(TEnum), value) : null;
-
-    private static string DateInput(DateTimeOffset? value) =>
-        value is { } date ? date.ToString("yyyy-MM-dd") : "";
-
-    private static DateTimeOffset? ParseDate(ChangeEventArgs e) =>
-        DateTime.TryParseExact(e.Value?.ToString(), "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var value)
-            ? new DateTimeOffset(value, TimeSpan.Zero)
-            : null;
 }

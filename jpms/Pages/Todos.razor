@@ -124,7 +124,7 @@
             @* The project filter: every project with items, plus company-wide (no-project) only.
                Disabled until the options land — a short list that quietly grows misleads as a 0
                count does — but a filter is a control, so it says so in its own placeholder. *@
-            <select class="field !w-auto text-xs" value="@scopeFilter" @onchange="e => scopeFilter = e.Value?.ToString() ?? ScopeAll"
+            <select class="field !w-auto" value="@scopeFilter" @onchange="e => scopeFilter = e.Value?.ToString() ?? ScopeAll"
                     disabled="@(!filtersReady)">
                 <option value="@ScopeAll">@(filtersReady ? "All" : "Loading…")</option>
                 <option value="@ScopeGeneral">Company-wide</option>
@@ -139,7 +139,7 @@
                data like the scope filter, so it needs no assignable-pool fetch and never offers a
                row that matches nothing. Unassigned is a role-slot answer, so it lives here — and
                empties the person filter. *@
-            <select class="field !w-auto text-xs" value="@roleFilter" @onchange="OnRoleFilterChange"
+            <select class="field !w-auto" value="@roleFilter" @onchange="OnRoleFilterChange"
                     disabled="@(!filtersReady)">
                 <option value="">@(filtersReady ? "Any role" : "Loading…")</option>
                 @if (CanSeeAll || HasUnassigned)
@@ -159,7 +159,7 @@
                    person are two filters, not one combined list: pick a role to narrow the person
                    list to its holders, a person straight away to see everything pinned to them,
                    or both to intersect. *@
-                <select class="field !w-auto text-xs" value="@personFilter" @onchange="e => personFilter = e.Value?.ToString() ?? string.Empty"
+                <select class="field !w-auto" value="@personFilter" @onchange="e => personFilter = e.Value?.ToString() ?? string.Empty"
                         disabled="@(!filtersReady || roleFilter == Unassigned)">
                     <option value="">@(filtersReady ? "Anyone" : "Loading…")</option>
                     @foreach (var person in FilterablePeople)

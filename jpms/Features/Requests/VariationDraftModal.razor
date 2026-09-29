@@ -55,7 +55,7 @@
                                 @* A control, not a region: it renders disabled with a "Loading…"
                                    placeholder rather than behind a gate, so the layout holds
                                    still and a wrong choice cannot be made (CLAUDE.md). *@
-                                <select class="field mt-1 ml-6 min-w-[14rem] text-sm" value="@row.CostCode"
+                                <select class="field mt-1 ml-6 min-w-[14rem]" value="@row.CostCode"
                                         disabled="@(!CostCenters.IsLoaded)"
                                         @onchange="e => OnLineCostCode.InvokeAsync((i, e.Value?.ToString() ?? string.Empty))">
                                     <option value="">@(CostCenters.IsLoaded ? "Cost centre…" : "Loading…")</option>

@@ -25,7 +25,7 @@
    being truncated; it's capped to the viewport so it can't run off the edge. *@
 <div class="relative @WidthClass" @ref="wrapperRef">
     <input @ref="inputRef" type="text" disabled="@Disabled" autocomplete="off"
-           class="w-full rounded pr-6 text-sm placeholder:text-content-subtle disabled:opacity-40 @InputClass @(HasValue || isOpen ?"text-content" : "text-content-subtle")"
+           class="w-full rounded pr-6 text-base md:text-sm placeholder:text-content-subtle disabled:opacity-40 @InputClass @(HasValue || isOpen ?"text-content" : "text-content-subtle")"
            style="text-overflow:ellipsis"
            value="@DisplayText" placeholder="@InputPlaceholder"
            @onclick="OpenAsync" @oninput="OnInput" @onkeydown="OnKeyDown" />
@@ -47,7 +47,7 @@
                 var i = index++;
                 var value = option.Value;
                 <button type="button" id="@ItemId(i)" tabindex="-1"
-                        class="block w-full text-left px-3 py-1.5 text-sm whitespace-nowrap @ItemClass(i, value)"
+                        class="block w-full text-left px-3 py-2.5 md:py-1.5 text-sm whitespace-nowrap @ItemClass(i, value)"
                         @onmousedown="() => SelectAsync(value)" @onmousedown:preventDefault="true"
                         @onmousedown:stopPropagation="true">
                     @option.Label

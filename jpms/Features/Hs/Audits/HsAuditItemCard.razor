@@ -1,0 +1,60 @@
+@namespace Jewel.JPMS.Features.Hs.Audits
+@using Jewel.JPMS.Contracts.Hs
+
+<div class="px-4 py-4 border-b border-line-strong last:border-b-0 space-y-3 @(Draft.IsDirty ? "bg-surface-raised/50" : "")">
+    <div class="flex items-start gap-2">
+        <span class="font-mono text-xs text-content-subtle pt-0.5">@Draft.Code</span>
+        <span class="text-sm text-content">@Draft.Name</span>
+        @if (Draft.HsRecordId is not null)
+        {
+            <Pill Tone="Tone.Info" Class="ml-auto shrink-0" Title="A corrective action is on the register for this item">Action</Pill>
+        }
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+        <FormField Label="Comment">
+            <HsAuditKeySelect TKey="HsAuditComment" Value="@Draft.Comment" ValueChanged="comment => Score(() => Draft.Comment = comment)"
+                              Code="comment => comment.Code()" Describe="comment => comment.DisplayName()" Disabled="@ReadOnly" />
+        </FormField>
+        <FormField Label="Rate">
+            <HsAuditKeySelect TKey="HsAuditRate" Value="@Draft.Rate" ValueChanged="rate => Score(() => Draft.Rate = rate)"
+                              Code="HsAuditItemEdits.Rate" Describe="rate => rate.DisplayName()" Disabled="@ReadOnly" />
+        </FormField>
+        <FormField Label="Class" Hint="@PointsOffHint">
+            <HsAuditKeySelect TKey="HsAuditClass" Value="@Draft.Class" ValueChanged="hsAuditClass => Score(() => Draft.Class = hsAuditClass)"
+                              Code="hsAuditClass => hsAuditClass.Letter()" Describe="hsAuditClass => hsAuditClass.DisplayName()" Disabled="@ReadOnly" />
+        </FormField>
+        <FormField Label="Time-scale">
+            <HsAuditKeySelect TKey="HsAuditTimeScale" Value="@Draft.TimeScale" ValueChanged="timeScale => Draft.TimeScale = timeScale"
+                              Code="timeScale => timeScale.Code()" Describe="timeScale => timeScale.DisplayName()" Disabled="@ReadOnly" />
+        </FormField>
+    </div>
+    <FormField Label="Findings / advice given">
+        <input type="text" class="field" disabled="@ReadOnly"
+               value="@Draft.Findings" @oninput="e => Draft.Findings = e.Value?.ToString() ?? string.Empty" />
+    </FormField>
+    <div class="grid grid-cols-2 gap-3">
+        <FormField Label="Owner">
+            <input type="text" class="field" maxlength="@StoredTextLengths.Name" disabled="@ReadOnly" placeholder="Name"
+                   value="@Draft.OwnerName" @oninput="e => Draft.OwnerName = e.Value?.ToString() ?? string.Empty" />
+        </FormField>
+        <FormField Label="Rectified">
+            <input type="date" class="field" disabled="@ReadOnly"
+                   value="@HsAuditItemEdits.DateInput(Draft.DateRectified)" @onchange="e => Draft.DateRectified = HsAuditItemEdits.ParseDate(e)" />
+        </FormField>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public HsAuditItemDraft Draft { get; set; } = default!;
+    [Parameter] public bool ReadOnly { get; set; }
+    /// <summary>Raised after an edit that moves the score, so the page's live chip follows.</summary>
+    [Parameter] public EventCallback OnScoreChanged { get; set; }
+
+    private string? PointsOffHint => Draft.PointsOffText is { Length: > 0 } pointsOff ? $"{pointsOff} off" : null;
+
+    private Task Score(Action change)
+    {
+        change();
+        return OnScoreChanged.InvokeAsync();
+    }
+}

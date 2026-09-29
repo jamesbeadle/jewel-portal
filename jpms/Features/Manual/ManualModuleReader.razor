@@ -40,7 +40,7 @@
 
     @if (!Module.HasAcknowledged && CanAcknowledge)
     {
-        <div class="flex items-end gap-3 mt-4 print:hidden">
+        <div class="flex flex-col sm:flex-row sm:items-end gap-3 mt-4 print:hidden">
             <FormField Label="Type your name to confirm you have read this version" Class="grow">
                 <input class="field" @bind="typedName" maxlength="@ManualLimits.TypedName" />
             </FormField>
