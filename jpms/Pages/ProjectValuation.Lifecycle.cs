@@ -29,16 +29,18 @@ public partial class ProjectValuation
         if (invoicesSection is not null) await invoicesSection.ReloadAsync();
     }, "Couldn't delete the claim — the server may be restarting. Please try again.");
 
-    // ---- Raise the invoice from the claim ----------------------------------
+    // ---- Raise the claim ---------------------------------------------------
     // The handover point: the project team has valued and locked the claim; accounts pick it
-    // up here. One move only — creates the invoice for the claim's payment due (first day of
-    // the claim date's month as its period) as a DRAFT against the claim's locked statement —
-    // the client-facing form of the report. Nothing leaves the portal. Sending the claim to
+    // up here. One move only — creates the valuation invoice for the claim's payment due
+    // (first day of the claim date's month as its period) as a DRAFT against the claim's
+    // locked statement — the client-facing form of the report. Nothing leaves the portal and
+    // nothing reaches Xero (that is step 4, "Raise in Xero & issue"). Sending the claim to
     // the architect/client happens outside (or via the card's Email statement), and the
     // card's next primary button, "Record claim sent", records that it went — so raising and
-    // claiming are two clicks that match two real-world moments. (Until 2026-09-07 this was
+    // sending are two clicks that match two real-world moments. (Until 2026-09-07 this was
     // one click that also marked the claim Submitted, worded "Raise & send invoice" — read as
-    // the portal emailing the invoice, which it never did.)
+    // the portal emailing the invoice, which it never did; until 2026-09-29 the button read
+    // "Raise invoice", read as the sales invoice going to Xero, which it never did either.)
     private Task RaiseInvoiceAsync()
     {
         if (Selected is null || busy) return Task.CompletedTask;
@@ -52,6 +54,6 @@ public partial class ProjectValuation
             await Invoices.CreateAsync(ProjectId, period, amount, claim.ValuationClaimId);
             await ReloadInvoicePanelsAsync();
             OnCertifiedChanged();
-        }, "Couldn't raise the invoice — the server may be restarting. Please try again.");
+        }, "Couldn't raise the claim — the server may be restarting. Please try again.");
     }
 }

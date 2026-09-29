@@ -1142,7 +1142,7 @@ Modals: none (the "workspace instead of modals" pattern is explicit in the page'
   - AlertBanner (negative) 🔒 — dismissible actionError
   - LoadGate ✅ ("Loading the claim")
     - ClaimProgressDialog ✅ (modal, IsOpen-bound)
-    - Claim card 🔒 — name + StatusPill ⚠️, stage-hint text, DropdownMenu ✅ "Actions", 6-step inline Stepper ⚠️ (done/current dots), ONE stage-driven PrimaryButton 🔒 (9-way switch: Preapprove/Raise invoice/Send/Approve/Issue/Amend/Start next/Confirm)
+    - Claim card 🔒 — name + StatusPill ⚠️, stage-hint text, DropdownMenu ✅ "Actions", 6-step inline Stepper ⚠️ (done/current dots), ONE stage-driven PrimaryButton 🔒 (9-way switch: Preapprove/Raise claim/Send/Approve/Issue/Amend/Start next/Confirm)
     - EmptyState 🔒 — "No claim selected"
   - SecondaryButton "Add line" 🔒 (Draft claim only)
   - LoadGate ✅ ("Loading the valuation report")

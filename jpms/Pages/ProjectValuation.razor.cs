@@ -95,9 +95,9 @@ public partial class ProjectValuation
                 "Set each line's cumulative % complete (Bulk edit % handles many at once), then lock the claim.",
             // The handover: the project team's part is done; from here the card is accounts'.
             ClaimStage.AwaitingInvoice =>
-                $"Valued and locked by the project team — {Money(claim.TotalWorksComplete)} works complete; the statement is frozen. Over to accounts: raise the invoice for the amount due. Raising files it as a draft — nothing is sent from here.",
+                $"Valued and locked by the project team — {Money(claim.TotalWorksComplete)} works complete; the statement is frozen. Over to accounts: raise the claim for the amount due. Raising files a draft valuation invoice here in the portal — nothing is sent, and nothing reaches Xero until step 4.",
             ClaimStage.InvoiceDraft =>
-                $"Invoice {invoice?.DisplayNumber} raised for {Money(invoice?.Amount ?? 0m)}, not yet claimed. Send the statement to the architect/client (Email statement, above), then record the claim as sent — or, if this client runs no approval loop, issue it directly from Actions.",
+                $"Claim raised as {invoice?.DisplayNumber} for {Money(invoice?.Amount ?? 0m)} — a portal draft, not yet sent and not in Xero. Send the statement to the architect/client (Email statement, above), then record the claim as sent — or, if this client runs no approval loop, raise it in Xero and issue it from Actions.",
             ClaimStage.AwaitingApproval =>
                 $"Claimed — invoice {invoice?.DisplayNumber} for {Money(invoice?.Amount ?? 0m)} is with the architect/client{(invoice?.SubmittedAt is { } sub ? $" since {sub:dd MMM yyyy}" : "")}. Record their approval (or rejection, in Actions) when it comes.",
             ClaimStage.ApprovedAwaitingIssue =>
@@ -275,7 +275,7 @@ public partial class ProjectValuation
     private ValuationClaim? LatestClaim => Claims.OrderByDescending(c => c.ClaimNumber).FirstOrDefault();
 
     // The claim's payment due as the report currently computes it (frozen for a locked claim,
-    // live for a draft) — the figure the "Raise invoice" button offers to bill.
+    // live for a draft) — the figure the "Raise claim" button offers to bill.
     private decimal PaymentDueNow => Selected is null
         ? 0m
         : ValuationSummaryFigures.For(
