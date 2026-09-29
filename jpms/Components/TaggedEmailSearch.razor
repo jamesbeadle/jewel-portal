@@ -1,8 +1,74 @@
+@namespace Jewel.JPMS.Components
+@using Jewel.JPMS.Features.Triage
+@using Jewel.JPMS.Features.Triage.Panels
+@inject IQueryClient Queries
+@inject SessionService Session
+@implements IDisposable
 
+@*
+    The keywords of a to-do search, put to the projects mailbox as well: the emails that match,
+    each wearing its record-tag chips, which link through to the records the email feeds. Mailbox-
+    wide on purpose — the email being hunted is often filed against another project's record, or
+    none. Renders only for the triage roles, the mailbox search endpoint's own gate; everyone else
+    sees nothing here and the to-do list above is untouched.
+*@
 
-    public void Dispose()
-    {
-        debounce?.Cancel();
-        debounce?.Dispose();
-    }
+@if (CanSearchMailbox && HasQuery)
+{
+    <div class="border-t border-line pt-4 mt-4">
+        <h3 class="eyebrow mb-2">Emails</h3>
+
+        @if (error is not null)
+        {
+            <Notice Tone="Tone.Negative">@error</Notice>
+        }
+        else if (results is null)
+        {
+            <p class="text-sm text-content-subtle italic">Searching the projects mailbox…</p>
+        }
+        else if (results.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">No emails in the projects mailbox match "@Query".</p>
+        }
+        else
+        {
+            <ul class="space-y-2">
+                @foreach (var email in results)
+                {
+                    <li @key="email.Id" class="rounded border border-line px-3 py-2">
+                        <div class="flex items-baseline justify-between gap-3">
+                            <span class="truncate text-xs text-content-muted">@DisplayFrom(email)</span>
+                            <span class="shrink-0 text-xs text-content-subtle">@DateFormats.DateText(email.ReceivedAt)</span>
+                        </div>
+                        <p class="truncate text-sm text-content">@email.Subject</p>
+                        @if (!string.IsNullOrWhiteSpace(email.BodyPreview))
+                        {
+                            <p class="mt-1 line-clamp-2 text-xs text-content-subtle">@email.BodyPreview</p>
+                        }
+                        @if (email.Categories.Count > 0)
+                        {
+                            <div class="mt-2 flex flex-wrap items-center gap-1">
+                                @foreach (var tag in email.Categories)
+                                {
+                                    var link = LinkFor(tag);
+                                    @if (link is not null)
+                                    {
+                                        <a href="@link.Href" title="@link.Record.Title"
+                                           class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent hover:underline">
+                                            <span>@RecordLinkVocabulary.RecordTypeLabel(link.Record.Type)</span>
+                                            <span class="font-mono">@link.Record.Reference</span>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <Pill Tone="Tone.Muted">@TagStem(tag)</Pill>
+                                    }
+                                }
+                            </div>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
 }
