@@ -21,6 +21,11 @@ public sealed class AiConnectorTests
     private static SignedInUser UserWith(params Role[] roles) =>
         new("test@jewelbb.co.uk", "Test User", roles);
 
+    // An administrator as SignedInUserResolver hands them to a gate: the directory's Admin role
+    // expanded to every login role (UserRoles.Expand), never the bare Role.Admin on its own.
+    private static SignedInUser Administrator() =>
+        new("test@jewelbb.co.uk", "Test User", UserRoles.Expand(new[] { Role.Admin }));
+
     [Fact]
     public void DriftCheck_passes()
     {
@@ -679,7 +684,7 @@ public sealed class AiConnectorTests
         Assert.True(AiActionRegistry.Find("retire_worker")!.RequiresConfirmation);
         Assert.Contains("WithdrawnByEmail", AiActionRegistry.Find("withdraw_lead_marketing_consent")!.EmailStamps);
 
-        var administrator = AiToolCatalogue.ForConnector(UserWith(Role.Admin));
+        var administrator = AiToolCatalogue.ForConnector(Administrator());
         Assert.Contains(administrator, tool => tool.Name == "get_person_dossier");
         Assert.DoesNotContain(AiToolCatalogue.ForConnector(UserWith(Role.ProjectManager)), tool => tool.Name == "get_person_dossier");
         Assert.Contains("marketingConsent", administrator.Single(tool => tool.Name == "get_lead").Description);
@@ -778,7 +783,7 @@ public sealed class AiConnectorTests
         foreach (var name in new[]
         {
             "send_request_email", "send_request_emails", "send_request_reply",
-            "send_work_order_po_email", "send_valuation_report_snapshot_email",
+            "send_work_order_po_email", "send_valuation_statement_email",
             "send_bid_package_invite_to_tender_list", "send_bid_package_invite",
             "send_subcontractor_statement_email", "send_programme_reply", "send_defect_to_supplier",
             "send_variation_order_email", "resend_request_document"
@@ -795,7 +800,7 @@ public sealed class AiConnectorTests
         // that is where a caller who wants a draft is sent.
         foreach (var name in new[]
         {
-            "send_work_order_po_email", "send_valuation_report_snapshot_email",
+            "send_work_order_po_email", "send_valuation_statement_email",
             "send_bid_package_invite_to_tender_list", "send_bid_package_invite",
             "send_subcontractor_statement_email", "send_programme_reply", "send_variation_order_email"
         })
