@@ -21,10 +21,11 @@
                     @allMessages.Count message@(allMessages.Count == 1 ? "" : "s")@(InternalCount > 0 ? $" · {InternalCount} internal" : "")
                 </span>
             }
-            @if (!string.IsNullOrWhiteSpace(RequestReference))
+            @if (!string.IsNullOrWhiteSpace(RequestReference) && Session.IsInternal)
             {
                 @* Search the whole mailbox and tag what belongs to this request — the conversation
-                   AND the assistant's context both get richer with each tag. *@
+                   AND the assistant's context both get richer with each tag. The mailbox is the
+                   business's own, so a party never sees the finder. *@
                 <Jewel.JPMS.Features.Triage.Panels.EmailFinder Type="RecordType.Request" RecordId="@RequestId"
                              RecordReference="@RequestReference" ExcludeTag="@($"JPMS/{RequestReference}")"
                              OnLinked="LoadAsync" />

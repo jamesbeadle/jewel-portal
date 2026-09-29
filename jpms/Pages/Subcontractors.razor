@@ -29,7 +29,7 @@
     @if (!CanAccess)
     {
         <PageHeader Title="Not available" />
-        <p class="text-content-muted">The directory is restricted to administrators, directors and project managers.</p>
+        <p class="text-content-muted">The directory is restricted to the office and management roles.</p>
     }
     else
     {
@@ -58,7 +58,7 @@
         @* The group chips: who you're looking for. Subcontractors is the company directory
            (the page's original body, unchanged); the other groups fold in alongside. *@
         <div class="flex flex-wrap items-center gap-2 mb-5">
-            @foreach (var option in GroupChips)
+            @foreach (var option in VisibleGroupChips)
             {
                 var value = option.Group;
                 <button type="button" class="@GroupChipClass(value)" @onclick="() => SelectGroup(value)">@option.Label</button>

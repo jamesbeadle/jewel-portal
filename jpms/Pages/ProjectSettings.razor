@@ -38,6 +38,7 @@
                         <StatTile Label="Entity"          Value="@Project.Organisation.ShortCode()" />
                         <StatTile Label="Project Manager" Value="@Project.ProjectManagerEmail" />
                         <StatTile Label="Client"          Value="@Project.ClientName" />
+                        <StatTile Label="Site manager"    Value="@SiteManager(Project)" />
                         <StatTile Label="Site address"    Value="@SiteAddress(Project)" />
                         <StatTile Label="Xero site"       Value="@XeroSite(Project)" />
                         <StatTile Label="Xero contact"    Value="@XeroContact(Project)" />
@@ -85,6 +86,12 @@
                 .Select(part => part.Trim()));
         return joined.Length == 0 ? "Not set" : joined;
     }
+
+    private static string SiteManager(Project project) =>
+        string.IsNullOrWhiteSpace(project.SiteManagerName) && string.IsNullOrWhiteSpace(project.SiteManagerEmail) ? "Not set"
+            : string.IsNullOrWhiteSpace(project.SiteManagerName) ? project.SiteManagerEmail
+            : string.IsNullOrWhiteSpace(project.SiteManagerEmail) ? project.SiteManagerName
+            : $"{project.SiteManagerName} · {project.SiteManagerEmail}";
 
     // The project's option in Xero's "Sites" tracking category — "Not set" is worth surfacing
     // because the Xero write-back refuses to run until it is mapped.

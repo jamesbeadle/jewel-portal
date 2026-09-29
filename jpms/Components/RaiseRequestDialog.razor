@@ -1,5 +1,6 @@
 @inject IRequestRegister RequestRegister
 @inject IRequestAttachmentStore Attachments
+@inject SessionService Session
 
 @*
     The raise-request dialog: RequestForm (the shared fields/validation/payload component — the
@@ -16,7 +17,8 @@
        OnConfirm="Submit"
        Class="max-w-2xl">
     <div class="space-y-3">
-        <RequestForm @ref="form" ProjectId="@ProjectId" LockToRfi="@RfiOnly" Busy="@saving" OnSubmit="SendAsync" />
+        <RequestForm @ref="form" ProjectId="@ProjectId" LockToRfi="@RfiOnly" Busy="@saving" OnSubmit="SendAsync"
+                     ShowAttachments="@Session.CanOpen(JpmsRoleSets.DrawingReaders)" />
         @if (attachmentWarning is not null)
         {
             <Notice Tone="Tone.Warning">@attachmentWarning</Notice>

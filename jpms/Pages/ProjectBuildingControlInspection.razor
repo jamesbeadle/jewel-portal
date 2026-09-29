@@ -96,7 +96,7 @@
                 </div>
                 <div class="flex items-center justify-between">
                     <button type="button" class="btn-primary"
-                            disabled="@(string.IsNullOrWhiteSpace(editStageName) || busy || !HasEdits(inspection))"
+                            disabled="@(string.IsNullOrWhiteSpace(editStageName) || busy || !CanManage || !HasEdits(inspection))"
                             @onclick="() => SaveAsync(inspection)">
                         Save changes
                     </button>
@@ -110,7 +110,7 @@
             <section class="panel p-5 mb-5">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Photos</h3>
-                    <label class="text-xs text-accent hover:underline cursor-pointer @(busy ?"opacity-50 pointer-events-none" : "")">
+                    <label class="text-xs text-accent hover:underline cursor-pointer @(busy || !CanManage ?"opacity-50 pointer-events-none" : "")">
                         + Add photos
                         <InputFile OnChange="e => UploadAsync(inspection, e, BuildingControlAttachmentKind.Photo)" multiple accept="image/*" class="hidden" />
                     </label>
@@ -131,7 +131,7 @@
                                 </a>
                                 <button type="button" title="Remove photo"
                                         class="absolute top-1 right-1 hidden group-hover:flex items-center justify-center w-6 h-6 rounded-full bg-surface/90 text-content-subtle hover:text-negative text-xs"
-                                        disabled="@busy" @onclick="() => RemoveFileAsync(photo.BuildingControlAttachmentId)">✕</button>
+                                        disabled="@(busy || !CanManage)" @onclick="() => RemoveFileAsync(photo.BuildingControlAttachmentId)">✕</button>
                             </figure>
                         }
                     </div>
@@ -142,7 +142,7 @@
             <section class="panel p-5 mb-5">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Documents</h3>
-                    <label class="text-xs text-accent hover:underline cursor-pointer @(busy ?"opacity-50 pointer-events-none" : "")">
+                    <label class="text-xs text-accent hover:underline cursor-pointer @(busy || !CanManage ?"opacity-50 pointer-events-none" : "")">
                         + Add files
                         <InputFile OnChange="e => UploadAsync(inspection, e, kind: null)" multiple class="hidden" />
                     </label>
@@ -166,7 +166,7 @@
                                     <span class="text-xs text-content-subtle ml-2">@file.Kind.Label() · @FormatSize(file.FileSizeBytes)</span>
                                     <span class="text-xs text-content-subtle ml-2">· @SourceLabel(file.Source) @DateText(file.AddedAt)</span>
                                 </div>
-                                <button type="button" class="text-xs text-content-muted hover:text-negative" disabled="@busy"
+                                <button type="button" class="text-xs text-content-muted hover:text-negative" disabled="@(busy || !CanManage)"
                                         @onclick="() => RemoveFileAsync(file.BuildingControlAttachmentId)">Remove</button>
                             </li>
                         }

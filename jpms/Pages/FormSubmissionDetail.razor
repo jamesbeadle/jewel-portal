@@ -4,6 +4,7 @@
 @inject IQueryClient Queries
 @inject ICommandSender Commands
 @inject FormsPageEntry Entry
+@inject SessionService Session
 
 <PageTitle>@Title · JBB Portal</PageTitle>
 
@@ -26,8 +27,15 @@
                         <ToolbarButton Icon="download" Label="Download the form as a PDF"
                                        Href="@($"/api/form-submissions/{FormSubmissionId}/pdf")" Download="true" />
                     </Toolbar>
-                    <DropdownMenu Label="@opened.Submission.Status.DisplayName()" ToggleClass="@Pill.ClassesFor(opened.Submission.Status.ToTone())"
-                                  Items="StatusMoves" Disabled="@(write.IsBusy || IsDestroyed)" ToggleTitle="Where the office has got to" />
+                    @if (CanMoveStatus)
+                    {
+                        <DropdownMenu Label="@opened.Submission.Status.DisplayName()" ToggleClass="@Pill.ClassesFor(opened.Submission.Status.ToTone())"
+                                      Items="StatusMoves" Disabled="@(write.IsBusy || IsDestroyed)" ToggleTitle="Where the office has got to" />
+                    }
+                    else
+                    {
+                        <Pill Tone="@opened.Submission.Status.ToTone()">@opened.Submission.Status.DisplayName()</Pill>
+                    }
                 </Actions>
             </PageHeader>
             @if (write.Problem is { } refusal)

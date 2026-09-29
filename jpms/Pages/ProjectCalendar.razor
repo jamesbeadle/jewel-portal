@@ -28,10 +28,13 @@
             <span class="text-content-subtle w-32 text-center text-sm">@MonthLabel</span>
             <button type="button" class="btn-secondary" @onclick="() => MoveMonth(1)">Next ›</button>
             <button type="button" class="btn-secondary" @onclick="GoToday">Today</button>
-            <button type="button" class="btn-primary ml-2"
-                    @onclick="OpenAdd">
-                Add event
-            </button>
+            @if (CanManage)
+            {
+                <button type="button" class="btn-primary ml-2"
+                        @onclick="OpenAdd">
+                    Add event
+                </button>
+            }
             </Actions>
         </SectionHeader>
 
@@ -237,18 +240,21 @@
         </div>
     </ChildContent>
     <FooterContent>
-        @if (editingId is not null)
+        @if (editingId is not null && CanManage)
         {
             <button type="button" class="text-sm font-medium text-negative hover:underline underline-offset-4 mr-auto disabled:opacity-50"
                     disabled="@busy" @onclick="DeleteAsync">
                 @(confirmingDelete ? "Really delete?" : "Delete")
             </button>
         }
-        <button type="button" class="btn-neutral" disabled="@busy" @onclick="CloseEdit">Cancel</button>
-        <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(fTitle) || string.IsNullOrWhiteSpace(fDate))"
-                @onclick="SaveAsync">
-            @(editingId is null ? "Add event" : "Save changes")
-        </button>
+        <button type="button" class="btn-neutral" disabled="@busy" @onclick="CloseEdit">@(CanManage ? "Cancel" : "Close")</button>
+        @if (CanManage)
+        {
+            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(fTitle) || string.IsNullOrWhiteSpace(fDate))"
+                    @onclick="SaveAsync">
+                @(editingId is null ? "Add event" : "Save changes")
+            </button>
+        }
     </FooterContent>
 </Modal>
 

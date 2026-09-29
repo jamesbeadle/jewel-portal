@@ -16,16 +16,8 @@ public sealed class RequestAttachmentEndpoints
     // Effectively "whatever the Functions host will accept" — phone photos are a few MB.
     private const long MaxAttachmentBytes = 64L * 1024 * 1024;
 
-    private static readonly RoleSet AllowedToRead = JpmsRoleSets.DeliveryTeamAndParties;
-    private static readonly RoleSet AllowedToAttach = RoleSet.Of(
-        Role.Admin,
-        JpmsRoles.Director,
-        JpmsRoles.FinanceDirector,
-        JpmsRoles.ProjectManager,
-        JpmsRoles.Estimator,
-        JpmsRoles.SiteManager,
-        JpmsRoles.Foreman,
-        JpmsRoles.Architect);
+    private static readonly RoleSet AllowedToRead = RequestAttachmentRoles.Readers;
+    private static readonly RoleSet AllowedToAttach = RequestAttachmentRoles.AllowedToAttach;
 
     private readonly SignedInUserResolver users;
     private readonly JpmsContext context;

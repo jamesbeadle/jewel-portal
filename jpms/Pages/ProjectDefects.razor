@@ -25,10 +25,13 @@
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="defects">
         <SectionHeader Title="Defects">
             <Actions>
-            <button type="button" class="btn-primary"
-                    @onclick="() => raiseOpen = !raiseOpen">
-                @(raiseOpen ? "Close" : "Raise defect")
-            </button>
+            @if (CanRaise)
+            {
+                <button type="button" class="btn-primary"
+                        @onclick="() => raiseOpen = !raiseOpen">
+                    @(raiseOpen ? "Close" : "Raise defect")
+                </button>
+            }
             </Actions>
         </SectionHeader>
 
@@ -149,7 +152,7 @@
                                 @DateText(defect.RaisedAt)
                             </td>
                             <td class="whitespace-nowrap">
-                                <select class="field py-1" value="@((int)defect.Status)" disabled="@busy"
+                                <select class="field py-1" value="@((int)defect.Status)" disabled="@(busy || !CanManage)"
                                         @onchange="e => SetStatusAsync(defect, e)">
                                     @foreach (var status in Enum.GetValues<DefectStatus>())
                                     {
@@ -177,6 +180,10 @@
     private string? actionError;
 
     private bool raiseOpen;
+
+    private bool CanRaise => Session.CanOpen(DefectRoles.Raisers);
+    private bool CanManage => Session.CanOpen(DefectRoles.Managers);
+
     private string newLocation = "";
     private string newDescription = "";
     private string newAssignedTo = "";

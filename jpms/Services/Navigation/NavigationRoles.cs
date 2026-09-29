@@ -28,9 +28,10 @@ public static class NavigationRoles
 
     // The per-role nav (2026-09-22, Nigel: "review each role and build the appropriate homepage
     // dashboard and side nav for their role") replaced the 2026-08-11 clamp that showed every
-    // row to the directors alone. The hard line is external logins: an architect sees the four
-    // project rows their scoped reads admit, and clients and subcontractors see Home alone (their
-    // own portal pages). Administrators bypass every set (DesktopNavigation.CanSee).
+    // row to the directors alone. The hard line is external logins: an architect sees the two
+    // project rows their scoped reads admit (RFIs and Variation Orders, RequestRoles), and clients
+    // and subcontractors see Home alone (their own portal pages). Administrators bypass every set
+    // (DesktopNavigation.CanSee).
 
     // The internal office/management roles that can open projects.
     public static readonly Role[] ProjectRoles =

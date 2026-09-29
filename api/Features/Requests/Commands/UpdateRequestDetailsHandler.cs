@@ -8,11 +8,13 @@ public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestD
 {
     private readonly JpmsContext context;
     private readonly IMailboxGraphClient graph;
+    private readonly SignedInCaller caller;
     private readonly ILogger<UpdateRequestDetailsHandler> logger;
-    public UpdateRequestDetailsHandler(JpmsContext context, IMailboxGraphClient graph, ILogger<UpdateRequestDetailsHandler> logger)
+    public UpdateRequestDetailsHandler(JpmsContext context, IMailboxGraphClient graph, SignedInCaller caller, ILogger<UpdateRequestDetailsHandler> logger)
     {
         this.context = context;
         this.graph = graph;
+        this.caller = caller;
         this.logger = logger;
     }
 
@@ -34,15 +36,14 @@ public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestD
         entity.Title = command.Title;
         entity.Description = command.Description;
         entity.Status = (int)command.Status;
-        entity.Value = command.Value;
         entity.ResponseText = command.ResponseText;
         entity.RespondedByEmail = command.RespondedByEmail;
         entity.ImpliesVariation = command.ImpliesVariation;
         entity.DrawingRef = command.DrawingRef;
         entity.ResponseDue = command.ResponseDue;
         entity.RelatedDrawingSpec = command.RelatedDrawingSpec;
-        entity.InternalNotes = command.InternalNotes;
         entity.ClientNotes = command.ClientNotes;
+        KeepTheInternalFieldsFromAParty(entity, command);
         // EOT -> NoD provenance only makes sense on an EOT; never write it for other kinds. A null on
         // the command means "not supplied" (the parameter is optional and most edit surfaces don't
         // carry it), NOT "clear the link" — so an existing link is preserved unless a value arrives.
@@ -105,6 +106,16 @@ public sealed class UpdateRequestDetailsHandler : ICommandHandler<UpdateRequestD
             .Where(item => item.RequestId == entity.RequestId)
             .ToListAsync(cancellationToken);
         return entity.ToModel(items);
+    }
+
+    /// <summary>A party's read of the request had its value and internal notes stripped
+    /// (PartyReads), so the record they send back carries nulls for both; their write keeps what
+    /// the business holds.</summary>
+    private void KeepTheInternalFieldsFromAParty(RequestEntity entity, UpdateRequestDetails command)
+    {
+        if (caller.IsAParty) return;
+        entity.Value = command.Value;
+        entity.InternalNotes = command.InternalNotes;
     }
 
     // The days sought / awarded only mean anything on an EOT, and follow the "null means not
