@@ -22,7 +22,7 @@
         }
         @if (IsOnSite)
         {
-            <MyDayLogForm Project="Project" OnPhotoProblem="problem => photoProblem = problem" />
+            <MyDayLogForm Project="Project" RecentCodes="RecentCodes" OnPhotoProblem="problem => photoProblem = problem" />
         }
         @if (Project.IsLoggedToday)
         {
@@ -34,6 +34,7 @@
 @code {
     [Parameter, EditorRequired] public MyLabourProject Project { get; set; } = default!;
     [Parameter] public IReadOnlyList<MyRecentTimesheet> TodaysHours { get; set; } = Array.Empty<MyRecentTimesheet>();
+    [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
 
     private string? photoProblem;
 

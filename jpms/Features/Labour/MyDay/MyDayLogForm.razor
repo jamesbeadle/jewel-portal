@@ -4,28 +4,23 @@
 @inject MyDayPhotoUploader Photos
 
 <div class="space-y-4">
+    @if (isRestored)
+    {
+        <Notice Dismissible OnDismiss="() => isRestored = false">We kept what you'd typed before the page reloaded. Pick the photos again — a browser can't keep those.</Notice>
+    }
     <FormField Label="Hours today" Hint="Half-hour steps for anything in between.">
-        <MyDayHoursPicker @bind-Hours="hours" Disabled="@isBusy" />
+        <MyDayHoursPicker @bind-Hours="hours" @bind-Hours:after="SaveDraftAsync" Disabled="@isBusy" />
     </FormField>
-    <FormField Label="What the work was" Required>
-        <select class="field h-12 text-base" @bind="costCode" disabled="@isBusy">
-            @foreach (var choice in Project.CostCodes)
-            {
-                <option value="@choice.Code">@choice.Name</option>
-            }
-        </select>
-    </FormField>
-    <MyDayWordsBox @bind-Words="description" Disabled="@isBusy" OnReportWordCaught="OpenDefectBox" />
+    <MyDayCostCodePicker Codes="Project.CostCodes" RecentCodes="RecentCodes" @bind-CostCode="costCode" @bind-CostCode:after="SaveDraftAsync" Disabled="@isBusy" />
+    <MyDayWordsBox @bind-Words="description" @bind-Words:after="SaveDraftAsync" Disabled="@isBusy" OnReportWordCaught="OpenDefectBox" />
     <FormField Label="Photos" Hint="@PhotosHint">
         <InputFile OnChange="OnPhotosChosen" multiple accept="image/*" class="w-full text-sm text-content-muted" disabled="@isBusy" />
     </FormField>
     <div class="space-y-2">
-        <MyDayInstructionBox @bind-Instruction="instruction" Disabled="@isBusy" />
-        <MyDayDefectBox @bind-Defect="defect" @bind-IsOpen="isDefectBoxOpen" Disabled="@isBusy" />
+        <MyDayInstructionBox @bind-Instruction="instruction" @bind-Instruction:after="SaveDraftAsync" Disabled="@isBusy" />
+        <MyDayDefectBox @bind-Defect="defect" @bind-Defect:after="SaveDraftAsync" @bind-IsOpen="isDefectBoxOpen" Disabled="@isBusy" />
     </div>
-    <FormField Label="Leaving at" Hint="The time now — change it if you're logging the day later.">
-        <input type="time" class="field h-12 text-lg" value="@leftAt" @onchange="args => leftAt = args.Value?.ToString() ?? string.Empty" disabled="@isBusy" />
-    </FormField>
+    <MyDayClock Label="Leaving at" Hint="The time now — change it if you're logging the day later." @bind-Time="leftAt" @bind-Time:after="SaveDraftAsync" Disabled="@isBusy" />
     @if (IsLongDay)
     {
         <p class="text-xs text-warning">Over @LongDayHours hours — fine if it's right, just double-check.</p>
@@ -41,6 +36,7 @@
     private const decimal LongDayHours = 12m;
 
     [Parameter, EditorRequired] public MyLabourProject Project { get; set; } = default!;
+    [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
     [Parameter] public EventCallback<string?> OnPhotoProblem { get; set; }
 
     private decimal hours = WorkingDayChunks.FullDay;
@@ -49,7 +45,7 @@
     private SiteLogInstruction? instruction;
     private string defect = "";
     private bool isDefectBoxOpen;
-    private string leftAt = MyDayTimes.Now();
+    private string leftAt = "";
     private IReadOnlyList<IBrowserFile> photos = Array.Empty<IBrowserFile>();
     private bool isBusy;
     private bool isUploadingPhotos;
@@ -64,10 +60,10 @@
         ? $"{PhotoCountText} · {FormatSize(photos.Sum(photo => photo.Size))}"
         : $"Camera or gallery, up to {MyDayPhotoUploader.MaxPerBatch}. They go onto today's log; more can be added after.";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        var firstCode = Project.CostCodes.FirstOrDefault();
-        costCode = firstCode?.Code ?? "";
+        costCode = RecentCodes.FirstOrDefault(recent => Project.CostCodes.Any(code => code.Code == recent)) ?? "";
+        await RestoreDraftAsync();
     }
 
     private void OnPhotosChosen(InputFileChangeEventArgs change) => photos = change.GetMultipleFiles(MyDayPhotoUploader.MaxPerBatch);
@@ -100,6 +96,7 @@
         {
             var logged = await SaveDayAsync();
             if (logged is null) return;
+            await ForgetDraftAsync();
             await UploadPhotosAsync(logged);
             await RefreshQuietlyAsync();
         }

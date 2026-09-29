@@ -1,0 +1,27 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+@implements IDisposable
+
+<FormField Label="@Label" Hint="@Hint">
+    <input type="time" class="field h-12 text-lg" value="@Shown" @onchange="OnChanged" disabled="@Disabled" />
+</FormField>
+
+@code {
+    private static readonly TimeSpan Tick = TimeSpan.FromSeconds(30);
+
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter] public string Hint { get; set; } = "";
+    [Parameter] public string Time { get; set; } = "";
+    [Parameter] public EventCallback<string> TimeChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    private Timer? clock;
+
+    private bool IsFollowingTheClock => string.IsNullOrEmpty(Time);
+    private string Shown => IsFollowingTheClock ? MyDayTimes.Now() : Time;
+
+    protected override void OnInitialized() => clock = new Timer(_ => InvokeAsync(StateHasChanged), null, Tick, Tick);
+
+    private Task OnChanged(ChangeEventArgs change) => TimeChanged.InvokeAsync(change.Value?.ToString() ?? "");
+
+    public void Dispose() => clock?.Dispose();
+}

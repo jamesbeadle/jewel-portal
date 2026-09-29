@@ -1405,6 +1405,20 @@ leaves the day unlinked. The day is the finance director's model (2026-09-28), a
   `MyDayLogTests` translates both with the SQL Server provider (`ToQueryString`, no database). The day failed
   to load for every linked worker until it did (JPMS-392A43, 2026-09-28).
 
+- **What Jeremy's first morning on Jack's phone taught the form** (29 Sep 2026, four FIX tasks). The
+  sign-in and sign-out times FOLLOW THE CLOCK until the worker touches them (`MyDayClock`: shown as
+  now, refreshed every half minute, and sent as nothing so the server stamps the moment of the save)
+  — a time set once when the form opened was ten minutes stale by the time the day was written. The
+  DRAFT IS KEPT ON THE PHONE as it is typed (`MyDayDraftStore`, the phone's storage keyed by project
+  and day, the same mechanism as `ActiveRoleStorage`): hours, code, words, the two boxes and a time the
+  worker set come back after a refresh or a trip to the camera, with a notice; the photographs are the
+  one thing a browser cannot keep, so they are picked again; the draft is cleared once the day is
+  saved. The COST CODE IS SEARCHED, NOT SCROLLED (`MyDayCostCodePicker`: the worker's last three codes
+  as one-tap chips, then `SearchSelect` over code and name) — a native select is a picker wheel on a
+  phone, and a project with no cost-code budgets offers every centre in the business; setting the
+  project's budgets is the office's lever to shorten the list. Under the cards, one line says only the
+  sites on the worker's list show (Jeremy read one card as "it defaulted to the first project").
+
 Onboarding a worker (Jeremy's recipe): invite them with the **Site Operative** role, add a **Worker** record on
 /labour/workers with the same email, and assign them to each project's worker list on its Labour tab; the
 project's cost-code budgets are the list they choose from.
