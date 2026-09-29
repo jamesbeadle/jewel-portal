@@ -18,7 +18,7 @@ public static class ValuationInvoiceDisplay
 
     public static string StatusTitle(ValuationInvoice invoice) => invoice.Status switch
     {
-        ValuationInvoiceStatus.Raised => "Draft — raised, not yet claimed: record the claim as sent, or issue directly",
+        ValuationInvoiceStatus.Raised => "Draft — claim raised in the portal, not yet sent and not in Xero: record the claim as sent, or issue directly",
         ValuationInvoiceStatus.Submitted => $"Claimed — with the architect/client for approval{(invoice.SubmittedAt is { } s ? $" since {s:dd MMM yyyy}" : "")}",
         ValuationInvoiceStatus.Approved => "Approved by the client — issue to count toward certified to date",
         ValuationInvoiceStatus.Rejected => "Rejected — amend and resubmit, or cancel",

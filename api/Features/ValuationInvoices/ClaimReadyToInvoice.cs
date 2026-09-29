@@ -3,7 +3,7 @@ namespace Jewel.JPMS.Api.Features.ValuationInvoices;
 /// <summary>
 /// The one check on raising a valuation invoice: it is drawn against the project's LATEST claim,
 /// that claim is locked ("We're claiming this" — Preapproved), and no live invoice is drawn
-/// against it already. The claim card only OFFERS "Raise invoice" at that moment; the Valuation
+/// against it already. The claim card only OFFERS "Raise claim" at that moment; the Valuation
 /// Invoices add form and the connector's create_valuation_invoice reach the handler directly, and
 /// until 2026-09-07 nothing refused a raise over a Draft claim (a statement frozen from figures
 /// still being edited), over a claim the report had already moved past (the snapshot capture

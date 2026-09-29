@@ -170,16 +170,17 @@
                                 We're claiming this
                             </button>
                             break;
-                        @* The handover: raising is accounts' first move. It files the invoice as a
-                           draft against the locked statement — it never sends anything. Claiming (the
-                           statement going to the architect/client) is recorded as its own step. *@
+                        @* The handover: raising the claim is accounts' first move. It files the
+                           claim's valuation invoice as a draft, here in the portal only — nothing
+                           reaches Xero until step 4 (Raise in Xero & issue). Sending the claim to the
+                           architect/client is recorded as its own step. *@
                         case ClaimStage.AwaitingInvoice:
                             <button @onclick="RaiseInvoiceAsync" disabled="@(busy || PaymentDueNow <= 0m)"
                                     title="@(PaymentDueNow > 0m
-                                              ? "Files the valuation invoice for the amount due as a draft, against this claim's locked statement. Nothing is sent — recording the claim as sent is the next step."
+                                              ? "Raises the claim for the amount due — a draft valuation invoice in the portal, against this claim's locked statement. Nothing is sent and nothing goes to Xero yet: recording the claim as sent is the next step, and Xero is step 4."
                                               : "Nothing is currently due — manage invoices in Valuation Invoices below")"
                                     class="btn-primary shrink-0">
-                                Raise invoice (@Money(PaymentDueNow))
+                                Raise claim (@Money(PaymentDueNow))
                             </button>
                             break;
                         case ClaimStage.InvoiceDraft:
