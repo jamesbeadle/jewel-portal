@@ -5,27 +5,23 @@ namespace Jewel.JPMS.Pages;
 
 public partial class Todos
 {
+    private sealed record ScopeProject(string ProjectId, string Label, string Name);
+
     private IReadOnlyList<Project> KnownProjects => Projects.Current ?? Array.Empty<Project>();
 
     // Only projects that actually have items on the current list appear in the scope filter.
-    private IReadOnlyList<Project> ProjectsWithItems
-    {
-        get
-        {
-            var projectIds = items.Select(i => i.ProjectId).Where(id => !string.IsNullOrWhiteSpace(id)).ToHashSet();
-            return KnownProjects
-                .Where(p => projectIds.Contains(p.ProjectId))
-                .ToList();
-        }
-    }
+    private IReadOnlyList<ScopeProject> ProjectsWithItems =>
+        items
+            .Where(item => !item.IsGeneral && item.ProjectLabel is not null)
+            .GroupBy(item => item.ProjectId)
+            .Select(group => group.First())
+            .Select(item => new ScopeProject(item.ProjectId, item.ProjectLabel!, item.ProjectName!))
+            .ToList();
 
-    // The project the scope filter is narrowed to, once its label is known — null for All and
-    // Company-wide, and while the project list is still in flight.
-    private Project? ScopedProject =>
+    private ScopeProject? ScopedProject =>
         scopeFilter is ScopeAll or ScopeGeneral
             ? null
-            : KnownProjects
-                .FirstOrDefault(p => p.ProjectId == scopeFilter);
+            : ProjectsWithItems.FirstOrDefault(project => project.ProjectId == scopeFilter);
 
     // Every project the reader can see, in the one order the app uses for projects (live work
     // first) — ListProjectsVisibleToUserHandler has already applied it, and nothing here narrows
@@ -43,6 +39,7 @@ public partial class Todos
         !filtersReady ? "Loading…"
         // With no projects to pick, blank is the only answer left — and for anyone but the MD it
         // is a refused one, so the control says why rather than looking merely empty.
+        : !CanListProjects ? "Your role can't pick a project here"
         : projectsFailed ? "Couldn't load projects — reload to try again"
         : CanSeeAll ? "Company-wide — no project"
         : "Pick a project";
@@ -50,7 +47,7 @@ public partial class Todos
     private string NewProjectLabel =>
         ProjectOptions.FirstOrDefault(option => option.Value == newProject)?.Label ?? "the project";
 
-    private static bool IsGeneral(TodoItem item) => string.IsNullOrWhiteSpace(item.ProjectId);
+    private static bool IsGeneral(TodoItem item) => item.IsGeneral;
 
     // "Mine" = assigned to a role the signed-in user holds — the same rule the API's
     // UpdateTodoItemAuthorisation applies for the tick-off path. An item pinned to a DIFFERENT
@@ -60,25 +57,16 @@ public partial class Todos
         && (item.AssigneePersonEmail is null
             || string.Equals(item.AssigneePersonEmail, Auth.CurrentUser?.Email, StringComparison.OrdinalIgnoreCase));
 
-    private string ScopeLabel(TodoItem item)
-    {
-        if (IsGeneral(item)) return "Company-wide";
-        var project = KnownProjects
-            .FirstOrDefault(p => p.ProjectId == item.ProjectId);
-        return project is null ? "Project" : $"{project.Reference} — {project.Name}";
-    }
+    private static string ScopeLabel(TodoItem item) =>
+        item.IsGeneral ? "Company-wide" : item.ProjectLabel ?? "Project";
 
     // The board card's project badge: reference AND name (the ref alone said nothing to anyone
     // not living in the numbering; the board truncates long names, hover for the full label), or
-    // the accent "Company" chip for a no-project item. While the project labels are still in
-    // flight the chip says just "Project" rather than nothing.
-    private TodoBoard.ScopeChip ScopeChipFor(TodoItem item)
+    // the accent "Company" chip for a no-project item.
+    private static TodoBoard.ScopeChip ScopeChipFor(TodoItem item)
     {
-        if (IsGeneral(item)) return new TodoBoard.ScopeChip("Company", "Company-wide — no project", true);
-        var project = KnownProjects
-            .FirstOrDefault(p => p.ProjectId == item.ProjectId);
-        return project is null
-            ? new TodoBoard.ScopeChip("Project", "Project", false)
-            : new TodoBoard.ScopeChip($"{project.Reference} — {project.Name}", $"{project.Reference} — {project.Name}", false);
+        if (item.IsGeneral) return new TodoBoard.ScopeChip("Company", "Company-wide — no project", true);
+        var label = item.ProjectLabel ?? "Project";
+        return new TodoBoard.ScopeChip(label, label, false);
     }
 }

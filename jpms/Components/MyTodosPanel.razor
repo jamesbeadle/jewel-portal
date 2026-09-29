@@ -5,7 +5,6 @@
 @inject AuthService Auth
 @inject TodoViewStorage ViewStorage
 @inject NavigationManager Nav
-@inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 
 @*
     "My to-dos" — the dashboard home panel. Board view (the default) lays the reader's items out
@@ -149,15 +148,7 @@
         boardView = await ViewStorage.ReadBoardAsync(email);
         newestFirst = await ViewStorage.ReadNewestFirstAsync(email);
 
-        // Two independent reads — the list is the panel, the labels dress the rows' scope lines.
-        // Neither needs the other, so they run together instead of one waiting behind the last.
-        await Task.WhenAll(LoadAsync(), LoadProjectLabelsAsync());
-    }
-
-    // Project labels for the rows' scope lines — a failed load degrades the label, never the list.
-    private async Task LoadProjectLabelsAsync()
-    {
-        try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); } catch { }
+        await LoadAsync();
     }
 
     private async Task LoadAsync()
@@ -205,14 +196,12 @@
         finally { busy = false; }
     }
 
-    private static bool IsGeneral(TodoItem item) => string.IsNullOrWhiteSpace(item.ProjectId);
+    private static bool IsGeneral(TodoItem item) => item.IsGeneral;
 
-    private string ScopeLabel(TodoItem item)
+    private static string ScopeLabel(TodoItem item)
     {
-        if (IsGeneral(item)) return "General";
-        var project = (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
-            .FirstOrDefault(p => p.ProjectId == item.ProjectId);
-        return project is null ? "Project" : $"{project.Reference} — {project.Name}";
+        if (item.IsGeneral) return "General";
+        return item.ProjectLabel ?? "Project";
     }
 
     // The role filter's option pool: the roles the reader's items actually span.
@@ -237,14 +226,11 @@
     // The board card's project badge: reference AND name (the ref alone said nothing to anyone
     // not living in the numbering; the board truncates long names, hover for the full label), or
     // the accent "Company" chip for a no-project item.
-    private TodoBoard.ScopeChip ScopeChipFor(TodoItem item)
+    private static TodoBoard.ScopeChip ScopeChipFor(TodoItem item)
     {
-        if (IsGeneral(item)) return new TodoBoard.ScopeChip("Company", "Company-wide — no project", true);
-        var project = (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
-            .FirstOrDefault(p => p.ProjectId == item.ProjectId);
-        return project is null
-            ? new TodoBoard.ScopeChip("Project", "Project", false)
-            : new TodoBoard.ScopeChip($"{project.Reference} — {project.Name}", $"{project.Reference} — {project.Name}", false);
+        if (item.IsGeneral) return new TodoBoard.ScopeChip("Company", "Company-wide — no project", true);
+        var label = item.ProjectLabel ?? "Project";
+        return new TodoBoard.ScopeChip(label, label, false);
     }
 
     private string ViewTabClass(bool board) =>

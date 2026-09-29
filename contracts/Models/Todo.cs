@@ -41,8 +41,12 @@ public sealed record TodoItem(
     // ("DEF-0012"), never stored.
     RecordType? AboutRecordType = null,
     string? AboutRecordId = null,
-    string? AboutRecordReference = null)
+    string? AboutRecordReference = null,
+    string? ProjectReference = null,
+    string? ProjectName = null)
 {
+    public bool IsGeneral => string.IsNullOrWhiteSpace(ProjectId);
+    public string? ProjectLabel => ProjectReference is null ? null : $"{ProjectReference} — {ProjectName}";
     public bool IsInProgress => !IsComplete && StartedAt is not null;
     public bool IsAboutRecord => AboutRecordType is not null && !string.IsNullOrWhiteSpace(AboutRecordId);
 }

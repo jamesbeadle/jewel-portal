@@ -130,7 +130,7 @@
                 <option value="@ScopeGeneral">Company-wide</option>
                 @foreach (var project in ProjectsWithItems)
                 {
-                    <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                    <option value="@project.ProjectId">@project.Label</option>
                 }
             </select>
 
@@ -172,7 +172,7 @@
             @* Narrowed to one project, the reader is really asking for that project's To-do tab —
                where the list is only its items and nothing needs filtering. A line of text, so it
                simply doesn't render until the project labels land. *@
-            @if (ScopedProject is Project scoped)
+            @if (ScopedProject is ScopeProject scoped)
             {
                 <a class="text-xs text-content-muted underline underline-offset-2 hover:text-content"
                    href="@($"/projects/{scoped.ProjectId}/todos")">

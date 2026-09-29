@@ -19,8 +19,8 @@ public partial class Todos
     private bool listFailed;
     // The filter row is built from the same round of fetches as the list, so it waits with it.
     private bool filtersReady;
-    // The project list failed to load — the scope filter loses its labels and the add modal's
-    // project picker has nothing to offer, so it says that instead of pretending to be empty.
+    // The project list failed to load — the add modal's project picker has nothing to offer, so
+    // it says that instead of pretending to be empty.
     private bool projectsFailed;
     private bool busy;
     private string? error;
@@ -78,6 +78,10 @@ public partial class Todos
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
             or Role.ProjectManager or Role.SiteManager or Role.Accounts);
 
+    // The project list endpoint's own gate: a read it would refuse (an Accounts login's) is never
+    // made, because a refused read puts a permission error across the top of the page.
+    private bool CanListProjects => Session.CanOpen(JpmsRoleSets.DeliveryTeamAndParties);
+
     // Mirrors the API's JpmsRoleSets.AllInternal — who may read to-dos at all.
     private bool HasInternalRole =>
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
@@ -95,9 +99,10 @@ public partial class Todos
         StateHasChanged();
         if (!Session.IsApproved || !HasInternalRole) { loading = false; return; }
 
-        // The list, the project labels and the assignable-role pool are independent, so they go
-        // out together rather than one after another.
-        var loads = new List<Task> { LoadAsync(), LoadProjectLabelsAsync() };
+        // The list, the add modal's project pool and the assignable-role pool are independent, so
+        // they go out together rather than one after another.
+        var loads = new List<Task> { LoadAsync() };
+        if (CanListProjects) loads.Add(LoadProjectPoolAsync());
         // The role pool feeds the assignee FILTER (MD/admin only) and the add modal's assignee
         // picker (anyone in the manage gate), so either reason is enough to fetch it.
         if (CanSeeAll || CanManage) loads.Add(LoadAssigneeOptionsAsync());
@@ -105,13 +110,9 @@ public partial class Todos
         filtersReady = true;
     }
 
-    // Project labels for the scope chips/filter, and the assignable-role pool for the
-    // picker/filter. Either failing degrades the labels, never the list itself.
-    private async Task LoadProjectLabelsAsync()
+    private async Task LoadProjectPoolAsync()
     {
         try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); }
-        // Degrades the scope filter's labels — and, since the add modal picks a project from this
-        // same list, leaves nothing to pick. The picker says so rather than sitting empty.
         catch { projectsFailed = true; }
     }
 

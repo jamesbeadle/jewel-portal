@@ -29,7 +29,7 @@ public sealed class LogTodoProgressHandler : ICommandHandler<LogTodoProgress, To
             activity.Record(entity, command.Kind, SummaryFor(command), command.ActorEmail);
             await context.SaveChangesAsync(cancellationToken);
         }
-        return entity.ToModel(await context.PersonNamesForAsync(new[] { entity }, cancellationToken));
+        return await context.ToModelAsync(entity, cancellationToken);
     }
 
     private static string SummaryFor(LogTodoProgress command) => command.Kind switch

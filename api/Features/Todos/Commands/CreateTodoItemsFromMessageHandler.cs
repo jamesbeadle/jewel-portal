@@ -213,7 +213,8 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
         }
 
         var personNames = await context.PersonNamesForAsync(entities, cancellationToken);
-        return entities.Select(e => e.ToModel(personNames)).ToList().AsReadOnly();
+        var projectLabels = await context.ProjectLabelsForAsync(entities, cancellationToken);
+        return entities.Select(e => e.ToModel(personNames, projectLabels: projectLabels)).ToList().AsReadOnly();
     }
 
     // Email subjects/bodies can exceed the column limits; clamp so a long email can't throw on save.

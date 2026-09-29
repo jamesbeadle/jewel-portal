@@ -19,6 +19,7 @@ public sealed class GetTodoItemByIdHandler : IQueryHandler<GetTodoItemById, Todo
 
         var personNames = await context.PersonNamesForAsync(new[] { entity }, cancellationToken);
         var aboutReferences = await aboutRecords.ReferencesForAsync(new[] { entity }, cancellationToken);
-        return entity.ToModel(personNames, aboutReferences);
+        var projectLabels = await context.ProjectLabelsForAsync(new[] { entity }, cancellationToken);
+        return entity.ToModel(personNames, aboutReferences, projectLabels);
     }
 }

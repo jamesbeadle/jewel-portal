@@ -1,7 +1,6 @@
 @namespace Jewel.JPMS.Features.Todos.Detail
 @using Jewel.JPMS.Features.Todos
 @inject ITodoStore Todos
-@inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 
 @* The to-dos linked to this item: every other item sharing a tagged email with it. The link IS
    the mail tag — one email raised as (or filed to) several items in the Control Centre ties them
@@ -67,19 +66,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // The linked list is the panel; the project labels only dress the scope line, so a failed
-        // label read degrades the label rather than the panel.
-        try { if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None); } catch { }
         try { linked = await Todos.ListLinkedAsync(TodoItemId); }
         catch { failed = "Couldn't read the linked to-dos. The reason is in the red bar above — reload to try again."; }
         finally { loading = false; }
     }
 
-    private string ScopeLabel(TodoItem item)
-    {
-        if (string.IsNullOrWhiteSpace(item.ProjectId)) return "Company-wide";
-        var project = (Projects.Current ?? (IReadOnlyList<Project>)Array.Empty<Project>())
-            .FirstOrDefault(candidate => candidate.ProjectId == item.ProjectId);
-        return project is null ? "Project" : $"{project.Reference} — {project.Name}";
-    }
+    private static string ScopeLabel(TodoItem item) =>
+        item.IsGeneral ? "Company-wide" : item.ProjectLabel ?? "Project";
 }
