@@ -26,7 +26,7 @@
         }
         @if (Project.IsLoggedToday)
         {
-            <MyDayLoggedSummary Project="Project" TodaysHours="TodaysHours" />
+            <MyDayLoggedSummary Project="Project" TodaysHours="TodaysHours" TodaysDay="TodaysDay" RecentCodes="RecentCodes" />
         }
     </ChildContent>
 </Panel>
@@ -35,6 +35,7 @@
     [Parameter, EditorRequired] public MyLabourProject Project { get; set; } = default!;
     [Parameter] public IReadOnlyList<MyRecentTimesheet> TodaysHours { get; set; } = Array.Empty<MyRecentTimesheet>();
     [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
+    [Parameter] public MyWeekDay? TodaysDay { get; set; }
 
     private string? photoProblem;
 

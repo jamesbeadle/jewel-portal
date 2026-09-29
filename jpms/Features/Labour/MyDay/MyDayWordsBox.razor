@@ -7,7 +7,7 @@
 @if (HasReportWords)
 {
     <Notice Tone="Tone.Warning">
-        “@CaughtWordsText” can't go in the weekly report. Put that in the Defect box below — it goes to the defects register instead — and the day still saves as written.
+        “@CaughtWordsText” can't go in the weekly report. @DefectAdvice The day still saves as written.
     </Notice>
 }
 
@@ -16,6 +16,11 @@
     [Parameter] public EventCallback<string> WordsChanged { get; set; }
     [Parameter] public EventCallback OnReportWordCaught { get; set; }
     [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool HasDefectBox { get; set; } = true;
+
+    private string DefectAdvice => HasDefectBox
+        ? "Put that in the Defect box below — it goes to the defects register instead."
+        : "The office will move it to a defect before the report is built.";
 
     private IReadOnlyList<string> caughtWords = Array.Empty<string>();
 

@@ -39,7 +39,8 @@ public sealed class GetMyLabourDayHandler : IQueryHandler<GetMyLabourDay, MyLabo
     private const int RecentDays = 13;
     private readonly JpmsContext context;
     private readonly MyDayProjects projects;
-    public GetMyLabourDayHandler(JpmsContext context, MyDayProjects projects) { this.context = context; this.projects = projects; }
+    private readonly MyDayWeek week;
+    public GetMyLabourDayHandler(JpmsContext context, MyDayProjects projects, MyDayWeek week) { this.context = context; this.projects = projects; this.week = week; }
 
     public Task<MyLabourDay> HandleAsync(GetMyLabourDay query, CancellationToken cancellationToken) =>
         throw new InvalidOperationException("GetMyLabourDay requires the signed-in email — use the endpoint.");
@@ -49,7 +50,7 @@ public sealed class GetMyLabourDayHandler : IQueryHandler<GetMyLabourDay, MyLabo
         var today = SiteClock.Today();
         var worker = await context.Workers.FirstOrDefaultAsync(candidate => candidate.ContactEmail == email, cancellationToken);
         if (worker is null || !worker.IsActive)
-            return new MyLabourDay("", "", today, Array.Empty<MyLabourProject>(), Array.Empty<MyRejectedTimesheet>(), Array.Empty<MyRecentTimesheet>());
+            return new MyLabourDay("", "", today, Array.Empty<MyLabourProject>(), Array.Empty<MyRejectedTimesheet>(), Array.Empty<MyRecentTimesheet>(), Array.Empty<MyWeekDay>());
 
         var cards = await projects.ForAsync(worker, email, today, cancellationToken);
         var rejected = await OwnTimesheets(worker, sheet => sheet.Status == (int)TimesheetStatus.Rejected).ToListAsync(cancellationToken);
@@ -60,7 +61,8 @@ public sealed class GetMyLabourDayHandler : IQueryHandler<GetMyLabourDay, MyLabo
             rejected.Select(row => new MyRejectedTimesheet(
                 row.TimesheetId, row.ProjectId, row.ProjectName, row.WorkedOn, row.Hours, row.CostCode, row.RejectionReason)).ToList(),
             recent.Select(row => new MyRecentTimesheet(
-                row.TimesheetId, row.ProjectId, row.ProjectName, row.WorkedOn, row.Hours, row.CostCode, (TimesheetStatus)row.Status)).ToList());
+                row.TimesheetId, row.ProjectId, row.ProjectName, row.WorkedOn, row.Hours, row.CostCode, (TimesheetStatus)row.Status)).ToList(),
+            await week.ForAsync(worker, email, cards, today, cancellationToken));
     }
 
     // Sorted before the record is built: SQL Server cannot sort on a record made by its constructor.

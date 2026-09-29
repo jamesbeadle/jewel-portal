@@ -163,7 +163,7 @@ public sealed class MyDayLogTests
     private static MyDayProjects DayProjects(JpmsContext context) =>
         new(context, new MyDayCostCodes(context), new MyDayNotesToday(context));
 
-    private static GetMyLabourDayHandler DayHandler(JpmsContext context) => new(context, DayProjects(context));
+    private static GetMyLabourDayHandler DayHandler(JpmsContext context) => new(context, DayProjects(context), new MyDayWeek(context));
 
     private static async Task<JpmsContext> SeededAsync()
     {
@@ -262,7 +262,7 @@ public sealed class MyDayRaisedRecordTests
         var instruction = new SiteLogInstruction("Swap the ironmongery.", "The architect");
         await SignOutAsync(context, new MySiteSignOut(Project, FullDay, Words, Instruction: instruction, Defect: "Scratched glass, plot 2."));
 
-        var day = await new GetMyLabourDayHandler(context, DayProjects(context)).HandleAsync(Email, CancellationToken.None);
+        var day = await new GetMyLabourDayHandler(context, DayProjects(context), new MyDayWeek(context)).HandleAsync(Email, CancellationToken.None);
 
         var note = Assert.Single(day.Projects).TodaysNote;
         Assert.Equal("SI-0001", note?.SiteInstructionReference);
@@ -294,6 +294,103 @@ public sealed class MyDayRaisedRecordTests
         context.Projects.Add(new ProjectEntity { ProjectId = Project, Name = "Abbot Road" });
         context.ProjectWorkerAssignments.Add(new ProjectWorkerAssignmentEntity { ProjectWorkerAssignmentId = "a-1", ProjectId = Project, WorkerId = "w-jack" });
         context.CostCenters.Add(new CostCenterEntity { CostCenterId = "cc-lab", Code = Code, Name = "Labour" });
+        await context.SaveChangesAsync();
+        return context;
+    }
+}
+
+// A logged day is the worker's to amend until the office has approved it, and My day lists the
+// week so they see what they have and have not filed (Jeremy on Jack's phone, 29 Sep 2026: "I
+// can't amend or change something on this entry?" and "could they see the whole week").
+public sealed class MyDayAmendTests
+{
+    private const string Email = "jack@example.com";
+    private const string Project = "p-abbot-road";
+    private const string OtherProject = "p-ravenswood";
+    private const string Code = "LAB";
+    private const string OtherCode = "CARP";
+    private static readonly SiteSignOutEntry[] FullDay = { new(Code, WorkingDayChunks.FullDay) };
+
+    [Fact]
+    public async Task AmendingTheDay_rewritesTheHours_theCode_theWords_andTheSignOut()
+    {
+        await using var context = await SeededAsync();
+        var logged = await LogDayAsync(context);
+        var timesheet = await context.Timesheets.SingleAsync();
+        var aMinuteOn = DateTimeOffset.UtcNow.AddMinutes(1);
+
+        await Amend(context).HandleAsync(new MyAmendSiteDay(timesheet.TimesheetId, WorkingDayChunks.HalfDay, OtherCode, "Half a day after all.", aMinuteOn), Email, CancellationToken.None);
+
+        var amended = await context.Timesheets.SingleAsync();
+        Assert.Equal(WorkingDayChunks.HalfDay, amended.Hours);
+        Assert.Equal(OtherCode, amended.CostCode);
+        Assert.Equal((int)TimesheetStatus.Submitted, amended.Status);
+        var note = await context.ProgressUpdates.SingleAsync(row => row.ProgressUpdateId == logged.ProgressUpdateId);
+        Assert.Equal("Half a day after all.", note.Description);
+        var attendance = await context.SiteAttendances.SingleAsync();
+        Assert.Equal(aMinuteOn, attendance.SignedOutAt);
+    }
+
+    [Fact]
+    public async Task AnApprovedDay_isTheOfficesToChange_andAnotherWorkersDayIsNotYours()
+    {
+        await using var context = await SeededAsync();
+        await LogDayAsync(context);
+        var timesheet = await context.Timesheets.SingleAsync();
+        timesheet.Status = (int)TimesheetStatus.Approved;
+        await context.SaveChangesAsync();
+        var amendment = new MyAmendSiteDay(timesheet.TimesheetId, WorkingDayChunks.HalfDay, Code, "Changed.");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Amend(context).HandleAsync(amendment, Email, CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Amend(context).HandleAsync(amendment, "dan@example.com", CancellationToken.None));
+
+        Assert.Equal(WorkingDayChunks.FullDay, (await context.Timesheets.SingleAsync()).Hours);
+    }
+
+    [Fact]
+    public async Task TheWeek_listsEachSite_logged_off_orNothing_forToday()
+    {
+        await using var context = await SeededAsync();
+        await LogDayAsync(context);
+        await new MySiteDayOffHandler(context).HandleAsync(new MySiteDayOff(OtherProject, "Not needed there today."), Email, CancellationToken.None);
+
+        var day = await new GetMyLabourDayHandler(context, DayProjects(context), new MyDayWeek(context)).HandleAsync(Email, CancellationToken.None);
+
+        var today = day.Week.Where(row => row.Date == day.WorkDate).ToList();
+        var logged = today.Single(row => row.ProjectId == Project);
+        Assert.Equal(MyWeekDayKind.Logged, logged.Kind);
+        Assert.True(logged.CanBeAmended);
+        Assert.Equal("Second fix to the plot 3 bathrooms.", logged.Words);
+        Assert.NotNull(logged.SignedOutAt);
+        var off = today.Single(row => row.ProjectId == OtherProject);
+        Assert.Equal(MyWeekDayKind.Off, off.Kind);
+        Assert.False(off.CanBeAmended);
+        Assert.Contains(day.Week, row => row.Kind == MyWeekDayKind.Nothing || row.Date == day.WorkDate);
+    }
+
+    private static async Task<MySiteDayLogged> LogDayAsync(JpmsContext context)
+    {
+        await new MySiteSignInHandler(context).HandleAsync(new MySiteSignIn(Project), Email, CancellationToken.None);
+        var handler = new MySiteSignOutHandler(context, new MyDayCostCodes(context), new MyDayRaisedRecords(context));
+        return await handler.HandleAsync(new MySiteSignOut(Project, FullDay, "Second fix to the plot 3 bathrooms."), Email, CancellationToken.None);
+    }
+
+    private static MyAmendSiteDayHandler Amend(JpmsContext context) => new(context, new MyDayCostCodes(context));
+
+    private static MyDayProjects DayProjects(JpmsContext context) =>
+        new(context, new MyDayCostCodes(context), new MyDayNotesToday(context));
+
+    private static async Task<JpmsContext> SeededAsync()
+    {
+        var context = new JpmsContext(new DbContextOptionsBuilder<JpmsContext>().UseInMemoryDatabase($"my-day-amend-{Guid.NewGuid():N}").Options);
+        context.Workers.Add(new WorkerEntity { WorkerId = "w-jack", Name = "Jack Eastly", ContactEmail = Email, HourlyRate = 25m });
+        context.Workers.Add(new WorkerEntity { WorkerId = "w-dan", Name = "Dan Prowse", ContactEmail = "dan@example.com", HourlyRate = 25m });
+        context.Projects.Add(new ProjectEntity { ProjectId = Project, Name = "Abbot Road" });
+        context.Projects.Add(new ProjectEntity { ProjectId = OtherProject, Name = "Ravenswood Ave" });
+        context.ProjectWorkerAssignments.Add(new ProjectWorkerAssignmentEntity { ProjectWorkerAssignmentId = "a-1", ProjectId = Project, WorkerId = "w-jack" });
+        context.ProjectWorkerAssignments.Add(new ProjectWorkerAssignmentEntity { ProjectWorkerAssignmentId = "a-2", ProjectId = OtherProject, WorkerId = "w-jack" });
+        context.CostCenters.Add(new CostCenterEntity { CostCenterId = "cc-lab", Code = Code, Name = "Labour" });
+        context.CostCenters.Add(new CostCenterEntity { CostCenterId = "cc-carp", Code = OtherCode, Name = "Carpentry" });
         await context.SaveChangesAsync();
         return context;
     }

@@ -171,6 +171,12 @@ public sealed class HttpLabourStore : ILabourStore
         await myDayReadModel.RefreshAsync(CancellationToken.None);
     }
 
+    public async Task MyAmendAsync(MyAmendSiteDay amendment)
+    {
+        await commands.SendAsync(amendment, CancellationToken.None);
+        await myDayReadModel.RefreshAsync(CancellationToken.None);
+    }
+
     public IReadOnlyList<TimesheetDetail> TimesheetsFor(string projectId)
     {
         if (timesheetsRequested.Add(projectId)) _ = LoadAsync(() => timesheetsReadModel.RefreshAsync(projectId, CancellationToken.None), timesheetsRequested, projectId);

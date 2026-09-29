@@ -34,13 +34,13 @@
                 }
                 @foreach (var project in day.Projects)
                 {
-                    <MyDayProjectCard @key="project.ProjectId" Project="project" TodaysHours="TodaysHoursFor(day, project)" RecentCodes="RecentCodesOf(day)" />
+                    <MyDayProjectCard @key="project.ProjectId" Project="project" TodaysHours="TodaysHoursFor(day, project)" TodaysDay="TodayFor(day, project)" RecentCodes="RecentCodesOf(day)" />
                 }
                 @if (!HasNoProjects(day))
                 {
                     <p class="text-xs text-content-subtle mb-4">Only the sites you're on the worker list for show here — ask your Project Manager to add you to another.</p>
                 }
-                <MyDayRecentDays Recent="day.Recent" WorkDate="day.WorkDate" />
+                <MyDayWeekPanel Week="day.Week" Projects="day.Projects" RecentCodes="RecentCodesOf(day)" />
                 <MyDayRejectedPanel Rejected="day.Rejected" />
             }
             @if (Day is { IsLinked: false })
@@ -88,6 +88,9 @@
 
     private static List<MyRecentTimesheet> TodaysHoursFor(MyLabourDay day, MyLabourProject project) =>
         day.Recent.Where(entry => entry.ProjectId == project.ProjectId && entry.WorkedOn == day.WorkDate).ToList();
+
+    private static MyWeekDay? TodayFor(MyLabourDay day, MyLabourProject project) =>
+        day.Week.FirstOrDefault(row => row.ProjectId == project.ProjectId && row.Date == day.WorkDate && row.IsLogged);
 
     private static List<string> RecentCodesOf(MyLabourDay day) =>
         day.Recent.OrderByDescending(entry => entry.WorkedOn).Select(entry => entry.CostCode).Distinct().Take(RecentCodesShown).ToList();

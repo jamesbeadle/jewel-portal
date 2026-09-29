@@ -1419,6 +1419,20 @@ leaves the day unlinked. The day is the finance director's model (2026-09-28), a
   project's budgets is the office's lever to shorten the list. Under the cards, one line says only the
   sites on the worker's list show (Jeremy read one card as "it defaulted to the first project").
 
+- **A logged day is the worker's to amend until the office approves it, and My day shows the week**
+  (29 Sep 2026, Jeremy on Jack's phone: "I can't amend or change something on this entry?" and "could
+  they see the whole week and submit at the end?"). `MyAmendSiteDay` (POST `my/labour/amend`, keyed by
+  the day's timesheet, `LogOwnTime`) rewrites the timesheet's hours and code (back to Submitted), the
+  note's words and the attendance's sign-out, in one save, under the sign-out's own checks; an
+  Approved day is refused — the PM's to change. *This week* (`MyDayWeekPanel`, replacing Recent days)
+  lists Monday to today per assigned site as `MyWeekDay` — Logged (hours, code, status, `CanBeAmended`),
+  Off, or Nothing on a working day — read by `MyDayWeek`; *Amend* opens `MyDayAmendForm` (the same
+  pickers as the log, no instruction or defect box), on the week row and on today's logged card. **The
+  day stays the unit and there is no end-of-week submit**: sign-in and sign-out are the real-time H&S
+  register, the PM approves days as they come for the coding run, and the Contractor's Report composes
+  on Friday from the days as filed; correcting a day before it is final is what the amend gives. Hours
+  print through the one `MyDayHoursText` ("8 h", "4.5 h"), never the decimal's four places.
+
 Onboarding a worker (Jeremy's recipe): invite them with the **Site Operative** role, add a **Worker** record on
 /labour/workers with the same email, and assign them to each project's worker list on its Labour tab; the
 project's cost-code budgets are the list they choose from.
