@@ -4,13 +4,16 @@ namespace Jewel.JPMS.Features.DataProtection;
 
 public static class DataProtectionRouteRegistration
 {
+    private const string DossierPath = "/api/data-protection/people/dossier";
+    private const string AnonymisePath = "/api/data-protection/people/anonymise";
+
     public static void RegisterDataProtectionRoutes(QueryRouteTable queries, CommandRouteTable commands)
     {
         queries.Register<GetPersonDossier, PersonDossier>(
-            new QueryRoute("/api/admin/people/dossier",
-                query => $"/api/admin/people/dossier?email={Uri.EscapeDataString(((GetPersonDossier)query).Email)}"));
+            new QueryRoute(DossierPath,
+                query => $"{DossierPath}?email={Uri.EscapeDataString(((GetPersonDossier)query).Email)}"));
 
         commands.Register<AnonymisePerson, PersonAnonymisation>(
-            new CommandRoute("POST", "/api/admin/people/anonymise", _ => "/api/admin/people/anonymise"));
+            new CommandRoute("POST", AnonymisePath, _ => AnonymisePath));
     }
 }

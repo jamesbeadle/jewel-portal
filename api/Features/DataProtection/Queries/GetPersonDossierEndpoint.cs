@@ -3,7 +3,7 @@ using Jewel.JPMS.Contracts.DataProtection;
 namespace Jewel.JPMS.Api.Features.DataProtection.Queries;
 
 /// <summary>
-/// GET /api/admin/people/dossier?email= — everything the portal holds against one address.
+/// GET /api/data-protection/people/dossier?email= — everything the portal holds against one address.
 /// User administration, so it stays behind the admin gate with the directory commands.
 /// </summary>
 public sealed class GetPersonDossierEndpoint
@@ -15,7 +15,7 @@ public sealed class GetPersonDossierEndpoint
 
     [Function(nameof(GetPersonDossier))]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "admin/people/dossier")] HttpRequest request)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "data-protection/people/dossier")] HttpRequest request)
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();

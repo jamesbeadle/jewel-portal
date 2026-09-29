@@ -663,6 +663,13 @@ The project-process kit writes this file once and never touches it again, and `C
   money and dates. It refuses while a sign-in carries the address — `DeleteDirectoryUser` is the
   door for that, and it now pseudonymises the audit and agent-activity actor (`ActorTrail`) — and
   while a worker under it has history nobody has retired. Never add a "delete everything" path.
+- **The API routes are `data-protection/people/dossier` and `data-protection/people/anonymise`**
+  (2026-09-28, the never-load fix). They began `admin/`, which the Functions host keeps for its own
+  administration API: the host logged "the specified route conflicts with one or more built in
+  routes" on every start and never loaded either function, so the paths answered 404 on every host
+  the API has run on. No HTTP-trigger route template may begin with `admin/` —
+  `HttpTriggerRouteTests` reads every `[HttpTrigger]` in the api and fails on one that does; the
+  Blazor pages stay at `/admin/...`, which is the app's router, not the host's.
 - **A worker with history is retired, never deleted**: `RetireWorker` (Workers page → Retire,
   connector `retire_worker` by name — across inactive workers too, `WorkerNameResolver.
   ResolveWhetherActiveOrNot`) clears contact email and phone, marks inactive, closes the
