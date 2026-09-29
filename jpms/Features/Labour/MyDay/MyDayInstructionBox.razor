@@ -45,6 +45,14 @@ else
     private bool IsOpen => Instruction is not null;
     private string SelectedWay => isVerbal ? VerbalKey : WrittenKey;
 
+    protected override void OnParametersSet()
+    {
+        if (Instruction is not { } given) return;
+        instruction = given.Instruction;
+        givenBy = given.GivenBy;
+        isVerbal = given.IsVerbal;
+    }
+
     private Task OpenAsync() => EmitAsync();
 
     private Task RemoveAsync()

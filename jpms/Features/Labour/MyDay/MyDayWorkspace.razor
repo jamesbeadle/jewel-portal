@@ -34,7 +34,11 @@
                 }
                 @foreach (var project in day.Projects)
                 {
-                    <MyDayProjectCard @key="project.ProjectId" Project="project" TodaysHours="TodaysHoursFor(day, project)" />
+                    <MyDayProjectCard @key="project.ProjectId" Project="project" TodaysHours="TodaysHoursFor(day, project)" RecentCodes="RecentCodesOf(day)" />
+                }
+                @if (!HasNoProjects(day))
+                {
+                    <p class="text-xs text-content-subtle mb-4">Only the sites you're on the worker list for show here — ask your Project Manager to add you to another.</p>
                 }
                 <MyDayRecentDays Recent="day.Recent" WorkDate="day.WorkDate" />
                 <MyDayRejectedPanel Rejected="day.Rejected" />
@@ -59,6 +63,8 @@
     /// not yet linked to a worker record, or a day that failed to load, is said in words.</summary>
     [Parameter] public bool IsAlwaysShown { get; set; }
 
+    private const int RecentCodesShown = 3;
+
     private bool isRefreshing;
     private string? loadError;
 
@@ -82,6 +88,9 @@
 
     private static List<MyRecentTimesheet> TodaysHoursFor(MyLabourDay day, MyLabourProject project) =>
         day.Recent.Where(entry => entry.ProjectId == project.ProjectId && entry.WorkedOn == day.WorkDate).ToList();
+
+    private static List<string> RecentCodesOf(MyLabourDay day) =>
+        day.Recent.OrderByDescending(entry => entry.WorkedOn).Select(entry => entry.CostCode).Distinct().Take(RecentCodesShown).ToList();
 
     private async Task RefreshSafelyAsync()
     {

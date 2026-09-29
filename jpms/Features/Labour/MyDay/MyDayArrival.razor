@@ -4,9 +4,7 @@
 @if (!isRecordingDayOff)
 {
     <div class="space-y-3">
-        <FormField Label="Arrived at" Hint="The time now — change it if you forgot at the gate.">
-            <input type="time" class="field h-12 text-lg" value="@arrivedAt" @onchange="args => arrivedAt = args.Value?.ToString() ?? string.Empty" />
-        </FormField>
+        <MyDayClock Label="Arrived at" Hint="The time now — change it if you forgot at the gate." @bind-Time="arrivedAt" Disabled="@isBusy" />
         <button type="button" class="btn-primary btn-lg w-full" disabled="@isBusy" @onclick="SignInAsync">
             @(isBusy ? "Signing in…" : "Sign in")
         </button>
@@ -25,7 +23,7 @@
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
 
-    private string arrivedAt = MyDayTimes.Now();
+    private string arrivedAt = "";
     private bool isRecordingDayOff;
     private bool isBusy;
     private string? error;
