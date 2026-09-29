@@ -31,8 +31,8 @@
                 <th>Received</th>
                 <th>Form</th>
                 <th>From</th>
-                <th>Filed under</th>
-                <th>Came by</th>
+                <th class="hidden md:table-cell">Filed under</th>
+                <th class="hidden lg:table-cell">Came by</th>
                 <th>Status</th>
             </tr>
         </thead>
@@ -43,8 +43,8 @@
                     <td class="whitespace-nowrap">@DateTimeText(submission.SubmittedAt)</td>
                     <td>@FormCatalogue.TitleOf(submission.FormSlug)</td>
                     <td>@submission.SubmitterName</td>
-                    <td>@submission.FilingName</td>
-                    <td class="whitespace-nowrap">@FormSubmissionFilters.LinkText(submission)</td>
+                    <td class="hidden md:table-cell">@submission.FilingName</td>
+                    <td class="hidden lg:table-cell whitespace-nowrap">@FormSubmissionFilters.LinkText(submission)</td>
                     <td><Pill Tone="@submission.Status.ToTone()">@submission.Status.DisplayName()</Pill></td>
                 </tr>
             }

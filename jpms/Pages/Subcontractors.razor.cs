@@ -45,8 +45,9 @@ public partial class Subcontractors
         _ => true
     };
 
-    // Widened for the unified directory (2026-07-22): Admin, MD, FD and PM may browse.
-    private bool CanAccess => Session.AvailableRoles.Any(r =>
+    private bool CanAccess => Session.CanOpen(DirectoryRoles.AllowedToList);
+
+    private bool CanReadStaff => Session.AvailableRoles.Any(r =>
         r is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
 
     // Adding companies mirrors the API's add authorisation (Admin, MD, FD — the API also allows
@@ -67,6 +68,9 @@ public partial class Subcontractors
         (DirectoryGroup.Subcontractors, "Subcontractors"),
         (DirectoryGroup.Staff,          "Internal staff")
     };
+
+    private IEnumerable<(DirectoryGroup Group, string Label)> VisibleGroupChips =>
+        GroupChips.Where(chip => chip.Group != DirectoryGroup.Staff || CanReadStaff);
 
     private string GroupChipClass(DirectoryGroup value) =>
         group == value

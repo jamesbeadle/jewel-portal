@@ -55,11 +55,11 @@
                     <tr>
                         <th>Ref</th>
                         <th>Inspected</th>
-                        <th>Type</th>
-                        <th>Safety officer</th>
-                        <th>Site manager</th>
+                        <th class="hidden md:table-cell">Type</th>
+                        <th class="hidden lg:table-cell">Safety officer</th>
+                        <th class="hidden lg:table-cell">Site manager</th>
                         <th class="text-right">Score</th>
-                        <th>Rating</th>
+                        <th class="hidden md:table-cell">Rating</th>
                         <th>Status</th>
                     </tr>
                 </thead>
@@ -69,11 +69,11 @@
                         <tr @key="audit.HsAuditId" class="is-clickable" @onclick="() => OpenAudit(audit)">
                             <td class="font-mono text-xs whitespace-nowrap">@audit.Reference</td>
                             <td class="whitespace-nowrap">@DateText(audit.InspectionDate)</td>
-                            <td>@audit.Type.DisplayName()</td>
-                            <td>@audit.SafetyOfficerName</td>
-                            <td>@audit.SiteManagerName</td>
+                            <td class="hidden md:table-cell">@audit.Type.DisplayName()</td>
+                            <td class="hidden lg:table-cell">@audit.SafetyOfficerName</td>
+                            <td class="hidden lg:table-cell">@audit.SiteManagerName</td>
                             <td class="text-right whitespace-nowrap">@(audit.Score is { } score ? HsAuditScoring.PercentText(score) : "—")</td>
-                            <td>
+                            <td class="hidden md:table-cell">
                                 @if (audit.Rating is { } rating)
                                 {
                                     <Pill Tone="@rating.ToTone()">@rating.DisplayName()</Pill>
@@ -95,11 +95,11 @@
                     <tr>
                         @if (Pane == RegisterPane) { <th>Kind</th> }
                         <th>Summary</th>
-                        <th>Owner</th>
-                        <th>Severity</th>
-                        <th>Raised</th>
+                        <th class="hidden md:table-cell">Owner</th>
+                        <th class="hidden md:table-cell">Severity</th>
+                        <th class="hidden lg:table-cell">Raised</th>
                         <th>Due</th>
-                        <th>Thread</th>
+                        <th class="hidden md:table-cell">Thread</th>
                         <th>Status</th>
                     </tr>
                 </thead>
@@ -109,11 +109,11 @@
                         <tr @key="record.HsRecordId" class="is-clickable @(record.IsOverdue() ? "text-warning" : "")" @onclick="() => openRecord = record">
                             @if (Pane == RegisterPane) { <td class="whitespace-nowrap">@record.Kind.KindDisplayName()</td> }
                             <td class="max-w-lg">@record.Summary</td>
-                            <td class="whitespace-nowrap">@record.OwnerDisplayName()</td>
-                            <td><Pill Tone="@record.Severity.ToTone()">@record.Severity</Pill></td>
-                            <td class="whitespace-nowrap">@DateText(record.RaisedAt)</td>
+                            <td class="hidden md:table-cell whitespace-nowrap">@record.OwnerDisplayName()</td>
+                            <td class="hidden md:table-cell"><Pill Tone="@record.Severity.ToTone()">@record.Severity</Pill></td>
+                            <td class="hidden lg:table-cell whitespace-nowrap">@DateText(record.RaisedAt)</td>
                             <td class="whitespace-nowrap">@DateText(record.DueAt)</td>
-                            <td class="whitespace-nowrap"><HsRecordThreadStanding Record="record" /></td>
+                            <td class="hidden md:table-cell whitespace-nowrap"><HsRecordThreadStanding Record="record" /></td>
                             <td @onclick:stopPropagation="true">
                                 <select class="field py-1" value="@((int)record.Status)" disabled="@busy"
                                         @onchange="e => SetStatusAsync(record, e)">

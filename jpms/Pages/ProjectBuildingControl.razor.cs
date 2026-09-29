@@ -8,6 +8,8 @@ public partial class ProjectBuildingControl
     [Parameter] public string ProjectId { get; set; } = "";
 
     private bool sessionReady;
+
+    private bool CanManage => Session.CanOpen(BuildingControlRoles.Managers);
     private bool dataFailed;
     private bool busy;
     private string? actionError;

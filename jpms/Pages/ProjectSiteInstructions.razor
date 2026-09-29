@@ -25,10 +25,13 @@
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="site-instructions">
         <SectionHeader Title="Site Instructions">
             <Actions>
-            <button type="button" class="btn-primary"
-                    @onclick="ToggleForm">
-                @(formOpen ? "Close" : "Raise instruction")
-            </button>
+            @if (CanManage)
+            {
+                <button type="button" class="btn-primary"
+                        @onclick="ToggleForm">
+                    @(formOpen ? "Close" : "Raise instruction")
+                </button>
+            }
             </Actions>
         </SectionHeader>
 
@@ -119,10 +122,13 @@
                                 @DateText(row.CreatedAt)
                             </td>
                             <td class="whitespace-nowrap text-right">
+                                @if (CanManage)
+                                {
                                 <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4 mr-3"
                                         @onclick="() => StartEdit(row)">
                                     Edit
                                 </button>
+                                }
                                 <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
                                         @onclick="() => ToggleEmails(row.SiteInstructionId)">
                                     @(isExpanded ? "Hide emails" : "Emails")
@@ -164,6 +170,9 @@
 
     // One form for both raise and edit: editingId null = raising.
     private bool formOpen;
+
+    private bool CanManage => Session.CanOpen(SiteInstructionRoles.Managers);
+
     private string? editingId;
     private string formTitle = "";
     private string formInstruction = "";

@@ -1,0 +1,28 @@
+@namespace Jewel.JPMS.Features.Hs.Audits
+@typeparam TKey where TKey : struct, Enum
+
+<select class="field py-1 @Class" disabled="@Disabled" value="@Selected" @onchange="ChosenAsync">
+    <option value="">—</option>
+    @foreach (var key in Enum.GetValues<TKey>())
+    {
+        <option value="@Convert.ToInt32(key)" title="@Describe(key)">@Code(key)</option>
+    }
+</select>
+
+@code {
+    [Parameter] public TKey? Value { get; set; }
+    [Parameter] public EventCallback<TKey?> ValueChanged { get; set; }
+    [Parameter, EditorRequired] public Func<TKey, string> Code { get; set; } = key => key.ToString();
+    [Parameter, EditorRequired] public Func<TKey, string> Describe { get; set; } = key => key.ToString();
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string Class { get; set; } = "";
+
+    private string Selected => Value is { } chosen ? Convert.ToInt32(chosen).ToString() : "";
+
+    private Task ChosenAsync(ChangeEventArgs chosen)
+    {
+        var isAKey = int.TryParse(chosen.Value?.ToString(), out var picked);
+        TKey? key = isAKey ? (TKey)Enum.ToObject(typeof(TKey), picked) : null;
+        return ValueChanged.InvokeAsync(key);
+    }
+}

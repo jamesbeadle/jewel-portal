@@ -19,7 +19,10 @@
     </FormField>
     <FormField Label="Evidence: the document page, or the online check result" Class="sm:col-span-2"
                Hint="Filed in the restricted Right to work folder under their name. We keep the copy, never the passport. Not a photo of the person.">
-        <InputFile OnChange="chosen => EvidenceChosen.InvokeAsync(chosen.File)" accept=".pdf,image/*" class="w-full text-sm text-content-muted" />
+        <label class="btn-secondary cursor-pointer">
+            Choose the evidence
+            <InputFile OnChange="chosen => EvidenceChosen.InvokeAsync(chosen.File)" accept=".pdf,image/*" class="hidden" />
+        </label>
     </FormField>
 </div>
 

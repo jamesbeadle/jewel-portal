@@ -16,7 +16,7 @@ namespace Jewel.JPMS.Tests;
 // role admitted on any project. The gateway now runs the same record scope the endpoint does.
 public sealed class AiActionScopesTests
 {
-    private const string Practice = "arch-a";
+    private const string ArchitectLogin = "architect@practice.example";
     private const string TheirProject = "P-THEIRS";
     private const string AnotherProject = "P-SOMEONE-ELSES";
     private const string TheirRequest = "req-theirs";
@@ -28,7 +28,7 @@ public sealed class AiActionScopesTests
     public async Task AnArchitect_isRefusedAnotherPracticesRecords_throughTheGateway()
     {
         await using var context = await SeededContextAsync();
-        var architect = Signed(Role.Architect, architectId: Practice);
+        var architect = Signed(Role.Architect, email: ArchitectLogin);
 
         Assert.False(await AiActionScopes.AllowsAsync(context, architect,
             new UpdateRequestDetails(AnotherRequest, "R1", "Title", "Body", RequestStatus.Open, null, null, null, false), CancellationToken.None));
@@ -42,7 +42,7 @@ public sealed class AiActionScopesTests
     public async Task AnArchitect_passesTheGateway_onTheirOwnRecords()
     {
         await using var context = await SeededContextAsync();
-        var architect = Signed(Role.Architect, architectId: Practice);
+        var architect = Signed(Role.Architect, email: ArchitectLogin);
 
         Assert.True(await AiActionScopes.AllowsAsync(context, architect,
             new PostRequestMessage(TheirRequest, "A note", MessageVisibility.Internal, AuthorEmail: "a@b.c", AuthorName: "A"), CancellationToken.None));
@@ -52,23 +52,23 @@ public sealed class AiActionScopesTests
     public async Task ACommandWithNoScope_passesTheGateway()
     {
         await using var context = await SeededContextAsync();
-        var architect = Signed(Role.Architect, architectId: Practice);
+        var architect = Signed(Role.Architect, email: ArchitectLogin);
 
         Assert.True(await AiActionScopes.AllowsAsync(context, architect, new object(), CancellationToken.None));
     }
 
-    private static SignedInUser Signed(Role role, string? architectId = null) =>
-        new("someone@example.com", "Someone", new[] { role }, ArchitectId: architectId);
+    private static SignedInUser Signed(Role role, string email = "someone@example.com") =>
+        new(email, "Someone", new[] { role });
 
     private static async Task<JpmsContext> SeededContextAsync()
     {
         var context = new JpmsContext(new DbContextOptionsBuilder<JpmsContext>()
             .UseInMemoryDatabase($"ai-action-scopes-{Guid.NewGuid():N}").Options);
         context.Projects.AddRange(
-            new ProjectEntity { ProjectId = TheirProject, Stage = (int)ProjectStage.LiveDelivery,
-                PartyKind = (int)PartyKind.Architect, PartyId = Practice },
-            new ProjectEntity { ProjectId = AnotherProject, Stage = (int)ProjectStage.LiveDelivery,
-                PartyKind = (int)PartyKind.Architect, PartyId = "arch-b" });
+            new ProjectEntity { ProjectId = TheirProject, Stage = (int)ProjectStage.LiveDelivery },
+            new ProjectEntity { ProjectId = AnotherProject, Stage = (int)ProjectStage.LiveDelivery });
+        context.ProjectAccessGrants.Add(
+            new ProjectAccessGrantEntity { ProjectAccessGrantId = "g-1", Email = ArchitectLogin, ProjectId = TheirProject });
         context.Requests.AddRange(
             new RequestEntity { RequestId = TheirRequest, ProjectId = TheirProject },
             new RequestEntity { RequestId = AnotherRequest, ProjectId = AnotherProject });

@@ -156,7 +156,7 @@
        filters local state (a <button>) and reads as a small bordered pill. Decision 2026-09-03.
        TabRow and FilterChips render these; a view never composes them by hand. */
     .tab {
-        @apply inline-flex items-center gap-1.5 px-3 py-2 -mb-px text-sm font-medium border-b-2 border-transparent text-content-faint hover:text-content transition-colors whitespace-nowrap;
+        @apply inline-flex items-center gap-1.5 px-3 py-3 md:py-2 -mb-px text-sm font-medium border-b-2 border-transparent text-content-faint hover:text-content transition-colors whitespace-nowrap;
     }
 
     .tab-active {
@@ -203,11 +203,11 @@
     }
 
     .data-table th {
-        @apply sticky top-0 z-10 h-10 px-6 py-3 bg-canvas border-b border-line-strong font-semibold text-content text-left align-bottom;
+        @apply sticky top-0 z-10 h-10 px-4 md:px-6 py-3 bg-canvas border-b border-line-strong font-semibold text-content text-left align-bottom;
     }
 
     .data-table td {
-        @apply h-12 px-6 py-4 bg-surface border-b border-line-strong align-middle;
+        @apply h-12 px-4 md:px-6 py-4 bg-surface border-b border-line-strong align-middle;
     }
 
     /* The body-text colour sits at ZERO specificity on purpose. `.data-table td` (0,1,1) outranks

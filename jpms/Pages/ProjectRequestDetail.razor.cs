@@ -109,6 +109,8 @@ public partial class ProjectRequestDetail
     // managers and administrators. Admins carry every role server-side, so they always qualify.
     private bool CanEditDetails => Session.AvailableRoles.Any(role => role is Role.Admin or Role.ProjectManager);
 
+    private bool CanAttach => Session.CanOpen(RequestAttachmentRoles.AllowedToAttach);
+
     // Raising a variation is a wider set than editing the request, and always was on the server:
     // this mirrors VariationRoles.AllowedToManageVariations and ModalCatalog.VariationDraft's
     // OpenableBy exactly. Keeping the button behind CanEditDetails hid it from the MD and the QS

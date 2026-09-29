@@ -52,14 +52,19 @@ public sealed class ExternalCorrespondenceTests
         var externalLogin = new[] { external };
         Assert.False(JpmsRoleSets.ProjectDeliveryTeam.IncludesAny(externalLogin));
         Assert.False(RecordEmailRoles.Readers.IncludesAny(externalLogin));
-        Assert.False(ArchitectInstructionRoles.AllowedToRead.IncludesAny(externalLogin));
         Assert.False(ArchitectInstructionRoles.AllowedToImportFromMail.IncludesAny(externalLogin));
     }
 
+    // 2026-09-29, Nigel: architects file and delete their own instructions, and follow a drawing
+    // linked on their RFI. Both reads are theirs on the projects their login was given alone —
+    // ArchitectInstructionScope and DrawingScope on every read — never the whole register.
     [Fact]
-    public void TheArchitect_readsNoDrawingThroughTheUnscopedRegister()
+    public void TheArchitect_readsInstructionsAndDrawings_throughAScope()
     {
-        Assert.False(JpmsRoleSets.DrawingReaders.Includes(Role.Architect));
+        Assert.True(ArchitectInstructionRoles.AllowedToRead.Includes(Role.Architect));
+        Assert.True(JpmsRoleSets.DrawingReaders.Includes(Role.Architect));
+        Assert.False(ArchitectInstructionRoles.AllowedToRead.Includes(Role.Client));
+        Assert.False(JpmsRoleSets.DrawingReaders.Includes(Role.Client));
     }
 
     [Theory]

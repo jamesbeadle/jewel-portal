@@ -5,13 +5,16 @@ namespace Jewel.JPMS.Api.Features.Drawings.Queries;
 public sealed class GetDrawingByIdEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly JpmsContext context;
     private readonly IQueryHandler<GetDrawingById, Drawing?> handler;
 
     public GetDrawingByIdEndpoint(
         SignedInUserResolver users,
+        JpmsContext context,
         IQueryHandler<GetDrawingById, Drawing?> handler)
     {
         this.users = users;
+        this.context = context;
         this.handler = handler;
     }
 
@@ -23,11 +26,14 @@ public sealed class GetDrawingByIdEndpoint
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "drawings/{drawingId}")] HttpRequest request,
         string drawingId)
     {
-        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        var cancellationToken = request.HttpContext.RequestAborted;
+        var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!RolesThatMayReadDrawings.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+        if (!await DrawingScope.MayReadDrawingAsync(context, signedInUser, drawingId, cancellationToken))
+            return new StatusCodeResult(403);
 
-        var drawing = await handler.HandleAsync(new GetDrawingById(drawingId), request.HttpContext.RequestAborted);
+        var drawing = await handler.HandleAsync(new GetDrawingById(drawingId), cancellationToken);
         return new OkObjectResult(drawing);
     }
 }

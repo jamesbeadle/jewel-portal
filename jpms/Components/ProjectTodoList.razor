@@ -82,7 +82,7 @@
             @* The role filter, board and list alike. Options are the roles that actually have
                items on this project — built from data, so it never offers a row that matches
                nothing — plus Unassigned when that would match something. *@
-            <select class="field !w-auto text-xs" title="Filter by assigned role"
+            <select class="field !w-auto" title="Filter by assigned role"
                     value="@roleFilter" @onchange="e => roleFilter = e.Value?.ToString() ?? string.Empty">
                 <option value="">Any role</option>
                 @if (HasUnassigned)

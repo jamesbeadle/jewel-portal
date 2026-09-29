@@ -65,9 +65,9 @@
                             <tr>
                                 <th>Ref</th>
                                 <th>Title</th>
-                                <th>Instructed</th>
-                                <th>Issued by</th>
-                                <th>Variations</th>
+                                <th class="hidden md:table-cell">Instructed</th>
+                                <th class="hidden lg:table-cell">Issued by</th>
+                                <th class="hidden md:table-cell">Variations</th>
                                 <th>Document</th>
                                 <th></th>
                             </tr>
@@ -91,14 +91,14 @@
                                             <span class="block text-xs text-content-subtle">@instruction.Notes</span>
                                         }
                                     </td>
-                                    <td class="whitespace-nowrap">@Date(instruction.InstructedAt ?? instruction.ReceivedAt)</td>
-                                    <td>
+                                    <td class="hidden md:table-cell whitespace-nowrap">@Date(instruction.InstructedAt ?? instruction.ReceivedAt)</td>
+                                    <td class="hidden lg:table-cell">
                                         @(string.IsNullOrWhiteSpace(instruction.IssuedByEmail) ? "—" : instruction.IssuedByEmail)
                                         <span class="block text-xs text-content-subtle">
                                             @(instruction.Source == ArchitectInstructionSource.Email ? "From email" : "Uploaded")
                                         </span>
                                     </td>
-                                    <td>
+                                    <td class="hidden md:table-cell">
                                         @if (instruction.Links.Count == 0)
                                         {
                                             <span class="text-content-subtle text-xs">Not linked</span>
@@ -184,14 +184,12 @@
             </div>
 
             <div>
-                <FormField Label="Document">
-                <InputFile OnChange="OnInstructionFileSelected" accept=".pdf,image/*,.doc,.docx" class="text-sm" />
+                <FormField Label="Document" Hint="@(formFile is null ? "Optional — file the row now and attach the document when it arrives." : formFile.Name)">
+                    <label class="btn-secondary cursor-pointer">
+                        Choose a file
+                        <InputFile OnChange="OnInstructionFileSelected" accept=".pdf,image/*,.doc,.docx" class="hidden" />
+                    </label>
                 </FormField>
-                <p class="mt-1 text-xs text-content-subtle">
-                    @(formFile is null
-                        ? "Optional — file the row now and attach the document when it arrives."
-                        : formFile.Name)
-                </p>
             </div>
 
             @if (VariationOptions.Count > 0)

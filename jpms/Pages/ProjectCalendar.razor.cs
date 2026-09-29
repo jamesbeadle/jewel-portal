@@ -55,6 +55,8 @@ public partial class ProjectCalendar
         return start < Today ? Today : start;
     }
 
+    private bool CanManage => Session.CanOpen(CalendarRoles.Managers);
+
     protected override async Task OnInitializedAsync()
     {
         year = DateTime.Today.Year;

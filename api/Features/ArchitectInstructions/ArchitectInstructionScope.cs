@@ -19,6 +19,10 @@ internal static class ArchitectInstructionScope
         return await ArchitectProjects.OwnsProjectAsync(context, architectLogin, projectId, cancellationToken);
     }
 
+    public static Task<bool> MayReadProjectAsync(
+        JpmsContext context, SignedInUser user, string projectId, CancellationToken cancellationToken) =>
+        MayFileOnProjectAsync(context, user, projectId, cancellationToken);
+
     public static async Task<bool> MayActOnAsync(
         JpmsContext context, SignedInUser user, string instructionId, CancellationToken cancellationToken)
     {

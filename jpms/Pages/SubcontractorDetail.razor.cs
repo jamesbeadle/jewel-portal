@@ -66,9 +66,9 @@ public partial class SubcontractorDetail
         finally { editBusy = false; }
     }
 
-    // Restricted to administrators, the managing and finance directors, and project managers —
-    // the roles allowed to edit directory records (mirrors the API's UpdateSubcontractor gate).
-    private bool CanAccess => Session.AvailableRoles.Any(r =>
+    private bool CanAccess => Session.CanOpen(DirectoryRoles.AllowedToList);
+
+    private bool CanEdit => Session.AvailableRoles.Any(r =>
         r is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
 
     // ---- Xero link ----

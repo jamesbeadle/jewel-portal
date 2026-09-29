@@ -6,7 +6,5 @@ namespace Jewel.JPMS.Api.Features.SiteInstructions.Commands;
 // defect and inventory maintenance (Director/PM/SiteManager) — no external roles.
 public sealed class AddSiteInstructionAuthorisation
 {
-    private static readonly RoleSet RolesThatMayInstructSite =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager);
-    public bool Allows(SignedInUser user, AddSiteInstruction command) => RolesThatMayInstructSite.IncludesAny(user.Roles);
+    public bool Allows(SignedInUser user, AddSiteInstruction command) => SiteInstructionRoles.Managers.IncludesAny(user.Roles);
 }

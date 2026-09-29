@@ -26,6 +26,8 @@ public partial class FormSubmissionDetail
 
     private bool IsDestroyed => view?.Submission.Status == FormSubmissionStatus.Destroyed;
 
+    private bool CanMoveStatus => Session.CanOpen(FormRoleSets.Office);
+
     private IReadOnlyList<DropdownMenu.Item> StatusMoves => new[] { FormSubmissionStatus.New, FormSubmissionStatus.InProgress, FormSubmissionStatus.Handled }
         .Select(status => new DropdownMenu.Item(status.DisplayName(), EventCallback.Factory.Create(this, () => MoveAsync(status)),
             Selected: status == view?.Submission.Status))

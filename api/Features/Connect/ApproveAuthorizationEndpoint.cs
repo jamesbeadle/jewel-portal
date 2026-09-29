@@ -44,6 +44,7 @@ public sealed class ApproveAuthorizationEndpoint
         var cancellationToken = request.HttpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
+        if (!ConnectorRoles.AllowedToConnect.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
 
         ApproveConnectRequest? body;
         try { body = await request.ReadFromJsonAsync<ApproveConnectRequest>(cancellationToken); }

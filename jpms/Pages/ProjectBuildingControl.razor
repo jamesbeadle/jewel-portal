@@ -47,7 +47,7 @@
                         Set up the case — the body signing this project off, their reference and the notice dates —
                         and the inspection checklist starts from a standard set of stages you can edit freely.
                     </p>
-                    @if (!caseFormOpen)
+                    @if (!caseFormOpen && CanManage)
                     {
                         <button type="button" class="btn-primary"
                                 @onclick="OpenCreateCase">
@@ -75,15 +75,18 @@
                             </p>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
-                            <select class="field py-1" value="@((int)ActiveCase.Status)" disabled="@busy"
+                            <select class="field py-1" value="@((int)ActiveCase.Status)" disabled="@(busy || !CanManage)"
                                     @onchange="e => SetCaseStatusAsync(ActiveCase, e)">
                                 @foreach (var status in Enum.GetValues<BuildingControlCaseStatus>())
                                 {
                                     <option value="@((int)status)">@status.DisplayName()</option>
                                 }
                             </select>
-                            <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                    @onclick="() => OpenEditCase(ActiveCase)">Edit</button>
+                            @if (CanManage)
+                            {
+                                <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                        @onclick="() => OpenEditCase(ActiveCase)">Edit</button>
+                            }
                         </div>
                     </div>
                     <dl class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2 text-sm mb-4">
@@ -117,10 +120,13 @@
                     <div class="border-t border-line pt-3">
                         <div class="flex items-center justify-between mb-2">
                             <h4 class="eyebrow">Case documents</h4>
-                            <label class="text-xs text-accent hover:underline cursor-pointer @(busy ?"opacity-50 pointer-events-none" : "")">
-                                + Add files
-                                <InputFile OnChange="e => UploadToCaseAsync(ActiveCase, e)" multiple class="hidden" />
-                            </label>
+                            @if (CanManage)
+                            {
+                                <label class="text-xs text-accent hover:underline cursor-pointer @(busy ?"opacity-50 pointer-events-none" : "")">
+                                    + Add files
+                                    <InputFile OnChange="e => UploadToCaseAsync(ActiveCase, e)" multiple class="hidden" />
+                                </label>
+                            }
                         </div>
                         <div class="flex items-center gap-2 mb-2">
                             <label class="text-xs text-content-subtle">Uploading as</label>
@@ -146,8 +152,11 @@
                                             <a class="font-medium text-content hover:underline" href="@Attachments.FileUrl(file.BuildingControlAttachmentId)" download>@file.DisplayName</a>
                                             <span class="text-xs text-content-subtle ml-2">@file.Kind.Label() · @FormatSize(file.FileSizeBytes)</span>
                                         </div>
-                                        <button type="button" class="text-xs text-content-muted hover:text-negative" disabled="@busy"
-                                                @onclick="() => RemoveFileAsync(file.BuildingControlAttachmentId)">Remove</button>
+                                        @if (CanManage)
+                                        {
+                                            <button type="button" class="text-xs text-content-muted hover:text-negative" disabled="@busy"
+                                                    @onclick="() => RemoveFileAsync(file.BuildingControlAttachmentId)">Remove</button>
+                                        }
                                     </li>
                                 }
                             </ul>
@@ -252,10 +261,13 @@
             {
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-base font-semibold text-content">Inspections</h3>
-                    <button type="button" class="btn-primary"
-                            @onclick="() => addStageOpen = !addStageOpen">
-                        @(addStageOpen ? "Close" : "Add inspection")
-                    </button>
+                    @if (CanManage)
+                    {
+                        <button type="button" class="btn-primary"
+                                @onclick="() => addStageOpen = !addStageOpen">
+                            @(addStageOpen ? "Close" : "Add inspection")
+                        </button>
+                    }
                 </div>
 
                 @if (addStageOpen)
@@ -315,7 +327,7 @@
                                     <td class="whitespace-nowrap">@DateText(inspection.InspectedAt)</td>
                                     <td class="whitespace-nowrap">@FileCountText(inspection)</td>
                                     <td class="whitespace-nowrap text-right" @onclick:stopPropagation>
-                                        @if (inspection.Status == BuildingControlInspectionStatus.Planned && FilesFor(inspection).Count == 0)
+                                        @if (CanManage && inspection.Status == BuildingControlInspectionStatus.Planned && FilesFor(inspection).Count == 0)
                                         {
                                             <button type="button" class="text-xs text-content-subtle hover:text-negative underline underline-offset-4" disabled="@busy"
                                                     @onclick="() => DeleteStageAsync(inspection)">Remove</button>

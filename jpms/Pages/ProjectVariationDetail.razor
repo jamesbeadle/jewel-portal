@@ -61,7 +61,7 @@
                the record's facts and the editors / dialogs the menu opens; none carries a button. *@
             <VariationHeaderBar Order="order" Busy="busy"
                                 StatusMenuItems="StatusMenuItems" ActionMenuItems="ActionMenuItems"
-                                PrimaryLabel="@PrimaryLabel" OnPrimary="RunPrimary" />
+                                PrimaryLabel="@PrimaryLabel" PrimaryDisabled="@PrimaryDisabled" OnPrimary="RunPrimary" />
 
             @* The same tab bar as the request page: the chain's documents as tabs, this record active.
                The Request / RFI tabs land back on the containing request page (the RFI tab straight
@@ -258,6 +258,12 @@
 
             <DeclineVariationModal Order="order" @bind-IsOpen="decliningOrder" Busy="busy" Error="@error"
                                    OnConfirm="RejectOrder" />
+
+            <ConfirmDialog IsOpen="@approvingAsInstructed" Title="@($"Approve {order.DisplayNumber}?")"
+                           ConfirmLabel="Approve variation" BusyLabel="Approving…" Busy="@busy"
+                           OnConfirm="ApproveAsInstructed" OnCancel="() => approvingAsInstructed = false">
+                <p class="text-sm text-content">@PartyApprovalSentence</p>
+            </ConfirmDialog>
 
             <ReinstateVariationDialog Order="ReinstateCandidate" Busy="busy" Error="@error"
                                       OnConfirm="ReinstateOrder"

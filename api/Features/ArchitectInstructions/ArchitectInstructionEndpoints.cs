@@ -6,18 +6,16 @@ using Jewel.JPMS.Contracts.ArchitectInstructions;
 namespace Jewel.JPMS.Api.Features.ArchitectInstructions;
 
 /// <summary>
-/// HTTP surface for the Architect's Instruction register. The JSON commands and queries follow the
-/// house four-part shape; the upload is multipart and the download proxies a private blob, so both
-/// of those are hand-written endpoints rather than routed through the JSON command sender — exactly
-/// as drawings do it.
+/// The writes on the Architect's Instruction register. The JSON commands follow the house four-part
+/// shape; the upload is multipart, so it is a hand-written endpoint rather than routed through the
+/// JSON command sender — exactly as drawings do it. The reads, which the architect's own login
+/// shares, live in ArchitectInstructionReadEndpoints, away from the mailbox import.
 /// </summary>
 public sealed class ArchitectInstructionEndpoints
 {
     private readonly SignedInUserResolver users;
     private readonly JpmsContext context;
     private readonly IArchitectInstructionBlobStore blobStore;
-    private readonly IQueryHandler<ListArchitectInstructionsForProject, IReadOnlyList<ArchitectInstruction>> list;
-    private readonly IQueryHandler<GetArchitectInstructionById, ArchitectInstruction?> get;
     private readonly ICommandHandler<RecordArchitectInstruction, ArchitectInstruction> record;
     private readonly ICommandHandler<ImportArchitectInstructionFromMessage, ArchitectInstruction> import;
     private readonly ICommandHandler<UpdateArchitectInstruction, ArchitectInstruction> update;
@@ -29,8 +27,6 @@ public sealed class ArchitectInstructionEndpoints
         SignedInUserResolver users,
         JpmsContext context,
         IArchitectInstructionBlobStore blobStore,
-        IQueryHandler<ListArchitectInstructionsForProject, IReadOnlyList<ArchitectInstruction>> list,
-        IQueryHandler<GetArchitectInstructionById, ArchitectInstruction?> get,
         ICommandHandler<RecordArchitectInstruction, ArchitectInstruction> record,
         ICommandHandler<ImportArchitectInstructionFromMessage, ArchitectInstruction> import,
         ICommandHandler<UpdateArchitectInstruction, ArchitectInstruction> update,
@@ -41,44 +37,12 @@ public sealed class ArchitectInstructionEndpoints
         this.users = users;
         this.context = context;
         this.blobStore = blobStore;
-        this.list = list;
-        this.get = get;
         this.record = record;
         this.import = import;
         this.update = update;
         this.link = link;
         this.unlink = unlink;
         this.delete = delete;
-    }
-
-    [Function(nameof(ListArchitectInstructionsForProject))]
-    public async Task<IActionResult> List(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "projects/{projectId}/architect-instructions")] HttpRequest request,
-        string projectId)
-    {
-        var cancellationToken = request.HttpContext.RequestAborted;
-        var signedInUser = await users.ResolveAsync(request, cancellationToken);
-        if (signedInUser is null) return new UnauthorizedResult();
-        if (!ArchitectInstructionRoles.AllowedToRead.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
-
-        return new OkObjectResult(
-            await list.HandleAsync(new ListArchitectInstructionsForProject(projectId), cancellationToken));
-    }
-
-    [Function(nameof(GetArchitectInstructionById))]
-    public async Task<IActionResult> Get(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "architect-instructions/{instructionId}")] HttpRequest request,
-        string instructionId)
-    {
-        var cancellationToken = request.HttpContext.RequestAborted;
-        var signedInUser = await users.ResolveAsync(request, cancellationToken);
-        if (signedInUser is null) return new UnauthorizedResult();
-        if (!ArchitectInstructionRoles.AllowedToRead.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
-
-        var instruction = await get.HandleAsync(new GetArchitectInstructionById(instructionId), cancellationToken);
-        return instruction is null
-            ? new NotFoundObjectResult($"Architect's Instruction {instructionId} not found.")
-            : new OkObjectResult(instruction);
     }
 
     /// <summary>
@@ -285,41 +249,5 @@ public sealed class ArchitectInstructionEndpoints
 
         return new OkObjectResult(
             await delete.HandleAsync(new DeleteArchitectInstruction(instructionId), cancellationToken));
-    }
-
-    /// <summary>
-    /// GET /api/architect-instructions/{instructionId}/file — streams the stored document. The
-    /// container is private, so the file is proxied here rather than handed out as a URL.
-    /// </summary>
-    [Function(nameof(DownloadArchitectInstructionFile))]
-    public async Task<IActionResult> DownloadArchitectInstructionFile(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "architect-instructions/{instructionId}/file")] HttpRequest request,
-        string instructionId)
-    {
-        var cancellationToken = request.HttpContext.RequestAborted;
-        var signedInUser = await users.ResolveAsync(request, cancellationToken);
-        if (signedInUser is null) return new UnauthorizedResult();
-        if (!ArchitectInstructionRoles.AllowedToRead.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
-
-        var entity = await context.ArchitectInstructions
-            .AsNoTracking()
-            .FirstOrDefaultAsync(row => row.ArchitectInstructionId == instructionId, cancellationToken);
-        if (entity is null || string.IsNullOrWhiteSpace(entity.BlobRef))
-            return new NotFoundObjectResult("No document is stored for this instruction.");
-
-        var blob = await blobStore.OpenAsync(entity.BlobRef, cancellationToken);
-        if (blob is null) return new NotFoundObjectResult("The stored document could not be found.");
-
-        // ?inline=1 renders in the in-app viewer; anything else downloads with its filename.
-        var inline = InlineRendering.IsAskedFor(request);
-        InlineRendering.ForbidSniffing(request.HttpContext.Response);
-
-        var result = new FileStreamResult(blob.Content, entity.ContentType ?? blob.ContentType)
-        {
-            EnableRangeProcessing = true
-        };
-        if (!InlineRendering.IsInlineView(inline, result.ContentType))
-            result.FileDownloadName = string.IsNullOrWhiteSpace(entity.FileName) ? $"{entity.Reference}" : entity.FileName;
-        return result;
     }
 }

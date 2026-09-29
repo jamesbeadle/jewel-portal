@@ -16,14 +16,20 @@ public partial class ProjectVariationDetail
 
     // The one green button. Pre-approval it is the approval itself (the step that writes the
     // contract figures); once approved, instructing the works. A rejected order has no next step.
-    private string? PrimaryLabel => order is null || !CanManage ? null : order.Status switch
+    private string? PrimaryLabel => order is null ? null : CanManage ? ManagerPrimaryLabel : PartyPrimaryLabel;
+
+    private string? ManagerPrimaryLabel => order!.Status switch
     {
         VariationOrderStatus.Approved => "Issue work order",
         VariationOrderStatus.Rejected => null,
         _ => IsManualApproval ? "Approve manually & raise VO…" : "Approve & raise VO…",
     };
 
-    private Task RunPrimary() => order?.Status == VariationOrderStatus.Approved ? IssueWorkOrder() : FocusApprovePanel();
+    private Task RunPrimary()
+    {
+        if (!CanManage) return OpenPartyApproval();
+        return order?.Status == VariationOrderStatus.Approved ? IssueWorkOrder() : FocusApprovePanel();
+    }
 
     private bool IsManualApproval => string.IsNullOrEmpty(order?.SelectedSubcontractorId);
 
@@ -33,8 +39,8 @@ public partial class ProjectVariationDetail
     {
         get
         {
-            if (order is null || !CanManage)
-                return new List<DropdownMenu.Item>();
+            if (order is null) return new List<DropdownMenu.Item>();
+            if (!CanManage) return PartyStatusMenuItems();
             if (order.Status == VariationOrderStatus.Rejected)
                 return RejectedStatusMenuItems();
 

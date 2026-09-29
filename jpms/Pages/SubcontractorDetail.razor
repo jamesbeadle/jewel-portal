@@ -14,7 +14,7 @@
     @if (!CanAccess)
     {
         <PageHeader Title="Not available" />
-        <p class="text-content-muted">The company directory is restricted to administrators, the managing and finance directors, and project managers.</p>
+        <p class="text-content-muted">The company directory is restricted to the office and management roles.</p>
     }
     else if (!SubcontractorStore.IsLoaded)
     {
@@ -77,9 +77,12 @@
                                        Busy="xeroBusy" OnConfirm="() => UnlinkFromXero(link.XeroContactId)" />
                     }
                 }
-                <button type="button" class="btn-secondary shrink-0"
-                        title="Edit the company name and contact details — rename to match Xero so invoices line up on WO Allocation"
-                        @onclick="OpenEdit">Edit details…</button>
+                @if (CanEdit)
+                {
+                    <button type="button" class="btn-secondary shrink-0"
+                            title="Edit the company name and contact details — rename to match Xero so invoices line up on WO Allocation"
+                            @onclick="OpenEdit">Edit details…</button>
+                }
             </Actions>
         </PageHeader>
 
@@ -191,7 +194,7 @@
                     }
                 </select>
                 <input class="field w-56" placeholder="New trade, e.g. Hod carrier" @bind="newTradeName" @bind:event="oninput" />
-                <button type="button" class="btn-secondary" disabled="@(tradesBusy || string.IsNullOrWhiteSpace(newTradeName))" @onclick="AddNewTrade">
+                <button type="button" class="btn-secondary" disabled="@(tradesBusy || !CanEdit || string.IsNullOrWhiteSpace(newTradeName))" @onclick="AddNewTrade">
                     @(tradesBusy ? "Saving…" : "Add new trade")
                 </button>
             </div>
@@ -267,7 +270,7 @@
                     </FormField>
                 </div>
                 <div class="flex gap-2">
-                    <button type="button" class="btn-secondary" disabled="@contactBusy" @onclick="SaveContact">
+                    <button type="button" class="btn-secondary" disabled="@(contactBusy || !CanEdit)" @onclick="SaveContact">
                         @(contactBusy ? "Saving…" : editingContactId is null ? "Add contact" : "Save contact")
                     </button>
                     @if (editingContactId is not null)
@@ -296,7 +299,7 @@
                 </Notice>
             }
             <div class="flex flex-wrap items-center gap-3">
-                <button type="button" class="btn-secondary" disabled="@(inviteBusy || string.IsNullOrWhiteSpace(subcontractor.ContactEmail))" @onclick="InviteToPortal">
+                <button type="button" class="btn-secondary" disabled="@(inviteBusy || !CanEdit || string.IsNullOrWhiteSpace(subcontractor.ContactEmail))" @onclick="InviteToPortal">
                     @(inviteBusy ? "Inviting…" : inviteResult is null ? "Invite to portal" : "Re-send invite")
                 </button>
                 <span class="text-xs text-content-subtle">
@@ -332,7 +335,7 @@
 
         @* The HMRC CIS verification result sits with the compliance documents — the two together
            are the record's standing to be paid. The page's gate is the API's edit gate. *@
-        <CisVerificationPanel Subcontractor="subcontractor" CanEdit="CanAccess" />
+        <CisVerificationPanel Subcontractor="subcontractor" CanEdit="CanEdit" />
 
         <SubcontractorComplianceList SubcontractorId="@subcontractor.SubcontractorId" />
 

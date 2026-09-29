@@ -12,7 +12,10 @@
         <input type="date" @bind="workDate" required class="field" />
     </FormField>
     <FormField Label="Photos" Hint="@PhotosHint">
-        <InputFile OnChange="OnFilesSelected" multiple accept="image/*" class="w-full text-sm text-content-muted" />
+        <label class="btn-secondary cursor-pointer">
+            Choose photos
+            <InputFile OnChange="OnFilesSelected" multiple accept="image/*" class="hidden" />
+        </label>
     </FormField>
     <ProgressWeatherFields @ref="weatherFields" />
     @if (error is not null)

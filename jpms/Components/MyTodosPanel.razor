@@ -59,7 +59,7 @@
     {
         @* Only when the reader's items span several roles — one role has nothing to filter. *@
         <div class="mb-3 flex justify-end">
-            <select class="field !w-auto text-xs" title="Filter by assigned role"
+            <select class="field !w-auto" title="Filter by assigned role"
                     value="@roleFilter" @onchange="e => roleFilter = e.Value?.ToString() ?? string.Empty">
                 <option value="">All my roles</option>
                 @foreach (var role in RolesOnPanel)

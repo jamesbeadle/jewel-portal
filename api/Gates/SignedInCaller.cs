@@ -22,4 +22,10 @@ public sealed class SignedInCaller
     /// login — client, architect, subcontractor or site operative.</summary>
     public bool MayReadInternalCorrespondence =>
         User is null || RecordEmailRoles.Readers.IncludesAny(User.Roles);
+
+    /// <summary>A project's party — its client or architect — signed in on their own login, as
+    /// opposed to staff. A party's read of a record has its internal fields stripped, so a write
+    /// they send back carries none, and the handler keeps what it holds.</summary>
+    public bool IsAParty =>
+        User is not null && !JpmsRoleSets.AllInternal.IncludesAny(User.Roles);
 }

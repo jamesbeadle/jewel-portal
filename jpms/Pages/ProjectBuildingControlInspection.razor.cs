@@ -10,6 +10,8 @@ public partial class ProjectBuildingControlInspection
     [Parameter] public string ProjectId { get; set; } = "";
     [Parameter] public string InspectionId { get; set; } = "";
 
+    private bool CanManage => Session.CanOpen(BuildingControlRoles.Managers);
+
     private bool dataFailed;
     private bool busy;
     private string? actionError;
