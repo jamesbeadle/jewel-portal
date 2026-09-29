@@ -28,6 +28,9 @@ This is the contract between scoping and Blazor implementation. Every Phase 1 us
   /me/preferences                                    Email + role-switch defaults
                                                    (Notifications delivered via PWA push, no dedicated inbox)
 /reports                                           [Owner P02; Read P01,P03,P04]
+/manual                                            [Office master — P01,P02,P03 manage; all internal read]
+  /manual/{manualModuleId}                           One module: controls, text, versions, acknowledgements
+  /manual/view/{view}                                Published role view (SiteManager, HealthAndSafetyOfficer, Foreman, Office); print = issue
                                                    US-07-10, US-07-22, plus any downstream-publish surface
   /reports/valuations                                Approved valuations CSV export
   /reports/timesheets                                Approved day-rate hours CSV export

@@ -1,0 +1,56 @@
+@using Jewel.JPMS.Features.Manual
+
+<Panel Class="mb-6 print:break-inside-avoid" BodyClass="p-5">
+    <div class="flex items-start justify-between gap-4 mb-3">
+        <div>
+            <p class="text-xs font-mono text-content-subtle">@Module.Code · v@(Module.Version) · approved @DateText(Module.ApprovedAt)</p>
+            <h3 class="text-lg font-semibold text-content">@Module.Title</h3>
+            @if (!string.IsNullOrEmpty(Module.Purpose))
+            {
+                <p class="text-sm text-content-muted">@Module.Purpose</p>
+            }
+        </div>
+        <div class="print:hidden shrink-0">
+            @if (Module.HasAcknowledged)
+            {
+                <Pill Tone="Tone.Positive" Dot>Read @DateText(Module.AcknowledgedAt)</Pill>
+            }
+            else
+            {
+                <Pill Tone="Tone.Warning" Dot>Not yet acknowledged</Pill>
+            }
+        </div>
+    </div>
+
+    <MarkdownText Text="@Module.Body" />
+
+    @if (Module.HasLinkedForms)
+    {
+        <p class="text-xs text-content-subtle mt-4">Forms:
+            @foreach (var slug in Module.LinkedFormSlugs)
+            {
+                <a href="@ManualViews.FormAddress(slug)" class="text-info hover:underline underline-offset-4 mr-2">@FormCatalogue.TitleOf(slug)</a>
+            }
+        </p>
+    }
+    @if (!string.IsNullOrEmpty(Module.LinkedStandards))
+    {
+        <p class="text-xs text-content-subtle mt-1">Standards: @Module.LinkedStandards</p>
+    }
+
+    @if (!Module.HasAcknowledged && CanAcknowledge)
+    {
+        <div class="flex items-end gap-3 mt-4 print:hidden">
+            <FormField Label="Type your name to confirm you have read this version" Class="grow">
+                <input class="field" @bind="typedName" maxlength="@ManualLimits.TypedName" />
+            </FormField>
+            <button type="button" class="btn-primary" disabled="@(isSaving || string.IsNullOrWhiteSpace(typedName))" @onclick="AcknowledgeAsync">
+                @(isSaving ? "Saving…" : "I have read this")
+            </button>
+        </div>
+        @if (problem is not null)
+        {
+            <Notice Tone="Tone.Negative" Class="mt-2">@problem</Notice>
+        }
+    }
+</Panel>

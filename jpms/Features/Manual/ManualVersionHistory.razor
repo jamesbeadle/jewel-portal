@@ -1,0 +1,33 @@
+<Panel Title="Approved versions" Class="mb-6" BodyClass="p-0">
+    <RecordsTable Dense="true" IsEmpty="@(Versions.Count == 0)" EmptyMessage="Nothing approved yet.">
+        <thead>
+            <tr>
+                <th>Version</th>
+                <th>Title</th>
+                <th>Approved</th>
+                <th>By</th>
+                <th>Superseded</th>
+                <th>Read by</th>
+                <th>Change summary</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var version in Versions)
+            {
+                <tr>
+                    <td class="tabular-nums">v@(version.Version)</td>
+                    <td class="text-content">@version.Title</td>
+                    <td class="whitespace-nowrap">@DateText(version.ApprovedAt)</td>
+                    <td class="text-content-muted">@version.ApprovedByEmail</td>
+                    <td class="whitespace-nowrap">@(version.IsCurrent ? "Current" : DateText(version.SupersededAt))</td>
+                    <td class="tabular-nums">@version.AcknowledgedCount</td>
+                    <td class="text-content-muted whitespace-pre-line">@version.ChangeSummary</td>
+                </tr>
+            }
+        </tbody>
+    </RecordsTable>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ManualModuleVersion> Versions { get; set; } = Array.Empty<ManualModuleVersion>();
+}

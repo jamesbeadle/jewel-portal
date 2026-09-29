@@ -1,0 +1,38 @@
+@page "/manual"
+@using Jewel.JPMS.Features.Manual
+@implements IDisposable
+
+<PageTitle>Site manual · JBB Portal</PageTitle>
+
+
+<Page OpenTo="ManualRoles.AllowedToReadMaster" Class="max-w-6xl">
+    <SectionHeader Title="Site manual">
+        <Actions>
+        @if (CanManage)
+        {
+            @if (IsEmpty)
+            {
+                <button type="button" class="btn-secondary" disabled="@isImporting" @onclick="ImportBaselineAsync">@(isImporting ? "Loading…" : "Load the JBB baseline")</button>
+            }
+            <button type="button" class="btn-primary" @onclick="() => isCreating = true">New module</button>
+        }
+        </Actions>
+    </SectionHeader>
+    <TableNote IsLead="true" Class="mb-5">
+        The office master: every module, its status and its controls. A draft never reaches the site;
+        an approval publishes it to its views and supersedes the version before.
+    </TableNote>
+
+    <TabRow Items="@ManualViews.Tabs()" AriaLabel="Read as" Class="mb-4" />
+
+    @if (note is not null)
+    {
+        <Notice Tone="Tone.Warning" Class="mb-3" Dismissible OnDismiss="() => note = null">@note</Notice>
+    }
+
+    <LoadGate IsLoading="@(Modules.Current is null)" Label="Loading the manual">
+        <ManualModulesTable Modules="@(Modules.Current ?? Array.Empty<ManualModule>())" />
+    </LoadGate>
+
+    <ManualModuleForm IsOpen="isCreating" OnClose="() => isCreating = false" OnSaved="CreatedAsync" />
+</Page>

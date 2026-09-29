@@ -20,6 +20,7 @@ global using static Jewel.JPMS.DateFormats;
 global using Jewel.JPMS.Contracts.Ai;
 global using Jewel.JPMS.Contracts.Commercial;
 global using Jewel.JPMS.Contracts.Cqrs;
+global using Jewel.JPMS.Contracts.Manual;
 global using Jewel.JPMS.Contracts.Procurement;
 global using Jewel.JPMS.Contracts.RecordLinks;
 global using Jewel.JPMS.Contracts.Requests;

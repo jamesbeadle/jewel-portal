@@ -1,0 +1,57 @@
+@using Jewel.JPMS.Features.Manual
+@inject NavigationManager Nav
+
+<RecordsTable Dense="true" IsEmpty="@(Modules.Count == 0)" EmptyMessage="No modules yet — load the JBB baseline or add a module.">
+    <thead>
+        <tr>
+            <th>Code</th>
+            <th>Module</th>
+            <th>Status</th>
+            <th>Version</th>
+            <th>Published</th>
+            <th>Owner</th>
+            <th>Approver</th>
+            <th>Next review</th>
+            <th>Views</th>
+            <th>Read</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var family in Modules.GroupBy(module => module.Family))
+        {
+            <tr>
+                <td colspan="10" class="text-xs uppercase tracking-wide text-content-subtle pt-3">@ManualModuleCodes.FamilyName(family.Key)</td>
+            </tr>
+            @foreach (var module in family)
+            {
+                <tr class="is-clickable" @onclick="() => Nav.NavigateTo(ManualViews.ModuleAddress(module.ManualModuleId))">
+                    <td class="font-mono text-xs">@module.Code</td>
+                    <td class="font-medium text-content">@module.Title</td>
+                    <td><Pill Tone="@module.Status.ToTone()">@ManualViews.StatusLabel(module.Status)</Pill></td>
+                    <td class="tabular-nums">@module.Version</td>
+                    <td class="tabular-nums">@(module.HasPublishedVersion ? $"v{module.PublishedVersion}" : "—")</td>
+                    <td class="text-content-muted">@EmailOrDash(module.OwnerEmail)</td>
+                    <td class="text-content-muted">@EmailOrDash(module.ApproverEmail)</td>
+                    <td class="whitespace-nowrap">@DateText(module.NextReviewAt)</td>
+                    <td class="text-xs text-content-muted">@AudienceText(module.Audience)</td>
+                    <td class="tabular-nums">@(module.HasPublishedVersion ? module.AcknowledgedCount.ToString() : "—")</td>
+                </tr>
+            }
+        }
+    </tbody>
+</RecordsTable>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ManualModule> Modules { get; set; } = Array.Empty<ManualModule>();
+
+    private static string EmailOrDash(string email) => string.IsNullOrEmpty(email) ? "—" : email;
+
+    private static string AudienceText(ManualAudience audience)
+    {
+        var views = new List<string>();
+        if (audience.IsForSiteManagers) views.Add("SM");
+        if (audience.IsForHealthAndSafetyOfficer) views.Add("H&S");
+        if (audience.IsForForemen) views.Add("Foreman");
+        return views.Count == 0 ? "Office only" : string.Join(" · ", views);
+    }
+}

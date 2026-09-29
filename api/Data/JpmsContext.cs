@@ -190,6 +190,9 @@ public sealed partial class JpmsContext : DbContext
     public DbSet<CompanyRegisterItemEntity> CompanyRegisterItems => Set<CompanyRegisterItemEntity>();
     public DbSet<PolicyDocumentEntity> PolicyDocuments => Set<PolicyDocumentEntity>();
     public DbSet<PolicySignOffEntity> PolicySignOffs => Set<PolicySignOffEntity>();
+    public DbSet<ManualModuleEntity> ManualModules => Set<ManualModuleEntity>();
+    public DbSet<ManualModuleVersionEntity> ManualModuleVersions => Set<ManualModuleVersionEntity>();
+    public DbSet<ManualAcknowledgementEntity> ManualAcknowledgements => Set<ManualAcknowledgementEntity>();
     public DbSet<CashflowSnapshotEntity> CashflowSnapshots => Set<CashflowSnapshotEntity>();
     public DbSet<WeeklyCashflowItemEntity> WeeklyCashflowItems => Set<WeeklyCashflowItemEntity>();
     public DbSet<WeeklyCashflowPlacementEntity> WeeklyCashflowPlacements => Set<WeeklyCashflowPlacementEntity>();

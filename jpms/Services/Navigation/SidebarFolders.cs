@@ -220,6 +220,8 @@ public static class SidebarFolders
                 // Staff sign-off forms: NDAs, policies, H&S acknowledgements.
                 new SidebarRow(new NavigationItem("Policies", "/policies"),
                     NavigationRoles.PolicyRoles),
+                new SidebarRow(new NavigationItem("Site manual", "/manual"),
+                    NavigationRoles.PolicyRoles),
                 new SidebarRow(new NavigationItem("Forms", "/forms"),
                     NavigationRoles.FormReaderRoles),
                 new SidebarRow(new NavigationItem("Emergency contacts", "/emergency-contacts"),
