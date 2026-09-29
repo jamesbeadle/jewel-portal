@@ -51,7 +51,7 @@
 
     @if (open)
     {
-        <div class="@PanelClass rounded border border-line bg-surface shadow-lg z-30 overflow-hidden"
+        <div class="@PanelClass rounded border border-line bg-surface shadow-lg overflow-hidden"
              style="@panelStyle"
              role="menu">
             @if (ChildContent is not null)
@@ -153,12 +153,18 @@
     private DotNetObjectReference<DropdownMenu>? selfRef;
     private bool watching;
 
+    /// <summary>The panel paints above the fixed sidebar (z-40 in NavigationDrawer) — a menu near
+    /// the content's left edge hangs back over the nav column and was cut off by it at z-30 — and
+    /// below the modal overlay (z-50), which is its own stacking context, so a menu inside a dialog
+    /// keeps the same layer relative to that dialog.</summary>
+    private const string PanelLayer = "z-[45]";
+
     /// <summary>Once the panel is placed it is fixed to the viewport and carries its own position;
     /// until then — a client whose cached shell has no measure() — it hangs off the toggle exactly
     /// as it did before, which is wrong only where a scrolling ancestor would clip it.</summary>
     private string PanelClass => isPanelPlaced
-        ? (MatchesToggleWidth ? "" : WidthClass)
-        : $"absolute {(AlignLeft ? "left-0" : "right-0")} mt-2 {WidthClass}";
+        ? $"{PanelLayer} {(MatchesToggleWidth ? "" : WidthClass)}"
+        : $"{PanelLayer} absolute {(AlignLeft ? "left-0" : "right-0")} mt-2 {WidthClass}";
 
     /// <summary>Keeps the document-level outside-press watcher in step with the panel: on while
     /// open, off once closed. Done after render so the watcher only ever sees a root that exists,
