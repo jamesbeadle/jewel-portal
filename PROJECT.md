@@ -61,6 +61,26 @@ The project-process kit writes this file once and never touches it again, and `C
   contracts/Models). RFIs are not on the chart: nothing links an RFI to a task yet.
 
 
+## A locked claim's money moves between its lines, never in or out (contracts + api + jpms)
+
+- **Why** (2026-09-29, Jeremy on By France): Valuation 20 was confirmed and paid with every V16
+  line at one smeared percentage (the 2026-09-16 re-spread deals a settled claim's certified sum
+  across a variation's lines at one uniform %), so Valuation 21's "previous" / "this period" read
+  wrong line by line while right in total — and a Confirmed claim never reopens
+  (`ReopenValuationClaim` is Preapproved → Draft only; that rule stands).
+- **The command**: `RestateValuationClaimLines(ValuationClaimId, Entries)` restates the per-line
+  cumulative % on a LOCKED claim's own frozen rows (Preapproved or Confirmed; a Draft takes
+  `RecordClaimEntries`). `ClaimRestatement.Plan` (contracts, pure) works each row's new money and
+  what the restatement would move; the handler refuses unless BOTH the total works complete and
+  the contract-side works (the deposit release's base) come out to the penny as they were. Only
+  rows the claim carries; nothing re-copied from the live bill; "this period" re-derived on the
+  claim and the one after it; the frozen footer untouched. Gate: `ValuationReportAuthorisation`
+  (claim lifecycle managers); rail: `ClaimEntryInputsValidation`, shared with `RecordClaimEntries`.
+- **Surfaces**: "Restate % per line…" in the claim card's Actions on a locked claim
+  (`ClaimRestatementDialog` + `ClaimRestatementBalance`, Save held until the balance reads nil),
+  POST `valuation-claims/{id}/restatement`, connector `restate_valuation_claim_lines`
+  (confirm-first). Pinned by `ClaimRestatementTests`.
+
 ## The site manual is controlled modules, and the site sees only what is approved (contracts + api + jpms)
 
 - **Why** (2026-09-29, Nigel's Site Manuals and Operating Systems request, YBT task in Jewel Bespoke

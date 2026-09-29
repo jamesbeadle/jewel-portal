@@ -198,6 +198,11 @@ public partial class ProjectValuation
                     OnSelect: EventCallback.Factory.Create(this, OpenClaimProgress),
                     Hint: "Enter cumulative % complete for several lines at once — or have the assistant fill it from the evidence"));
 
+            if (claim.IsLocked && CanManageClaims)
+                items.Add(new(Label: "Restate % per line…",
+                    OnSelect: EventCallback.Factory.Create(this, OpenRestatement),
+                    Hint: "Move money between this claim's lines — its total stays exactly as certified"));
+
             // Group 1 — walking the stage back (or jumping it forward) on a preapproved claim.
             if (claim.Status == ValuationClaimStatus.Preapproved)
             {

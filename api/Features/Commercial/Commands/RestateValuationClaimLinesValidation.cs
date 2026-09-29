@@ -2,9 +2,9 @@ using Jewel.JPMS.Contracts.Commercial;
 
 namespace Jewel.JPMS.Api.Features.Commercial.Commands;
 
-public sealed class RecordClaimEntriesValidation
+public sealed class RestateValuationClaimLinesValidation
 {
-    public ValidationOutcome Check(RecordClaimEntries command)
+    public ValidationOutcome Check(RestateValuationClaimLines command)
     {
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(command.ValuationClaimId)) errors.Add("ValuationClaimId is required.");

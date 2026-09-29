@@ -103,6 +103,8 @@
         <LoadGate IsLoading="@LoadState.UntilAll(ClaimReady, ReportReady)" Prominent="true" Label="Loading the valuation report">
         <ClaimProgressDialog ProjectId="@ProjectId" IsOpen="claimProgressOpen" Claim="@Selected"
                              OnClose="CloseClaimProgress" OnSaved="ClaimProgressSaved" />
+        <ClaimRestatementDialog ProjectId="@ProjectId" IsOpen="restatementOpen" Claim="@Selected"
+                                OnClose="CloseRestatement" OnSaved="RestatementSaved" />
 
         @if (Selected is { } s)
         {

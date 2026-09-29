@@ -256,6 +256,22 @@ figures compute live from its entries). Confirmed claims stay final: their amoun
 Certified-to-date, so they can never reopen. Surfaced as a secondary "Reopen as draft" button
 next to "Confirm payment received".
 
+## 12. Addendum — restating a locked claim's lines (added 29 Sep 2026)
+
+By France's Valuation 20 was confirmed and paid with every V16 line at one smeared percentage
+(the variation re-spread of 2026-09-16 deals a settled claim's certified sum across the lines at
+one uniform %), so Valuation 21's "previous" and "this period" read wrong line by line while
+right in total — and a Confirmed claim cannot reopen. `RestateValuationClaimLines` (POST
+`/api/valuation-claims/{claimId}/restatement`) restates the per-line % on a locked claim's own
+frozen rows: money moves BETWEEN its lines, never in or out. The handler refuses the command
+unless the claim's total works complete and its contract-side works (the deposit release's base)
+come out to the penny as they were (`ClaimRestatement.Plan`, contracts). Only rows the claim
+carries are restated; nothing is re-copied from the live bill; "this period" is re-derived on
+the claim and on the one after it; the frozen footer is untouched. Surfaced as "Restate % per
+line…" in the claim card's Actions on any locked claim (`ClaimRestatementDialog`, Save held until
+the balance reads nil) and as the connector action `restate_valuation_claim_lines`
+(confirm-first). Section 10's rule stands: Confirmed stays final.
+
 ## 11. Open questions
 
 1. Should **Approve** be recordable with the client's certificate reference/date (architects often certify a different figure)? If so, Approve could accept an optional `CertifiedAmount` that amends the invoice amount in one step.

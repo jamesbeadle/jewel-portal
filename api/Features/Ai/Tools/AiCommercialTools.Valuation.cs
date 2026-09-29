@@ -199,7 +199,7 @@ internal static partial class AiCommercialTools
                                    ? "No claim exists yet — % complete can only be recorded on a Draft claim; the user starts one on the Valuation Report tab. "
                                    : selected.Status == (int)ValuationClaimStatus.Draft
                                        ? "The selected claim is Draft, so % complete can be changed: open_modal \"claim_progress\" with the lines to change (valuationLineItemId + cumulative percentComplete). "
-                                       : $"The selected claim is {((ValuationClaimStatus)selected.Status)}, so its % complete is locked — say so; a new Draft claim is started on the Valuation Report tab. ")
+                                       : $"The selected claim is {((ValuationClaimStatus)selected.Status)}, so its % complete is locked — say so; a new Draft claim is started on the Valuation Report tab. Money can still move BETWEEN its lines, total unchanged, with restate_valuation_claim_lines. ")
                                + "Percentages are CUMULATIVE to date. Every figure here is read from the report; quote it, never estimate."
                                + (filtered.Count > shown.Count ? $" Only the first {MaxLines} of {filtered.Count} lines are shown — filter by section or variationRef." : "")
                     });

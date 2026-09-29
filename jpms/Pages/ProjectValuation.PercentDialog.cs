@@ -26,4 +26,22 @@ public partial class ProjectValuation
         claimProgressOpen = false;
         // The store re-fetched the claim's entries and the claims (totals re-frozen) on save.
     }
+
+    private bool restatementOpen;
+
+    private void OpenRestatement()
+    {
+        if (Selected is not { IsLocked: true }) return;
+        restatementOpen = true;
+    }
+
+    private void CloseRestatement()
+    {
+        restatementOpen = false;
+    }
+
+    private void RestatementSaved()
+    {
+        restatementOpen = false;
+    }
 }

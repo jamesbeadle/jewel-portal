@@ -81,6 +81,13 @@ A Draft prints as a working copy, stamped as such. There is no separate
 snapshot: the old Valuation Snapshots register is gone (its address lands on
 the Valuation Report tab). A locked claim's money never moves; to change the
 figures cancel the invoice, reopen the claim, edit, lock again, raise again.
+A Confirmed claim never reopens; what CAN change on any locked claim is where
+its money sits — "Restate % per line…" in the claim card's Actions (connector
+`restate_valuation_claim_lines`) moves money between its frozen lines with
+the total, and the contract / variation split, unchanged to the penny. It is
+the correction for a paid period whose variation lines were smeared to one
+uniform % by a re-spread; the next claim's this-period column then reads
+right line by line.
 
 Correspondence: the Control Centre's Client → **Valuation reports** section
 offers one row per period — the claim (tag `JPMS/VAL-{project}-{claim

@@ -112,6 +112,13 @@ the renamed set, get the yes, then rename each one. Names only — nothing finan
   Comparing the statement against get_valuation_context is how you answer "what moved since we
   claimed". A locked claim's money never moves; to change the figures cancel the invoice,
   reopen, edit, lock again, raise again.
+- **A Confirmed claim never reopens, but WHERE its money sits can be restated.** When a paid
+  claim's lines are smeared (a variation re-spread dealt its certified sum across the lines at
+  one uniform %), `restate_valuation_claim_lines` moves money BETWEEN its frozen lines — the
+  total, and the contract / variation split, come out to the penny as they were or it is
+  refused. Work the percentages out from get_valuation_statement so the lines add back to what
+  the claim holds, show the before / after and the unchanged total, take the user's yes. The
+  next claim's "previous" and "this period" then measure from the real position.
 - **Retention is stamped server-side** from the project's terms — never compute or pass it.
 - **Certified-to-date = issued + paid invoices (gross of deposit credits).** Quote it from
   list_valuation_invoices' summary, never by adding numbers yourself.

@@ -1,38 +1,38 @@
 # Refactor audit
 
-Generated 2026-09-29 13:41 UTC.
+Generated 2026-09-29 15:39 UTC.
 
 ## Headline
 
-**Code quality score 71.5%.** **786 of 4,799 source files are over the 100-line limit (16.4%)**; the worst file is 551 lines.
+**Code quality score 71.5%.** **788 of 4,809 source files are over the 100-line limit (16.4%)**; the worst file is 551 lines.
 
 ## Code quality score
 
 | Element | Reading | Score | Weight | 0% at |
 | --- | --- | --- | --- | --- |
 | **Standard baseline checks** | | **70.0%** | **60** | |
-| Files over the line limit | 786 in 4799 files | 67.2% | 10 | 50% of files |
+| Files over the line limit | 788 in 4809 files | 67.2% | 10 | 50% of files |
 | Worst file, in limits over | 4.51 | 49.9% | 5 | 9 |
-| Functions over the line limit | 836 in 9432 functions | 64.5% | 8 | 25% of functions |
-| Else blocks | 1181 in 13103 branches | 82.0% | 5 | 50% of branches |
+| Functions over the line limit | 836 in 9453 functions | 64.6% | 8 | 25% of functions |
+| Else blocks | 1181 in 13128 branches | 82.0% | 5 | 50% of branches |
 | Duplication % | 2.34 | 88.3% | 8 | 20 |
-| Explanatory comment lines | 16306 in 306.75 thousand lines | 0.0% | 4 | 50 per thousand lines |
-| Inline magic values | 135 in 306.75 thousand lines | 97.8% | 4 | 20 per thousand lines |
-| Orphan components and functions | 27 in 9580 components and functions | 97.2% | 4 | 10% of components and functions |
-| Long member chain lines | 4112 in 306.75 thousand lines | 55.3% | 4 | 30 per thousand lines |
-| Deeply indented lines | 3064 in 306.75 thousand lines | 66.7% | 4 | 30 per thousand lines |
-| Overlong function names | 57 in 9432 functions | 94.0% | 4 | 10% of functions |
+| Explanatory comment lines | 16302 in 307.28 thousand lines | 0.0% | 4 | 50 per thousand lines |
+| Inline magic values | 135 in 307.28 thousand lines | 97.8% | 4 | 20 per thousand lines |
+| Orphan components and functions | 27 in 9603 components and functions | 97.2% | 4 | 10% of components and functions |
+| Long member chain lines | 4112 in 307.28 thousand lines | 55.4% | 4 | 30 per thousand lines |
+| Deeply indented lines | 3064 in 307.28 thousand lines | 66.8% | 4 | 30 per thousand lines |
+| Overlong function names | 57 in 9453 functions | 94.0% | 4 | 10% of functions |
 | **Design pattern file count** | | **92.5%** | **20** | |
-| Files the patterns predict but are missing | 186 in 2459 predicted files | 84.9% | 10 | 50% of predicted files |
+| Files the patterns predict but are missing | 186 in 2467 predicted files | 84.9% | 10 | 50% of predicted files |
 | Entities outside their expected file count | 0 in 19 entities | 100.0% | 10 | 50% of entities |
-| **Prose** | | **93.4%** | **20** | |
-| Conditions with calls tangled inside calls | 276 in 13103 branches | 91.6% | 8 | 25% of branches |
-| Conditions compared to a raw literal | 235 in 13103 branches | 92.8% | 6 | 25% of branches |
-| Accessor names that want to be a property | 34 in 9432 functions | 96.4% | 6 | 10% of functions |
+| **Prose** | | **93.5%** | **20** | |
+| Conditions with calls tangled inside calls | 274 in 13128 branches | 91.7% | 8 | 25% of branches |
+| Conditions compared to a raw literal | 234 in 13128 branches | 92.9% | 6 | 25% of branches |
+| Accessor names that want to be a property | 34 in 9453 functions | 96.4% | 6 | 10% of functions |
 | **Widget adoption** | | **47.7%** | **8** | |
-| Markup written by hand where a widget should be | 697 in 2667 widget slots | 47.7% | 8 | 50% of widget slots |
+| Markup written by hand where a widget should be | 699 in 2673 widget slots | 47.7% | 8 | 50% of widget slots |
 | **Input validation** | | **0.0%** | **8** | |
-| Doors that write without checking their input against the columns | 16551 in 711 write doors | 0.0% | 8 | 50% of write doors |
+| Doors that write without checking their input against the columns | 11489 in 713 write doors | 0.0% | 8 | 50% of write doors |
 
 Each element scores 100% with no offenders and falls in a straight line to 0% when its offenders, measured against the size of the codebase, reach the figure in the last column. The score is the weighted average of the elements that could be measured; an element that could not be measured lends its weight to the rest. Weights and zero points are set in `tools/refactor/rules.json` under `score.elements`. The offenders behind every reading are in `tools/refactor/audit-output/audit.json`.
 
@@ -40,38 +40,38 @@ Each element scores 100% with no offenders and falls in a straight line to 0% wh
 
 | Area | Files | Of which audited source | Source lines |
 | --- | --- | --- | --- |
-| api | 2,438 | 2,433 | 122,315 |
-| frontend | 1,445 | 1,335 | 128,805 |
-| contracts | 763 | 763 | 27,931 |
+| api | 2,438 | 2,438 | 122,504 |
+| frontend | 1,445 | 1,338 | 129,051 |
+| contracts | 763 | 765 | 27,997 |
 | database | 312 | 0 | 0 |
-| connector | 254 | 254 | 26,875 |
+| connector | 254 | 254 | 26,901 |
 | docs | 232 | 0 | 0 |
 | tooling | 191 | 0 | 0 |
 | tests | 186 | 0 | 0 |
 | infrastructure | 38 | 0 | 0 |
 | worker | 14 | 14 | 824 |
 | other | 1 | 0 | 0 |
-| **whole repository** | **5,874** | **4,799** | **306,750** |
+| **whole repository** | **5,874** | **4,809** | **307,277** |
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 786, totalFiles: 4799, totalLines: 306750, worstFileLines: 551, worstFileTimesOverLimit: 4.51 |
-| functionShape | limit: 30, functionsOverLimit: 836, totalFunctions: 9432, elseBlocks: 1181, ifBlocks: 13103, measurementIsHeuristic: True |
+| fileLength | limit: 100, filesOverLimit: 788, totalFiles: 4809, totalLines: 307277, worstFileLines: 551, worstFileTimesOverLimit: 4.51 |
+| functionShape | limit: 30, functionsOverLimit: 836, totalFunctions: 9453, elseBlocks: 1181, ifBlocks: 13128, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 57, maxWords: 5, maxLength: 40 |
 | accessorNames | gluedAccessorNames: 34, measurementIsHeuristic: True |
 | duplication | clones: 553, duplicatedLines: 6280, totalLines: 268394, duplicatedPercentage: 2.34, carriedFromBaseline: True |
-| naming | bannedAbbreviationHits: 777, unprefixedBooleans: 2041 |
-| comments | explanatoryCommentLines: 16306, filesWithComments: 2302, taskMarkers: 52 |
+| naming | bannedAbbreviationHits: 777, unprefixedBooleans: 2047 |
+| comments | explanatoryCommentLines: 16302, filesWithComments: 2301, taskMarkers: 52 |
 | magicValues | inlineHexColours: 40, inlineStyleAttributes: 65, repeatedStringLiterals: 30 |
-| prose | longMemberChainLines: 4112, deeplyIndentedLines: 3064, overlongLines: 1952, measurementIsHeuristic: True |
-| conditions | tangledConditionLines: 276, literalComparisonLines: 235, measurementIsHeuristic: True |
-| orphans | orphanFunctions: 21, functionsExamined: 9432 |
-| designPatterns | roleFamilies: 187, predictedFiles: 2459, predictedFilesMissing: 186, entities: 19, entitiesOutOfRange: 0, measurementIsHeuristic: True |
-| inventory | pages: 119, components: 148, orphanComponents: 6, averagePageLines: 173 |
-| siteDefinition | routes: 132, views: 688, siteComponents: 657, catalogue: 34, widgetUsages: 1970, handRolledElements: 697, widgetSlots: 2667, viewsWithHandRolled: 315, designSheets: 0, designsLastChecked: never, brandCheckedAt: never |
-| inputValidation | schemaTables: 216, limitedColumns: 1301, writeDoors: 711, unvalidatedDoors: 0, looserLimits: 16551 |
+| prose | longMemberChainLines: 4112, deeplyIndentedLines: 3064, overlongLines: 1958, measurementIsHeuristic: True |
+| conditions | tangledConditionLines: 274, literalComparisonLines: 234, measurementIsHeuristic: True |
+| orphans | orphanFunctions: 21, functionsExamined: 9453 |
+| designPatterns | roleFamilies: 187, predictedFiles: 2467, predictedFilesMissing: 186, entities: 19, entitiesOutOfRange: 0, measurementIsHeuristic: True |
+| inventory | pages: 119, components: 150, orphanComponents: 6, averagePageLines: 173 |
+| siteDefinition | routes: 132, views: 690, siteComponents: 659, catalogue: 34, widgetUsages: 1974, handRolledElements: 699, widgetSlots: 2673, viewsWithHandRolled: 316, designSheets: 0, designsLastChecked: never, brandCheckedAt: never |
+| inputValidation | schemaTables: 216, limitedColumns: 1301, writeDoors: 713, unvalidatedDoors: 0, looserLimits: 11489 |
 | fileAreas | totalFiles: 5874, api: 2438, frontend: 1445, contracts: 763, database: 312, connector: 254, docs: 232, tooling: 191, tests: 186, infrastructure: 38, worker: 14, other: 1 |
 
 ## Against the baseline
@@ -79,12 +79,12 @@ Each element scores 100% with no offenders and falls in a straight line to 0% wh
 | Ratcheted figure | Baseline | Now | Verdict |
 | --- | --- | --- | --- |
 | code quality score | 75.3% | 71.5% | — |
-| fileLength.filesOverLimit | 794 | 786 | better |
+| fileLength.filesOverLimit | 794 | 788 | better |
 | fileLength.worstFileLines | 557 | 551 | better |
 | functionShape.functionsOverLimit | 836 | 836 | held |
 | functionShape.elseBlocks | 1186 | 1181 | better |
 | duplication.duplicatedPercentage | 2.34 | 2.34 | held |
-| comments.explanatoryCommentLines | 16311 | 16306 | better |
+| comments.explanatoryCommentLines | 16311 | 16302 | better |
 | magicValues.inlineHexColours | 40 | 40 | held |
 | inventory.orphanComponents | 6 | 6 | held |
 | orphans.orphanFunctions | 21 | 21 | held |
@@ -92,12 +92,12 @@ Each element scores 100% with no offenders and falls in a straight line to 0% wh
 | prose.deeplyIndentedLines | 3125 | 3064 | better |
 | functionNames.overlongFunctionNames | 58 | 57 | better |
 | accessorNames.gluedAccessorNames | 34 | 34 | held |
-| conditions.tangledConditionLines | 278 | 276 | better |
-| conditions.literalComparisonLines | 246 | 235 | better |
+| conditions.tangledConditionLines | 278 | 274 | better |
+| conditions.literalComparisonLines | 246 | 234 | better |
 | designPatterns.predictedFilesMissing | 187 | 186 | better |
-| siteDefinition.handRolledElements | None | 697 | — |
+| siteDefinition.handRolledElements | None | 699 | — |
 | inputValidation.unvalidatedDoors | None | 0 | — |
-| inputValidation.looserLimits | None | 16551 | — |
+| inputValidation.looserLimits | None | 11489 | — |
 
 ## Worst files by length
 
@@ -111,8 +111,8 @@ Each element scores 100% with no offenders and falls in a straight line to 0% wh
 | jpms/Pages/XeroAllocation.razor | 433 |
 | jpms/Pages/AdminKpis.razor | 429 |
 | jpms/Components/ManualWorkOrderModal.razor.cs | 428 |
+| jpms/Pages/ProjectValuation.razor | 423 |
 | jpms/Pages/SubcontractorDetail.razor | 422 |
-| jpms/Pages/ProjectValuation.razor | 421 |
 | jpms/Pages/CostCodes.razor | 415 |
 | jpms/Pages/ProjectVariations.razor | 412 |
 | jpms/Pages/DocumentControl.Filing.cs | 409 |
