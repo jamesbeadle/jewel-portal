@@ -4,6 +4,15 @@ This repository's own instructions: its conventions, the commands that build and
 
 The project-process kit writes this file once and never touches it again, and `CLAUDE.md` is the kit's, replaced whole every time the bootstrap runs, so anything written there is lost. Write here instead. Where this file and the kit disagree about this project, this file wins, except that nothing here lifts the branch rule: the work still happens on a branch and ends as a pull request.
 
+## Built on the portal template
+
+This portal is the **origin of the portal template**: its shell was carved out on 2026-09-26 into the Jewel PFP portal (`jewel-pfp-portal`, whose `docs/refactor/shell-carve-out.md` and `portal-carve-out.md` record the cut), and that shell is now the template every new company portal starts from. It is registered in the project-process kit's `portals/portals.json` beside `jewel-pfp-portal`, and the kit's doctrine (*A repository built on a template carries a template change to its siblings*) applies here:
+
+- **The template's files** are those under `api/`, `jpms/`, `contracts/`, `worker/` and `tests/Jewel.JPMS.Tests/`, except the generated domain, the migrations and the brand's files, and except what each portal makes its own: the roles (`contracts/Models/Role.cs`), the gates, the navigation, the privacy notice and `tailwind.config.js`. Everything else there is the shell: sign-in and roles, the directory, audit, documents, the mailbox intake, to-dos, calendar, registers, the skills store, the MCP connector framework, the layout and the widget catalogue.
+- **A fix or a UI change to those files is a template change.** Before the first commit, say so on the task; then make the same change in `jewel-pfp-portal` on a branch of the same name (`fix/<slug>` or `feature/<slug>`), in its words (`Jewel.PFP`, `Jpfp`, a *job* where this portal says *project*, `portal/` where this one has `jpms/`), as its own pull request naming this one. If `jewel-pfp-portal` is not checked out, clone it, or say on the task that it still needs the change.
+- **A change about Jewel Bespoke Build's own records (projects, requests, variations, valuations, work orders, bid packages, Xero's ledgers) stays here.** When it is not clear which it is, ask, naming both.
+- **Before starting shell work, read the drift.** From a checkout of project-process beside this one: `python3 -m tools.portals drift` (or `read_template_drift` on its `portals` MCP server) lists the commits since the carve that one portal has and the other lacks; `python3 -m tools.portals diff <template path>` shows one file across both.
+
 ## Moved from CLAUDE.md
 
 # Jewel Bespoke Build — working notes
