@@ -34,13 +34,13 @@
                 }
                 @foreach (var project in day.Projects)
                 {
-                    <MyDayProjectCard @key="project.ProjectId" Project="project" TodaysHours="TodaysHoursFor(day, project)" TodaysDay="TodayFor(day, project)" RecentCodes="RecentCodesOf(day)" />
+                    <MyDayProjectCard @key="project.ProjectId" Project="project" Projects="day.Projects" TodaysHours="TodaysHoursFor(day, project)" TodaysDay="TodayFor(day, project)" RecentCodes="RecentCodesOf(day)" />
                 }
                 @if (!HasNoProjects(day))
                 {
                     <p class="text-xs text-content-subtle mb-4">Only the sites you're on the worker list for show here — ask your Project Manager to add you to another.</p>
                 }
-                <MyDayWeekPanel Week="day.Week" Projects="day.Projects" RecentCodes="RecentCodesOf(day)" />
+                <MyDayWeekPanel Week="day.Week" Projects="day.Projects" Today="day.WorkDate" RecentCodes="RecentCodesOf(day)" />
                 <MyDayRejectedPanel Rejected="day.Rejected" />
             }
             @if (Day is { IsLinked: false })

@@ -4,8 +4,8 @@ namespace Jewel.JPMS.Api.Features.Labour.Queries;
 
 /// <summary>The worker's week as My day lists it: Monday to today, one row per assigned site per
 /// working day (a weekend day only when something was recorded on it) — logged, off, or nothing —
-/// so the worker sees what they have and have not filed before Friday, and can amend a logged day
-/// the office has not approved.</summary>
+/// so the worker sees what they have and have not filed before Friday, can amend a logged day the
+/// office has not approved, and can fill in a day already gone that reads nothing.</summary>
 public sealed class MyDayWeek
 {
     private readonly JpmsContext context;
@@ -47,7 +47,7 @@ public sealed class MyDayWeek
         return new MyWeekDay(
             card.ProjectId, card.ProjectName, day, MyWeekDayKind.Logged, timesheet.TimesheetId, timesheet.Hours, timesheet.CostCode,
             (TimesheetStatus)timesheet.Status, note?.Description ?? "", note is null ? 0 : photoCounts.GetValueOrDefault(note.ProgressUpdateId),
-            attendance?.SignedOutAt);
+            attendance?.SignedOutAt, note?.ProgressUpdateId ?? "", timesheet.IsFiledLate);
     }
 
     private async Task<IReadOnlyDictionary<string, int>> PhotoCountsAsync(List<string> noteIds, CancellationToken cancellationToken) =>

@@ -63,6 +63,7 @@ public static class LabourRouteRegistration
         commands.Register<MySiteSignIn, Acknowledgement>(CommandRoute.Post("/api/my/labour/sign-in"));
         commands.Register<MySiteSignOut, MySiteDayLogged>(CommandRoute.Post("/api/my/labour/sign-out"));
         commands.Register<MySiteDayOff, MySiteDayLogged>(CommandRoute.Post("/api/my/labour/day-off"));
+        commands.Register<MyLogMissedSiteDay, MySiteDayLogged>(CommandRoute.Post("/api/my/labour/missed-day"));
         commands.Register<MyResubmitTimesheet, Acknowledgement>(CommandRoute.Post("/api/my/labour/resubmit"));
         commands.Register<MyAmendSiteDay, Acknowledgement>(CommandRoute.Post("/api/my/labour/amend"));
 

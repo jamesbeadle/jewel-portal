@@ -9,7 +9,10 @@
         }
     </td>
     <td class="px-2 py-2.5 text-content font-medium whitespace-nowrap">@Timesheet.WorkerName</td>
-    <td class="px-2 py-2.5 text-content-subtle whitespace-nowrap">@Timesheet.WorkedOn.ToString("ddd dd MMM")</td>
+    <td class="px-2 py-2.5 text-content-subtle whitespace-nowrap">
+        @Timesheet.WorkedOn.ToString("ddd dd MMM")
+        @if (Timesheet.IsFiledLate) { <Pill Tone="Tone.Warning" Class="ml-1" Title="The worker filed or changed this day after the date">Late</Pill> }
+    </td>
     <td class="px-2 py-2.5">
         @if (IsEditing)
         {

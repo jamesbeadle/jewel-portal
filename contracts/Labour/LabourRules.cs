@@ -8,6 +8,15 @@ namespace Jewel.JPMS.Contracts.Labour;
 /// </summary>
 public static class LabourRules
 {
+    /// <summary>How far back a worker may fill in a day they missed, or record one off, from
+    /// My day: a fortnight, the window the day's recent timesheets already cover.</summary>
+    public static readonly TimeSpan LateFilingWindow = TimeSpan.FromDays(14);
+
+    /// <summary>A working day already gone that the worker may still file for: earlier than
+    /// today (today is logged from the site card) and no older than the late-filing window.</summary>
+    public static bool IsOpenForLateFiling(DateTimeOffset workDate, DateTimeOffset today) =>
+        workDate < today && workDate >= today - LateFilingWindow;
+
     /// <summary>Hours must be at least half an hour, in half-hour steps (spec constraint).</summary>
     public static bool IsValidHours(decimal hours) =>
         hours >= 0.5m && hours % 0.5m == 0m;

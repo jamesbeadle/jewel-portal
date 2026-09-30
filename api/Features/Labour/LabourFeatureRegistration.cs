@@ -71,6 +71,7 @@ public static class LabourFeatureRegistration
         services.AddScoped<MySiteSignInHandler>();
         services.AddScoped<MySiteSignOutHandler>();
         services.AddScoped<MySiteDayOffHandler>();
+        services.AddScoped<MyLogMissedSiteDayHandler>();
         services.AddScoped<MyDayPhotosHandler>();
         services.AddScoped<MyResubmitTimesheetHandler>();
 

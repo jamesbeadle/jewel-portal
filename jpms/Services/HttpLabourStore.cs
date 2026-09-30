@@ -162,8 +162,10 @@ public sealed class HttpLabourStore : ILabourStore
 
     public Task<MySiteDayLogged> MySignOutAsync(MySiteSignOut day) => commands.SendAsync(day, CancellationToken.None);
 
-    public Task<MySiteDayLogged> MyDayOffAsync(string projectId, string description) =>
-        commands.SendAsync(new MySiteDayOff(projectId, description), CancellationToken.None);
+    public Task<MySiteDayLogged> MyDayOffAsync(string projectId, string description, DateTimeOffset? date = null) =>
+        commands.SendAsync(new MySiteDayOff(projectId, description, date), CancellationToken.None);
+
+    public Task<MySiteDayLogged> MyLogMissedDayAsync(MyLogMissedSiteDay day) => commands.SendAsync(day, CancellationToken.None);
 
     public async Task MyResubmitAsync(string timesheetId, decimal hours, string costCode)
     {

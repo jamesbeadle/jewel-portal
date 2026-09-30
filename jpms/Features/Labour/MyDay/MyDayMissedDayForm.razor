@@ -1,0 +1,95 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+@using Jewel.JPMS.Contracts.Labour
+@inject ILabourStore Labour
+@inject MyDayPhotoUploader Photos
+
+@if (isRecordingDayOff)
+{
+    <p class="text-sm text-content-subtle mb-3">@Day.ProjectName, @Day.Date.ToString(DayFormat).</p>
+    <MyDayOffForm ProjectId="@Day.ProjectId" Date="Day.Date" OnCancel="() => isRecordingDayOff = false" OnRecorded="OnDone" />
+    return;
+}
+<div class="space-y-4">
+    <p class="text-sm text-content-subtle">Filling in @Day.ProjectName, @Day.Date.ToString(DayFormat). The office sees it as a day filed late and approves it as usual.</p>
+    <FormField Label="Hours that day" Hint="Half-hour steps for anything in between.">
+        <MyDayHoursPicker @bind-Hours="hours" Disabled="@isBusy" />
+    </FormField>
+    <MyDayCostCodePicker Codes="Codes" RecentCodes="RecentCodes" @bind-CostCode="costCode" Disabled="@isBusy" />
+    <MyDayWordsBox @bind-Words="words" Disabled="@isBusy" HasDefectBox="false" />
+    <FormField Label="Photos" Hint="@PhotosHint">
+        <InputFile OnChange="OnPhotosChosen" multiple accept="image/*" class="w-full text-sm text-content-muted" disabled="@isBusy" />
+    </FormField>
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative">@error</Notice>
+    }
+    <button type="button" class="btn-primary btn-lg w-full" disabled="@isBusy" @onclick="SaveAsync">@SaveLabel</button>
+    <button type="button" class="btn-ghost w-full" disabled="@isBusy" @onclick="() => isRecordingDayOff = true">Not on site that day</button>
+    <button type="button" class="btn-ghost w-full" disabled="@isBusy" @onclick="OnDone">Leave it</button>
+</div>
+
+@code {
+    private const string DayFormat = "dddd d MMMM";
+
+    [Parameter, EditorRequired] public MyWeekDay Day { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<SiteSheetCostCode> Codes { get; set; } = Array.Empty<SiteSheetCostCode>();
+    [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
+    [Parameter] public EventCallback OnDone { get; set; }
+
+    private decimal hours = WorkingDayChunks.FullDay;
+    private string costCode = "";
+    private string words = "";
+    private IReadOnlyList<IBrowserFile> photos = Array.Empty<IBrowserFile>();
+    private bool isRecordingDayOff;
+    private bool isBusy;
+    private bool isUploadingPhotos;
+    private string? error;
+
+    private bool HasPhotos => photos.Count > 0;
+    private string PhotoCountText => photos.Count == 1 ? "1 photo" : $"{photos.Count} photos";
+    private string PhotosHint => HasPhotos ? $"{PhotoCountText} chosen." : $"Camera or gallery, up to {MyDayPhotoUploader.MaxPerBatch}. They go onto that day's log.";
+    private string SaveLabel => isUploadingPhotos ? $"Uploading {PhotoCountText}…" : isBusy ? "Saving the day…" : "Save the day";
+
+    protected override void OnInitialized() =>
+        costCode = RecentCodes.FirstOrDefault(recent => Codes.Any(code => code.Code == recent)) ?? "";
+
+    private void OnPhotosChosen(InputFileChangeEventArgs change) => photos = change.GetMultipleFiles(MyDayPhotoUploader.MaxPerBatch);
+
+    private string? Refusal()
+    {
+        if (hours <= WorkingDayChunks.Off) return "Give the day its hours — half a day, a full day, or half-hour steps.";
+        if (string.IsNullOrWhiteSpace(costCode)) return "Choose what the work was.";
+        if (string.IsNullOrWhiteSpace(words)) return "Say what was done that day — the words are the day's record.";
+        return null;
+    }
+
+    private async Task SaveAsync()
+    {
+        error = Refusal();
+        if (error is not null) return;
+        isBusy = true;
+        try
+        {
+            var logged = await Labour.MyLogMissedDayAsync(new MyLogMissedSiteDay(Day.ProjectId, Day.Date, hours, costCode, words.Trim()));
+            var arePhotosUp = await UploadPhotosAsync(logged);
+            await Labour.RefreshMyDayAsync();
+            if (arePhotosUp) await OnDone.InvokeAsync();
+        }
+        catch (CommandFailedException refusal) { error = refusal.Message; }
+        catch (Exception) { error = "The day didn't go through — check your signal and try again."; }
+        finally { isBusy = false; isUploadingPhotos = false; }
+    }
+
+    private async Task<bool> UploadPhotosAsync(MySiteDayLogged logged)
+    {
+        if (!HasPhotos) return true;
+        isUploadingPhotos = true;
+        StateHasChanged();
+        try { await Photos.UploadAsync(logged.ProgressUpdateId, photos, CancellationToken.None); return true; }
+        catch (Exception exception)
+        {
+            error = $"The day is saved, but the photos didn't upload ({exception.Message}). Add them from Amend on the week.";
+            return false;
+        }
+    }
+}

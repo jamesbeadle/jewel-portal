@@ -6,8 +6,9 @@ namespace Jewel.JPMS.Api.Features.Labour.Commands;
 
 /// <summary>
 /// POST /api/my/labour/day-off — a day off recorded as a day: the note on the project's progress
-/// feed says why, in the worker's own name, and nothing else is written. Refused once the worker
-/// has signed in today (sign out to log the day instead) or has already logged today.
+/// feed says why, in the worker's own name, and nothing else is written — today, or a day already
+/// gone that the worker missed. Refused once the worker has signed in on that day (sign out to
+/// log it instead) or has already logged it.
 /// </summary>
 public sealed class MySiteDayOffEndpoint
 {
@@ -48,24 +49,15 @@ public sealed class MySiteDayOffHandler : ICommandHandler<MySiteDayOff, MySiteDa
     public async Task<MySiteDayLogged> HandleAsync(MySiteDayOff command, string email, CancellationToken cancellationToken)
     {
         var worker = await WorkerByEmail.ResolveAsync(context, email, cancellationToken);
-        var isAssigned = await context.ProjectWorkerAssignments.AnyAsync(
-            assignment => assignment.ProjectId == command.ProjectId && assignment.WorkerId == worker.WorkerId && assignment.IsActive,
-            cancellationToken);
-        if (!isAssigned) throw new InvalidOperationException("You're not on this project's worker list — ask your Project Manager to add you.");
+        await MyDayAssignment.EnsureAssignedAsync(context, command.ProjectId, worker, cancellationToken);
         if (!MyDayNotes.IsGiven(command.Description))
             throw new InvalidOperationException("Say why — rain, holiday, no works on site — so the day is recorded, not missing.");
-
-        var today = SiteClock.Today();
-        var isSignedInToday = await context.SiteAttendances.AnyAsync(
-            row => row.ProjectId == command.ProjectId && row.WorkerId == worker.WorkerId && row.WorkDate == today, cancellationToken);
-        if (isSignedInToday) throw new InvalidOperationException("You're signed in today — sign out to log the day instead.");
-        var isLoggedToday = await context.ProgressUpdates.AnyAsync(
-            row => row.ProjectId == command.ProjectId && row.CreatedByEmail == email && row.WorkDate == today, cancellationToken);
-        if (isLoggedToday) throw new InvalidOperationException("Today is already logged on this site.");
+        var workDate = MyDayFiling.ResolveWorkDate(command.Date, SiteClock.Today());
+        await MyDayVacancy.EnsureAsync(context, command.ProjectId, worker, email, workDate, cancellationToken);
 
         var note = ProgressUpdateRows.New(
             ProgressIdentifierFactory.NextProgressUpdateId(), command.ProjectId, MyDayNotes.OffTitle(worker),
-            command.Description, today, null, email, DateTimeOffset.UtcNow);
+            command.Description, workDate, null, email, DateTimeOffset.UtcNow);
         context.ProgressUpdates.Add(note);
         await context.SaveChangesAsync(cancellationToken);
         return new MySiteDayLogged("", note.ProgressUpdateId);

@@ -1,10 +1,7 @@
 @namespace Jewel.JPMS.Features.Labour.MyDay
-@inject ILabourStore Labour
-@inject MyDayPhotoUploader Photos
-
 @if (isAmending && TodaysDay is { } amended)
 {
-    <MyDayAmendForm Day="amended" Codes="Project.CostCodes" RecentCodes="RecentCodes" OnDone="() => isAmending = false" />
+    <MyDayAmendForm Day="amended" Projects="AmendableSites" RecentCodes="RecentCodes" OnDone="() => isAmending = false" />
     return;
 }
 <div class="space-y-3 text-sm">
@@ -31,17 +28,7 @@
         {
             <p class="text-xs text-content-subtle">To the office: @RaisedRecordsText(note)</p>
         }
-        <FormField Label="Add photos" Hint="They go onto today's log.">
-            <InputFile OnChange="AddPhotosAsync" multiple accept="image/*" class="w-full text-sm text-content-muted" disabled="@isUploading" />
-        </FormField>
-        @if (isUploading)
-        {
-            <p class="text-xs text-content-subtle">Uploading…</p>
-        }
-        @if (error is not null)
-        {
-            <p class="text-sm text-negative" role="alert">@error</p>
-        }
+        <MyDayAddPhotos ProgressUpdateId="@note.ProgressUpdateId" Hint="They go onto today's log." />
     }
     @if (TodaysDay is { CanBeAmended: true } today)
     {
@@ -55,18 +42,18 @@
 
 @code {
     [Parameter, EditorRequired] public MyLabourProject Project { get; set; } = default!;
+    [Parameter] public IReadOnlyList<MyLabourProject> Projects { get; set; } = Array.Empty<MyLabourProject>();
     [Parameter] public IReadOnlyList<MyRecentTimesheet> TodaysHours { get; set; } = Array.Empty<MyRecentTimesheet>();
     [Parameter] public MyWeekDay? TodaysDay { get; set; }
     [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
 
-    private bool isUploading;
     private bool isAmending;
-    private string? error;
 
     private bool HasAttendance => Project.HasSignedOutToday;
     private bool IsOffDay => !Project.HasSignedOutToday;
     private DateTimeOffset SignedInAt => Project.SignedInAt ?? DateTimeOffset.Now;
     private DateTimeOffset SignedOutAt => Project.SignedOutAt ?? DateTimeOffset.Now;
+    private IReadOnlyList<MyLabourProject> AmendableSites => Projects.Count > 0 ? Projects : new[] { Project };
 
     private static string PhotoCountText(MyDayNote note) => note.PhotoCount == 1 ? "1 photo" : $"{note.PhotoCount} photos";
 
@@ -78,19 +65,5 @@
     {
         if (note.SiteInstructionReference.Length > 0) yield return $"{note.SiteInstructionReference} instruction";
         if (note.DefectReference.Length > 0) yield return $"{note.DefectReference} defect";
-    }
-
-    private async Task AddPhotosAsync(InputFileChangeEventArgs change)
-    {
-        if (Project.TodaysNote is not { } note) return;
-        error = null;
-        isUploading = true;
-        try
-        {
-            await Photos.UploadAsync(note.ProgressUpdateId, change.GetMultipleFiles(MyDayPhotoUploader.MaxPerBatch), CancellationToken.None);
-            await Labour.RefreshMyDayAsync();
-        }
-        catch (Exception exception) { error = $"The photos didn't upload: {exception.Message}"; }
-        finally { isUploading = false; }
     }
 }
