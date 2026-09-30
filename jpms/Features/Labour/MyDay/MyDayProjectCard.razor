@@ -22,7 +22,7 @@
         }
         @if (IsOnSite)
         {
-            <MyDayLogForm Project="Project" RecentCodes="RecentCodes" OnPhotoProblem="problem => photoProblem = problem" />
+            <MyDayLogForm Project="Project" Projects="Projects" RecentCodes="RecentCodes" OnPhotoProblem="problem => photoProblem = problem" />
         }
         @if (Project.IsLoggedToday)
         {

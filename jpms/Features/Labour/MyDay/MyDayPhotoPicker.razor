@@ -1,0 +1,48 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+
+@*
+    The photographs picked for a day, kept as they are picked: a phone's camera hands back one
+    photo per visit, so each pick is ADDED to the ones already chosen rather than replacing them
+    (Jeremy on Jack's phone, 30 Sep 2026: "when you take another one the 1st photo goes missing").
+    Each chosen photo can be taken off again before the day is saved.
+*@
+
+<FormField Label="@Label" Hint="@Hint">
+    <InputFile OnChange="AddPhotos" multiple accept="image/*" class="w-full text-sm text-content-muted" disabled="@Disabled" />
+    @if (Photos.Count > 0)
+    {
+        <ul class="mt-2 space-y-1 text-sm">
+            @foreach (var photo in Photos)
+            {
+                <li class="flex items-center justify-between gap-3">
+                    <span class="text-content-muted min-w-0 truncate">@photo.Name</span>
+                    <button type="button" class="btn-ghost shrink-0" disabled="@Disabled" aria-label="Remove this photo" @onclick="() => RemoveAsync(photo)">Remove</button>
+                </li>
+            }
+        </ul>
+    }
+</FormField>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Photos";
+    [Parameter] public string EmptyHint { get; set; } = "";
+    [Parameter] public IReadOnlyList<IBrowserFile> Photos { get; set; } = Array.Empty<IBrowserFile>();
+    [Parameter] public EventCallback<IReadOnlyList<IBrowserFile>> PhotosChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    private string CountText => Photos.Count == 1 ? "1 photo" : $"{Photos.Count} photos";
+    private string Hint => Photos.Count == 0 ? EmptyHint : $"{CountText} · {FormatSize(Photos.Sum(photo => photo.Size))}. Take or pick another and it is added.";
+
+    private Task AddPhotos(InputFileChangeEventArgs change)
+    {
+        var picked = change.GetMultipleFiles(MyDayPhotoUploader.MaxPerBatch);
+        var added = picked.Where(photo => !Photos.Any(held => IsSamePhoto(held, photo)));
+        var kept = Photos.Concat(added).Take(MyDayPhotoUploader.MaxPerBatch).ToList();
+        return PhotosChanged.InvokeAsync(kept);
+    }
+
+    private Task RemoveAsync(IBrowserFile photo) => PhotosChanged.InvokeAsync(Photos.Where(held => held != photo).ToList());
+
+    private static bool IsSamePhoto(IBrowserFile held, IBrowserFile picked) =>
+        held.Name == picked.Name && held.Size == picked.Size && held.LastModified == picked.LastModified;
+}

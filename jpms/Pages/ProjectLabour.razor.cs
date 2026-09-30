@@ -39,6 +39,7 @@ public partial class ProjectLabour
     private bool isApproving;
 
     private string? editingId;
+    private string? openDayId;
     private decimal editHours;
     private string editCostCode = "";
 
@@ -140,6 +141,8 @@ public partial class ProjectLabour
         var daysSinceMonday = ((int)moment.DayOfWeek + 6) % 7;
         return new DateTimeOffset(moment.Date.AddDays(-daysSinceMonday), TimeSpan.Zero);
     }
+
+    private void ToggleDay(string timesheetId) => openDayId = openDayId == timesheetId ? null : timesheetId;
 
     private void MoveWeek(int days)
     {
