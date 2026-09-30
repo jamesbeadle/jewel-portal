@@ -8255,6 +8255,9 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<bool>("IsApproved")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsFiledLate")
+                        .HasColumnType("bit");
+
                     b.Property<string>("PersonEmail")
                         .IsRequired()
                         .HasMaxLength(256)

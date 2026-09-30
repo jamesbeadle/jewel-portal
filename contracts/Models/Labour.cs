@@ -71,7 +71,8 @@ public sealed record TimesheetDetail(
     decimal CostAmount,
     string ApprovedByEmail,
     DateTimeOffset? ApprovedAt,
-    string RejectionReason);
+    string RejectionReason,
+    bool IsFiledLate = false);
 
 /// <summary>BudgetBlocked marks the failures the budget hard-block produced (as opposed to
 /// uncoded rows, missing workers, already-decided rows). The Labour tab uses it to offer the
@@ -139,7 +140,8 @@ public enum MyWeekDayKind { Logged, Off, Nothing }
 
 /// <summary>One site on one day of the worker's week, Monday to today, as My day lists it so the
 /// worker sees what they have and have not filed before Friday. A logged day carries what its
-/// amend form pre-fills; it may be amended until the office has approved it.</summary>
+/// amend form pre-fills and the note its photographs go onto; it may be amended until the office
+/// has approved it. A day with nothing on it, once gone, may be filled in late.</summary>
 public sealed record MyWeekDay(
     string ProjectId,
     string ProjectName,
@@ -151,10 +153,14 @@ public sealed record MyWeekDay(
     TimesheetStatus? Status = null,
     string Words = "",
     int PhotoCount = 0,
-    DateTimeOffset? SignedOutAt = null)
+    DateTimeOffset? SignedOutAt = null,
+    string ProgressUpdateId = "",
+    bool IsFiledLate = false)
 {
     public bool IsLogged => Kind == MyWeekDayKind.Logged;
     public bool CanBeAmended => IsLogged && Status is not TimesheetStatus.Approved;
+    public bool IsMissed => Kind == MyWeekDayKind.Nothing;
+    public bool HasNote => ProgressUpdateId.Length > 0;
 }
 
 /// <summary>One of the caller's recent timesheets (last two weeks) — hours and status only.</summary>

@@ -1,0 +1,22 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+
+@if (Projects.Count > 1)
+{
+    <FormField Label="Which site" Hint="Move the day if it was logged against the wrong site.">
+        <select class="field h-12 text-base" value="@ProjectId" disabled="@Disabled" @onchange="OnPicked">
+            @foreach (var project in Projects)
+            {
+                <option value="@project.ProjectId">@project.ProjectName</option>
+            }
+        </select>
+    </FormField>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<MyLabourProject> Projects { get; set; } = Array.Empty<MyLabourProject>();
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public EventCallback<string> ProjectIdChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+
+    private Task OnPicked(ChangeEventArgs change) => ProjectIdChanged.InvokeAsync(change.Value?.ToString() ?? "");
+}

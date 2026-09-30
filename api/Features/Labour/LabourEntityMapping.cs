@@ -21,7 +21,7 @@ internal static class LabourEntityMapping
     public static TimesheetDetail ToDetail(this TimesheetEntity entity, string workerName) =>
         new(entity.TimesheetId, entity.ProjectId, entity.WorkerId, workerName, entity.WorkedOn,
             entity.Hours, entity.CostCode, (TimesheetStatus)entity.Status, entity.RateApplied,
-            entity.CostAmount, entity.ApprovedByEmail, entity.ApprovedAt, entity.RejectionReason);
+            entity.CostAmount, entity.ApprovedByEmail, entity.ApprovedAt, entity.RejectionReason, entity.IsFiledLate);
 
     public static TimesheetDetail ToModelWithoutMoney(this TimesheetEntity entity, string workerName) =>
         entity.ToDetail(workerName) with { RateApplied = 0m, CostAmount = 0m };

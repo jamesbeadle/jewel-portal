@@ -1,0 +1,50 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+
+<div class="flex items-center justify-between gap-3 border-t border-line/60 py-1.5 text-sm">
+    <span class="text-content-subtle min-w-0">
+        @Row.Date.ToString(DayFormat) · @Row.ProjectName
+        @if (Row.IsLogged)
+        {
+            <span class="whitespace-nowrap"> · @Row.CostCode</span>
+        }
+    </span>
+    <span class="shrink-0 whitespace-nowrap flex items-center gap-2">
+        @if (Row.IsLogged)
+        {
+            <span class="text-content font-medium">@MyDayHoursText.Of(Row.Hours)</span>
+            <StatusPill Status="@Row.Status!.Value" />
+        }
+        @if (Row.IsFiledLate)
+        {
+            <Pill Tone="Tone.Warning" Title="Filed after the date — the office sees it as late">Late</Pill>
+        }
+        @if (Row.Kind == MyWeekDayKind.Off)
+        {
+            <Pill Tone="Tone.Muted">Off</Pill>
+        }
+        @if (Row.IsMissed)
+        {
+            <Pill Tone="Tone.Warning">Nothing</Pill>
+        }
+        @if (Row.CanBeAmended)
+        {
+            <button type="button" class="btn-secondary" @onclick="OnAmend">Amend</button>
+        }
+        @if (CanBeAdded)
+        {
+            <button type="button" class="btn-secondary" @onclick="OnAdd">Add</button>
+        }
+    </span>
+</div>
+
+@code {
+    private const string DayFormat = "ddd dd";
+
+    [Parameter, EditorRequired] public MyWeekDay Row { get; set; } = default!;
+    /// <summary>Today's empty day is filled in from the site card above, so only a day already gone offers Add.</summary>
+    [Parameter] public bool IsBeforeToday { get; set; }
+    [Parameter] public EventCallback OnAmend { get; set; }
+    [Parameter] public EventCallback OnAdd { get; set; }
+
+    private bool CanBeAdded => Row.IsMissed && IsBeforeToday;
+}

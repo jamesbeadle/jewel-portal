@@ -55,6 +55,13 @@
     input[type="checkbox"]:disabled, input[type="radio"]:disabled {
         @apply opacity-50 cursor-not-allowed;
     }
+
+    /* iOS Safari gives a date or time input its own width and chrome, so a `.field` clock ran
+       past its card's edge on the phone (My day, 2026-09-30). The field's width is the field's. */
+    input[type="date"], input[type="time"] {
+        @apply block min-w-0 max-w-full appearance-none;
+        -webkit-appearance: none;
+    }
 }
 
 @layer components {

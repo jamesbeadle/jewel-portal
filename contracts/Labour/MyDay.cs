@@ -31,20 +31,39 @@ public sealed record MySiteSignOut(
     string Defect = "") : ICommand<MySiteDayLogged>;
 
 /// <summary>A day off, recorded as a day: the words say why (rain, holiday, no works on site) and
-/// nothing else is written — no attendance, no hours. A recorded off day is never a missing day.</summary>
-public sealed record MySiteDayOff(string ProjectId, string Description) : ICommand<MySiteDayLogged>;
+/// nothing else is written — no attendance, no hours. A recorded off day is never a missing day.
+/// <paramref name="Date"/> is today unless the worker is filling in a day they missed, and then a
+/// working day already gone, within the late-filing window (Jeremy on Jack's phone, 30 Sep 2026).</summary>
+public sealed record MySiteDayOff(string ProjectId, string Description, DateTimeOffset? Date = null) : ICommand<MySiteDayLogged>;
+
+/// <summary>A day the worker was on site but never logged — no signal, forgot — filled in after
+/// the date from My day's week (Jeremy on Jack's phone, 30 Sep 2026: Monday read "Nothing" and
+/// could not be opened). Writes the day's Submitted timesheet and its note, both marked as filed
+/// late for the office, and no attendance: there was no sign-in at the gate to record. The date
+/// must be a working day already gone, within the late-filing window; a day already logged or
+/// recorded off is amended instead. Photographs follow onto the note as they do at sign-out.</summary>
+public sealed record MyLogMissedSiteDay(
+    string ProjectId,
+    DateTimeOffset Date,
+    decimal Hours,
+    string CostCode,
+    string Description) : ICommand<MySiteDayLogged>;
 
 /// <summary>Amends a day the worker has logged, until the office has approved it: the hours and
 /// cost code of that day's timesheet, the words of its note and its sign-out time, in one save
 /// (Jeremy on Jack's phone, 29 Sep 2026: "I can't amend or change something on this entry?").
 /// An approved day is refused — that is the Project Manager's to change. The day's instruction
-/// and defect were raised when it was logged and are not re-raised here.</summary>
+/// and defect were raised when it was logged and are not re-raised here. <paramref name="ProjectId"/>
+/// is the site the day belongs on — another of the worker's sites when it was logged against the
+/// wrong one (Jeremy, 30 Sep 2026), blank to leave it where it is; the timesheet, the note and the
+/// attendance move together. A day amended after its date is marked as filed late for the office.</summary>
 public sealed record MyAmendSiteDay(
     string TimesheetId,
     decimal Hours,
     string CostCode,
     string Description,
-    DateTimeOffset? SignedOutAt = null) : ICommand<Acknowledgement>;
+    DateTimeOffset? SignedOutAt = null,
+    string ProjectId = "") : ICommand<Acknowledgement>;
 
 /// <summary>Resubmits one of the caller's own rejected timesheets (back to Submitted).</summary>
 public sealed record MyResubmitTimesheet(string TimesheetId, decimal Hours, string CostCode)

@@ -3,53 +3,30 @@
 <Panel Title="This week" Class="mb-4" BodyClass="p-4" Prominent="false">
     @if (amending is { } day)
     {
-        <MyDayAmendForm Day="day" Codes="CodesFor(day)" RecentCodes="RecentCodes" OnDone="CloseAsync" />
+        <MyDayAmendForm Day="day" Projects="Projects" RecentCodes="RecentCodes" OnDone="CloseAsync" />
+    }
+    else if (adding is { } missed)
+    {
+        <MyDayMissedDayForm Day="missed" Codes="CodesFor(missed)" RecentCodes="RecentCodes" OnDone="CloseAsync" />
     }
     else
     {
         @foreach (var row in Week)
         {
-            <div class="flex items-center justify-between gap-3 border-t border-line/60 py-1.5 text-sm">
-                <span class="text-content-subtle min-w-0">
-                    @row.Date.ToString(DayFormat) · @row.ProjectName
-                    @if (row.IsLogged)
-                    {
-                        <span class="whitespace-nowrap"> · @row.CostCode</span>
-                    }
-                </span>
-                <span class="shrink-0 whitespace-nowrap flex items-center gap-2">
-                    @if (row.IsLogged)
-                    {
-                        <span class="text-content font-medium">@MyDayHoursText.Of(row.Hours)</span>
-                        <StatusPill Status="@row.Status!.Value" />
-                    }
-                    @if (row.Kind == MyWeekDayKind.Off)
-                    {
-                        <Pill Tone="Tone.Muted">Off</Pill>
-                    }
-                    @if (row.Kind == MyWeekDayKind.Nothing)
-                    {
-                        <Pill Tone="Tone.Warning">Nothing</Pill>
-                    }
-                    @if (row.CanBeAmended)
-                    {
-                        <button type="button" class="btn-secondary" @onclick="() => amending = row">Amend</button>
-                    }
-                </span>
-            </div>
+            <MyDayWeekRow Row="row" IsBeforeToday="@(row.Date < Today)" OnAmend="() => amending = row" OnAdd="() => adding = row" />
         }
-        <p class="text-xs text-content-subtle mt-2">A day can be amended until the office has approved it.</p>
+        <p class="text-xs text-content-subtle mt-2">A day can be amended, or a missed one filled in, until the office has approved it. A day filed after the date is shown to the office as late.</p>
     }
 </Panel>
 
 @code {
-    private const string DayFormat = "ddd dd";
-
     [Parameter, EditorRequired] public IReadOnlyList<MyWeekDay> Week { get; set; } = Array.Empty<MyWeekDay>();
     [Parameter, EditorRequired] public IReadOnlyList<MyLabourProject> Projects { get; set; } = Array.Empty<MyLabourProject>();
+    [Parameter, EditorRequired] public DateTimeOffset Today { get; set; }
     [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
 
     private MyWeekDay? amending;
+    private MyWeekDay? adding;
 
     private IReadOnlyList<SiteSheetCostCode> CodesFor(MyWeekDay day) =>
         Projects.FirstOrDefault(project => project.ProjectId == day.ProjectId)?.CostCodes ?? Array.Empty<SiteSheetCostCode>();
@@ -57,6 +34,7 @@
     private Task CloseAsync()
     {
         amending = null;
+        adding = null;
         return Task.CompletedTask;
     }
 }

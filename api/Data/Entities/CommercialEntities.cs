@@ -273,6 +273,11 @@ public sealed class TimesheetEntity
     [MaxLength(64)]      public string SiteAttendanceId { get; set; } = "";
     public int Status { get; set; }
 
+    // Filed or changed by the worker after the working day (docs/Labour-Time-Tracking-Scope.md
+    // §5): a missed day filled in from My day, or a day amended the day after. The office sees
+    // it as late on the Labour tab; it still needs approval like any other day.
+    public bool IsFiledLate { get; set; }
+
     // Costing snapshot, written at approval: the worker's rate effective on WorkedOn and the
     // resulting cost. Zero until approved — unapproved time is never cost.
     public decimal RateApplied { get; set; }

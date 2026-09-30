@@ -49,8 +49,12 @@ public interface ILabourStore
     /// references of anything the log raised. The caller refreshes the day once the photographs
     /// are up, so the card changes once.</summary>
     Task<MySiteDayLogged> MySignOutAsync(MySiteSignOut day);
-    /// <summary>Records a day off in the worker's words; the caller refreshes the day.</summary>
-    Task<MySiteDayLogged> MyDayOffAsync(string projectId, string description);
+    /// <summary>Records a day off in the worker's words — today, or a day already gone when a
+    /// date is given; the caller refreshes the day.</summary>
+    Task<MySiteDayLogged> MyDayOffAsync(string projectId, string description, DateTimeOffset? date = null);
+    /// <summary>Fills in a day the worker was on site but never logged, marked late for the
+    /// office, and answers with the note the photographs go onto; the caller refreshes the day.</summary>
+    Task<MySiteDayLogged> MyLogMissedDayAsync(MyLogMissedSiteDay day);
     Task MyResubmitAsync(string timesheetId, decimal hours, string costCode);
     /// <summary>Amends a day the worker logged, until the office has approved it; refreshes the day.</summary>
     Task MyAmendAsync(MyAmendSiteDay amendment);

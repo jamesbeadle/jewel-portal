@@ -1,0 +1,37 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+@inject ILabourStore Labour
+@inject MyDayPhotoUploader Photos
+
+<FormField Label="Add photos" Hint="@Hint">
+    <InputFile OnChange="AddPhotosAsync" multiple accept="image/*" class="w-full text-sm text-content-muted" disabled="@isUploading" />
+</FormField>
+@if (isUploading)
+{
+    <p class="text-xs text-content-subtle">Uploading…</p>
+}
+@if (error is not null)
+{
+    <p class="text-sm text-negative" role="alert">@error</p>
+}
+
+@code {
+    /// <summary>The day's note the photographs go onto — the worker's own, written by their log.</summary>
+    [Parameter, EditorRequired] public string ProgressUpdateId { get; set; } = "";
+    [Parameter] public string Hint { get; set; } = "They go onto the day's log.";
+
+    private bool isUploading;
+    private string? error;
+
+    private async Task AddPhotosAsync(InputFileChangeEventArgs change)
+    {
+        error = null;
+        isUploading = true;
+        try
+        {
+            await Photos.UploadAsync(ProgressUpdateId, change.GetMultipleFiles(MyDayPhotoUploader.MaxPerBatch), CancellationToken.None);
+            await Labour.RefreshMyDayAsync();
+        }
+        catch (Exception exception) { error = $"The photos didn't upload: {exception.Message}"; }
+        finally { isUploading = false; }
+    }
+}

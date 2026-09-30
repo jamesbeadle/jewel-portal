@@ -4,12 +4,20 @@
 
 <div class="space-y-4">
     <p class="text-sm text-content-subtle">Amending @Day.ProjectName, @Day.Date.ToString(DayFormat). The office sees the day as you leave it here.</p>
+    <MyDaySitePicker Projects="Projects" @bind-ProjectId="projectId" @bind-ProjectId:after="KeepTheCodeOnTheSite" Disabled="@isBusy" />
     <FormField Label="Hours" Hint="Half-hour steps for anything in between.">
         <MyDayHoursPicker @bind-Hours="hours" Disabled="@isBusy" />
     </FormField>
     <MyDayCostCodePicker Codes="Codes" RecentCodes="RecentCodes" @bind-CostCode="costCode" Disabled="@isBusy" />
     <MyDayWordsBox @bind-Words="words" Disabled="@isBusy" HasDefectBox="false" />
-    <MyDayClock Label="Left at" Hint="Change it if the leaving time was wrong." @bind-Time="leftAt" Disabled="@isBusy" />
+    @if (Day.SignedOutAt is not null)
+    {
+        <MyDayClock Label="Left at" Hint="Change it if the leaving time was wrong." @bind-Time="leftAt" Disabled="@isBusy" />
+    }
+    @if (Day.HasNote)
+    {
+        <MyDayAddPhotos ProgressUpdateId="@Day.ProgressUpdateId" Hint="@PhotosHint" />
+    }
     @if (error is not null)
     {
         <Notice Tone="Tone.Negative">@error</Notice>
@@ -23,10 +31,11 @@
     private const string ClockFormat = "HH:mm";
 
     [Parameter, EditorRequired] public MyWeekDay Day { get; set; } = default!;
-    [Parameter, EditorRequired] public IReadOnlyList<SiteSheetCostCode> Codes { get; set; } = Array.Empty<SiteSheetCostCode>();
+    [Parameter, EditorRequired] public IReadOnlyList<MyLabourProject> Projects { get; set; } = Array.Empty<MyLabourProject>();
     [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
     [Parameter] public EventCallback OnDone { get; set; }
 
+    private string projectId = "";
     private decimal hours;
     private string costCode = "";
     private string words = "";
@@ -34,12 +43,24 @@
     private bool isBusy;
     private string? error;
 
+    private IReadOnlyList<SiteSheetCostCode> Codes =>
+        Projects.FirstOrDefault(project => project.ProjectId == projectId)?.CostCodes ?? Array.Empty<SiteSheetCostCode>();
+
+    private string PhotosHint => Day.PhotoCount == 1 ? "1 photo on the day so far." : $"{Day.PhotoCount} photos on the day so far.";
+
     protected override void OnInitialized()
     {
+        projectId = Day.ProjectId;
         hours = Day.Hours;
         costCode = Day.CostCode;
         words = Day.Words;
         leftAt = Day.SignedOutAt?.ToLocalTime().ToString(ClockFormat) ?? "";
+    }
+
+    private void KeepTheCodeOnTheSite()
+    {
+        var isCodeOnTheSite = Codes.Any(code => code.Code == costCode);
+        if (!isCodeOnTheSite) costCode = "";
     }
 
     private string? Refusal()
@@ -57,7 +78,7 @@
         isBusy = true;
         try
         {
-            await Labour.MyAmendAsync(new MyAmendSiteDay(Day.TimesheetId, hours, costCode, words.Trim(), MyDayTimes.TodayAt(leftAt)));
+            await Labour.MyAmendAsync(new MyAmendSiteDay(Day.TimesheetId, hours, costCode, words.Trim(), MyDayTimes.At(Day.Date, leftAt), projectId));
             await OnDone.InvokeAsync();
         }
         catch (CommandFailedException refusal) { error = refusal.Message; }

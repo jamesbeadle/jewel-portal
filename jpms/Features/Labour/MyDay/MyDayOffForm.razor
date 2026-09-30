@@ -2,7 +2,7 @@
 @inject ILabourStore Labour
 
 <div class="space-y-3">
-    <FormField Label="Why not on site today?" Required Hint="Rain, holiday, no works on site — a recorded day off is never a missing day." Error="@error">
+    <FormField Label="@Label" Required Hint="Rain, holiday, no works on site — a recorded day off is never a missing day." Error="@error">
         <textarea class="field" rows="3" @bind="description" placeholder="Rained off"></textarea>
     </FormField>
     <button type="button" class="btn-primary btn-lg w-full" disabled="@isBusy" @onclick="RecordAsync">
@@ -13,13 +13,17 @@
 
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    /// <summary>The day being recorded off: today when none, else a day already gone that was missed.</summary>
+    [Parameter] public DateTimeOffset? Date { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnRecorded { get; set; }
 
     private string description = "";
     private bool isBusy;
     private string? error;
 
     private bool HasWords => !string.IsNullOrWhiteSpace(description);
+    private string Label => Date is null ? "Why not on site today?" : "Why not on site that day?";
 
     private async Task RecordAsync()
     {
@@ -28,8 +32,9 @@
         isBusy = true;
         try
         {
-            await Labour.MyDayOffAsync(ProjectId, description.Trim());
+            await Labour.MyDayOffAsync(ProjectId, description.Trim(), Date);
             await Labour.RefreshMyDayAsync();
+            await OnRecorded.InvokeAsync();
         }
         catch (CommandFailedException refusal) { error = refusal.Message; }
         catch (Exception) { error = "That didn't go through — check your signal and try again."; }
