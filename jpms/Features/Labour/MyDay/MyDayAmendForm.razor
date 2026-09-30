@@ -4,7 +4,7 @@
 
 <div class="space-y-4">
     <p class="text-sm text-content-subtle">Amending @Day.ProjectName, @Day.Date.ToString(DayFormat). The office sees the day as you leave it here.</p>
-    <MyDaySitePicker Projects="Projects" @bind-ProjectId="projectId" @bind-ProjectId:after="KeepTheCodeOnTheSite" Disabled="@isBusy" />
+    <MyDaySitePicker Projects="Projects" @bind-ProjectId="projectId" @bind-ProjectId:after="KeepCodeOnSite" Disabled="@isBusy" />
     <FormField Label="Hours" Hint="Half-hour steps for anything in between.">
         <MyDayHoursPicker @bind-Hours="hours" Disabled="@isBusy" />
     </FormField>
@@ -57,7 +57,7 @@
         leftAt = Day.SignedOutAt?.ToLocalTime().ToString(ClockFormat) ?? "";
     }
 
-    private void KeepTheCodeOnTheSite()
+    private void KeepCodeOnSite()
     {
         var isCodeOnTheSite = Codes.Any(code => code.Code == costCode);
         if (!isCodeOnTheSite) costCode = "";

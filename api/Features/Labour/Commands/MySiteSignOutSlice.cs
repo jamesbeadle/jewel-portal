@@ -53,7 +53,7 @@ public sealed class MySiteSignOutHandler : ICommandHandler<MySiteSignOut, MySite
     {
         var worker = await WorkerByEmail.ResolveAsync(context, email, cancellationToken);
         var today = SiteClock.Today();
-        var attendance = await OpenAttendanceAsync(command.ProjectId, worker, today, cancellationToken);
+        var attendance = await OpenAttendanceAsync(command.ProjectId, worker, email, today, cancellationToken);
         await CheckAsync(command, cancellationToken);
         var signedOutAt = MyDayMoments.Resolve(command.SignedOutAt, today, "sign-out");
         if (signedOutAt < attendance.SignedInAt)
@@ -82,13 +82,27 @@ public sealed class MySiteSignOutHandler : ICommandHandler<MySiteSignOut, MySite
         if (errors.Count > 0) throw new InvalidOperationException(string.Join(" ", errors));
     }
 
-    private async Task<SiteAttendanceEntity> OpenAttendanceAsync(string projectId, WorkerEntity worker, DateTimeOffset today, CancellationToken cancellationToken)
+    private async Task<SiteAttendanceEntity> OpenAttendanceAsync(string projectId, WorkerEntity worker, string email, DateTimeOffset today, CancellationToken cancellationToken)
     {
         var attendance = await context.SiteAttendances.FirstOrDefaultAsync(
             row => row.ProjectId == projectId && row.WorkerId == worker.WorkerId && row.WorkDate == today, cancellationToken)
-            ?? throw new InvalidOperationException("You haven't signed in today — sign in first.");
+            ?? await MovedSignInAsync(projectId, worker, email, today, cancellationToken);
         if (attendance.SignedOutAt is not null)
             throw new InvalidOperationException("You've already signed out today. Contact your Project Manager if you need to amend your hours.");
         return attendance;
+    }
+
+    /// <summary>The day signed in on the wrong site (Jeremy, 30 Sep 2026): the worker's one open
+    /// sign-in today, wherever it was made, is put onto the site they say the day was on — a site
+    /// they are on the worker list for, with nothing else logged there today.</summary>
+    private async Task<SiteAttendanceEntity> MovedSignInAsync(string projectId, WorkerEntity worker, string email, DateTimeOffset today, CancellationToken cancellationToken)
+    {
+        var openElsewhere = await context.SiteAttendances.FirstOrDefaultAsync(
+            row => row.WorkerId == worker.WorkerId && row.WorkDate == today && row.SignedOutAt == null, cancellationToken)
+            ?? throw new InvalidOperationException("You haven't signed in today — sign in first.");
+        await MyDayAssignment.EnsureAssignedAsync(context, projectId, worker, cancellationToken);
+        await MyDayVacancy.EnsureAsync(context, projectId, worker, email, today, cancellationToken);
+        openElsewhere.ProjectId = projectId;
+        return openElsewhere;
     }
 }

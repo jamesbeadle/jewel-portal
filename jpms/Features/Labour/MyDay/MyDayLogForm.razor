@@ -6,16 +6,15 @@
 <div class="space-y-4">
     @if (isRestored)
     {
-        <Notice Dismissible OnDismiss="() => isRestored = false">We kept what you'd typed before the page reloaded. Pick the photos again — a browser can't keep those.</Notice>
+        <Notice Dismissible OnDismiss="() => isRestored = false">We kept what you'd typed before the page reloaded. Take or pick the photos again — a browser can't keep those.</Notice>
     }
+    <MyDaySitePicker Projects="Projects" @bind-ProjectId="projectId" @bind-ProjectId:after="KeepCodeOnSite" Disabled="@isBusy" />
     <FormField Label="Hours today" Hint="Half-hour steps for anything in between.">
         <MyDayHoursPicker @bind-Hours="hours" @bind-Hours:after="SaveDraftAsync" Disabled="@isBusy" />
     </FormField>
-    <MyDayCostCodePicker Codes="Project.CostCodes" RecentCodes="RecentCodes" @bind-CostCode="costCode" @bind-CostCode:after="SaveDraftAsync" Disabled="@isBusy" />
+    <MyDayCostCodePicker Codes="Codes" RecentCodes="RecentCodes" @bind-CostCode="costCode" @bind-CostCode:after="SaveDraftAsync" Disabled="@isBusy" />
     <MyDayWordsBox @bind-Words="description" @bind-Words:after="SaveDraftAsync" Disabled="@isBusy" OnReportWordCaught="OpenDefectBox" />
-    <FormField Label="Photos" Hint="@PhotosHint">
-        <InputFile OnChange="OnPhotosChosen" multiple accept="image/*" class="w-full text-sm text-content-muted" disabled="@isBusy" />
-    </FormField>
+    <MyDayPhotosField Basket="photos" Disabled="@isBusy" />
     <div class="space-y-2">
         <MyDayInstructionBox @bind-Instruction="instruction" @bind-Instruction:after="SaveDraftAsync" Disabled="@isBusy" />
         <MyDayDefectBox @bind-Defect="defect" @bind-Defect:after="SaveDraftAsync" @bind-IsOpen="isDefectBoxOpen" Disabled="@isBusy" />
@@ -36,9 +35,12 @@
     private const decimal LongDayHours = 12m;
 
     [Parameter, EditorRequired] public MyLabourProject Project { get; set; } = default!;
+    /// <summary>Every site the worker is on, so a day signed in on the wrong one is put right at sign-out.</summary>
+    [Parameter] public IReadOnlyList<MyLabourProject> Projects { get; set; } = Array.Empty<MyLabourProject>();
     [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
     [Parameter] public EventCallback<string?> OnPhotoProblem { get; set; }
 
+    private string projectId = "";
     private decimal hours = WorkingDayChunks.FullDay;
     private string costCode = "";
     private string description = "";
@@ -46,27 +48,31 @@
     private string defect = "";
     private bool isDefectBoxOpen;
     private string leftAt = "";
-    private IReadOnlyList<IBrowserFile> photos = Array.Empty<IBrowserFile>();
+    private readonly MyDayPhotoBasket photos = new();
     private bool isBusy;
     private bool isUploadingPhotos;
     private string? error;
 
-    private bool HasPhotos => photos.Count > 0;
+    private bool HasPhotos => photos.HasAny;
     private bool HasWords => !string.IsNullOrWhiteSpace(description);
     private bool HasHours => hours > WorkingDayChunks.Off;
     private bool IsLongDay => hours > LongDayHours;
     private string PhotoCountText => photos.Count == 1 ? "1 photo" : $"{photos.Count} photos";
-    private string PhotosHint => HasPhotos
-        ? $"{PhotoCountText} · {FormatSize(photos.Sum(photo => photo.Size))}"
-        : $"Camera or gallery, up to {MyDayPhotoUploader.MaxPerBatch}. They go onto today's log; more can be added after.";
+    private IReadOnlyList<SiteSheetCostCode> Codes =>
+        Projects.FirstOrDefault(project => project.ProjectId == projectId)?.CostCodes ?? Project.CostCodes;
 
     protected override async Task OnInitializedAsync()
     {
-        costCode = RecentCodes.FirstOrDefault(recent => Project.CostCodes.Any(code => code.Code == recent)) ?? "";
+        projectId = Project.ProjectId;
+        costCode = RecentCodes.FirstOrDefault(recent => Codes.Any(code => code.Code == recent)) ?? "";
         await RestoreDraftAsync();
     }
 
-    private void OnPhotosChosen(InputFileChangeEventArgs change) => photos = change.GetMultipleFiles(MyDayPhotoUploader.MaxPerBatch);
+    private void KeepCodeOnSite()
+    {
+        var isCodeOnTheSite = Codes.Any(code => code.Code == costCode);
+        if (!isCodeOnTheSite) costCode = "";
+    }
 
     private void OpenDefectBox() => isDefectBoxOpen = true;
 
@@ -106,7 +112,7 @@
     private async Task<MySiteDayLogged?> SaveDayAsync()
     {
         var entries = new[] { new SiteSignOutEntry(costCode, hours) };
-        var day = new MySiteSignOut(Project.ProjectId, entries, description.Trim(), MyDayTimes.TodayAt(leftAt), instruction, defect.Trim());
+        var day = new MySiteSignOut(projectId, entries, description.Trim(), MyDayTimes.TodayAt(leftAt), instruction, defect.Trim());
         try { return await Labour.MySignOutAsync(day); }
         catch (CommandFailedException refusal) { error = refusal.Message; }
         catch (Exception) { error = "Your day didn't go through — check your signal and try again."; }
@@ -118,7 +124,7 @@
         if (!HasPhotos) return;
         isUploadingPhotos = true;
         StateHasChanged();
-        try { await Photos.UploadAsync(logged.ProgressUpdateId, photos, CancellationToken.None); }
+        try { await Photos.UploadAsync(logged.ProgressUpdateId, photos.Photos, CancellationToken.None); }
         catch (Exception exception)
         {
             await OnPhotoProblem.InvokeAsync($"Your day is saved, but the photos didn't upload ({exception.Message}). Add them from today's log below.");

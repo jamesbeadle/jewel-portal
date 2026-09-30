@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-30T21:20:45+00:00",
+  "generatedAt": "2026-09-30T22:11:13+00:00",
   "kitVersion": "1.12.1",
   "score": {
     "overall": 78.4,
@@ -39,8 +39,8 @@
         "zeroAt": 0.5,
         "unit": "files",
         "isMeasured": true,
-        "offenders": 789,
-        "measuredAgainst": 4817,
+        "offenders": 790,
+        "measuredAgainst": 4820,
         "score": 67.2
       },
       {
@@ -64,7 +64,7 @@
         "unit": "functions",
         "isMeasured": true,
         "offenders": 836,
-        "measuredAgainst": 9468,
+        "measuredAgainst": 9477,
         "score": 64.7
       },
       {
@@ -76,7 +76,7 @@
         "unit": "branches",
         "isMeasured": true,
         "offenders": 1182,
-        "measuredAgainst": 13154,
+        "measuredAgainst": 13156,
         "score": 82.0
       },
       {
@@ -100,7 +100,7 @@
         "unit": "thousand lines",
         "isMeasured": true,
         "offenders": 16305,
-        "measuredAgainst": 307.68,
+        "measuredAgainst": 307.8,
         "score": 0.0
       },
       {
@@ -112,7 +112,7 @@
         "unit": "thousand lines",
         "isMeasured": true,
         "offenders": 135,
-        "measuredAgainst": 307.68,
+        "measuredAgainst": 307.8,
         "score": 97.8
       },
       {
@@ -124,7 +124,7 @@
         "unit": "components and functions",
         "isMeasured": true,
         "offenders": 27,
-        "measuredAgainst": 9618,
+        "measuredAgainst": 9627,
         "score": 97.2
       },
       {
@@ -135,8 +135,8 @@
         "zeroAt": 30,
         "unit": "thousand lines",
         "isMeasured": true,
-        "offenders": 4113,
-        "measuredAgainst": 307.68,
+        "offenders": 4114,
+        "measuredAgainst": 307.8,
         "score": 55.4
       },
       {
@@ -148,7 +148,7 @@
         "unit": "thousand lines",
         "isMeasured": true,
         "offenders": 3064,
-        "measuredAgainst": 307.68,
+        "measuredAgainst": 307.8,
         "score": 66.8
       },
       {
@@ -159,9 +159,9 @@
         "zeroAt": 0.1,
         "unit": "functions",
         "isMeasured": true,
-        "offenders": 58,
-        "measuredAgainst": 9468,
-        "score": 93.9
+        "offenders": 57,
+        "measuredAgainst": 9477,
+        "score": 94.0
       },
       {
         "key": "predictedFiles",
@@ -196,7 +196,7 @@
         "unit": "branches",
         "isMeasured": true,
         "offenders": 276,
-        "measuredAgainst": 13154,
+        "measuredAgainst": 13156,
         "score": 91.6
       },
       {
@@ -208,7 +208,7 @@
         "unit": "branches",
         "isMeasured": true,
         "offenders": 234,
-        "measuredAgainst": 13154,
+        "measuredAgainst": 13156,
         "score": 92.9
       },
       {
@@ -220,7 +220,7 @@
         "unit": "functions",
         "isMeasured": true,
         "offenders": 34,
-        "measuredAgainst": 9468,
+        "measuredAgainst": 9477,
         "score": 96.4
       },
       {
@@ -232,7 +232,7 @@
         "unit": "widget slots",
         "isMeasured": true,
         "offenders": 699,
-        "measuredAgainst": 2679,
+        "measuredAgainst": 2678,
         "score": 47.8
       },
       {
@@ -252,22 +252,22 @@
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 789,
-      "totalFiles": 4817,
-      "totalLines": 307680,
+      "filesOverLimit": 790,
+      "totalFiles": 4820,
+      "totalLines": 307800,
       "worstFileLines": 551,
       "worstFileTimesOverLimit": 4.51
     },
     "functionShape": {
       "limit": 30,
       "functionsOverLimit": 836,
-      "totalFunctions": 9468,
+      "totalFunctions": 9477,
       "elseBlocks": 1182,
-      "ifBlocks": 13154,
+      "ifBlocks": 13156,
       "measurementIsHeuristic": true
     },
     "functionNames": {
-      "overlongFunctionNames": 58,
+      "overlongFunctionNames": 57,
       "maxWords": 5,
       "maxLength": 40
     },
@@ -283,8 +283,8 @@
       "carriedFromBaseline": true
     },
     "naming": {
-      "bannedAbbreviationHits": 781,
-      "unprefixedBooleans": 2048
+      "bannedAbbreviationHits": 782,
+      "unprefixedBooleans": 2049
     },
     "comments": {
       "explanatoryCommentLines": 16305,
@@ -297,9 +297,9 @@
       "repeatedStringLiterals": 30
     },
     "prose": {
-      "longMemberChainLines": 4113,
+      "longMemberChainLines": 4114,
       "deeplyIndentedLines": 3064,
-      "overlongLines": 1961,
+      "overlongLines": 1960,
       "measurementIsHeuristic": true
     },
     "conditions": {
@@ -309,10 +309,10 @@
     },
     "orphans": {
       "orphanFunctions": 21,
-      "functionsExamined": 9468
+      "functionsExamined": 9477
     },
     "designPatterns": {
-      "roleFamilies": 187,
+      "roleFamilies": 188,
       "predictedFiles": 2467,
       "predictedFilesMissing": 186,
       "entities": 19,
@@ -327,12 +327,12 @@
     },
     "siteDefinition": {
       "routes": 132,
-      "views": 694,
-      "siteComponents": 663,
+      "views": 695,
+      "siteComponents": 664,
       "catalogue": 34,
-      "widgetUsages": 1980,
+      "widgetUsages": 1979,
       "handRolledElements": 699,
-      "widgetSlots": 2679,
+      "widgetSlots": 2678,
       "viewsWithHandRolled": 316,
       "designSheets": 0,
       "designsLastChecked": "never",
@@ -346,15 +346,15 @@
       "looserLimits": 3
     },
     "fileAreas": {
-      "totalFiles": 5886,
-      "api": 2443,
-      "frontend": 1448,
+      "totalFiles": 5897,
+      "api": 2447,
+      "frontend": 1452,
       "contracts": 765,
-      "database": 312,
+      "database": 314,
       "connector": 254,
       "docs": 232,
       "tooling": 192,
-      "tests": 187,
+      "tests": 188,
       "infrastructure": 38,
       "worker": 14,
       "other": 1
@@ -365,9 +365,9 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 789,
-        "totalFiles": 4817,
-        "totalLines": 307680,
+        "filesOverLimit": 790,
+        "totalFiles": 4820,
+        "totalLines": 307800,
         "worstFileLines": 551,
         "worstFileTimesOverLimit": 4.51
       },
@@ -2429,6 +2429,10 @@
           "lines": 139
         },
         {
+          "file": "jpms/Features/Labour/MyDay/MyDayLogForm.razor",
+          "lines": 139
+        },
+        {
           "file": "jpms/Features/Variations/VariationDocumentPanel.razor",
           "lines": 139
         },
@@ -2566,10 +2570,6 @@
         },
         {
           "file": "jpms/Services/HttpIntakeQueue.cs",
-          "lines": 133
-        },
-        {
-          "file": "jpms/Features/Labour/MyDay/MyDayLogForm.razor",
           "lines": 133
         },
         {
@@ -3221,6 +3221,10 @@
           "lines": 108
         },
         {
+          "file": "api/Features/Labour/Commands/MySiteSignOutSlice.cs",
+          "lines": 108
+        },
+        {
           "file": "api/Features/Procurement/Documents/WorkOrderPoRenderer.Scope.cs",
           "lines": 108
         },
@@ -3535,9 +3539,9 @@
       "summary": {
         "limit": 30,
         "functionsOverLimit": 836,
-        "totalFunctions": 9468,
+        "totalFunctions": 9477,
         "elseBlocks": 1182,
-        "ifBlocks": 13154,
+        "ifBlocks": 13156,
         "measurementIsHeuristic": true
       },
       "offenders": [
@@ -3846,7 +3850,7 @@
     "functionNames": {
       "name": "functionNames",
       "summary": {
-        "overlongFunctionNames": 58,
+        "overlongFunctionNames": 57,
         "maxWords": 5,
         "maxLength": 40
       },
@@ -4285,8 +4289,8 @@
     "naming": {
       "name": "naming",
       "summary": {
-        "bannedAbbreviationHits": 781,
-        "unprefixedBooleans": 2048
+        "bannedAbbreviationHits": 782,
+        "unprefixedBooleans": 2049
       },
       "offenders": {
         "abbreviations": [
@@ -5330,7 +5334,7 @@
         "repeatedLiterals": [
           {
             "literal": "button",
-            "occurrences": 963
+            "occurrences": 964
           },
           {
             "literal": "text-xs text-content-subtle",
@@ -5425,12 +5429,12 @@
             "occurrences": 74
           },
           {
-            "literal": "yyyy-MM-dd",
+            "literal": "projectId",
             "occurrences": 73
           },
           {
-            "literal": "projectId",
-            "occurrences": 72
+            "literal": "yyyy-MM-dd",
+            "occurrences": 73
           },
           {
             "literal": "space-y-4",
@@ -5454,9 +5458,9 @@
     "prose": {
       "name": "prose",
       "summary": {
-        "longMemberChainLines": 4113,
+        "longMemberChainLines": 4114,
         "deeplyIndentedLines": 3064,
-        "overlongLines": 1961,
+        "overlongLines": 1960,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -6259,7 +6263,7 @@
           },
           {
             "file": "api/Features/Labour/Commands/MyLogMissedSiteDaySlice.cs",
-            "line": 69
+            "line": 68
           },
           {
             "file": "api/Features/Labour/Commands/MySiteSignOutSlice.cs",
@@ -6486,7 +6490,7 @@
       "name": "orphans",
       "summary": {
         "orphanFunctions": 21,
-        "functionsExamined": 9468
+        "functionsExamined": 9477
       },
       "offenders": [
         {
@@ -6599,7 +6603,7 @@
     "designPatterns": {
       "name": "designPatterns",
       "summary": {
-        "roleFamilies": 187,
+        "roleFamilies": 188,
         "predictedFiles": 2467,
         "predictedFilesMissing": 186,
         "entities": 19,
@@ -6657,7 +6661,7 @@
           "export": 13,
           "extraction": 4,
           "factory": 34,
-          "field": 5,
+          "field": 6,
           "fields": 8,
           "figures": 4,
           "filing": 8,
@@ -6717,6 +6721,7 @@
           "pane": 8,
           "panel": 79,
           "people": 4,
+          "photo": 4,
           "photos": 7,
           "picker": 10,
           "pill": 6,
@@ -8257,7 +8262,7 @@
           },
           {
             "component": "jpms/Components/FormField.razor",
-            "reusedBy": 165
+            "reusedBy": 166
           },
           {
             "component": "jpms/Components/Pill.razor",
@@ -8866,12 +8871,12 @@
       "name": "siteDefinition",
       "summary": {
         "routes": 132,
-        "views": 694,
-        "siteComponents": 663,
+        "views": 695,
+        "siteComponents": 664,
         "catalogue": 34,
-        "widgetUsages": 1980,
+        "widgetUsages": 1979,
         "handRolledElements": 699,
-        "widgetSlots": 2679,
+        "widgetSlots": 2678,
         "viewsWithHandRolled": 316,
         "designSheets": 0,
         "designsLastChecked": "never",
@@ -15069,6 +15074,18 @@
           "usedBy": 2
         },
         {
+          "component": "MyDayPhotosField",
+          "file": "jpms/Features/Labour/MyDay/MyDayPhotosField.razor",
+          "definition": "FormField{ InputFile }",
+          "usedBy": 2
+        },
+        {
+          "component": "MyDaySitePicker",
+          "file": "jpms/Features/Labour/MyDay/MyDaySitePicker.razor",
+          "definition": "?Projects.Count > 1: FormField",
+          "usedBy": 2
+        },
+        {
           "component": "MyTodosPanel",
           "file": "jpms/Components/MyTodosPanel.razor",
           "definition": "[ \u26a0h2\u2192SectionHeader ?!loading: [ (2) \u26a0button\u2192Button ] ], ?error is not null: Notice, ?!loading && items.Count > 0 && \u2026: \u26a0select\u2192FormField, LoadGate{ ( ?boardView && items.Count > 0: TodoBoard | (n) \u26a0button\u2192Button ) }",
@@ -16235,7 +16252,7 @@
         {
           "component": "MyDayLogForm",
           "file": "jpms/Features/Labour/MyDay/MyDayLogForm.razor",
-          "definition": "?isRestored: Notice, FormField{ MyDayHoursPicker }, MyDayCostCodePicker, MyDayWordsBox, FormField{ InputFile }, MyDayInstructionBox, MyDayDefectBox, MyDayClock, ?error is not null: Notice",
+          "definition": "?isRestored: Notice, MyDaySitePicker, FormField{ MyDayHoursPicker }, MyDayCostCodePicker, MyDayWordsBox, MyDayPhotosField, MyDayInstructionBox, MyDayDefectBox, MyDayClock, ?error is not null: Notice",
           "usedBy": 1
         },
         {
@@ -16247,7 +16264,7 @@
         {
           "component": "MyDayMissedDayForm",
           "file": "jpms/Features/Labour/MyDay/MyDayMissedDayForm.razor",
-          "definition": "?isRecordingDayOff: MyDayOffForm, FormField{ MyDayHoursPicker }, MyDayCostCodePicker, MyDayWordsBox, FormField{ InputFile }, ?error is not null: Notice",
+          "definition": "?isRecordingDayOff: MyDayOffForm, FormField{ MyDayHoursPicker }, MyDayCostCodePicker, MyDayWordsBox, MyDayPhotosField, ?error is not null: Notice",
           "usedBy": 1
         },
         {
@@ -16260,12 +16277,6 @@
           "component": "MyDayRejectedPanel",
           "file": "jpms/Features/Labour/MyDay/MyDayRejectedPanel.razor",
           "definition": "?HasRejected: Panel{ ?error is not null: Notice, (n) FormField }",
-          "usedBy": 1
-        },
-        {
-          "component": "MyDaySitePicker",
-          "file": "jpms/Features/Labour/MyDay/MyDaySitePicker.razor",
-          "definition": "?Projects.Count > 1: FormField",
           "usedBy": 1
         },
         {
@@ -18673,15 +18684,15 @@
     "fileAreas": {
       "name": "fileAreas",
       "summary": {
-        "totalFiles": 5886,
-        "api": 2443,
-        "frontend": 1448,
+        "totalFiles": 5897,
+        "api": 2447,
+        "frontend": 1452,
         "contracts": 765,
-        "database": 312,
+        "database": 314,
         "connector": 254,
         "docs": 232,
         "tooling": 192,
-        "tests": 187,
+        "tests": 188,
         "infrastructure": 38,
         "worker": 14,
         "other": 1
@@ -18689,15 +18700,15 @@
       "offenders": [
         {
           "area": "api",
-          "files": 2443,
+          "files": 2447,
           "sourceFiles": 2442,
-          "sourceLines": 122675
+          "sourceLines": 122687
         },
         {
           "area": "frontend",
-          "files": 1448,
-          "sourceFiles": 1342,
-          "sourceLines": 129249
+          "files": 1452,
+          "sourceFiles": 1345,
+          "sourceLines": 129357
         },
         {
           "area": "contracts",
@@ -18707,7 +18718,7 @@
         },
         {
           "area": "database",
-          "files": 312,
+          "files": 314,
           "sourceFiles": 0,
           "sourceLines": 0
         },
@@ -18731,7 +18742,7 @@
         },
         {
           "area": "tests",
-          "files": 187,
+          "files": 188,
           "sourceFiles": 0,
           "sourceLines": 0
         },

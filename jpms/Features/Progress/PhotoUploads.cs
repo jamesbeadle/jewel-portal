@@ -24,6 +24,17 @@ public static class PhotoUploads
         }
     }
 
+    public static void AddFiles(MultipartFormDataContent content, IReadOnlyList<ChosenPhoto> photos)
+    {
+        foreach (var photo in photos)
+        {
+            var fileContent = new ByteArrayContent(photo.Bytes);
+            var contentType = string.IsNullOrWhiteSpace(photo.ContentType) ? UnknownContentType : photo.ContentType;
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+            content.Add(fileContent, FilesField, photo.Name);
+        }
+    }
+
     public static async Task ThrowIfFailedAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         if (response.IsSuccessStatusCode) return;
