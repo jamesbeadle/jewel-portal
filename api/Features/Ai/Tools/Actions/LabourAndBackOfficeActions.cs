@@ -51,6 +51,7 @@ internal sealed partial class LabourAndBackOfficeActions : IAiActionSource
         TimesheetActions()
             .Concat(WorkerLinkActions())
             .Concat(MonthEndActions())
+            .Concat(WeekReviewActions())
             .Concat(CostCentreActions())
             .Concat(RateActions())
             .Concat(HealthAndSafetyActions())

@@ -95,6 +95,15 @@ public static class LabourFeatureRegistration
         services.AddScoped<IQueryHandler<GetLabourWeekPlan, LabourWeekPlan>>(
             provider => provider.GetRequiredService<LabourWeekPlanHandler>());
         services.AddScoped<PlanWorkerDaysHandler>();
+        services.AddScoped<ICommandHandler<SignOffSubmittedWeekByName, WorkerWeekSubmission>, SignOffSubmittedWeekByNameHandler>();
+        services.AddScoped<SignOffSubmittedWeekByNameAuthorisation>();
+        services.AddScoped<SignOffSubmittedWeekByNameValidation>();
+        services.AddScoped<ICommandHandler<SendBackSubmittedWeekByName, WorkerWeekSubmission>, SendBackSubmittedWeekByNameHandler>();
+        services.AddScoped<SendBackSubmittedWeekByNameAuthorisation>();
+        services.AddScoped<SendBackSubmittedWeekByNameValidation>();
+        services.AddScoped<ICommandHandler<PlanWorkerDaysByName, Acknowledgement>, PlanWorkerDaysByNameHandler>();
+        services.AddScoped<PlanWorkerDaysByNameAuthorisation>();
+        services.AddScoped<PlanWorkerDaysByNameValidation>();
         services.AddScoped<ICommandHandler<PlanWorkerDays, Acknowledgement>>(
             provider => provider.GetRequiredService<PlanWorkerDaysHandler>());
 
