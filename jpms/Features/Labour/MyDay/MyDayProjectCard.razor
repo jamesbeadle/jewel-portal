@@ -33,7 +33,7 @@
 
 @code {
     [Parameter, EditorRequired] public MyLabourProject Project { get; set; } = default!;
-    /// <summary>Every site the worker is on, so today's day can be moved to another from its amend form.</summary>
+    /// <summary>Every site the worker is on, so today's day can be put on another at sign-out or from its amend form.</summary>
     [Parameter] public IReadOnlyList<MyLabourProject> Projects { get; set; } = Array.Empty<MyLabourProject>();
     [Parameter] public IReadOnlyList<MyRecentTimesheet> TodaysHours { get; set; } = Array.Empty<MyRecentTimesheet>();
     [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();

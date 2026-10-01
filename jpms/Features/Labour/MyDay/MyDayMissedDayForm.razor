@@ -1,5 +1,6 @@
 @namespace Jewel.JPMS.Features.Labour.MyDay
 @using Jewel.JPMS.Contracts.Labour
+@using Jewel.JPMS.Features.Progress
 @inject ILabourStore Labour
 @inject MyDayPhotoUploader Photos
 
@@ -37,7 +38,7 @@
     private decimal hours = WorkingDayChunks.FullDay;
     private string costCode = "";
     private string words = "";
-    private IReadOnlyList<IBrowserFile> photos = Array.Empty<IBrowserFile>();
+    private IReadOnlyList<ChosenPhoto> photos = Array.Empty<ChosenPhoto>();
     private bool isRecordingDayOff;
     private bool isBusy;
     private bool isUploadingPhotos;

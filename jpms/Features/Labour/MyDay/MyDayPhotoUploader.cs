@@ -13,11 +13,24 @@ public sealed class MyDayPhotoUploader
     private readonly HttpClient httpClient;
     public MyDayPhotoUploader(HttpClient httpClient) { this.httpClient = httpClient; }
 
-    public async Task<ProgressPhotoBatchResult> UploadAsync(
+    public Task<ProgressPhotoBatchResult> UploadAsync(
         string progressUpdateId, IReadOnlyList<IBrowserFile> photos, CancellationToken cancellationToken)
     {
         using var content = new MultipartFormDataContent();
         PhotoUploads.AddFiles(content, photos, cancellationToken);
+        return PostAsync(progressUpdateId, content, cancellationToken);
+    }
+
+    public Task<ProgressPhotoBatchResult> UploadAsync(
+        string progressUpdateId, IReadOnlyList<ChosenPhoto> photos, CancellationToken cancellationToken)
+    {
+        using var content = new MultipartFormDataContent();
+        PhotoUploads.AddFiles(content, photos);
+        return PostAsync(progressUpdateId, content, cancellationToken);
+    }
+
+    private async Task<ProgressPhotoBatchResult> PostAsync(string progressUpdateId, MultipartFormDataContent content, CancellationToken cancellationToken)
+    {
         var response = await httpClient.PostAsync($"api/my/labour/notes/{progressUpdateId}/photos", content, cancellationToken);
         await PhotoUploads.ThrowIfFailedAsync(response, cancellationToken);
         return (await response.Content.ReadFromJsonAsync<ProgressPhotoBatchResult>(cancellationToken: cancellationToken))!;

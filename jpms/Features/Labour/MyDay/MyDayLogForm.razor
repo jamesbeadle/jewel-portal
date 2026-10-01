@@ -1,12 +1,13 @@
 @namespace Jewel.JPMS.Features.Labour.MyDay
 @using Jewel.JPMS.Contracts.Labour
+@using Jewel.JPMS.Features.Progress
 @inject ILabourStore Labour
 @inject MyDayPhotoUploader Photos
 
 <div class="space-y-4">
     @if (isRestored)
     {
-        <Notice Dismissible OnDismiss="() => isRestored = false">We kept what you'd typed before the page reloaded. Pick the photos again — a browser can't keep those.</Notice>
+        <Notice Dismissible OnDismiss="() => isRestored = false">We kept what you'd typed before the page reloaded. Take or pick the photos again — a browser can't keep those.</Notice>
     }
     <MyDaySitePicker Projects="Projects" Hint="You signed in here — change it if the work was on another of your sites." @bind-ProjectId="siteProjectId" @bind-ProjectId:after="SiteChangedAsync" Disabled="@isBusy" />
     <FormField Label="Hours today" Hint="Half-hour steps for anything in between.">
@@ -48,7 +49,7 @@
     private string defect = "";
     private bool isDefectBoxOpen;
     private string leftAt = "";
-    private IReadOnlyList<IBrowserFile> photos = Array.Empty<IBrowserFile>();
+    private IReadOnlyList<ChosenPhoto> photos = Array.Empty<ChosenPhoto>();
     private bool isBusy;
     private bool isUploadingPhotos;
     private string? error;
