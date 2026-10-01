@@ -1540,6 +1540,40 @@ leaves the day unlinked. The day is the finance director's model (2026-09-28), a
   approving the hours, instead of only being able to change the code and the hours. Pinned by
   `MyDaySiteAndTradesTests`.
 
+- **My day pages through the weeks, reads the month, and sends a finished week to the office; the office
+  plans the week** (1 Oct 2026, four of Jeremy's stories). THE WEEK SWIPES: `MyDayCalendar` on the Dashboard
+  holds a Week | Month toggle; `MyDayWeekPanel` reads any week up to the current one through
+  `GetMyLabourWeek` (GET `my/labour/weeks/{date}`, `MyLabourWeek`: Monday to Sunday, `MyDayDays`, the sites
+  being today's list plus any site a day in the range was recorded on) and pages with a swipe
+  (`my-day-swipe.js`, `MyDaySwipeWatcher`) or the arrows (`MyDayWeekHeading`), the dates as its heading. A
+  future day reads "—" or *Not in* when the office has planned the worker off (`MyWeekDay.PlannedAbsence`).
+  THE MONTH is `MyDayMonthPanel` over `GetMyLabourMonth` (GET `my/labour/months/{year}/{month}`,
+  `MyLabourMonth`): a Monday-to-Sunday grid, a tapped day opened beneath it with the same Amend / Add, and
+  `MyMonthTotals` — approved hours and the days they make at the standard day (`ForecastRules.HoursToDays`,
+  the overview's own arithmetic, so the invoice and the settlement agree), days waiting, days off and
+  working days gone with nothing (`MyDayMonthTotals`). THE WEEK IS SUBMITTED from the bottom of the week
+  (`MySubmitWeek`, POST `my/labour/weeks/submit`, `WorkerWeekSubmissionEntity`: one row per worker and
+  week, `MyWeekSubmissionRules`): offered once Friday is logged and every working day is logged, recorded
+  off, or planned off; a submitted or signed-off week is closed to the worker (`WorkerWeekLock`, asked by
+  sign-out, amend, missed day and day off; `MyWeekDay.CanBeAmended` / `CanBeAdded` read it) and a week sent
+  back reopens on the same row. THE DIRECTORS ANSWER IT on the Labour overview's *Weeks for review* view
+  (`WeekReviewPanel`, `ListWorkerWeekSubmissions`; `LabourRoleSets.ReviewWorkerWeeks` = MD, FD, Admin —
+  PMs read the list, the directors act): `SignOffWorkerWeek` approves every waiting day through the one
+  `ApproveTimesheetsHandler` (rates, the budget hard-block — a refused day refuses the whole sign-off by
+  name, nothing half-signed), turns a day the worker recorded off into a `WorkerAbsence` (NotWorked, the
+  worker's words) so the month-end stops chasing it, writes the `LabourWeekSignOff` marker for each month
+  the week touches, and locks the row with who and when; `SendBackWorkerWeek` needs a note the worker reads
+  on My day. A rejected day in a submitted week is answered by sending the week back, never signed over.
+  THE WEEK PLANNER (`/labour/planner`, `LabourPlanner`, `GetLabourWeekPlan`, `LabourWeekPlan`;
+  `ManageWorkers`) lists every active operative Monday to Friday, in unless an absence is recorded;
+  `PlanWorkerDays` marks days not in as a Holiday absence ("Planned not in on the week planner") or back in
+  by removing whatever absence is there — the office's one absence record, which the overview, the chase
+  list and the sign-off gate already read — and refuses not in on a day already logged. Forecast is planned
+  days × day rate (`WeekPlanRules`); actual is the logged days' cost (`LabourActuals`: the approval snapshot,
+  else hours at the current rate). The operative sees the plan on My day as *Not in*. Migration
+  `AddWorkerWeekSubmissions`, script `add-worker-week-submissions.sql`. Pinned by `MyDayWeeksTests`,
+  `WeekReviewTests` and `LabourWeekPlanTests`. The connector has no door onto any of this yet.
+
 Onboarding a worker (Jeremy's recipe): invite them with the **Site Operative** role, add a **Worker** record on
 /labour/workers with the same email, and assign them to each project's worker list on its Labour tab; the
 project's cost-code budgets are the list they choose from.

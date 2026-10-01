@@ -9,9 +9,9 @@ using static Jewel.JPMS.Tests.MyDayWeeksSeed;
 
 namespace Jewel.JPMS.Tests;
 
-// A director answers a submitted week in one step (1 Oct 2026): sign it off — every day approved,
-// the off day a recorded absence, the month-end marker written, the week locked with who and when —
-// or send it back with a note so the operative can amend and submit again.
+/// <summary>A director answers a submitted week in one step (1 Oct 2026): sign it off — every day
+/// approved, the off day a recorded absence, the month-end marker written, the week locked with who
+/// and when — or send it back with a note so the operative can amend and submit again.</summary>
 public sealed class WeekReviewTests
 {
     [Fact]

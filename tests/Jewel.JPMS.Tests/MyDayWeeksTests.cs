@@ -8,8 +8,8 @@ using static Jewel.JPMS.Tests.MyDayWeeksSeed;
 
 namespace Jewel.JPMS.Tests;
 
-// Jeremy's asks of 1 Oct 2026: an operative swipes back through earlier weeks, reads the month
-// as they invoice it, and sends a finished week to the office in one step.
+/// <summary>Jeremy's asks of 1 Oct 2026: an operative swipes back through earlier weeks, reads the
+/// month as they invoice it, and sends a finished week to the office in one step.</summary>
 public sealed class MyDayWeeksTests
 {
     [Fact]
@@ -21,9 +21,10 @@ public sealed class MyDayWeeksTests
         var week = await WeekHandler(context).HandleAsync(new GetMyLabourWeek(LastMonday.AddDays(3)), Email, CancellationToken.None);
 
         Assert.Equal(LastMonday, week.WeekStart);
-        Assert.Equal(LabourWeeks.WorkingDaysInWeek, week.Days.Count);
-        Assert.Equal(2, week.Days.Count(day => day.IsLogged));
-        Assert.True(week.Days.Single(day => day.Date == LastMonday).CanBeAmended);
+        var days = week.Days;
+        Assert.Equal(LabourWeeks.WorkingDaysInWeek, days.Count);
+        Assert.Equal(2, days.Count(day => day.IsLogged));
+        Assert.True(days.Single(day => day.Date == LastMonday).CanBeAmended);
         Assert.Null(week.Submission);
     }
 
@@ -62,12 +63,13 @@ public sealed class MyDayWeeksTests
 
         var month = await MonthHandler(context).HandleAsync(new GetMyLabourMonth(2026, 6), Email, CancellationToken.None);
 
-        Assert.Equal(8m, month.Totals.ApprovedHours);
-        Assert.Equal(1m, month.Totals.ApprovedDays);
-        Assert.Equal(2, month.Totals.WaitingDays);
-        Assert.Equal(1, month.Totals.OffDays);
-        Assert.Equal(ForecastRules.WorkingDaysInMonth(2026, 6) - 4, month.Totals.MissingDays);
-        Assert.Equal(month.Totals.WaitingDays + month.Totals.MissingDays, month.Totals.OutstandingDays);
+        var totals = month.Totals;
+        Assert.Equal(8m, totals.ApprovedHours);
+        Assert.Equal(1m, totals.ApprovedDays);
+        Assert.Equal(2, totals.WaitingDays);
+        Assert.Equal(1, totals.OffDays);
+        Assert.Equal(ForecastRules.WorkingDaysInMonth(2026, 6) - 4, totals.MissingDays);
+        Assert.Equal(totals.WaitingDays + totals.MissingDays, totals.OutstandingDays);
     }
 
     [Fact]

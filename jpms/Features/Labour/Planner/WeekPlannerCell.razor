@@ -1,0 +1,30 @@
+@namespace Jewel.JPMS.Features.Labour.Planner
+@using Jewel.JPMS.Features.Labour.MyDay
+@using static Jewel.JPMS.Features.Labour.LabourDisplay
+
+<td class="text-center">
+    @if (Day.IsLogged && Day.Status is { } status)
+    {
+        <span class="text-xs font-medium @status.ToTone().Text()" title="@LoggedTitle">@MyDayHoursText.Of(Day.LoggedHours)</span>
+    }
+    @if (!Day.IsLogged)
+    {
+        <button type="button" class="text-xs rounded-full px-2 py-0.5 hover:brightness-110 @ToggleClasses" title="@ToggleTitle"
+                disabled="@Disabled" @onclick="() => OnToggle.InvokeAsync(!Day.IsIn)">@ToggleLabel</button>
+    }
+</td>
+
+@code {
+    private const string InClasses = "bg-positive/10 text-positive";
+    private const string NotInClasses = "bg-surface-raised text-content-subtle";
+
+    /// <summary>One worker on one day: in or not in as a tap, and once the day is logged, what was worked.</summary>
+    [Parameter, EditorRequired] public LabourPlanDay Day { get; set; } = default!;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<bool> OnToggle { get; set; }
+
+    private string ToggleLabel => Day.IsIn ? "In" : "Not in";
+    private string ToggleClasses => Day.IsIn ? InClasses : NotInClasses;
+    private string ToggleTitle => Day.IsIn ? "In — press to mark not in" : $"{AbsenceLabel(Day.AbsenceOrNotWorked)} — press to mark in";
+    private string LoggedTitle => $"Logged {MyDayHoursText.Of(Day.LoggedHours)} ({StatusLabel(Day.Status!.Value)}) — {Pounds(Day.ActualCost)}";
+}

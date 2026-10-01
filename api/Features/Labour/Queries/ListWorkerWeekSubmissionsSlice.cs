@@ -15,7 +15,8 @@ public sealed class ListWorkerWeekSubmissionsEndpoint
     [Function(nameof(ListWorkerWeekSubmissions))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "labour/weeks/submissions")] HttpRequest request)
     {
-        var cancellationToken = request.HttpContext.RequestAborted;
+        var httpContext = request.HttpContext;
+        var cancellationToken = httpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!LabourRoleSets.ApproveTimesheets.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);

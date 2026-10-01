@@ -1,0 +1,22 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+
+<div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+    <div class="rounded-md border border-line/60 p-2">
+        <p class="text-xs text-content-subtle">Approved</p>
+        <p class="font-semibold text-positive">@MyDayHoursText.Of(Totals.ApprovedHours) <span class="font-normal text-content-subtle">· @DaysText(Totals.ApprovedDays)</span></p>
+    </div>
+    <div class="rounded-md border border-line/60 p-2">
+        <p class="text-xs text-content-subtle">Outstanding</p>
+        <p class="font-semibold @(Totals.OutstandingDays > 0 ? "text-warning" : "text-content")">@Totals.OutstandingDays @(Totals.OutstandingDays == 1 ? "day" : "days")</p>
+        <p class="text-xs text-content-subtle">@Totals.WaitingDays waiting · @Totals.MissingDays nothing · @Totals.OffDays off</p>
+    </div>
+</div>
+<p class="text-xs text-content-subtle mt-2">Invoice from the approved total — it is the figure the office settles. A waiting day joins it once approved.</p>
+
+@code {
+    /// <summary>The month's figures as the worker invoices from them: the approved total to invoice,
+    /// and what is still outstanding — waiting on the office, or a day with nothing on it.</summary>
+    [Parameter, EditorRequired] public MyMonthTotals Totals { get; set; } = default!;
+
+    private static string DaysText(decimal days) => days == 1m ? "1 day" : $"{days:0.##} days";
+}

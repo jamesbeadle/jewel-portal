@@ -1,0 +1,93 @@
+@page "/labour/planner"
+@using Jewel.JPMS.Contracts.Labour
+@using Jewel.JPMS.Features.Labour.MyDay
+@using Jewel.JPMS.Features.Labour.Planner
+@inject AuthService Auth
+@inject SessionService Session
+@inject IWeekPlanStore Plans
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Week planner · JBB Portal</PageTitle>
+
+<Page OpenTo="LabourRoleSets.ManageWorkers" Class="max-w-7xl">
+    <SectionHeader Title="Week planner">
+        <Actions>
+            <div class="flex items-center gap-2 text-sm">
+                <button type="button" class="btn-secondary" disabled="@isBusy" @onclick="() => MoveAsync(-1)">‹ Prev</button>
+                <span class="text-content-subtle whitespace-nowrap">w/c @weekStart.ToString(WeekFormat)</span>
+                <button type="button" class="btn-secondary" disabled="@isBusy" @onclick="() => MoveAsync(1)">Next ›</button>
+                <button type="button" class="btn-ghost" disabled="@isBusy" @onclick="() => MoveAsync(0)">This week</button>
+            </div>
+            <a class="btn-secondary" href="/labour/overview">Labour overview</a>
+        </Actions>
+    </SectionHeader>
+    <TableNote IsLead="true" Class="mb-5">
+        Plan next week in a few taps: every operative is in each day until you mark the days they
+        have asked off. The forecast is the planned days at each day rate; once the days are logged
+        and signed off, the actual sits beside it.
+    </TableNote>
+
+    @if (actionError is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
+    }
+    @if (Plan is { } plan)
+    {
+        <WeekPlannerTotals Plan="plan" />
+    }
+    <WeekPlannerTable Plan="Plan" HasFailed="@hasFailed" IsBusy="@isBusy" OnPlan="PlanAsync" />
+</Page>
+
+@code {
+    private const string WeekFormat = "dd MMM yyyy";
+
+    private DateTimeOffset weekStart;
+    private bool hasFailed;
+    private bool isBusy;
+    private string? actionError;
+
+    private LabourWeekPlan? Plan => Plans.Plan(weekStart);
+
+    protected override async Task OnInitializedAsync()
+    {
+        weekStart = MyDayCalendarDates.MondayOf(MyDayCalendarDates.TodayUtc());
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Plans.OnChange += HandleChange;
+        StateHasChanged();
+        if (Session.IsApproved) await LoadAsync();
+    }
+
+    private void HandleChange() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Plans.OnChange -= HandleChange;
+
+    private async Task MoveAsync(int weeks)
+    {
+        weekStart = weeks switch
+        {
+            0 => MyDayCalendarDates.MondayOf(MyDayCalendarDates.TodayUtc()),
+            < 0 => MyDayCalendarDates.PreviousMonday(weekStart),
+            _ => MyDayCalendarDates.NextMonday(weekStart),
+        };
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        hasFailed = false;
+        try { await Plans.RefreshAsync(weekStart); }
+        catch (Exception) { hasFailed = true; }
+    }
+
+    private async Task PlanAsync((string WorkerId, IReadOnlyList<DateTimeOffset> Dates, bool IsIn) change)
+    {
+        actionError = null;
+        isBusy = true;
+        try { await Plans.PlanDaysAsync(weekStart, change.WorkerId, change.Dates, change.IsIn); }
+        catch (CommandFailedException refusal) { actionError = refusal.Message; }
+        catch (Exception) { actionError = "The change didn't go through — try again."; }
+        finally { isBusy = false; }
+    }
+}

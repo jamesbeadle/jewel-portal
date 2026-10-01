@@ -1,0 +1,27 @@
+@namespace Jewel.JPMS.Features.Labour.Review
+
+<Pill Tone="@Tone" Title="@AnsweredBy">@Label</Pill>
+
+@code {
+    private const string WhenFormat = "ddd d MMM, HH:mm";
+
+    /// <summary>Where a submitted week has got to, with who answered it and when.</summary>
+    [Parameter, EditorRequired] public WorkerWeekSubmission Submission { get; set; } = default!;
+
+    private Tone Tone => Submission.Status switch
+    {
+        WorkerWeekSubmissionStatus.SignedOff => Tone.Positive,
+        WorkerWeekSubmissionStatus.SentBack => Tone.Info,
+        _ => Tone.Warning,
+    };
+
+    private string Label => Submission.Status switch
+    {
+        WorkerWeekSubmissionStatus.SignedOff => "Signed off",
+        WorkerWeekSubmissionStatus.SentBack => "Sent back",
+        _ => "Waiting",
+    };
+
+    private string? AnsweredBy =>
+        Submission.IsAwaitingReview ? null : $"{Submission.ReviewedByEmail} on {Submission.ReviewedAt?.ToLocalTime().ToString(WhenFormat)}";
+}

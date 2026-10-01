@@ -6,18 +6,19 @@ namespace Jewel.JPMS.Api.Features.Labour.Queries;
 /// <summary>GET /api/my/labour/weeks/{weekStart} — one week of the signed-in worker's days, Monday
 /// to Sunday, with the week's submission if it has been sent to the office. Any week up to the
 /// current one; a week still to come is refused.</summary>
-public sealed class GetMyLabourWeekEndpoint
+public sealed class MyLabourWeekEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly GetMyLabourWeekHandler handler;
-    public GetMyLabourWeekEndpoint(SignedInUserResolver users, GetMyLabourWeekHandler handler)
+    private readonly MyLabourWeekHandler handler;
+    public MyLabourWeekEndpoint(SignedInUserResolver users, MyLabourWeekHandler handler)
     { this.users = users; this.handler = handler; }
 
     [Function(nameof(GetMyLabourWeek))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "my/labour/weeks/{weekStart}")] HttpRequest request, string weekStart)
     {
-        var cancellationToken = request.HttpContext.RequestAborted;
+        var httpContext = request.HttpContext;
+        var cancellationToken = httpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!LabourRoleSets.LogOwnTime.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
@@ -27,12 +28,12 @@ public sealed class GetMyLabourWeekEndpoint
     }
 }
 
-public sealed class GetMyLabourWeekHandler : IQueryHandler<GetMyLabourWeek, MyLabourWeek>
+public sealed class MyLabourWeekHandler : IQueryHandler<GetMyLabourWeek, MyLabourWeek>
 {
     private readonly JpmsContext context;
     private readonly MyDayProjects projects;
     private readonly MyDayDays days;
-    public GetMyLabourWeekHandler(JpmsContext context, MyDayProjects projects, MyDayDays days)
+    public MyLabourWeekHandler(JpmsContext context, MyDayProjects projects, MyDayDays days)
     { this.context = context; this.projects = projects; this.days = days; }
 
     public Task<MyLabourWeek> HandleAsync(GetMyLabourWeek query, CancellationToken cancellationToken) =>

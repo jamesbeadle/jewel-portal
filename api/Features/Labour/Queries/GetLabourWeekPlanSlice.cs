@@ -6,18 +6,19 @@ namespace Jewel.JPMS.Api.Features.Labour.Queries;
 /// <summary>GET /api/labour/plan/{weekStart} — the week planner: every active operative, Monday to
 /// Friday, in unless the office has recorded an absence, with the forecast at each day rate and
 /// the actuals of the days logged so far. Rates ride on it, so the managing roles only.</summary>
-public sealed class GetLabourWeekPlanEndpoint
+public sealed class LabourWeekPlanEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly GetLabourWeekPlanHandler handler;
-    public GetLabourWeekPlanEndpoint(SignedInUserResolver users, GetLabourWeekPlanHandler handler)
+    private readonly LabourWeekPlanHandler handler;
+    public LabourWeekPlanEndpoint(SignedInUserResolver users, LabourWeekPlanHandler handler)
     { this.users = users; this.handler = handler; }
 
     [Function(nameof(GetLabourWeekPlan))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "labour/plan/{weekStart}")] HttpRequest request, string weekStart)
     {
-        var cancellationToken = request.HttpContext.RequestAborted;
+        var httpContext = request.HttpContext;
+        var cancellationToken = httpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!LabourRoleSets.ManageWorkers.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
@@ -26,10 +27,10 @@ public sealed class GetLabourWeekPlanEndpoint
     }
 }
 
-public sealed class GetLabourWeekPlanHandler : IQueryHandler<GetLabourWeekPlan, LabourWeekPlan>
+public sealed class LabourWeekPlanHandler : IQueryHandler<GetLabourWeekPlan, LabourWeekPlan>
 {
     private readonly JpmsContext context;
-    public GetLabourWeekPlanHandler(JpmsContext context) { this.context = context; }
+    public LabourWeekPlanHandler(JpmsContext context) { this.context = context; }
 
     public async Task<LabourWeekPlan> HandleAsync(GetLabourWeekPlan query, CancellationToken cancellationToken)
     {

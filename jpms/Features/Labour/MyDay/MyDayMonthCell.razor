@@ -1,0 +1,42 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+
+<button type="button" class="@Classes" disabled="@IsOutsideMonth" @onclick="OnPick">
+    <span class="text-xs @(IsToday ? "font-semibold text-content" : "text-content-subtle")">@Date.Day</span>
+    @if (Content is { } content)
+    {
+        <span class="text-xs @content.Classes">@content.Text</span>
+    }
+</button>
+
+@code {
+    private const string CellClasses = "flex flex-col items-center justify-start gap-0.5 rounded-md py-1.5 min-h-[3rem] border";
+
+    /// <summary>One day of the month grid: the date, then what the day holds — the hours in the
+    /// status's colour, Off, Not in, or nothing — as a button that opens the day beneath the grid.</summary>
+    [Parameter, EditorRequired] public DateTimeOffset Date { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<MyWeekDay> Rows { get; set; } = Array.Empty<MyWeekDay>();
+    [Parameter, EditorRequired] public DateTimeOffset Today { get; set; }
+    [Parameter] public bool IsOutsideMonth { get; set; }
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public EventCallback OnPick { get; set; }
+
+    private bool IsToday => Date == Today;
+    private MyWeekDay? Logged => Rows.FirstOrDefault(row => row.IsLogged);
+    private decimal LoggedHours => Rows.Where(row => row.IsLogged).Sum(row => row.Hours);
+    private bool IsOff => Rows.Any(row => row.Kind == MyWeekDayKind.Off);
+    private bool IsPlannedOff => Rows.Any(row => row.IsPlannedOff);
+    private bool IsWorkingDay => Date.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday);
+    private bool IsNothingYet => IsWorkingDay && Date <= Today && Rows.Count > 0 && Rows.All(row => row.IsMissed);
+
+    private (string Text, string Classes)? Content =>
+        Logged is { Status: { } status } ? (MyDayHoursText.Of(LoggedHours), $"font-medium {status.ToTone().Text()}")
+        : IsOff ? ("Off", "text-content-subtle")
+        : IsPlannedOff ? ("Not in", "text-info")
+        : IsNothingYet ? ("·", "text-warning")
+        : null;
+
+    private string Classes =>
+        IsOutsideMonth ? $"{CellClasses} border-transparent opacity-0"
+        : IsSelected ? $"{CellClasses} border-accent bg-accent/10"
+        : $"{CellClasses} border-line/60 hover:bg-surface-raised/40";
+}

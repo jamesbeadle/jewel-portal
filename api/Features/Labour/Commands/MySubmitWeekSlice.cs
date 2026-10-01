@@ -17,7 +17,8 @@ public sealed class MySubmitWeekEndpoint
     [Function(nameof(MySubmitWeek))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "my/labour/weeks/submit")] HttpRequest request)
     {
-        var cancellationToken = request.HttpContext.RequestAborted;
+        var httpContext = request.HttpContext;
+        var cancellationToken = httpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!LabourRoleSets.LogOwnTime.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
@@ -31,8 +32,8 @@ public sealed class MySubmitWeekEndpoint
 public sealed class MySubmitWeekHandler : ICommandHandler<MySubmitWeek, MyLabourWeek>
 {
     private readonly JpmsContext context;
-    private readonly GetMyLabourWeekHandler week;
-    public MySubmitWeekHandler(JpmsContext context, GetMyLabourWeekHandler week) { this.context = context; this.week = week; }
+    private readonly MyLabourWeekHandler week;
+    public MySubmitWeekHandler(JpmsContext context, MyLabourWeekHandler week) { this.context = context; this.week = week; }
 
     public Task<MyLabourWeek> HandleAsync(MySubmitWeek command, CancellationToken cancellationToken) =>
         throw new InvalidOperationException("MySubmitWeek requires the signed-in email — use the endpoint.");

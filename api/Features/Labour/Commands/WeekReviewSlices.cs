@@ -4,9 +4,9 @@ using Jewel.JPMS.Contracts.Labour;
 
 namespace Jewel.JPMS.Api.Features.Labour.Commands;
 
-// A director's answer to a submitted week (2026-10-01, Jeremy's ask): sign it off in one step, or
-// send it back with a note. Both are gated to the MD, FD and Admin (LabourRoleSets.ReviewWorkerWeeks).
-
+/// <summary>A director's answer to a submitted week (2026-10-01, Jeremy's ask): sign it off in one
+/// step, or send it back with a note. Both are gated to the MD, FD and Admin
+/// (LabourRoleSets.ReviewWorkerWeeks).</summary>
 public sealed class SignOffWorkerWeekEndpoint
 {
     private readonly SignedInUserResolver users;
@@ -18,7 +18,8 @@ public sealed class SignOffWorkerWeekEndpoint
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "labour/weeks/submissions/{submissionId}/sign-off")] HttpRequest request, string submissionId)
     {
-        var cancellationToken = request.HttpContext.RequestAborted;
+        var httpContext = request.HttpContext;
+        var cancellationToken = httpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!LabourRoleSets.ReviewWorkerWeeks.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
@@ -39,7 +40,8 @@ public sealed class SendBackWorkerWeekEndpoint
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "labour/weeks/submissions/{submissionId}/send-back")] HttpRequest request, string submissionId)
     {
-        var cancellationToken = request.HttpContext.RequestAborted;
+        var httpContext = request.HttpContext;
+        var cancellationToken = httpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!LabourRoleSets.ReviewWorkerWeeks.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);

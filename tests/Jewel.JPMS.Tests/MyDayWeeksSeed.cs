@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.Labour;
 using Jewel.JPMS.Api.Features.Labour.Commands;
 using Jewel.JPMS.Api.Features.Labour.Queries;
@@ -63,9 +64,9 @@ internal static class MyDayWeeksSeed
 
     public static MyDayProjects DayProjects(JpmsContext context) => new(context, new MyDayCostCodes(context), new MyDayNotesToday(context));
 
-    public static GetMyLabourWeekHandler WeekHandler(JpmsContext context) => new(context, DayProjects(context), new MyDayDays(context));
+    public static MyLabourWeekHandler WeekHandler(JpmsContext context) => new(context, DayProjects(context), new MyDayDays(context));
 
-    public static GetMyLabourMonthHandler MonthHandler(JpmsContext context) => new(context, DayProjects(context), new MyDayDays(context));
+    public static MyLabourMonthHandler MonthHandler(JpmsContext context) => new(context, DayProjects(context), new MyDayDays(context));
 
     public static MySubmitWeekHandler SubmitHandler(JpmsContext context) => new(context, WeekHandler(context));
 
@@ -73,8 +74,7 @@ internal static class MyDayWeeksSeed
 
     public static SignOffWorkerWeekHandler SignOffHandler(JpmsContext context)
     {
-        var audit = new Jewel.JPMS.Api.Features.Audit.AuditTrail(context, new Jewel.JPMS.Api.Features.Audit.AuditActor { Email = Director },
-            NullLogger<Jewel.JPMS.Api.Features.Audit.AuditTrail>.Instance);
+        var audit = new AuditTrail(context, new AuditActor { Email = Director }, NullLogger<AuditTrail>.Instance);
         return new SignOffWorkerWeekHandler(context, new ApproveTimesheetsHandler(context, audit), new SignOffLabourWeekHandler(context), Reader(context));
     }
 

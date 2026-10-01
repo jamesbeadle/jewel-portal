@@ -93,9 +93,8 @@ public sealed class SignOffWorkerWeekHandler : ICommandHandler<SignOffWorkerWeek
 
     private async Task WriteMarkersAsync(WorkerWeekSubmission week, string signedOffByEmail, CancellationToken cancellationToken)
     {
-        var monday = week.WeekStart.UtcDateTime.Date;
         var months = LabourWeeks.Between(week.WeekStart, week.WeekStart.AddDays(LabourWeeks.DaysInWeek - 1))
-            .Select(day => new DateTimeOffset(ForecastRules.MonthStartOf(day.UtcDateTime.Date), TimeSpan.Zero))
+            .Select(LabourWeeks.MonthStartOf)
             .Distinct();
         foreach (var month in months)
             await markers.HandleAsync(new SignOffLabourWeek(week.WorkerId, week.WeekStart, month), signedOffByEmail, cancellationToken);

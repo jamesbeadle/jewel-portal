@@ -36,6 +36,8 @@ public sealed record MyLabourWeek(
 {
     public DateTimeOffset WeekEnd => WeekStart.AddDays(6);
     public bool IsLocked => Submission is { IsLocked: true };
+    public bool IsOpenToSubmit => Submission is null or { IsSentBack: true };
+    public bool HasSubmitRefusal => SubmitRefusal.Length > 0;
 }
 
 /// <summary>The month's figures as the worker invoices from them — the same arithmetic as the

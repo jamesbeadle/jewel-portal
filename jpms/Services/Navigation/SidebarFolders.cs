@@ -238,6 +238,8 @@ public static class SidebarFolders
             {
                 new SidebarRow(new NavigationItem("Labour overview", "/labour/overview"),
                     NavigationRoles.WorkerRegistryRoles),
+                new SidebarRow(new NavigationItem("Week planner", "/labour/planner"),
+                    NavigationRoles.WorkerRegistryRoles),
                 new SidebarRow(new NavigationItem("Labour", "/projects/{project}/labour"),
                     NavigationRoles.SiteLabourRoles),
                 new SidebarRow(new NavigationItem("Workers", "/labour/workers"),

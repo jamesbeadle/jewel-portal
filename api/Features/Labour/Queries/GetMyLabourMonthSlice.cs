@@ -4,20 +4,21 @@ namespace Jewel.JPMS.Api.Features.Labour.Queries;
 
 /// <summary>GET /api/my/labour/months/{year}/{month} — one calendar month of the signed-in worker's
 /// days with the totals they invoice from: approved hours and days, and what is still outstanding.</summary>
-public sealed class GetMyLabourMonthEndpoint
+public sealed class MyLabourMonthEndpoint
 {
     private const int FirstYear = 2020;
     private const int LastYear = 2100;
     private readonly SignedInUserResolver users;
-    private readonly GetMyLabourMonthHandler handler;
-    public GetMyLabourMonthEndpoint(SignedInUserResolver users, GetMyLabourMonthHandler handler)
+    private readonly MyLabourMonthHandler handler;
+    public MyLabourMonthEndpoint(SignedInUserResolver users, MyLabourMonthHandler handler)
     { this.users = users; this.handler = handler; }
 
     [Function(nameof(GetMyLabourMonth))]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "my/labour/months/{year:int}/{month:int}")] HttpRequest request, int year, int month)
     {
-        var cancellationToken = request.HttpContext.RequestAborted;
+        var httpContext = request.HttpContext;
+        var cancellationToken = httpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!LabourRoleSets.LogOwnTime.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
@@ -28,12 +29,12 @@ public sealed class GetMyLabourMonthEndpoint
     }
 }
 
-public sealed class GetMyLabourMonthHandler : IQueryHandler<GetMyLabourMonth, MyLabourMonth>
+public sealed class MyLabourMonthHandler : IQueryHandler<GetMyLabourMonth, MyLabourMonth>
 {
     private readonly JpmsContext context;
     private readonly MyDayProjects projects;
     private readonly MyDayDays days;
-    public GetMyLabourMonthHandler(JpmsContext context, MyDayProjects projects, MyDayDays days)
+    public MyLabourMonthHandler(JpmsContext context, MyDayProjects projects, MyDayDays days)
     { this.context = context; this.projects = projects; this.days = days; }
 
     public Task<MyLabourMonth> HandleAsync(GetMyLabourMonth query, CancellationToken cancellationToken) =>

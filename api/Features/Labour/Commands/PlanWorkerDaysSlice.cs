@@ -16,7 +16,8 @@ public sealed class PlanWorkerDaysEndpoint
     [Function(nameof(PlanWorkerDays))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "labour/plan")] HttpRequest request)
     {
-        var cancellationToken = request.HttpContext.RequestAborted;
+        var httpContext = request.HttpContext;
+        var cancellationToken = httpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
         if (!LabourRoleSets.ManageWorkers.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
@@ -44,10 +45,20 @@ public sealed class PlanWorkerDaysHandler : ICommandHandler<PlanWorkerDays, Ackn
         var dates = command.Dates.Select(SiteClock.WorkDateOf).Distinct().ToList();
         var absences = await context.WorkerAbsences
             .Where(row => row.WorkerId == worker.WorkerId && dates.Contains(row.Date)).ToListAsync(cancellationToken);
-        if (command.IsIn) context.WorkerAbsences.RemoveRange(absences);
-        else await MarkNotInAsync(worker, dates, absences, plannedByEmail, cancellationToken);
+        await ApplyAsync(command.IsIn, worker, dates, absences, plannedByEmail, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
         return new Acknowledgement(worker.WorkerId);
+    }
+
+    private async Task ApplyAsync(
+        bool isIn, WorkerEntity worker, List<DateTimeOffset> dates, List<WorkerAbsenceEntity> absences, string plannedByEmail, CancellationToken cancellationToken)
+    {
+        if (isIn)
+        {
+            context.WorkerAbsences.RemoveRange(absences);
+            return;
+        }
+        await MarkNotInAsync(worker, dates, absences, plannedByEmail, cancellationToken);
     }
 
     private async Task MarkNotInAsync(

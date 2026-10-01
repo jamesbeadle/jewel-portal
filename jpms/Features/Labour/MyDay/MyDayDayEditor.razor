@@ -1,0 +1,23 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+
+@if (Amending is { } day)
+{
+    <MyDayAmendForm Day="day" Projects="Projects" RecentCodes="RecentCodes" OnDone="OnDone" />
+}
+@if (Adding is { } missed)
+{
+    <MyDayMissedDayForm Day="missed" Codes="CodesFor(missed)" RecentCodes="RecentCodes" OnDone="OnDone" />
+}
+
+@code {
+    /// <summary>The form a tapped day opens — the amend form for a logged day, the fill-in form for
+    /// a day that reads nothing — shared by the week and the month so both open a day the same way.</summary>
+    [Parameter] public MyWeekDay? Amending { get; set; }
+    [Parameter] public MyWeekDay? Adding { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<MyLabourProject> Projects { get; set; } = Array.Empty<MyLabourProject>();
+    [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
+    [Parameter] public EventCallback OnDone { get; set; }
+
+    private IReadOnlyList<SiteSheetCostCode> CodesFor(MyWeekDay day) =>
+        Projects.FirstOrDefault(project => project.ProjectId == day.ProjectId)?.CostCodes ?? Array.Empty<SiteSheetCostCode>();
+}

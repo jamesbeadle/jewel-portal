@@ -1,0 +1,29 @@
+@namespace Jewel.JPMS.Features.Labour.Planner
+@using static Jewel.JPMS.Features.Labour.LabourDisplay
+
+<tr class="border-b border-line/60">
+    <td class="font-medium text-content whitespace-nowrap">@Worker.Name</td>
+    <td class="text-right tabular-nums whitespace-nowrap">@Pounds(Worker.DayRate)</td>
+    @foreach (var day in Worker.Days)
+    {
+        <WeekPlannerCell Day="day" Disabled="@Disabled" OnToggle="isIn => OnPlan.InvokeAsync((Worker.WorkerId, new[] { day.Date }, isIn))" />
+    }
+    <td class="text-center whitespace-nowrap">
+        <button type="button" class="text-xs text-content-subtle hover:text-content underline" disabled="@Disabled"
+                @onclick="() => OnPlan.InvokeAsync((Worker.WorkerId, PlannableDates, !IsAnyoneIn))">@(IsAnyoneIn ? "Week off" : "Week in")</button>
+    </td>
+    <td class="text-right tabular-nums">@Days(Worker.PlannedDays)</td>
+    <td class="text-right tabular-nums font-semibold text-content">@Pounds(Worker.PlannedCost)</td>
+    <td class="text-right tabular-nums">@(Worker.LoggedDays == 0 ? "—" : Pounds(Worker.ActualCost))</td>
+</tr>
+
+@code {
+    /// <summary>One operative's week: in by default, each day a tap, the whole week in one, the
+    /// forecast at their day rate and the actual beside it.</summary>
+    [Parameter, EditorRequired] public LabourPlanWorker Worker { get; set; } = default!;
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<(string WorkerId, IReadOnlyList<DateTimeOffset> Dates, bool IsIn)> OnPlan { get; set; }
+
+    private IReadOnlyList<DateTimeOffset> PlannableDates => Worker.Days.Where(day => !day.IsLogged).Select(day => day.Date).ToList();
+    private bool IsAnyoneIn => Worker.Days.Any(day => !day.IsLogged && day.IsIn);
+}

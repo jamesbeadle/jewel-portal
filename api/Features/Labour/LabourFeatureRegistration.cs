@@ -76,11 +76,9 @@ public static class LabourFeatureRegistration
         services.AddScoped<MyDayPhotosHandler>();
         services.AddScoped<MyResubmitTimesheetHandler>();
 
-        // My day's weeks and months (2026-10-01): any week swiped to, the month calendar, and the
-        // week sent to the office for review — answered by the directors in one step.
         services.AddScoped<MyDayDays>();
-        services.AddScoped<GetMyLabourWeekHandler>();
-        services.AddScoped<GetMyLabourMonthHandler>();
+        services.AddScoped<MyLabourWeekHandler>();
+        services.AddScoped<MyLabourMonthHandler>();
         services.AddScoped<MySubmitWeekHandler>();
         services.AddScoped<WorkerWeekSubmissionReader>();
         services.AddScoped<ListWorkerWeekSubmissionsHandler>();
@@ -93,11 +91,9 @@ public static class LabourFeatureRegistration
         services.AddScoped<ICommandHandler<SendBackWorkerWeek, WorkerWeekSubmission>>(
             provider => provider.GetRequiredService<SendBackWorkerWeekHandler>());
 
-        // The week planner (2026-10-01): who is in each day, the forecast at the day rate, and the
-        // actuals beside it once the days are logged.
-        services.AddScoped<GetLabourWeekPlanHandler>();
+        services.AddScoped<LabourWeekPlanHandler>();
         services.AddScoped<IQueryHandler<GetLabourWeekPlan, LabourWeekPlan>>(
-            provider => provider.GetRequiredService<GetLabourWeekPlanHandler>());
+            provider => provider.GetRequiredService<LabourWeekPlanHandler>());
         services.AddScoped<PlanWorkerDaysHandler>();
         services.AddScoped<ICommandHandler<PlanWorkerDays, Acknowledgement>>(
             provider => provider.GetRequiredService<PlanWorkerDaysHandler>());

@@ -8,8 +8,9 @@ using static Jewel.JPMS.Tests.MyDayWeeksSeed;
 
 namespace Jewel.JPMS.Tests;
 
-// The week planner (1 Oct 2026, Jeremy's ask): every operative in by default, marked not in for
-// the days they asked off, the forecast at the day rate, and the actuals beside it once logged.
+/// <summary>The week planner (1 Oct 2026, Jeremy's ask): every operative in by default, marked not
+/// in for the days they asked off, the forecast at the day rate, and the actuals beside it once
+/// logged.</summary>
 public sealed class LabourWeekPlanTests
 {
     [Fact]
@@ -19,14 +20,14 @@ public sealed class LabourWeekPlanTests
         var planner = new PlanWorkerDaysHandler(context);
         var monday = LastMonday;
 
-        var before = await new GetLabourWeekPlanHandler(context).HandleAsync(new GetLabourWeekPlan(monday.AddDays(2)), CancellationToken.None);
+        var before = await new LabourWeekPlanHandler(context).HandleAsync(new GetLabourWeekPlan(monday.AddDays(2)), CancellationToken.None);
         var jack = Assert.Single(before.Workers);
         Assert.Equal(monday, before.WeekStart);
         Assert.Equal(5m, jack.PlannedDays);
         Assert.Equal(1000m, jack.PlannedCost);
 
         await planner.HandleAsync(new PlanWorkerDays(WorkerId, new[] { monday, monday.AddDays(1) }, IsIn: false), Director, CancellationToken.None);
-        var after = await new GetLabourWeekPlanHandler(context).HandleAsync(new GetLabourWeekPlan(monday), CancellationToken.None);
+        var after = await new LabourWeekPlanHandler(context).HandleAsync(new GetLabourWeekPlan(monday), CancellationToken.None);
         var planned = Assert.Single(after.Workers);
         Assert.Equal(3m, planned.PlannedDays);
         Assert.Equal(600m, after.PlannedCost);
@@ -46,7 +47,7 @@ public sealed class LabourWeekPlanTests
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             new PlanWorkerDaysHandler(context).HandleAsync(new PlanWorkerDays(WorkerId, new[] { LastMonday }, IsIn: false), Director, CancellationToken.None));
 
-        var plan = await new GetLabourWeekPlanHandler(context).HandleAsync(new GetLabourWeekPlan(LastMonday), CancellationToken.None);
+        var plan = await new LabourWeekPlanHandler(context).HandleAsync(new GetLabourWeekPlan(LastMonday), CancellationToken.None);
         var day = plan.Workers.Single().Days[0];
         Assert.True(day.IsLogged);
         Assert.Equal(8m, day.LoggedHours);

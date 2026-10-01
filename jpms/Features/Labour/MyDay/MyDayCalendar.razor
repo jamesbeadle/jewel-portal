@@ -1,0 +1,28 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+
+<div class="flex items-center gap-1 mb-2">
+    <button type="button" class="@ClassesFor(isMonth: false)" @onclick="() => isMonth = false">Week</button>
+    <button type="button" class="@ClassesFor(isMonth: true)" @onclick="() => isMonth = true">Month</button>
+</div>
+@if (isMonth)
+{
+    <MyDayMonthPanel Projects="Projects" Today="Today" RecentCodes="RecentCodes" />
+}
+@if (!isMonth)
+{
+    <MyDayWeekPanel Projects="Projects" Today="Today" RecentCodes="RecentCodes" />
+}
+
+@code {
+    private const string ChosenClasses = "btn-secondary bg-surface-raised text-content";
+    private const string OtherClasses = "btn-secondary text-content-subtle";
+
+    /// <summary>The worker's days beyond today: the week they swipe through, or the month they invoice from.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<MyLabourProject> Projects { get; set; } = Array.Empty<MyLabourProject>();
+    [Parameter, EditorRequired] public DateTimeOffset Today { get; set; }
+    [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
+
+    private bool isMonth;
+
+    private string ClassesFor(bool isMonth) => this.isMonth == isMonth ? ChosenClasses : OtherClasses;
+}

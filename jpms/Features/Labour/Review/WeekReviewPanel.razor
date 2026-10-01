@@ -1,0 +1,48 @@
+@namespace Jewel.JPMS.Features.Labour.Review
+@inject IWeekReviewStore Review
+@implements IDisposable
+
+<Panel Title="Weeks for review" Class="mb-6" BodyClass="p-0" IsLoading="@(!Review.IsLoaded && loadError is null)" LoadingLabel="Loading submitted weeks">
+    @if (loadError is not null)
+    {
+        <p class="p-5 text-sm text-negative">@loadError</p>
+    }
+    @if (IsEmpty)
+    {
+        <p class="p-5 text-sm text-content-subtle italic">No weeks have been submitted. An operative submits a finished week from the bottom of My day.</p>
+    }
+    @if (HasWeeks)
+    {
+        @foreach (var submission in Review.Submissions)
+        {
+            <WeekReviewCard @key="submission.WorkerWeekSubmissionId" Submission="submission" CanAnswer="CanAnswer" />
+        }
+    }
+    <p class="px-5 py-3 text-xs text-content-subtle border-t border-line">
+        Signing a week off approves every waiting day in it at the worker's rate, under the same
+        budget rules as the Labour tab, and marks the week signed off for the month-end. A week
+        sent back reopens for the operative to amend and submit again.
+    </p>
+</Panel>
+
+@code {
+    /// <summary>The weeks operatives have submitted from My day (2026-10-01): the ones waiting on a
+    /// director first, each opened to its days, answered in one step — signed off, or sent back with a note.</summary>
+    [Parameter] public bool CanAnswer { get; set; }
+
+    private string? loadError;
+
+    private bool IsEmpty => loadError is null && Review.IsLoaded && !Review.HasSubmissions;
+    private bool HasWeeks => loadError is null && Review.HasSubmissions;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Review.OnChange += HandleChange;
+        try { await Review.RefreshAsync(); }
+        catch (Exception) { loadError = "Couldn't load the submitted weeks — refresh to try again."; }
+    }
+
+    private void HandleChange() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Review.OnChange -= HandleChange;
+}

@@ -10,6 +10,7 @@ public sealed record LabourPlanDay(
     decimal ActualCost)
 {
     public bool IsIn => Absence is null;
+    public AbsenceKind AbsenceOrNotWorked => Absence ?? AbsenceKind.NotWorked;
     public bool IsLogged => Status is not null;
 }
 
@@ -32,6 +33,7 @@ public sealed record LabourWeekPlan(
     DateTimeOffset WeekStart,
     IReadOnlyList<LabourPlanWorker> Workers)
 {
+    public bool HasWorkers => Workers.Count > 0;
     public decimal PlannedCost => Workers.Sum(worker => worker.PlannedCost);
     public decimal ActualCost => Workers.Sum(worker => worker.ActualCost);
 }

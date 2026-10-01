@@ -144,6 +144,9 @@ builder.Services.AddScoped<IUsefulInformationStore, HttpUsefulInformationStore>(
 builder.Services.AddScoped<ISiteStore, HttpSiteStore>();
 builder.Services.AddScoped<ICommercialStore, HttpCommercialStore>();
 builder.Services.AddScoped<ILabourStore, HttpLabourStore>();
+builder.Services.AddScoped<IMyWeeksStore, HttpMyWeeksStore>();
+builder.Services.AddScoped<IWeekReviewStore, HttpWeekReviewStore>();
+builder.Services.AddScoped<IWeekPlanStore, HttpWeekPlanStore>();
 builder.Services.AddScoped<MyDayPhotoUploader>();
 builder.Services.AddScoped<MyDayDraftStore>();
 builder.Services.AddScoped<IValuationReportStore, HttpValuationReportStore>();

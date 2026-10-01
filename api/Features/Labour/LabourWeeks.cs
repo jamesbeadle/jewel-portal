@@ -15,6 +15,12 @@ public static class LabourWeeks
         return new DateTimeOffset(ForecastRules.WeekStartOf(workDate.UtcDateTime), TimeSpan.Zero);
     }
 
+    public static DateTimeOffset MonthStartOf(DateTimeOffset day)
+    {
+        var date = day.UtcDateTime;
+        return new DateTimeOffset(ForecastRules.MonthStartOf(date.Date), TimeSpan.Zero);
+    }
+
     public static DateTimeOffset SundayOf(DateTimeOffset moment) => MondayOf(moment).AddDays(DaysInWeek - 1);
 
     public static DateTimeOffset FridayOf(DateTimeOffset moment) => MondayOf(moment).AddDays(WorkingDaysInWeek - 1);
