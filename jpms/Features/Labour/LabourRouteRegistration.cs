@@ -18,6 +18,9 @@ public static class LabourRouteRegistration
         return services;
     }
 
+    private static string CostCodeSuggestionPath(SuggestMyDayCostCode query) =>
+        $"/api/my/labour/cost-code-suggestion?projectId={Uri.EscapeDataString(query.ProjectId)}&description={Uri.EscapeDataString(query.Description)}";
+
     public static void RegisterLabourRoutes(QueryRouteTable queries, CommandRouteTable commands)
     {
         queries.Register<ListWorkers, IReadOnlyList<Worker>>(
@@ -41,6 +44,10 @@ public static class LabourRouteRegistration
 
         queries.Register<GetMyLabourDay, MyLabourDay>(
             QueryRoute.Static("/api/my/labour/day"));
+
+        queries.Register<SuggestMyDayCostCode, MyDayCostCodeSuggestion>(
+            new QueryRoute("/api/my/labour/cost-code-suggestion",
+                query => CostCodeSuggestionPath((SuggestMyDayCostCode)query)));
 
         queries.Register<ListLabourSettlementForProject, IReadOnlyList<LabourSettlementRow>>(
             new QueryRoute("/api/projects/{projectId}/labour/settlement",

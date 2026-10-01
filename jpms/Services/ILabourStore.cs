@@ -55,6 +55,8 @@ public interface ILabourStore
     /// <summary>Fills in a day the worker was on site but never logged, marked late for the
     /// office, and answers with the note the photographs go onto; the caller refreshes the day.</summary>
     Task<MySiteDayLogged> MyLogMissedDayAsync(MyLogMissedSiteDay day);
+    /// <summary>The cost code the day's words point to, from the site's own list; empty when none.</summary>
+    Task<MyDayCostCodeSuggestion> SuggestCostCodeAsync(string projectId, string description);
     Task MyResubmitAsync(string timesheetId, decimal hours, string costCode);
     /// <summary>Amends a day the worker logged, until the office has approved it; refreshes the day.</summary>
     Task MyAmendAsync(MyAmendSiteDay amendment);

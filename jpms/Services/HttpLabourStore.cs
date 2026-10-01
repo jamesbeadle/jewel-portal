@@ -167,6 +167,9 @@ public sealed class HttpLabourStore : ILabourStore
 
     public Task<MySiteDayLogged> MyLogMissedDayAsync(MyLogMissedSiteDay day) => commands.SendAsync(day, CancellationToken.None);
 
+    public Task<MyDayCostCodeSuggestion> SuggestCostCodeAsync(string projectId, string description) =>
+        queries.AskAsync(new SuggestMyDayCostCode(projectId, description), CancellationToken.None);
+
     public async Task MyResubmitAsync(string timesheetId, decimal hours, string costCode)
     {
         await commands.SendAsync(new MyResubmitTimesheet(timesheetId, hours, costCode), CancellationToken.None);

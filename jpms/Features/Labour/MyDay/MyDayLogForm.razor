@@ -13,8 +13,8 @@
     <FormField Label="Hours today" Hint="Half-hour steps for anything in between.">
         <MyDayHoursPicker @bind-Hours="hours" @bind-Hours:after="SaveDraftAsync" Disabled="@isBusy" />
     </FormField>
-    <MyDayCostCodePicker Codes="Codes" RecentCodes="RecentCodes" @bind-CostCode="costCode" @bind-CostCode:after="SaveDraftAsync" Disabled="@isBusy" />
-    <MyDayWordsBox @bind-Words="description" @bind-Words:after="SaveDraftAsync" Disabled="@isBusy" OnReportWordCaught="OpenDefectBox" />
+    <MyDayCostCodePicker Codes="Codes" RecentCodes="RecentCodes" @bind-CostCode="costCode" @bind-CostCode:after="CodePickedAsync" Hint="@CodeHint" Disabled="@isBusy" />
+    <MyDayWordsBox @bind-Words="description" @bind-Words:after="WordsChangedAsync" Disabled="@isBusy" OnReportWordCaught="OpenDefectBox" />
     <MyDayPhotoPicker EmptyHint="@PhotosHint" @bind-Photos="photos" Disabled="@isBusy" />
     <div class="space-y-2">
         <MyDayInstructionBox @bind-Instruction="instruction" @bind-Instruction:after="SaveDraftAsync" Disabled="@isBusy" />

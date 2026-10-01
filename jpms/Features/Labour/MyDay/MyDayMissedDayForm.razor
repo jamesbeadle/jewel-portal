@@ -15,8 +15,8 @@
     <FormField Label="Hours that day" Hint="Half-hour steps for anything in between.">
         <MyDayHoursPicker @bind-Hours="hours" Disabled="@isBusy" />
     </FormField>
-    <MyDayCostCodePicker Codes="Codes" RecentCodes="RecentCodes" @bind-CostCode="costCode" Disabled="@isBusy" />
-    <MyDayWordsBox @bind-Words="words" Disabled="@isBusy" HasDefectBox="false" />
+    <MyDayCostCodePicker Codes="Codes" RecentCodes="RecentCodes" @bind-CostCode="costCode" @bind-CostCode:after="CodePicked" Hint="@CodeHint" Disabled="@isBusy" />
+    <MyDayWordsBox @bind-Words="words" @bind-Words:after="SuggestCodeAsync" Disabled="@isBusy" HasDefectBox="false" />
     <MyDayPhotoPicker EmptyHint="@PhotosHint" @bind-Photos="photos" Disabled="@isBusy" />
     @if (error is not null)
     {
