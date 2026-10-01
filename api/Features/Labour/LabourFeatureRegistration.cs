@@ -76,6 +76,32 @@ public static class LabourFeatureRegistration
         services.AddScoped<MyDayPhotosHandler>();
         services.AddScoped<MyResubmitTimesheetHandler>();
 
+        // My day's weeks and months (2026-10-01): any week swiped to, the month calendar, and the
+        // week sent to the office for review — answered by the directors in one step.
+        services.AddScoped<MyDayDays>();
+        services.AddScoped<GetMyLabourWeekHandler>();
+        services.AddScoped<GetMyLabourMonthHandler>();
+        services.AddScoped<MySubmitWeekHandler>();
+        services.AddScoped<WorkerWeekSubmissionReader>();
+        services.AddScoped<ListWorkerWeekSubmissionsHandler>();
+        services.AddScoped<IQueryHandler<ListWorkerWeekSubmissions, IReadOnlyList<WorkerWeekSubmission>>>(
+            provider => provider.GetRequiredService<ListWorkerWeekSubmissionsHandler>());
+        services.AddScoped<SignOffWorkerWeekHandler>();
+        services.AddScoped<ICommandHandler<SignOffWorkerWeek, WorkerWeekSubmission>>(
+            provider => provider.GetRequiredService<SignOffWorkerWeekHandler>());
+        services.AddScoped<SendBackWorkerWeekHandler>();
+        services.AddScoped<ICommandHandler<SendBackWorkerWeek, WorkerWeekSubmission>>(
+            provider => provider.GetRequiredService<SendBackWorkerWeekHandler>());
+
+        // The week planner (2026-10-01): who is in each day, the forecast at the day rate, and the
+        // actuals beside it once the days are logged.
+        services.AddScoped<GetLabourWeekPlanHandler>();
+        services.AddScoped<IQueryHandler<GetLabourWeekPlan, LabourWeekPlan>>(
+            provider => provider.GetRequiredService<GetLabourWeekPlanHandler>());
+        services.AddScoped<PlanWorkerDaysHandler>();
+        services.AddScoped<ICommandHandler<PlanWorkerDays, Acknowledgement>>(
+            provider => provider.GetRequiredService<PlanWorkerDaysHandler>());
+
         // Labour tab: week grid, adjust / approve / reject.
         services.AddScoped<ListTimesheetDetailsForProjectHandler>();
         services.AddScoped<GetSubmittedDayForTimesheetHandler>();

@@ -14,6 +14,7 @@ internal static class LabourIdentifierFactory
     public static string NextWorkerAbsenceId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextWorkerCisStatusId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextLabourWeekSignOffId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextWorkerWeekSubmissionId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextWorkerSettlementLineId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextSiteXeroMappingId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextCostCodeXeroMappingId() => Guid.NewGuid().ToString(CompactGuidFormat);

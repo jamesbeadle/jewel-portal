@@ -37,6 +37,15 @@ public static class LabourRoleSets
         RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector);
 
     /// <summary>
+    /// May sign off or send back a week an operative has submitted for review (2026-10-01, from
+    /// Jeremy's ask: "so that Jeremy or Nigel can sign it off in one step"). The MD and FD, and
+    /// no wider: a sign-off approves every day in the week at the worker's rate in one act, which
+    /// is the same weight as signing an overspend. Named separately so the two can drift apart.
+    /// </summary>
+    public static readonly RoleSet ReviewWorkerWeeks =
+        RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector);
+
+    /// <summary>
     /// May correct what approval has already posted: put an approved timesheet back to Submitted
     /// (withdrawing its cost) or move a timesheet to another project. Decision 2026-09-07, from
     /// the accountant's ask: the same MD/FD/Admin set that may sign an overspend, and no wider —

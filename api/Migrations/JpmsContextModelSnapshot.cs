@@ -9894,6 +9894,47 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("WorkstationActions");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.WorkerWeekSubmissionEntity", b =>
+                {
+                    b.Property<string>("WorkerWeekSubmissionId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ReviewNote")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ReviewedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("SubmittedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("WeekStart")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("WorkerId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("WorkerWeekSubmissionId");
+
+                    b.HasIndex("WorkerId", "WeekStart")
+                        .IsUnique()
+                        .HasDatabaseName("IX_WorkerWeekSubmissions_WorkerId_WeekStart");
+
+                    b.ToTable("WorkerWeekSubmissions");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.XeroCodingRunEntity", b =>
                 {
                     b.Property<string>("XeroCodingRunId")

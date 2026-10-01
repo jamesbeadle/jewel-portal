@@ -138,10 +138,11 @@ public sealed record MyLabourDay(
 /// off, or nothing at all.</summary>
 public enum MyWeekDayKind { Logged, Off, Nothing }
 
-/// <summary>One site on one day of the worker's week, Monday to today, as My day lists it so the
-/// worker sees what they have and have not filed before Friday. A logged day carries what its
-/// amend form pre-fills and the note its photographs go onto; it may be amended until the office
-/// has approved it. A day with nothing on it, once gone, may be filled in late.</summary>
+/// <summary>One site on one day of the worker's week, as My day lists it so the worker sees what
+/// they have and have not filed. A logged day carries what its amend form pre-fills and the note
+/// its photographs go onto; it may be amended until the office has approved it or the worker has
+/// submitted the week. A day with nothing on it, once gone, may be filled in late. A day the
+/// office has planned the worker off carries that absence.</summary>
 public sealed record MyWeekDay(
     string ProjectId,
     string ProjectName,
@@ -155,11 +156,16 @@ public sealed record MyWeekDay(
     int PhotoCount = 0,
     DateTimeOffset? SignedOutAt = null,
     string ProgressUpdateId = "",
-    bool IsFiledLate = false)
+    bool IsFiledLate = false,
+    bool IsInSubmittedWeek = false,
+    AbsenceKind? PlannedAbsence = null)
 {
     public bool IsLogged => Kind == MyWeekDayKind.Logged;
-    public bool CanBeAmended => IsLogged && Status is not TimesheetStatus.Approved;
+    public bool IsWaiting => IsLogged && Status is not TimesheetStatus.Approved;
+    public bool CanBeAmended => IsWaiting && !IsInSubmittedWeek;
     public bool IsMissed => Kind == MyWeekDayKind.Nothing;
+    public bool CanBeAdded => IsMissed && !IsInSubmittedWeek;
+    public bool IsPlannedOff => PlannedAbsence is not null;
     public bool HasNote => ProgressUpdateId.Length > 0;
 }
 

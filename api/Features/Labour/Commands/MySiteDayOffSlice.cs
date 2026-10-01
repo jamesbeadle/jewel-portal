@@ -53,6 +53,7 @@ public sealed class MySiteDayOffHandler : ICommandHandler<MySiteDayOff, MySiteDa
         if (!MyDayNotes.IsGiven(command.Description))
             throw new InvalidOperationException("Say why — rain, holiday, no works on site — so the day is recorded, not missing.");
         var workDate = MyDayFiling.ResolveWorkDate(command.Date, SiteClock.Today());
+        await WorkerWeekLock.EnsureOpenAsync(context, worker.WorkerId, workDate, cancellationToken);
         await MyDayVacancy.EnsureAsync(context, command.ProjectId, worker, email, workDate, cancellationToken);
 
         var note = ProgressUpdateRows.New(
