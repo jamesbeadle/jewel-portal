@@ -1,6 +1,6 @@
 # Refactor audit
 
-Generated 2026-10-01 06:40 UTC.
+Generated 2026-10-01 07:55 UTC.
 
 ## Headline
 
@@ -40,9 +40,9 @@ Each element scores 100% with no offenders and falls in a straight line to 0% wh
 
 | Area | Files | Of which audited source | Source lines |
 | --- | --- | --- | --- |
-| api | 2,449 | 2,446 | 122,914 |
-| frontend | 1,455 | 1,347 | 129,588 |
-| contracts | 766 | 767 | 28,085 |
+| api | 2,451 | 2,446 | 122,914 |
+| frontend | 1,457 | 1,347 | 129,590 |
+| contracts | 767 | 767 | 28,085 |
 | database | 314 | 0 | 0 |
 | connector | 254 | 254 | 26,901 |
 | docs | 232 | 0 | 0 |
@@ -51,13 +51,13 @@ Each element scores 100% with no offenders and falls in a straight line to 0% wh
 | infrastructure | 38 | 0 | 0 |
 | worker | 14 | 14 | 824 |
 | other | 1 | 0 | 0 |
-| **whole repository** | **5,904** | **4,828** | **308,312** |
+| **whole repository** | **5,909** | **4,828** | **308,314** |
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 788, totalFiles: 4828, totalLines: 308312, worstFileLines: 551, worstFileTimesOverLimit: 4.51 |
+| fileLength | limit: 100, filesOverLimit: 788, totalFiles: 4828, totalLines: 308314, worstFileLines: 551, worstFileTimesOverLimit: 4.51 |
 | functionShape | limit: 30, functionsOverLimit: 836, totalFunctions: 9501, elseBlocks: 1183, ifBlocks: 13188, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 57, maxWords: 5, maxLength: 40 |
 | accessorNames | gluedAccessorNames: 34, measurementIsHeuristic: True |
@@ -72,7 +72,7 @@ Each element scores 100% with no offenders and falls in a straight line to 0% wh
 | inventory | pages: 119, components: 150, orphanComponents: 6, averagePageLines: 173 |
 | siteDefinition | routes: 132, views: 696, siteComponents: 665, catalogue: 34, widgetUsages: 1979, handRolledElements: 699, widgetSlots: 2678, viewsWithHandRolled: 316, designSheets: 0, designsLastChecked: never, brandCheckedAt: never |
 | inputValidation | schemaTables: 216, limitedColumns: 1301, writeDoors: 714, unvalidatedDoors: 0, looserLimits: 3 |
-| fileAreas | totalFiles: 5904, api: 2449, frontend: 1455, contracts: 766, database: 314, connector: 254, docs: 232, tooling: 192, tests: 189, infrastructure: 38, worker: 14, other: 1 |
+| fileAreas | totalFiles: 5909, api: 2451, frontend: 1457, contracts: 767, database: 314, connector: 254, docs: 232, tooling: 192, tests: 189, infrastructure: 38, worker: 14, other: 1 |
 
 ## Against the baseline
 

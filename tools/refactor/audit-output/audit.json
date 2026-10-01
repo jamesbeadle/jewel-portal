@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-01T06:40:23+00:00",
+  "generatedAt": "2026-10-01T07:55:43+00:00",
   "kitVersion": "1.12.1",
   "score": {
     "overall": 78.4,
@@ -254,7 +254,7 @@
       "limit": 100,
       "filesOverLimit": 788,
       "totalFiles": 4828,
-      "totalLines": 308312,
+      "totalLines": 308314,
       "worstFileLines": 551,
       "worstFileTimesOverLimit": 4.51
     },
@@ -346,10 +346,10 @@
       "looserLimits": 3
     },
     "fileAreas": {
-      "totalFiles": 5904,
-      "api": 2449,
-      "frontend": 1455,
-      "contracts": 766,
+      "totalFiles": 5909,
+      "api": 2451,
+      "frontend": 1457,
+      "contracts": 767,
       "database": 314,
       "connector": 254,
       "docs": 232,
@@ -367,7 +367,7 @@
         "limit": 100,
         "filesOverLimit": 788,
         "totalFiles": 4828,
-        "totalLines": 308312,
+        "totalLines": 308314,
         "worstFileLines": 551,
         "worstFileTimesOverLimit": 4.51
       },
@@ -18682,10 +18682,10 @@
     "fileAreas": {
       "name": "fileAreas",
       "summary": {
-        "totalFiles": 5904,
-        "api": 2449,
-        "frontend": 1455,
-        "contracts": 766,
+        "totalFiles": 5909,
+        "api": 2451,
+        "frontend": 1457,
+        "contracts": 767,
         "database": 314,
         "connector": 254,
         "docs": 232,
@@ -18698,19 +18698,19 @@
       "offenders": [
         {
           "area": "api",
-          "files": 2449,
+          "files": 2451,
           "sourceFiles": 2446,
           "sourceLines": 122914
         },
         {
           "area": "frontend",
-          "files": 1455,
+          "files": 1457,
           "sourceFiles": 1347,
-          "sourceLines": 129588
+          "sourceLines": 129590
         },
         {
           "area": "contracts",
-          "files": 766,
+          "files": 767,
           "sourceFiles": 767,
           "sourceLines": 28085
         },

@@ -5,7 +5,9 @@
 @*
     What the worker submitted with the day, opened under its timesheet row on the Labour tab: the
     words of the day's note, its photographs, the sign-in and sign-out, and what the log raised for
-    the office — so the approver reads the day before coding and approving the hours.
+    the office — so the approver reads the day before coding and approving the hours. The words
+    sit above the photographs at reading width; a day with twenty photographs must not squeeze
+    its words into a one-word column (Jeremy, 1 Oct 2026).
 *@
 
 <tr class="border-b border-line/60 bg-surface-raised/30">
@@ -20,8 +22,8 @@
         }
         @if (record is { } day)
         {
-            <div class="grid gap-4 md:grid-cols-[1fr_auto] text-sm">
-                <div class="space-y-2 min-w-0">
+            <div class="space-y-3 text-sm">
+                <div class="space-y-2 max-w-prose">
                     <p class="text-xs text-content-subtle">@TimesText(day)</p>
                     @if (day.HasNote)
                     {
@@ -41,7 +43,7 @@
                     <div class="flex flex-wrap gap-2">
                         @foreach (var photo in day.Photos)
                         {
-                            <a href="@($"/api/progress-photos/{photo.ProgressPhotoId}/file")" title="@photo.FileName" target="_blank">
+                            <a href="@($"/api/progress-photos/{photo.ProgressPhotoId}/file")" title="@photo.FileName" target="_blank" class="shrink-0">
                                 <img src="@($"/api/progress-photos/{photo.ProgressPhotoId}/file?inline=1")" alt="@photo.FileName" loading="lazy" class="h-24 w-32 object-cover rounded border border-line" />
                             </a>
                         }
