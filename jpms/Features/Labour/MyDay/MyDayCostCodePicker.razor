@@ -1,6 +1,6 @@
 @namespace Jewel.JPMS.Features.Labour.MyDay
 
-<FormField Label="What the work was" Required Hint="Type a word of the trade, or the code, to find it.">
+<FormField Label="What the work was" Required Hint="@(Hint ?? DefaultHint)">
     @if (RecentChips.Count > 0)
     {
         <FilterChips Items="RecentChips" Selected="@CostCode" OnSelect="PickAsync" AriaLabel="The codes you used last" Disabled="@Disabled" Large="true" Class="mb-2" />
@@ -11,12 +11,15 @@
 
 @code {
     private const string CodeAndName = "{0} · {1}";
+    private const string DefaultHint = "Type a word of the trade, or the code, to find it.";
 
     [Parameter, EditorRequired] public IReadOnlyList<SiteSheetCostCode> Codes { get; set; } = Array.Empty<SiteSheetCostCode>();
     [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
     [Parameter] public string CostCode { get; set; } = "";
     [Parameter] public EventCallback<string> CostCodeChanged { get; set; }
     [Parameter] public bool Disabled { get; set; }
+    /// <summary>Replaces the usual hint — the form says so when the code was suggested from the words.</summary>
+    [Parameter] public string? Hint { get; set; }
 
     private IReadOnlyList<SearchSelect.Option> Options =>
         Codes.Select(code => new SearchSelect.Option(code.Code, string.Format(CodeAndName, code.Code, code.Name))).ToList();

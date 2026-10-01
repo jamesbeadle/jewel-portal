@@ -1,4 +1,6 @@
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.Ai;
+using Microsoft.Extensions.Logging.Abstractions;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Labour;
 using Jewel.JPMS.Api.Features.Labour.Commands;
@@ -164,6 +166,62 @@ public sealed class MyDayLateFilingTests
         context.ProjectWorkerAssignments.Add(new ProjectWorkerAssignmentEntity { ProjectWorkerAssignmentId = "a-1", ProjectId = Project, WorkerId = "w-jack" });
         context.ProjectWorkerAssignments.Add(new ProjectWorkerAssignmentEntity { ProjectWorkerAssignmentId = "a-2", ProjectId = OtherProject, WorkerId = "w-jack" });
         context.CostCenters.Add(new CostCenterEntity { CostCenterId = "cc-lab", Code = Code, Name = "Labour" });
+        await context.SaveChangesAsync();
+        return context;
+    }
+}
+
+// The cost code suggested from the day's words (Jeremy, 1 Oct 2026): the trade-word rulebook
+// places plain trade words on one of the site's codes without any AI; words the rulebook cannot
+// place, with no AI connected, are no suggestion rather than a guess.
+public sealed class MyDayCostCodeSuggestionTests
+{
+    private const string Project = "p-abbot-road";
+    private const string Demolition = "ENABLE-DEM";
+    private const string Scaffold = "SCAFF-STD";
+
+    [Fact]
+    public async Task PlainTradeWords_areSuggestedFromTheRulebook_onTheSitesOwnCode()
+    {
+        await using var context = await SeededAsync();
+
+        var suggestion = await Handler(context).HandleAsync(new SuggestMyDayCostCode(Project, "Demolition of the rear wall and the old kitchen."), CancellationToken.None);
+
+        Assert.Equal(Demolition, suggestion.CostCode);
+        Assert.Equal(MyDaySuggestionSource.Rule, suggestion.Source);
+    }
+
+    [Fact]
+    public async Task WordsTheRulebookCannotPlace_areNoSuggestion_withoutTheAi()
+    {
+        await using var context = await SeededAsync();
+        var handler = Handler(context);
+
+        var vague = await handler.HandleAsync(new SuggestMyDayCostCode(Project, "Busy day, lots done."), CancellationToken.None);
+        var blank = await handler.HandleAsync(new SuggestMyDayCostCode(Project, "   "), CancellationToken.None);
+
+        Assert.False(vague.HasCode);
+        Assert.False(blank.HasCode);
+    }
+
+    [Fact]
+    public void TheAnswer_isReadFromStrictJson_orIsNothing()
+    {
+        Assert.Equal(Scaffold, MyDayCostCodePrompt.ParseCode("```json\n{\"costCode\":\"SCAFF-STD\"}\n```"));
+        Assert.Equal("", MyDayCostCodePrompt.ParseCode("{\"costCode\":\"\"}"));
+        Assert.Equal("", MyDayCostCodePrompt.ParseCode("no idea"));
+        Assert.Equal("", MyDayCostCodePrompt.ParseCode(null));
+    }
+
+    private static SuggestMyDayCostCodeHandler Handler(JpmsContext context) =>
+        new(new MyDayCostCodes(context), new NullClaudeClient(), NullLogger<SuggestMyDayCostCodeHandler>.Instance);
+
+    private static async Task<JpmsContext> SeededAsync()
+    {
+        var context = new JpmsContext(new DbContextOptionsBuilder<JpmsContext>().UseInMemoryDatabase($"my-day-code-{Guid.NewGuid():N}").Options);
+        context.Projects.Add(new ProjectEntity { ProjectId = Project, Name = "Abbot Road" });
+        context.CostCenters.Add(new CostCenterEntity { CostCenterId = "cc-dem", Code = Demolition, Name = "Demolition", IsActive = true });
+        context.CostCenters.Add(new CostCenterEntity { CostCenterId = "cc-scaff", Code = Scaffold, Name = "Scaffolding", IsActive = true });
         await context.SaveChangesAsync();
         return context;
     }
