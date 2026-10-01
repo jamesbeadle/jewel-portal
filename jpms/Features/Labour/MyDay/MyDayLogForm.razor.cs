@@ -12,12 +12,13 @@ public partial class MyDayLogForm
 
     private bool isRestored;
 
-    private MyDayDraft CurrentDraft => new(hours, costCode, description, instruction, defect, leftAt);
+    private MyDayDraft CurrentDraft => new(hours, costCode, description, instruction, defect, leftAt, siteProjectId);
 
     private async Task RestoreDraftAsync()
     {
         var draft = await Drafts.ReadAsync(Project.ProjectId);
         if (draft is not { HasAnything: true }) return;
+        if (Projects.Any(project => project.ProjectId == draft.SiteProjectId)) siteProjectId = draft.SiteProjectId;
         hours = draft.Hours;
         costCode = draft.CostCode;
         description = draft.Description;

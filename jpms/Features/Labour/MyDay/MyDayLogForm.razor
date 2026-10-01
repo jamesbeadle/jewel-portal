@@ -1,5 +1,6 @@
 @namespace Jewel.JPMS.Features.Labour.MyDay
 @using Jewel.JPMS.Contracts.Labour
+@using Jewel.JPMS.Features.Progress
 @inject ILabourStore Labour
 @inject MyDayPhotoUploader Photos
 
@@ -8,13 +9,13 @@
     {
         <Notice Dismissible OnDismiss="() => isRestored = false">We kept what you'd typed before the page reloaded. Take or pick the photos again — a browser can't keep those.</Notice>
     }
-    <MyDaySitePicker Projects="Projects" @bind-ProjectId="projectId" @bind-ProjectId:after="KeepCodeOnSite" Disabled="@isBusy" />
+    <MyDaySitePicker Projects="Projects" Hint="You signed in here — change it if the work was on another of your sites." @bind-ProjectId="siteProjectId" @bind-ProjectId:after="SiteChangedAsync" Disabled="@isBusy" />
     <FormField Label="Hours today" Hint="Half-hour steps for anything in between.">
         <MyDayHoursPicker @bind-Hours="hours" @bind-Hours:after="SaveDraftAsync" Disabled="@isBusy" />
     </FormField>
     <MyDayCostCodePicker Codes="Codes" RecentCodes="RecentCodes" @bind-CostCode="costCode" @bind-CostCode:after="SaveDraftAsync" Disabled="@isBusy" />
     <MyDayWordsBox @bind-Words="description" @bind-Words:after="SaveDraftAsync" Disabled="@isBusy" OnReportWordCaught="OpenDefectBox" />
-    <MyDayPhotosField Basket="photos" Disabled="@isBusy" />
+    <MyDayPhotoPicker EmptyHint="@PhotosHint" @bind-Photos="photos" Disabled="@isBusy" />
     <div class="space-y-2">
         <MyDayInstructionBox @bind-Instruction="instruction" @bind-Instruction:after="SaveDraftAsync" Disabled="@isBusy" />
         <MyDayDefectBox @bind-Defect="defect" @bind-Defect:after="SaveDraftAsync" @bind-IsOpen="isDefectBoxOpen" Disabled="@isBusy" />
@@ -35,12 +36,12 @@
     private const decimal LongDayHours = 12m;
 
     [Parameter, EditorRequired] public MyLabourProject Project { get; set; } = default!;
-    /// <summary>Every site the worker is on, so a day signed in on the wrong one is put right at sign-out.</summary>
+    /// <summary>Every site the worker is on, so the day can be logged against another when the work was there.</summary>
     [Parameter] public IReadOnlyList<MyLabourProject> Projects { get; set; } = Array.Empty<MyLabourProject>();
     [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
     [Parameter] public EventCallback<string?> OnPhotoProblem { get; set; }
 
-    private string projectId = "";
+    private string siteProjectId = "";
     private decimal hours = WorkingDayChunks.FullDay;
     private string costCode = "";
     private string description = "";
@@ -48,30 +49,34 @@
     private string defect = "";
     private bool isDefectBoxOpen;
     private string leftAt = "";
-    private readonly MyDayPhotoBasket photos = new();
+    private IReadOnlyList<ChosenPhoto> photos = Array.Empty<ChosenPhoto>();
     private bool isBusy;
     private bool isUploadingPhotos;
     private string? error;
 
-    private bool HasPhotos => photos.HasAny;
+    private bool HasPhotos => photos.Count > 0;
     private bool HasWords => !string.IsNullOrWhiteSpace(description);
     private bool HasHours => hours > WorkingDayChunks.Off;
     private bool IsLongDay => hours > LongDayHours;
     private string PhotoCountText => photos.Count == 1 ? "1 photo" : $"{photos.Count} photos";
-    private IReadOnlyList<SiteSheetCostCode> Codes =>
-        Projects.FirstOrDefault(project => project.ProjectId == projectId)?.CostCodes ?? Project.CostCodes;
+    private string PhotosHint => $"Camera or gallery, up to {MyDayPhotoUploader.MaxPerBatch}. They go onto today's log; more can be added after.";
+
+    /// <summary>The site the day is logged against — the one signed in at unless the worker says otherwise — and its codes.</summary>
+    private MyLabourProject Site => Projects.FirstOrDefault(project => project.ProjectId == siteProjectId) ?? Project;
+    private IReadOnlyList<SiteSheetCostCode> Codes => Site.CostCodes;
 
     protected override async Task OnInitializedAsync()
     {
-        projectId = Project.ProjectId;
+        siteProjectId = Project.ProjectId;
         costCode = RecentCodes.FirstOrDefault(recent => Codes.Any(code => code.Code == recent)) ?? "";
         await RestoreDraftAsync();
     }
 
-    private void KeepCodeOnSite()
+    private Task SiteChangedAsync()
     {
         var isCodeOnTheSite = Codes.Any(code => code.Code == costCode);
         if (!isCodeOnTheSite) costCode = "";
+        return SaveDraftAsync();
     }
 
     private void OpenDefectBox() => isDefectBoxOpen = true;
@@ -112,7 +117,7 @@
     private async Task<MySiteDayLogged?> SaveDayAsync()
     {
         var entries = new[] { new SiteSignOutEntry(costCode, hours) };
-        var day = new MySiteSignOut(projectId, entries, description.Trim(), MyDayTimes.TodayAt(leftAt), instruction, defect.Trim());
+        var day = new MySiteSignOut(Project.ProjectId, entries, description.Trim(), MyDayTimes.TodayAt(leftAt), instruction, defect.Trim(), siteProjectId);
         try { return await Labour.MySignOutAsync(day); }
         catch (CommandFailedException refusal) { error = refusal.Message; }
         catch (Exception) { error = "Your day didn't go through — check your signal and try again."; }
@@ -124,7 +129,7 @@
         if (!HasPhotos) return;
         isUploadingPhotos = true;
         StateHasChanged();
-        try { await Photos.UploadAsync(logged.ProgressUpdateId, photos.Photos, CancellationToken.None); }
+        try { await Photos.UploadAsync(logged.ProgressUpdateId, photos, CancellationToken.None); }
         catch (Exception exception)
         {
             await OnPhotoProblem.InvokeAsync($"Your day is saved, but the photos didn't upload ({exception.Message}). Add them from today's log below.");

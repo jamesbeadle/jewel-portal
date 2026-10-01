@@ -1518,6 +1518,28 @@ leaves the day unlinked. The day is the finance director's model (2026-09-28), a
   on Friday from the days as filed; correcting a day before it is final is what the amend gives. Hours
   print through the one `MyDayHoursText` ("8 h", "4.5 h"), never the decimal's four places.
 
+- **What Jeremy's second evening on Jack's phone taught the form** (30 Sep 2026, four tasks). THE SITE
+  IS PICKED AT SIGN-OUT TOO: the log form carries the same `MyDaySitePicker` as the amend ("You signed
+  in here — change it if the work was on another of your sites"), the codes follow the chosen site, and
+  `MySiteSignOut.SiteProjectId` writes the whole day — attendance, hours and note — on that site through
+  the one `MyDaySiteMove` the amend uses (on the worker's list, no day of theirs there that date). The
+  picker shows only for a worker on more than one site's list; on one list there is nowhere to move to,
+  and the line under the cards says so. PHOTOS ADD UP: a phone's camera hands back one file per visit,
+  so `MyDayPhotoPicker` (the log form and the missed-day form) adds each pick to the ones already chosen,
+  never the same file twice, up to the batch limit, with a Remove per photo — a second photo no longer
+  loses the first. THE TRADES ARE THE SITE'S: `MyDayCostCodes` reads the codes a site has from the four
+  places they are written down (its cost-code budgets, its bill of quantities, its valuation lines and
+  its work orders), and only while a site has none of those does it offer every active centre; the
+  sign-out and the amend are checked against the same list, so a code the site does not have is refused,
+  not merely hidden ("if there was no demolition then they can't choose demolition"). THE OFFICE READS
+  THE DAY: *View day* on every row of the project's Labour tab opens `TimesheetDayRow` beneath it —
+  `GetSubmittedDayForTimesheet` (GET `labour/timesheets/{id}/day`, all internal roles; `SubmittedDay`):
+  the words of the worker's own note on that site and date, its photographs (the same inline photo
+  files the Progress tab shows), the sign-in and sign-out the day closed, filed late, and the
+  instruction or defect the log raised — so the approver reads what was submitted before coding and
+  approving the hours, instead of only being able to change the code and the hours. Pinned by
+  `MyDaySiteAndTradesTests`.
+
 Onboarding a worker (Jeremy's recipe): invite them with the **Site Operative** role, add a **Worker** record on
 /labour/workers with the same email, and assign them to each project's worker list on its Labour tab; the
 project's cost-code budgets are the list they choose from.

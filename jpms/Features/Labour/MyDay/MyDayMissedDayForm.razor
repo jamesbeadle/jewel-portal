@@ -1,5 +1,6 @@
 @namespace Jewel.JPMS.Features.Labour.MyDay
 @using Jewel.JPMS.Contracts.Labour
+@using Jewel.JPMS.Features.Progress
 @inject ILabourStore Labour
 @inject MyDayPhotoUploader Photos
 
@@ -16,7 +17,7 @@
     </FormField>
     <MyDayCostCodePicker Codes="Codes" RecentCodes="RecentCodes" @bind-CostCode="costCode" Disabled="@isBusy" />
     <MyDayWordsBox @bind-Words="words" Disabled="@isBusy" HasDefectBox="false" />
-    <MyDayPhotosField Basket="photos" Disabled="@isBusy" />
+    <MyDayPhotoPicker EmptyHint="@PhotosHint" @bind-Photos="photos" Disabled="@isBusy" />
     @if (error is not null)
     {
         <Notice Tone="Tone.Negative">@error</Notice>
@@ -37,14 +38,15 @@
     private decimal hours = WorkingDayChunks.FullDay;
     private string costCode = "";
     private string words = "";
-    private readonly MyDayPhotoBasket photos = new();
+    private IReadOnlyList<ChosenPhoto> photos = Array.Empty<ChosenPhoto>();
     private bool isRecordingDayOff;
     private bool isBusy;
     private bool isUploadingPhotos;
     private string? error;
 
-    private bool HasPhotos => photos.HasAny;
+    private bool HasPhotos => photos.Count > 0;
     private string PhotoCountText => photos.Count == 1 ? "1 photo" : $"{photos.Count} photos";
+    private string PhotosHint => $"Camera or gallery, up to {MyDayPhotoUploader.MaxPerBatch}. They go onto that day's log.";
     private string SaveLabel => isUploadingPhotos ? $"Uploading {PhotoCountText}…" : isBusy ? "Saving the day…" : "Save the day";
 
     protected override void OnInitialized() =>
@@ -80,7 +82,7 @@
         if (!HasPhotos) return true;
         isUploadingPhotos = true;
         StateHasChanged();
-        try { await Photos.UploadAsync(logged.ProgressUpdateId, photos.Photos, CancellationToken.None); return true; }
+        try { await Photos.UploadAsync(logged.ProgressUpdateId, photos, CancellationToken.None); return true; }
         catch (Exception exception)
         {
             error = $"The day is saved, but the photos didn't upload ({exception.Message}). Add them from Amend on the week.";

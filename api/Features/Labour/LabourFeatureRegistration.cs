@@ -77,6 +77,9 @@ public static class LabourFeatureRegistration
 
         // Labour tab: week grid, adjust / approve / reject.
         services.AddScoped<ListTimesheetDetailsForProjectHandler>();
+        services.AddScoped<GetSubmittedDayForTimesheetHandler>();
+        services.AddScoped<IQueryHandler<GetSubmittedDayForTimesheet, SubmittedDay?>>(
+            provider => provider.GetRequiredService<GetSubmittedDayForTimesheetHandler>());
         services.AddScoped<IQueryHandler<ListTimesheetDetailsForProject, IReadOnlyList<TimesheetDetail>>>(
             provider => provider.GetRequiredService<ListTimesheetDetailsForProjectHandler>());
         services.AddScoped<ICommandHandler<AdjustTimesheet, TimesheetDetail>, AdjustTimesheetHandler>();

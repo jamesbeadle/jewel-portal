@@ -21,6 +21,9 @@ public sealed record MySiteSignIn(string ProjectId, DateTimeOffset? SignedInAt =
 /// now unless adjusted. Photographs follow onto the note. One sign-out per project per day.
 /// Beside the note, and never inside its words: an instruction given on site is raised as a
 /// Site Instruction and a defect as a defect, both in the worker's name for the office to triage.
+/// <paramref name="ProjectId"/> is the site signed in at; <paramref name="SiteProjectId"/>, when
+/// given, is the site the work was actually on — another of the worker's own — and the whole day
+/// (attendance, hours and note) is written there instead (Jeremy on Jack's phone, 30 Sep 2026).
 /// </summary>
 public sealed record MySiteSignOut(
     string ProjectId,
@@ -28,7 +31,8 @@ public sealed record MySiteSignOut(
     string Description = "",
     DateTimeOffset? SignedOutAt = null,
     SiteLogInstruction? Instruction = null,
-    string Defect = "") : ICommand<MySiteDayLogged>;
+    string Defect = "",
+    string SiteProjectId = "") : ICommand<MySiteDayLogged>;
 
 /// <summary>A day off, recorded as a day: the words say why (rain, holiday, no works on site) and
 /// nothing else is written — no attendance, no hours. A recorded off day is never a missing day.

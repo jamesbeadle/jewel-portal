@@ -1,0 +1,97 @@
+@namespace Jewel.JPMS.Features.Labour
+@using Jewel.JPMS.Contracts.Labour
+@inject IQueryClient Queries
+
+@*
+    What the worker submitted with the day, opened under its timesheet row on the Labour tab: the
+    words of the day's note, its photographs, the sign-in and sign-out, and what the log raised for
+    the office — so the approver reads the day before coding and approving the hours.
+*@
+
+<tr class="border-b border-line/60 bg-surface-raised/30">
+    <td colspan="8" class="px-5 py-4">
+        @if (record is null && error is null)
+        {
+            <p class="text-sm text-content-subtle">Reading the day…</p>
+        }
+        @if (error is not null)
+        {
+            <p class="text-sm text-negative">@error</p>
+        }
+        @if (record is { } day)
+        {
+            <div class="grid gap-4 md:grid-cols-[1fr_auto] text-sm">
+                <div class="space-y-2 min-w-0">
+                    <p class="text-xs text-content-subtle">@TimesText(day)</p>
+                    @if (day.HasNote)
+                    {
+                        <p class="text-content whitespace-pre-line">@day.Words</p>
+                    }
+                    else
+                    {
+                        <p class="text-content-subtle italic">No note was written with this day — it was entered by the office, not logged from site.</p>
+                    }
+                    @if (HasRaisedRecords(day))
+                    {
+                        <p class="text-xs text-content-subtle">To the office: @RaisedRecordsText(day)</p>
+                    }
+                </div>
+                @if (day.HasPhotos)
+                {
+                    <div class="flex flex-wrap gap-2">
+                        @foreach (var photo in day.Photos)
+                        {
+                            <a href="@($"/api/progress-photos/{photo.ProgressPhotoId}/file")" title="@photo.FileName" target="_blank">
+                                <img src="@($"/api/progress-photos/{photo.ProgressPhotoId}/file?inline=1")" alt="@photo.FileName" loading="lazy" class="h-24 w-32 object-cover rounded border border-line" />
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </td>
+</tr>
+
+@code {
+    private const string ClockFormat = "HH:mm";
+
+    [Parameter, EditorRequired] public string TimesheetId { get; set; } = "";
+
+    private SubmittedDay? record;
+    private string? error;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (record?.TimesheetId == TimesheetId) return;
+        record = null; error = null;
+        try { record = await Queries.AskAsync(new GetSubmittedDayForTimesheet(TimesheetId), CancellationToken.None); }
+        catch (Exception) { error = "Couldn't read this day — reload to try again."; }
+        if (record is null && error is null) error = "This day is no longer here.";
+    }
+
+    private static string TimesText(SubmittedDay day)
+    {
+        var hasTimes = day.SignedInAt is not null && day.SignedOutAt is not null;
+        var times = hasTimes ? $"On site {Clock(day.SignedInAt)} – {Clock(day.SignedOutAt)}" : "No sign-in on this day";
+        var photos = day.PhotoCount == 1 ? "1 photo" : $"{day.PhotoCount} photos";
+        var late = day.IsFiledLate ? " · filed late" : "";
+        return $"{times} · {photos}{late}";
+    }
+
+    private static string Clock(DateTimeOffset? moment)
+    {
+        if (moment is null) return "";
+        var local = moment.Value.ToLocalTime();
+        return local.ToString(ClockFormat);
+    }
+
+    private static bool HasRaisedRecords(SubmittedDay day) => RaisedRecords(day).Any();
+
+    private static string RaisedRecordsText(SubmittedDay day) => string.Join(" · ", RaisedRecords(day));
+
+    private static IEnumerable<string> RaisedRecords(SubmittedDay day)
+    {
+        if (day.HasSiteInstruction) yield return $"{day.SiteInstructionReference} instruction";
+        if (day.HasDefect) yield return $"{day.DefectReference} defect";
+    }
+}

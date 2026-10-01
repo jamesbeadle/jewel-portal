@@ -11,7 +11,8 @@ public sealed record MyDayDraft(
     string Description,
     SiteLogInstruction? Instruction,
     string Defect,
-    string LeftAt)
+    string LeftAt,
+    string SiteProjectId = "")
 {
     public bool HasAnything =>
         !string.IsNullOrWhiteSpace(Description) || Instruction is not null || !string.IsNullOrWhiteSpace(Defect);
