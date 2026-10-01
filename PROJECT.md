@@ -1572,7 +1572,11 @@ leaves the day unlinked. The day is the finance director's model (2026-09-28), a
   days × day rate (`WeekPlanRules`); actual is the logged days' cost (`LabourActuals`: the approval snapshot,
   else hours at the current rate). The operative sees the plan on My day as *Not in*. Migration
   `AddWorkerWeekSubmissions`, script `add-worker-week-submissions.sql`. Pinned by `MyDayWeeksTests`,
-  `WeekReviewTests` and `LabourWeekPlanTests`. The connector has no door onto any of this yet.
+  `WeekReviewTests` and `LabourWeekPlanTests`. THE CONNECTOR reaches it (`AiWeekReviewTools`,
+  `LabourAndBackOfficeActions.WeekReview`): `list_submitted_weeks` and `view_week_plan` read; `sign_off_submitted_week`
+  (confirm-first), `send_back_submitted_week` and `plan_worker_days` are by-name wrappers (`WeekReviewByNameSlices`)
+  over the same handlers, so the two surfaces cannot drift. Pinned by `WeekReviewConnectorTests`. The operative's own
+  week and month reads have no connector door because site roles have no connector access.
 
 Onboarding a worker (Jeremy's recipe): invite them with the **Site Operative** role, add a **Worker** record on
 /labour/workers with the same email, and assign them to each project's worker list on its Labour tab; the
