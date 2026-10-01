@@ -42,7 +42,7 @@ public sealed class MyAmendSiteDayHandler : ICommandHandler<MyAmendSiteDay, Ackn
     {
         var worker = await WorkerByEmail.ResolveAsync(context, email, cancellationToken);
         var timesheet = await OwnOpenTimesheetAsync(command.TimesheetId, worker, cancellationToken);
-        var projectId = await SiteForAsync(command, timesheet, worker, cancellationToken);
+        var projectId = await MyDaySiteMove.DestinationAsync(context, worker, timesheet.ProjectId, command.ProjectId, timesheet.WorkedOn, cancellationToken);
         await CheckAsync(command, projectId, cancellationToken);
         var note = await OwnNoteAsync(timesheet, email, cancellationToken);
         var attendance = await context.SiteAttendances.FirstOrDefaultAsync(row => row.SiteAttendanceId == timesheet.SiteAttendanceId, cancellationToken);
@@ -53,7 +53,7 @@ public sealed class MyAmendSiteDayHandler : ICommandHandler<MyAmendSiteDay, Ackn
         timesheet.RejectionReason = "";
         timesheet.IsFiledLate = timesheet.IsFiledLate || MyDayFiling.IsLate(timesheet.WorkedOn, SiteClock.Today());
         note.Description = command.Description.Trim();
-        MoveDay(timesheet, note, attendance, projectId);
+        MyDaySiteMove.Move(timesheet, note, attendance, projectId);
         if (attendance is not null) attendance.SignedOutAt = SignedOutAt(command, timesheet, attendance);
         await context.SaveChangesAsync(cancellationToken);
         return new Acknowledgement(timesheet.TimesheetId);
@@ -67,17 +67,6 @@ public sealed class MyAmendSiteDayHandler : ICommandHandler<MyAmendSiteDay, Ackn
         if (timesheet.Status == (int)TimesheetStatus.Approved)
             throw new InvalidOperationException("The office has approved this day — ask your Project Manager to change it.");
         return timesheet;
-    }
-
-    private async Task<string> SiteForAsync(MyAmendSiteDay command, TimesheetEntity timesheet, WorkerEntity worker, CancellationToken cancellationToken)
-    {
-        var isStayingPut = string.IsNullOrWhiteSpace(command.ProjectId) || command.ProjectId == timesheet.ProjectId;
-        if (isStayingPut) return timesheet.ProjectId;
-        await MyDayAssignment.EnsureAssignedAsync(context, command.ProjectId, worker, cancellationToken);
-        var isThatSiteTaken = await context.Timesheets.AnyAsync(
-            row => row.WorkerId == worker.WorkerId && row.ProjectId == command.ProjectId && row.WorkedOn == timesheet.WorkedOn, cancellationToken);
-        if (isThatSiteTaken) throw new InvalidOperationException("That site already has a day logged on this date — amend that one instead.");
-        return command.ProjectId;
     }
 
     private async Task CheckAsync(MyAmendSiteDay command, string projectId, CancellationToken cancellationToken)
@@ -95,13 +84,6 @@ public sealed class MyAmendSiteDayHandler : ICommandHandler<MyAmendSiteDay, Ackn
             .OrderByDescending(note => note.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken)
         ?? throw new InvalidOperationException("That day's note is no longer here — ask your Project Manager.");
-
-    private static void MoveDay(TimesheetEntity timesheet, ProgressUpdateEntity note, SiteAttendanceEntity? attendance, string projectId)
-    {
-        timesheet.ProjectId = projectId;
-        note.ProjectId = projectId;
-        if (attendance is not null) attendance.ProjectId = projectId;
-    }
 
     private static DateTimeOffset SignedOutAt(MyAmendSiteDay command, TimesheetEntity timesheet, SiteAttendanceEntity attendance)
     {

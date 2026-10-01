@@ -8,7 +8,8 @@ namespace Jewel.JPMS.Api.Features.Labour.Commands;
 /// <summary>
 /// POST /api/my/labour/sign-out — the worker's day, logged once: one Submitted timesheet per cost
 /// code, the attendance closed at the sign-out time, and the day's note written onto the project's
-/// progress feed in the worker's own name, in one save. One sign-out per project per day.
+/// progress feed in the worker's own name, in one save. One sign-out per project per day. When the
+/// worker says the work was on another of their sites, the whole day is written there.
 /// </summary>
 public sealed class MySiteSignOutEndpoint
 {
@@ -54,27 +55,29 @@ public sealed class MySiteSignOutHandler : ICommandHandler<MySiteSignOut, MySite
         var worker = await WorkerByEmail.ResolveAsync(context, email, cancellationToken);
         var today = SiteClock.Today();
         var attendance = await OpenAttendanceAsync(command.ProjectId, worker, today, cancellationToken);
-        await CheckAsync(command, cancellationToken);
+        var siteProjectId = await MyDaySiteMove.DestinationAsync(context, worker, command.ProjectId, command.SiteProjectId, today, cancellationToken);
+        await CheckAsync(command, siteProjectId, cancellationToken);
         var signedOutAt = MyDayMoments.Resolve(command.SignedOutAt, today, "sign-out");
         if (signedOutAt < attendance.SignedInAt)
             throw new InvalidOperationException("The sign-out time cannot be before the sign-in time.");
 
         foreach (var entry in command.Entries)
-            context.Timesheets.Add(MyDayTimesheets.Submitted(command.ProjectId, entry, worker, attendance, email, today));
+            context.Timesheets.Add(MyDayTimesheets.Submitted(siteProjectId, entry, worker, attendance, email, today));
         var note = ProgressUpdateRows.New(
-            ProgressIdentifierFactory.NextProgressUpdateId(), command.ProjectId, MyDayNotes.LogTitle(worker),
+            ProgressIdentifierFactory.NextProgressUpdateId(), siteProjectId, MyDayNotes.LogTitle(worker),
             command.Description, today, null, email, DateTimeOffset.UtcNow);
         context.ProgressUpdates.Add(note);
         var instructionReference = await raisedRecords.RaiseInstructionAsync(command.Instruction, note, email, cancellationToken);
         var defectReference = await raisedRecords.RaiseDefectAsync(command.Defect, note, email, cancellationToken);
+        attendance.ProjectId = siteProjectId;
         attendance.SignedOutAt = signedOutAt;
         await context.SaveChangesAsync(cancellationToken);
         return new MySiteDayLogged(attendance.SiteAttendanceId, note.ProgressUpdateId, instructionReference, defectReference);
     }
 
-    private async Task CheckAsync(MySiteSignOut command, CancellationToken cancellationToken)
+    private async Task CheckAsync(MySiteSignOut command, string siteProjectId, CancellationToken cancellationToken)
     {
-        var allowedCodes = await costCodes.AllowedForAsync(command.ProjectId, cancellationToken);
+        var allowedCodes = await costCodes.AllowedForAsync(siteProjectId, cancellationToken);
         var errors = LabourRules.CheckSignOutEntries(command.Entries, allowedCodes).ToList();
         if (!MyDayNotes.IsGiven(command.Description))
             errors.Add("Say what was done today — the words are the day's record.");

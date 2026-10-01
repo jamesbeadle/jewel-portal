@@ -117,12 +117,17 @@
                                               Selected="@selectedIds.Contains(timesheet.TimesheetId)"
                                               OnSelectedChanged="selected => ToggleSelected(timesheet.TimesheetId, selected)"
                                               IsEditing="@(editingId == timesheet.TimesheetId)"
+                                              IsDayOpen="@(openDayId == timesheet.TimesheetId)" OnToggleDay="() => ToggleDay(timesheet.TimesheetId)"
                                               CostCodeOptions="@CostCodeOptions"
                                               @bind-EditCostCode="editCostCode" @bind-EditHours="editHours"
                                               OnSave="SaveEditAsync" OnCancelEdit="() => editingId = null"
                                               OnAdjust="() => StartEdit(timesheet)" OnReject="() => StartReject(timesheet)"
                                               CanCorrect="CanCorrect"
                                               OnUnapprove="() => StartUnapprove(timesheet)" OnMove="() => StartMove(timesheet)" />
+                                @if (openDayId == timesheet.TimesheetId)
+                                {
+                                    <TimesheetDayRow TimesheetId="@timesheet.TimesheetId" />
+                                }
                             }
                         </tbody>
                     </table>

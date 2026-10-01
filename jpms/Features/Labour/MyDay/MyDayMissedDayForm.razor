@@ -16,9 +16,7 @@
     </FormField>
     <MyDayCostCodePicker Codes="Codes" RecentCodes="RecentCodes" @bind-CostCode="costCode" Disabled="@isBusy" />
     <MyDayWordsBox @bind-Words="words" Disabled="@isBusy" HasDefectBox="false" />
-    <FormField Label="Photos" Hint="@PhotosHint">
-        <InputFile OnChange="OnPhotosChosen" multiple accept="image/*" class="w-full text-sm text-content-muted" disabled="@isBusy" />
-    </FormField>
+    <MyDayPhotoPicker EmptyHint="@PhotosHint" @bind-Photos="photos" Disabled="@isBusy" />
     @if (error is not null)
     {
         <Notice Tone="Tone.Negative">@error</Notice>
@@ -47,13 +45,11 @@
 
     private bool HasPhotos => photos.Count > 0;
     private string PhotoCountText => photos.Count == 1 ? "1 photo" : $"{photos.Count} photos";
-    private string PhotosHint => HasPhotos ? $"{PhotoCountText} chosen." : $"Camera or gallery, up to {MyDayPhotoUploader.MaxPerBatch}. They go onto that day's log.";
+    private string PhotosHint => $"Camera or gallery, up to {MyDayPhotoUploader.MaxPerBatch}. They go onto that day's log.";
     private string SaveLabel => isUploadingPhotos ? $"Uploading {PhotoCountText}…" : isBusy ? "Saving the day…" : "Save the day";
 
     protected override void OnInitialized() =>
         costCode = RecentCodes.FirstOrDefault(recent => Codes.Any(code => code.Code == recent)) ?? "";
-
-    private void OnPhotosChosen(InputFileChangeEventArgs change) => photos = change.GetMultipleFiles(MyDayPhotoUploader.MaxPerBatch);
 
     private string? Refusal()
     {

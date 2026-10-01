@@ -31,6 +31,10 @@ public static class LabourRouteRegistration
             new QueryRoute("/api/projects/{projectId}/labour/timesheets",
                 query => $"/api/projects/{((ListTimesheetDetailsForProject)query).ProjectId}/labour/timesheets"));
 
+        queries.Register<GetSubmittedDayForTimesheet, SubmittedDay?>(
+            new QueryRoute("/api/labour/timesheets/{timesheetId}/day",
+                query => $"/api/labour/timesheets/{((GetSubmittedDayForTimesheet)query).TimesheetId}/day"));
+
         queries.Register<ListSiteAttendanceForProject, IReadOnlyList<SiteAttendance>>(
             new QueryRoute("/api/projects/{projectId}/labour/attendance",
                 query => $"/api/projects/{((ListSiteAttendanceForProject)query).ProjectId}/labour/attendance"));

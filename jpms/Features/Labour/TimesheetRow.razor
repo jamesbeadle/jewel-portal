@@ -40,6 +40,8 @@
         <span title="@(Timesheet.Status == TimesheetStatus.Rejected ? Timesheet.RejectionReason : null)"><StatusPill Status="@Timesheet.Status" /></span>
     </td>
     <td class="px-5 py-2.5 text-right whitespace-nowrap">
+        <button type="button" class="btn-ghost mr-1" title="What the worker submitted with this day — the note, photos and times"
+                @onclick="() => OnToggleDay.InvokeAsync()">@(IsDayOpen ? "Hide day" : "View day")</button>
         @if (Timesheet.Status == TimesheetStatus.Submitted && IsEditing)
         {
             <button type="button" class="btn-secondary mr-1" @onclick="() => OnSave.InvokeAsync()">Save</button>
@@ -78,6 +80,9 @@
     /// <summary>This row is the one open for adjustment; the edit fields below are page-owned
     /// so Save can read them.</summary>
     [Parameter] public bool IsEditing { get; set; }
+    /// <summary>The day's submission (note, photos, times) is open beneath this row.</summary>
+    [Parameter] public bool IsDayOpen { get; set; }
+    [Parameter] public EventCallback OnToggleDay { get; set; }
     [Parameter] public IReadOnlyList<SearchSelect.Option> CostCodeOptions { get; set; } = Array.Empty<SearchSelect.Option>();
     [Parameter] public string EditCostCode { get; set; } = "";
     [Parameter] public EventCallback<string> EditCostCodeChanged { get; set; }
