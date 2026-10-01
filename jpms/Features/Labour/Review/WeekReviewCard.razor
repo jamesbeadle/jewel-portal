@@ -1,0 +1,57 @@
+@namespace Jewel.JPMS.Features.Labour.Review
+@using Jewel.JPMS.Features.Labour.MyDay
+@inject IWeekReviewStore Review
+
+<div class="border-b border-line/60 px-5 py-4">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+            <p class="font-medium text-content">@Submission.WorkerName · w/c @Submission.WeekStart.ToString(WeekFormat)</p>
+            <p class="text-xs text-content-subtle">@MyDayHoursText.Of(Submission.TotalHours) over @LoggedDays · submitted @Submission.SubmittedAt.ToLocalTime().ToString(WhenFormat)</p>
+        </div>
+        <WeekReviewStatus Submission="Submission" />
+    </div>
+    <WeekReviewDays Days="Submission.Days" />
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mt-2">@error</Notice>
+    }
+    @if (Submission.IsAwaitingReview && CanAnswer)
+    {
+        <WeekReviewAnswer IsBusy="@isBusy" OnSignOff="SignOffAsync" OnSendBack="SendBackAsync" />
+    }
+</div>
+
+@code {
+    private const string WeekFormat = "dd MMM";
+    private const string WhenFormat = "ddd d MMM, HH:mm";
+
+    /// <summary>One submitted week: who and which week, its days as filed, and the directors' answer.</summary>
+    [Parameter, EditorRequired] public WorkerWeekSubmission Submission { get; set; } = default!;
+    [Parameter] public bool CanAnswer { get; set; }
+
+    private bool isBusy;
+    private string? error;
+
+    private string LoggedDays
+    {
+        get
+        {
+            var count = Submission.Days.Count(day => day.IsLogged);
+            return count == 1 ? "1 day" : $"{count} days";
+        }
+    }
+
+    private Task SignOffAsync() => AnswerAsync(() => Review.SignOffAsync(Submission.WorkerWeekSubmissionId));
+
+    private Task SendBackAsync(string note) => AnswerAsync(() => Review.SendBackAsync(Submission.WorkerWeekSubmissionId, note));
+
+    private async Task AnswerAsync(Func<Task<WorkerWeekSubmission>> answer)
+    {
+        error = null;
+        isBusy = true;
+        try { await answer(); }
+        catch (CommandFailedException refusal) { error = refusal.Message; }
+        catch (Exception) { error = "The answer didn't go through — try again."; }
+        finally { isBusy = false; }
+    }
+}

@@ -1,0 +1,39 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+
+<div class="grid grid-cols-7 gap-1">
+    @foreach (var name in DayNames)
+    {
+        <span class="text-center text-xs text-content-faint">@name</span>
+    }
+    @foreach (var date in Cells)
+    {
+        <MyDayMonthCell Date="date" Rows="RowsOn(date)" Today="Today" IsOutsideMonth="@(date.Month != Month.Month)"
+                        IsSelected="@(date == Selected)" OnPick="() => OnPick.InvokeAsync(date)" />
+    }
+</div>
+
+@code {
+    private static readonly string[] DayNames = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+    private const int DaysInWeek = 7;
+
+    /// <summary>The month as a calendar, Monday to Sunday across, like a phone's month view.</summary>
+    [Parameter, EditorRequired] public MyLabourMonth Month { get; set; } = default!;
+    [Parameter, EditorRequired] public DateTimeOffset Today { get; set; }
+    [Parameter] public DateTimeOffset? Selected { get; set; }
+    [Parameter] public EventCallback<DateTimeOffset> OnPick { get; set; }
+
+    private DateTimeOffset First => new(new DateTime(Month.Year, Month.Month, 1), TimeSpan.Zero);
+
+    private IEnumerable<DateTimeOffset> Cells
+    {
+        get
+        {
+            var start = MyDayCalendarDates.MondayOf(First);
+            var end = First.AddMonths(1).AddDays(-1);
+            var cellCount = ((int)(end - start).TotalDays / DaysInWeek + 1) * DaysInWeek;
+            return Enumerable.Range(0, cellCount).Select(offset => start.AddDays(offset));
+        }
+    }
+
+    private IReadOnlyList<MyWeekDay> RowsOn(DateTimeOffset date) => Month.Days.Where(row => row.Date == date).ToList();
+}

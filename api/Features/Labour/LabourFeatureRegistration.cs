@@ -76,6 +76,28 @@ public static class LabourFeatureRegistration
         services.AddScoped<MyDayPhotosHandler>();
         services.AddScoped<MyResubmitTimesheetHandler>();
 
+        services.AddScoped<MyDayDays>();
+        services.AddScoped<MyLabourWeekHandler>();
+        services.AddScoped<MyLabourMonthHandler>();
+        services.AddScoped<MySubmitWeekHandler>();
+        services.AddScoped<WorkerWeekSubmissionReader>();
+        services.AddScoped<ListWorkerWeekSubmissionsHandler>();
+        services.AddScoped<IQueryHandler<ListWorkerWeekSubmissions, IReadOnlyList<WorkerWeekSubmission>>>(
+            provider => provider.GetRequiredService<ListWorkerWeekSubmissionsHandler>());
+        services.AddScoped<SignOffWorkerWeekHandler>();
+        services.AddScoped<ICommandHandler<SignOffWorkerWeek, WorkerWeekSubmission>>(
+            provider => provider.GetRequiredService<SignOffWorkerWeekHandler>());
+        services.AddScoped<SendBackWorkerWeekHandler>();
+        services.AddScoped<ICommandHandler<SendBackWorkerWeek, WorkerWeekSubmission>>(
+            provider => provider.GetRequiredService<SendBackWorkerWeekHandler>());
+
+        services.AddScoped<LabourWeekPlanHandler>();
+        services.AddScoped<IQueryHandler<GetLabourWeekPlan, LabourWeekPlan>>(
+            provider => provider.GetRequiredService<LabourWeekPlanHandler>());
+        services.AddScoped<PlanWorkerDaysHandler>();
+        services.AddScoped<ICommandHandler<PlanWorkerDays, Acknowledgement>>(
+            provider => provider.GetRequiredService<PlanWorkerDaysHandler>());
+
         // Labour tab: week grid, adjust / approve / reject.
         services.AddScoped<ListTimesheetDetailsForProjectHandler>();
         services.AddScoped<GetSubmittedDayForTimesheetHandler>();

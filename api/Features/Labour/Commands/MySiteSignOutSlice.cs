@@ -57,6 +57,7 @@ public sealed class MySiteSignOutHandler : ICommandHandler<MySiteSignOut, MySite
         var attendance = await OpenAttendanceAsync(command.ProjectId, worker, today, cancellationToken);
         var siteProjectId = await MyDaySiteMove.DestinationAsync(context, worker, command.ProjectId, command.SiteProjectId, today, cancellationToken);
         await CheckAsync(command, siteProjectId, cancellationToken);
+        await WorkerWeekLock.EnsureOpenAsync(context, worker.WorkerId, today, cancellationToken);
         var signedOutAt = MyDayMoments.Resolve(command.SignedOutAt, today, "sign-out");
         if (signedOutAt < attendance.SignedInAt)
             throw new InvalidOperationException("The sign-out time cannot be before the sign-in time.");

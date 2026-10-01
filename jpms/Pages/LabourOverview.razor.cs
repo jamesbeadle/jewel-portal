@@ -18,7 +18,7 @@ public partial class LabourOverview
     private static readonly (string Key, string Label)[] Views =
     {
         ("workers", "By worker"), ("sites", "By site"), ("costcodes", "By cost code"), ("signoff", "Sign-off"),
-        ("settlement", "Settlement"),
+        ("review", "Weeks for review"), ("settlement", "Settlement"),
     };
 
 
@@ -29,6 +29,7 @@ public partial class LabourOverview
     private IReadOnlyList<string>? weekSummaryLines;
 
     private bool Loading => !Labour.OverviewLoadedFor(year, month) && !dataFailed;
+    private bool CanAnswerWeeks => Session.CanOpen(LabourRoleSets.ReviewWorkerWeeks);
     private string MonthLabel => new DateTime(year, month, 1).ToString("MMMM yyyy");
     // Keys the month's panes: moving month recreates them, so an opened row or "show all" resets.
     // Each pane prefixes it — the open pane and the chase list are siblings, and Blazor refuses

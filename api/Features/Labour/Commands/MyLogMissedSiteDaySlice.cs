@@ -46,6 +46,7 @@ public sealed class MyLogMissedSiteDayHandler : ICommandHandler<MyLogMissedSiteD
         await MyDayAssignment.EnsureAssignedAsync(context, command.ProjectId, worker, cancellationToken);
         var workDate = MyDayFiling.PastWorkDate(SiteClock.WorkDateOf(command.Date), SiteClock.Today());
         await CheckAsync(command, cancellationToken);
+        await WorkerWeekLock.EnsureOpenAsync(context, worker.WorkerId, workDate, cancellationToken);
         await MyDayVacancy.EnsureAsync(context, command.ProjectId, worker, email, workDate, cancellationToken);
 
         var entry = new SiteSignOutEntry(command.CostCode, command.Hours);

@@ -1,40 +1,112 @@
 @namespace Jewel.JPMS.Features.Labour.MyDay
+@inject IMyWeeksStore Weeks
+@inject ILabourStore Labour
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-<Panel Title="This week" Class="mb-4" BodyClass="p-4" Prominent="false">
-    @if (amending is { } day)
-    {
-        <MyDayAmendForm Day="day" Projects="Projects" RecentCodes="RecentCodes" OnDone="CloseAsync" />
-    }
-    else if (adding is { } missed)
-    {
-        <MyDayMissedDayForm Day="missed" Codes="CodesFor(missed)" RecentCodes="RecentCodes" OnDone="CloseAsync" />
-    }
-    else
-    {
-        @foreach (var row in Week)
-        {
-            <MyDayWeekRow Row="row" IsBeforeToday="@(row.Date < Today)" OnAmend="() => amending = row" OnAdd="() => adding = row" />
-        }
-        <p class="text-xs text-content-subtle mt-2">A day can be amended, or a missed one filled in, until the office has approved it. A day filed after the date is shown to the office as late.</p>
-    }
+<Panel Title="@MyDayCalendarDates.WeekHeading(weekStart)" Class="mb-4" BodyClass="p-4" Prominent="false">
+    <HeaderActions>
+        <MyDayWeekHeading WeekStart="weekStart" Today="Today" Disabled="@IsEditing" OnMove="MoveAsync" />
+    </HeaderActions>
+    <ChildContent>
+        <div @ref="swipeArea">
+            @if (IsEditing)
+            {
+                <MyDayDayEditor Amending="amending" Adding="adding" Projects="Projects" RecentCodes="RecentCodes" OnDone="CloseAsync" />
+            }
+            @if (HasFailed)
+            {
+                <Notice Tone="Tone.Negative">@loadError</Notice>
+            }
+            @if (IsLoading)
+            {
+                <p class="text-sm text-content-subtle">Loading the week…</p>
+            }
+            @if (IsShowingTheWeek && Week is { } shown)
+            {
+                @foreach (var row in shown.Days)
+                {
+                    <MyDayWeekRow Row="row" IsBeforeToday="@(row.Date < Today)" IsAfterToday="@(row.Date > Today)" OnAmend="() => amending = row" OnAdd="() => adding = row" />
+                }
+                <MyDayWeekSubmission Week="shown" OnSubmit="SubmitAsync" />
+                <p class="text-xs text-content-subtle mt-2">Swipe for another week. A day can be amended, or a missed one filled in, until the week is submitted or the office has approved it. A day filed after the date is shown to the office as late.</p>
+            }
+        </div>
+    </ChildContent>
 </Panel>
 
 @code {
-    [Parameter, EditorRequired] public IReadOnlyList<MyWeekDay> Week { get; set; } = Array.Empty<MyWeekDay>();
+    /// <summary>The worker's week, Monday to Sunday, paged by a swipe or the arrows: this week first,
+    /// any earlier week behind it. A logged day amends and a missed one fills in until the office has
+    /// it; a finished week is sent to the office from the bottom.</summary>
     [Parameter, EditorRequired] public IReadOnlyList<MyLabourProject> Projects { get; set; } = Array.Empty<MyLabourProject>();
     [Parameter, EditorRequired] public DateTimeOffset Today { get; set; }
     [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
 
+    private DateTimeOffset weekStart;
     private MyWeekDay? amending;
     private MyWeekDay? adding;
+    private string? loadError;
+    private ElementReference swipeArea;
+    private MyDaySwipeWatcher? swipe;
 
-    private IReadOnlyList<SiteSheetCostCode> CodesFor(MyWeekDay day) =>
-        Projects.FirstOrDefault(project => project.ProjectId == day.ProjectId)?.CostCodes ?? Array.Empty<SiteSheetCostCode>();
+    private MyLabourWeek? Week => Weeks.Week(weekStart);
+    private bool IsEditing => amending is not null || adding is not null;
+    private bool HasFailed => !IsEditing && loadError is not null;
+    private bool IsLoading => !IsEditing && loadError is null && Week is null;
+    private bool IsShowingTheWeek => !IsEditing && loadError is null && Week is not null;
 
-    private Task CloseAsync()
+    protected override void OnInitialized()
+    {
+        weekStart = MyDayCalendarDates.MondayOf(Today);
+        Weeks.OnChange += StateHasChanged;
+        Labour.OnChange += ReloadQuietly;
+        _ = LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool isFirstRender)
+    {
+        if (!isFirstRender) return;
+        swipe = new MyDaySwipeWatcher(JS, isLeft => MoveAsync(isLeft ? 1 : -1));
+        await swipe.WatchAsync(swipeArea);
+    }
+
+    private async Task MoveAsync(int weeks)
+    {
+        if (IsEditing) return;
+        var moved = weeks < 0 ? MyDayCalendarDates.PreviousMonday(weekStart) : MyDayCalendarDates.NextMonday(weekStart);
+        if (moved > MyDayCalendarDates.MondayOf(Today)) return;
+        weekStart = moved;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loadError = null;
+        try { await Weeks.RefreshWeekAsync(weekStart); }
+        catch (Exception) { loadError = "Could not load the week — check your signal and try again."; }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ReloadQuietly() => _ = LoadAsync();
+
+    private async Task SubmitAsync()
+    {
+        await Weeks.SubmitWeekAsync(weekStart);
+        await Labour.RefreshMyDayAsync();
+    }
+
+    private async Task CloseAsync()
     {
         amending = null;
         adding = null;
-        return Task.CompletedTask;
+        await LoadAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Weeks.OnChange -= StateHasChanged;
+        Labour.OnChange -= ReloadQuietly;
+        if (swipe is not null) await swipe.DisposeAsync();
     }
 }

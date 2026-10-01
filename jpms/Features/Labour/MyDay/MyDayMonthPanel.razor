@@ -1,0 +1,99 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+@inject IMyWeeksStore Weeks
+@inject ILabourStore Labour
+@implements IDisposable
+
+<Panel Title="@MyDayCalendarDates.MonthHeading(year, month)" Class="mb-4" BodyClass="p-4" Prominent="false">
+    <HeaderActions>
+        <button type="button" class="btn-secondary px-2" aria-label="Earlier month" disabled="@IsEditing" @onclick="() => MoveAsync(-1)">‹</button>
+        <button type="button" class="btn-secondary px-2" aria-label="Later month" disabled="@(IsEditing || IsThisMonth)" @onclick="() => MoveAsync(1)">›</button>
+    </HeaderActions>
+    <ChildContent>
+        @if (IsEditing)
+        {
+            <MyDayDayEditor Amending="amending" Adding="adding" Projects="Projects" RecentCodes="RecentCodes" OnDone="CloseAsync" />
+        }
+        @if (HasFailed)
+        {
+            <Notice Tone="Tone.Negative">@loadError</Notice>
+        }
+        @if (IsLoading)
+        {
+            <p class="text-sm text-content-subtle">Loading the month…</p>
+        }
+        @if (IsShowingTheMonth && Month is { } shown)
+        {
+            <MyDayMonthGrid Month="shown" Today="Today" Selected="selected" OnPick="date => selected = date" />
+            <MyDayMonthTotals Totals="shown.Totals" />
+            @if (selected is { } day)
+            {
+                <MyDayMonthDay Date="day" Rows="RowsOn(day)" Today="Today" OnAmend="row => amending = row" OnAdd="row => adding = row" />
+            }
+        }
+    </ChildContent>
+</Panel>
+
+@code {
+    /// <summary>The month calendar: every day's site, hours and status at a glance, the totals the
+    /// worker invoices from, and a tapped day opened beneath the grid.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<MyLabourProject> Projects { get; set; } = Array.Empty<MyLabourProject>();
+    [Parameter, EditorRequired] public DateTimeOffset Today { get; set; }
+    [Parameter] public IReadOnlyList<string> RecentCodes { get; set; } = Array.Empty<string>();
+
+    private int year;
+    private int month;
+    private DateTimeOffset? selected;
+    private MyWeekDay? amending;
+    private MyWeekDay? adding;
+    private string? loadError;
+
+    private MyLabourMonth? Month => Weeks.Month(year, month);
+    private bool IsEditing => amending is not null || adding is not null;
+    private bool HasFailed => !IsEditing && loadError is not null;
+    private bool IsLoading => !IsEditing && loadError is null && Month is null;
+    private bool IsShowingTheMonth => !IsEditing && loadError is null && Month is not null;
+    private bool IsThisMonth => MyDayCalendarDates.IsThisMonth(year, month, Today);
+
+    protected override void OnInitialized()
+    {
+        year = Today.Year;
+        month = Today.Month;
+        Weeks.OnChange += StateHasChanged;
+        Labour.OnChange += ReloadQuietly;
+        _ = LoadAsync();
+    }
+
+    public void Dispose()
+    {
+        Weeks.OnChange -= StateHasChanged;
+        Labour.OnChange -= ReloadQuietly;
+    }
+
+    private async Task MoveAsync(int months)
+    {
+        if (IsEditing) return;
+        (year, month) = months < 0 ? MyDayCalendarDates.MonthBefore(year, month) : MyDayCalendarDates.MonthAfter(year, month);
+        selected = null;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loadError = null;
+        try { await Weeks.RefreshMonthAsync(year, month); }
+        catch (Exception) { loadError = "Could not load the month — check your signal and try again."; }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ReloadQuietly() => _ = LoadAsync();
+
+    private IReadOnlyList<MyWeekDay> RowsOn(DateTimeOffset date) =>
+        Month?.Days.Where(row => row.Date == date).ToList() ?? new List<MyWeekDay>();
+
+    private async Task CloseAsync()
+    {
+        amending = null;
+        adding = null;
+        await LoadAsync();
+    }
+}

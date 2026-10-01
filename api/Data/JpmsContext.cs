@@ -182,6 +182,7 @@ public sealed partial class JpmsContext : DbContext
     public DbSet<WorkerAbsenceEntity> WorkerAbsences => Set<WorkerAbsenceEntity>();
     public DbSet<WorkerCisStatusEntity> WorkerCisStatuses => Set<WorkerCisStatusEntity>();
     public DbSet<LabourWeekSignOffEntity> LabourWeekSignOffs => Set<LabourWeekSignOffEntity>();
+    public DbSet<WorkerWeekSubmissionEntity> WorkerWeekSubmissions => Set<WorkerWeekSubmissionEntity>();
     public DbSet<WorkerSettlementLineEntity> WorkerSettlementLines => Set<WorkerSettlementLineEntity>();
     public DbSet<SiteXeroMappingEntity> SiteXeroMappings => Set<SiteXeroMappingEntity>();
     public DbSet<CostCodeXeroMappingEntity> CostCodeXeroMappings => Set<CostCodeXeroMappingEntity>();

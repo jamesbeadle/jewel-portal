@@ -1,0 +1,25 @@
+@namespace Jewel.JPMS.Features.Labour.Review
+
+<div class="mt-3 flex flex-wrap items-center gap-2">
+    @if (isSendingBack)
+    {
+        <input class="field w-72 text-sm" placeholder="What needs changing?" @bind="note" @bind:event="oninput" disabled="@IsBusy" />
+        <button type="button" class="btn-secondary" disabled="@(IsBusy || string.IsNullOrWhiteSpace(note))" @onclick="() => OnSendBack.InvokeAsync(note.Trim())">Send back</button>
+        <button type="button" class="btn-ghost" disabled="@IsBusy" @onclick="() => isSendingBack = false">Cancel</button>
+    }
+    @if (!isSendingBack)
+    {
+        <InlineConfirm Label="Sign off week" Question="Approve every day and sign off?" Danger="false" Busy="@IsBusy" OnConfirm="OnSignOff" />
+        <button type="button" class="btn-secondary" disabled="@IsBusy" @onclick="() => isSendingBack = true">Send back…</button>
+    }
+</div>
+
+@code {
+    /// <summary>The director's answer: sign off in one step, or send back with the note the operative reads.</summary>
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public EventCallback OnSignOff { get; set; }
+    [Parameter] public EventCallback<string> OnSendBack { get; set; }
+
+    private bool isSendingBack;
+    private string note = "";
+}

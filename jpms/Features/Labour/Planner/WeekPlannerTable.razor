@@ -1,0 +1,62 @@
+@namespace Jewel.JPMS.Features.Labour.Planner
+@using static Jewel.JPMS.Features.Labour.LabourDisplay
+
+<Panel Title="Who is in" Class="mb-6" BodyClass="p-0" IsLoading="@(Plan is null && !HasFailed)" LoadingLabel="Loading the week">
+    @if (Plan is null)
+    {
+        <p class="p-5 text-sm text-negative">Couldn't load the week — refresh to try again.</p>
+    }
+    @if (Plan is { HasWorkers: false })
+    {
+        <p class="p-5 text-sm text-content-subtle italic">No active workers. Add them on the Workers page.</p>
+    }
+    @if (Plan is { HasWorkers: true } plan)
+    {
+        <div class="overflow-x-auto">
+            <table class="data-table data-table-dense">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th class="text-right">Rate</th>
+                        @foreach (var day in DaysOf(plan))
+                        {
+                            <th class="text-center">@day.Date.ToString(DayFormat)</th>
+                        }
+                        <th></th>
+                        <th class="text-right">Planned</th>
+                        <th class="text-right">Forecast</th>
+                        <th class="text-right">Actual</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var worker in plan.Workers)
+                    {
+                        <WeekPlannerRow @key="worker.WorkerId" Worker="worker" Disabled="@IsBusy" OnPlan="OnPlan" />
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p class="px-5 py-3 text-xs text-content-subtle border-t border-line">
+            Everyone is in unless marked not in — a day off they asked for, recorded as an absence the
+            overview and the chase list already read. Forecast is planned days at the day rate; Actual is
+            what has been logged so far, at the approved cost once signed off. A day already logged can't
+            be planned off.
+        </p>
+    }
+</Panel>
+
+@code {
+    private const string DayFormat = "ddd dd";
+
+    /// <summary>The planner grid: every active operative down the side, Monday to Friday across.</summary>
+    [Parameter] public LabourWeekPlan? Plan { get; set; }
+    [Parameter] public bool HasFailed { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
+    [Parameter] public EventCallback<(string WorkerId, IReadOnlyList<DateTimeOffset> Dates, bool IsIn)> OnPlan { get; set; }
+
+    private static IReadOnlyList<LabourPlanDay> DaysOf(LabourWeekPlan plan)
+    {
+        var first = plan.Workers[0];
+        return first.Days;
+    }
+}

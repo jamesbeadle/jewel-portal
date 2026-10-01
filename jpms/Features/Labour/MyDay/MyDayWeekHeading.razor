@@ -1,0 +1,18 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+
+<div class="flex items-center gap-2">
+    <button type="button" class="btn-secondary px-2" aria-label="Earlier week" disabled="@Disabled" @onclick="() => OnMove.InvokeAsync(-1)">‹</button>
+    <span class="text-sm text-content-subtle whitespace-nowrap">@MyDayCalendarDates.WeekName(WeekStart, Today)</span>
+    <button type="button" class="btn-secondary px-2" aria-label="Later week" disabled="@(Disabled || IsThisWeek)" @onclick="() => OnMove.InvokeAsync(1)">›</button>
+</div>
+
+@code {
+    /// <summary>The arrows for anyone who does not swipe. Forward stops at this week: a week still
+    /// to come has nothing to show.</summary>
+    [Parameter, EditorRequired] public DateTimeOffset WeekStart { get; set; }
+    [Parameter, EditorRequired] public DateTimeOffset Today { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback<int> OnMove { get; set; }
+
+    private bool IsThisWeek => MyDayCalendarDates.IsThisWeek(WeekStart, Today);
+}

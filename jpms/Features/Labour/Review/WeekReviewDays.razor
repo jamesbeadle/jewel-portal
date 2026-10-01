@@ -1,0 +1,50 @@
+@namespace Jewel.JPMS.Features.Labour.Review
+@using Jewel.JPMS.Features.Labour.MyDay
+
+<table class="data-table data-table-dense mt-2">
+    <tbody>
+        @foreach (var day in Days)
+        {
+            <tr>
+                <td class="whitespace-nowrap">@day.Date.ToString(DayFormat)</td>
+                <td class="whitespace-nowrap">@day.ProjectName</td>
+                <td class="whitespace-nowrap">
+                    @if (day.IsLogged)
+                    {
+                        <span class="font-medium text-content">@MyDayHoursText.Of(day.Hours)</span> <span class="text-content-subtle">· @day.CostCode</span>
+                    }
+                </td>
+                <td class="whitespace-nowrap">
+                    @if (day.IsLogged)
+                    {
+                        <StatusPill Status="@day.Status!.Value" />
+                    }
+                    @if (day.Kind == MyWeekDayKind.Off)
+                    {
+                        <Pill Tone="Tone.Muted">Off</Pill>
+                    }
+                    @if (day.IsPlannedOff)
+                    {
+                        <Pill Tone="Tone.Info">Not in</Pill>
+                    }
+                    @if (day.IsMissed && !day.IsPlannedOff)
+                    {
+                        <Pill Tone="Tone.Warning">Nothing</Pill>
+                    }
+                    @if (day.IsFiledLate)
+                    {
+                        <Pill Tone="Tone.Warning">Late</Pill>
+                    }
+                </td>
+                <td class="text-content-subtle max-w-prose">@day.Words</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private const string DayFormat = "ddd dd";
+
+    /// <summary>The week's days as the operative filed them — site, hours, trade, status and their words.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<MyWeekDay> Days { get; set; } = Array.Empty<MyWeekDay>();
+}

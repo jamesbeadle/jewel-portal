@@ -78,6 +78,27 @@ public static class LabourRouteRegistration
         commands.Register<MyResubmitTimesheet, Acknowledgement>(CommandRoute.Post("/api/my/labour/resubmit"));
         commands.Register<MyAmendSiteDay, Acknowledgement>(CommandRoute.Post("/api/my/labour/amend"));
 
+        queries.Register<GetMyLabourWeek, MyLabourWeek>(
+            new QueryRoute("/api/my/labour/weeks/{weekStart}",
+                query => $"/api/my/labour/weeks/{((GetMyLabourWeek)query).WeekStart:yyyy-MM-dd}"));
+        queries.Register<GetMyLabourMonth, MyLabourMonth>(
+            new QueryRoute("/api/my/labour/months/{year}/{month}",
+                query => $"/api/my/labour/months/{((GetMyLabourMonth)query).Year}/{((GetMyLabourMonth)query).Month}"));
+        commands.Register<MySubmitWeek, MyLabourWeek>(CommandRoute.Post("/api/my/labour/weeks/submit"));
+
+        queries.Register<ListWorkerWeekSubmissions, IReadOnlyList<WorkerWeekSubmission>>(
+            QueryRoute.Static("/api/labour/weeks/submissions"));
+        commands.Register<SignOffWorkerWeek, WorkerWeekSubmission>(
+            new CommandRoute("POST", "/api/labour/weeks/submissions/{submissionId}/sign-off",
+                command => $"/api/labour/weeks/submissions/{((SignOffWorkerWeek)command).WorkerWeekSubmissionId}/sign-off"));
+        commands.Register<SendBackWorkerWeek, WorkerWeekSubmission>(
+            new CommandRoute("POST", "/api/labour/weeks/submissions/{submissionId}/send-back",
+                command => $"/api/labour/weeks/submissions/{((SendBackWorkerWeek)command).WorkerWeekSubmissionId}/send-back"));
+        queries.Register<GetLabourWeekPlan, LabourWeekPlan>(
+            new QueryRoute("/api/labour/plan/{weekStart}",
+                query => $"/api/labour/plan/{((GetLabourWeekPlan)query).WeekStart:yyyy-MM-dd}"));
+        commands.Register<PlanWorkerDays, Acknowledgement>(CommandRoute.Post("/api/labour/plan"));
+
         commands.Register<AddWorkerTimesheet, TimesheetDetail>(
             new CommandRoute("POST", "/api/projects/{projectId}/labour/timesheets",
                 command => $"/api/projects/{((AddWorkerTimesheet)command).ProjectId}/labour/timesheets"));

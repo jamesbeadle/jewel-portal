@@ -3,6 +3,7 @@
 @using Jewel.JPMS.Features.CostCenters
 @using Jewel.JPMS.Features.Projects
 @using Jewel.JPMS.Features.Labour
+@using Jewel.JPMS.Features.Labour.Review
 @using static Jewel.JPMS.Features.Labour.LabourDisplay
 @inject AuthService Auth
 @inject SessionService Session
@@ -100,7 +101,7 @@
                             OnSignOff="pick => SignOffAsync(pick.WorkerId, pick.WeekStart)"
                             OnRemoveSignOff="pick => RemoveSignOffAsync(pick.WorkerId, pick.WeekStart)" />
     }
-    else
+    else if (view == "settlement")
     {
         <SettlementSchedulesPanel @key="@($"settlement:{MonthKey}")" Schedules="Labour.Schedules(year, month)"
                                   Loading="@(!Labour.SchedulesLoadedFor(year, month) && !dataFailed)"
@@ -108,6 +109,11 @@
                                   OnPreviewCoding="PreviewCodingAsync" OnRunCoding="RunCodingAsync" OnCancelPlan="CancelCodingPlan"
                                   OnResetCoding="OpenCodingReset" OnApproveBill="OpenBillApprove"
                                   OnAddLine="OpenSettleLine" OnRemoveLine="RemoveSettlementLineAsync" />
+    }
+
+    @if (view == "review")
+    {
+        <WeekReviewPanel CanAnswer="CanAnswerWeeks" />
     }
 
     @* ---- Chase list: conditional panel — absent while loading, absent when clear. ---- *@

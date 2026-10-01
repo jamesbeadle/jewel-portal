@@ -1,6 +1,6 @@
 @namespace Jewel.JPMS.Features.Labour.MyDay
 
-<div class="flex items-center justify-between gap-3 border-t border-line/60 py-1.5 text-sm">
+<div class="flex items-center justify-between gap-3 border-t border-line/60 py-1.5 text-sm @(IsAfterToday ? "opacity-60" : "")">
     <span class="text-content-subtle min-w-0">
         @Row.Date.ToString(DayFormat) · @Row.ProjectName
         @if (Row.IsLogged)
@@ -22,9 +22,17 @@
         {
             <Pill Tone="Tone.Muted">Off</Pill>
         }
-        @if (Row.IsMissed)
+        @if (Row.IsPlannedOff)
+        {
+            <Pill Tone="Tone.Info" Title="The office has you down as not in this day">Not in</Pill>
+        }
+        @if (IsNothingYet)
         {
             <Pill Tone="Tone.Warning">Nothing</Pill>
+        }
+        @if (IsStillToCome)
+        {
+            <span class="text-content-faint">—</span>
         }
         @if (Row.CanBeAmended)
         {
@@ -43,8 +51,12 @@
     [Parameter, EditorRequired] public MyWeekDay Row { get; set; } = default!;
     /// <summary>Today's empty day is filled in from the site card above, so only a day already gone offers Add.</summary>
     [Parameter] public bool IsBeforeToday { get; set; }
+    /// <summary>A day still to come reads as a plan — the office's not in, or nothing yet — never as missed.</summary>
+    [Parameter] public bool IsAfterToday { get; set; }
     [Parameter] public EventCallback OnAmend { get; set; }
     [Parameter] public EventCallback OnAdd { get; set; }
 
-    private bool CanBeAdded => Row.IsMissed && IsBeforeToday;
+    private bool CanBeAdded => Row.CanBeAdded && IsBeforeToday;
+    private bool IsNothingYet => Row.IsMissed && !Row.IsPlannedOff && !IsAfterToday;
+    private bool IsStillToCome => Row.IsMissed && !Row.IsPlannedOff && IsAfterToday;
 }

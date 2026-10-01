@@ -1,0 +1,36 @@
+@namespace Jewel.JPMS.Features.Labour.Planner
+@using static Jewel.JPMS.Features.Labour.LabourDisplay
+
+<Panel Class="mb-6" BodyClass="p-5">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+        <MetricStat Label="Forecast labour cost" Value="@Pounds(Plan.PlannedCost)" />
+        <article>
+            <p class="text-sm text-content-subtle">Planned worker-days</p>
+            <p class="mt-1 text-xl font-semibold text-content tracking-tight tabular-nums">@Days(PlannedDays)</p>
+            <p class="text-xs text-content-subtle">@NotInDays not in</p>
+        </article>
+        <article>
+            <p class="text-sm text-content-subtle">Actual so far</p>
+            <p class="mt-1 text-xl font-semibold text-content tracking-tight tabular-nums">@Pounds(Plan.ActualCost)</p>
+            <p class="text-xs text-content-subtle">@LoggedDays logged · @Variance against forecast</p>
+        </article>
+    </div>
+</Panel>
+
+@code {
+    /// <summary>The week's forecast against its actual, side by side.</summary>
+    [Parameter, EditorRequired] public LabourWeekPlan Plan { get; set; } = default!;
+
+    private decimal PlannedDays => Plan.Workers.Sum(worker => worker.PlannedDays);
+    private int LoggedDays => Plan.Workers.Sum(worker => worker.LoggedDays);
+    private int NotInDays => Plan.Workers.Sum(worker => worker.Days.Count(day => !day.IsIn));
+
+    private string Variance
+    {
+        get
+        {
+            var difference = Plan.ActualCost - Plan.PlannedCost;
+            return difference >= 0 ? $"+{Pounds(difference)}" : $"−{Pounds(-difference)}";
+        }
+    }
+}

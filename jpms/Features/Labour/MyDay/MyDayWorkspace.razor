@@ -40,7 +40,7 @@
                 {
                     <p class="text-xs text-content-subtle mb-4">Only the sites you're on the worker list for show here — ask your Project Manager to add you to another.</p>
                 }
-                <MyDayWeekPanel Week="day.Week" Projects="day.Projects" Today="day.WorkDate" RecentCodes="RecentCodesOf(day)" />
+                <MyDayCalendar Projects="day.Projects" Today="day.WorkDate" RecentCodes="RecentCodesOf(day)" />
                 <MyDayRejectedPanel Rejected="day.Rejected" />
             }
             @if (Day is { IsLinked: false })

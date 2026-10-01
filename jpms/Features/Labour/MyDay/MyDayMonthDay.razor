@@ -1,0 +1,25 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+
+<div class="mt-3">
+    <p class="text-sm font-medium text-content">@Date.ToString(DayFormat)</p>
+    @if (Rows.Count == 0)
+    {
+        <p class="text-sm text-content-subtle">Nothing recorded — you weren't on a site's list that day.</p>
+    }
+    @foreach (var row in Rows)
+    {
+        <MyDayWeekRow Row="row" IsBeforeToday="@(row.Date < Today)" IsAfterToday="@(row.Date > Today)"
+                      OnAmend="() => OnAmend.InvokeAsync(row)" OnAdd="() => OnAdd.InvokeAsync(row)" />
+    }
+</div>
+
+@code {
+    private const string DayFormat = "dddd d MMMM";
+
+    /// <summary>The day tapped on the grid: its rows, each with the same Amend or Add the week offers.</summary>
+    [Parameter, EditorRequired] public DateTimeOffset Date { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<MyWeekDay> Rows { get; set; } = Array.Empty<MyWeekDay>();
+    [Parameter, EditorRequired] public DateTimeOffset Today { get; set; }
+    [Parameter] public EventCallback<MyWeekDay> OnAmend { get; set; }
+    [Parameter] public EventCallback<MyWeekDay> OnAdd { get; set; }
+}

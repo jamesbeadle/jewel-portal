@@ -42,6 +42,7 @@ public sealed class MyAmendSiteDayHandler : ICommandHandler<MyAmendSiteDay, Ackn
     {
         var worker = await WorkerByEmail.ResolveAsync(context, email, cancellationToken);
         var timesheet = await OwnOpenTimesheetAsync(command.TimesheetId, worker, cancellationToken);
+        await WorkerWeekLock.EnsureOpenAsync(context, worker.WorkerId, timesheet.WorkedOn, cancellationToken);
         var projectId = await MyDaySiteMove.DestinationAsync(context, worker, timesheet.ProjectId, command.ProjectId, timesheet.WorkedOn, cancellationToken);
         await CheckAsync(command, projectId, cancellationToken);
         var note = await OwnNoteAsync(timesheet, email, cancellationToken);

@@ -1,0 +1,57 @@
+@namespace Jewel.JPMS.Features.Labour.MyDay
+
+<div class="mt-3 space-y-2">
+    @if (Week.Submission is { IsWithTheOffice: true } waiting)
+    {
+        <p class="text-sm"><Pill Tone="Tone.Info">With the office</Pill> <span class="text-content-subtle">Sent @waiting.SubmittedAt.ToLocalTime().ToString(WhenFormat). Nothing in it can change until they answer.</span></p>
+    }
+    @if (Week.Submission is { IsSignedOff: true } signed)
+    {
+        <p class="text-sm"><Pill Tone="Tone.Positive">Signed off</Pill> <span class="text-content-subtle">By @signed.ReviewedByEmail on @When(signed.ReviewedAt).</span></p>
+    }
+    @if (Week.Submission is { IsSentBack: true } sentBack)
+    {
+        <Notice Tone="Tone.Warning" Title="Sent back by the office">
+            <p>@sentBack.ReviewNote</p>
+            <p class="text-xs mt-1">@sentBack.ReviewedByEmail, @When(sentBack.ReviewedAt). Amend the days and submit the week again.</p>
+        </Notice>
+    }
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative">@error</Notice>
+    }
+    @if (Week.CanBeSubmitted)
+    {
+        <button type="button" class="btn-primary w-full" disabled="@isBusy" @onclick="SubmitAsync">@(isBusy ? "Sending…" : "Submit week to the office")</button>
+    }
+    @if (ShowsWhyNot)
+    {
+        <p class="text-xs text-content-subtle">@Week.SubmitRefusal</p>
+    }
+</div>
+
+@code {
+    private const string WhenFormat = "ddd d MMM, HH:mm";
+
+    /// <summary>Where the week stands with the office, and the one button that sends it: offered once
+    /// Friday is logged and every working day is accounted for; the reason it is not yet is said in a line.</summary>
+    [Parameter, EditorRequired] public MyLabourWeek Week { get; set; } = default!;
+    [Parameter] public EventCallback OnSubmit { get; set; }
+
+    private bool isBusy;
+    private string? error;
+
+    private bool ShowsWhyNot => !Week.CanBeSubmitted && Week.IsOpenToSubmit && Week.HasSubmitRefusal;
+
+    private static string When(DateTimeOffset? moment) => moment?.ToLocalTime().ToString(WhenFormat) ?? "";
+
+    private async Task SubmitAsync()
+    {
+        error = null;
+        isBusy = true;
+        try { await OnSubmit.InvokeAsync(); }
+        catch (CommandFailedException refusal) { error = refusal.Message; }
+        catch (Exception) { error = "The week didn't go through — check your signal and try again."; }
+        finally { isBusy = false; }
+    }
+}
