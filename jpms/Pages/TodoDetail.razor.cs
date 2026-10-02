@@ -65,9 +65,9 @@ public partial class TodoDetail
         StateHasChanged();
         if (!Session.IsApproved || !HasInternalRole) { itemLoading = false; return; }
 
-        // The item, the project pool and the assignee pool are independent — they go out
-        // together rather than one after another.
-        var loads = new List<Task> { LoadItemAsync() };
+        // The item, its neighbours in the pile, the project pool and the assignee pool are
+        // independent — they go out together rather than one after another.
+        var loads = new List<Task> { LoadItemAsync(), LoadNeighboursAsync() };
         if (CanListProjects) loads.Add(LoadProjectPoolAsync());
         if (CanManage) loads.Add(LoadAssigneeOptionsAsync());
         await Task.WhenAll(loads);
@@ -125,11 +125,15 @@ public partial class TodoDetail
     private async Task ToggleCompleteAsync()
     {
         if (item is null) return;
-        await RunAsync(() => TodoStore.UpdateAsync(new UpdateTodoItem(
-            item.TodoItemId, item.Title, NullIfBlank(item.Notes),
-            item.AssigneeRole, item.AssigneePersonEmail, item.DueAt,
-            !item.IsComplete)));
+        await RunAsync(CompleteCommand(!item.IsComplete));
     }
+
+    // The full-row update that only turns IsComplete — behind Mark done, Reopen and Done & next.
+    private Func<Task> CompleteCommand(bool isComplete) =>
+        () => TodoStore.UpdateAsync(new UpdateTodoItem(
+            item!.TodoItemId, item.Title, NullIfBlank(item.Notes),
+            item.AssigneeRole, item.AssigneePersonEmail, item.DueAt,
+            isComplete));
 
     private async Task<bool> ReassignAsync(TodoAssignee? assignee)
     {

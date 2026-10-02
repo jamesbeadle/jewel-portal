@@ -6,6 +6,7 @@
 @inject ITodoStore TodoStore
 @inject NavigationManager Nav
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
+@inject TodoViewStorage ViewStorage
 
 <PageTitle>@(item is null ? "To-do" : item.Reference) · JBB Portal</PageTitle>
 
@@ -27,7 +28,13 @@
     }
     else
     {
-        <a href="/todos" class="text-xs text-content-subtle hover:text-content underline underline-offset-2">← All to-dos</a>
+        <div class="flex items-center justify-between gap-4">
+            <a href="/todos" class="text-xs text-content-subtle hover:text-content underline underline-offset-2">← All to-dos</a>
+            @if (item is not null)
+            {
+                <TodoStepper Neighbours="@neighbours" Busy="@busy" OnStep="OpenNeighbour" />
+            }
+        </div>
 
         <LoadGate IsLoading="@itemLoading" Prominent="true" Label="Loading the to-do">
         @if (loadFailed)
@@ -67,6 +74,11 @@
                         <button type="button" class="btn-primary" disabled="@busy" @onclick="ToggleCompleteAsync">
                             @(item.IsComplete ? "Reopen" : "Mark done")
                         </button>
+                    }
+                    @if (CanComplete && CanStepOn)
+                    {
+                        <button type="button" class="btn-primary" disabled="@busy" @onclick="CompleteAndStepOnAsync"
+                                title="@($"Mark done, then open {neighbours.NextReference}")">Done &amp; next →</button>
                     }
                 </Primary>
             </PageHeader>
