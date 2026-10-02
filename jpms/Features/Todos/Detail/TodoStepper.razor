@@ -1,0 +1,24 @@
+@namespace Jewel.JPMS.Features.Todos.Detail
+@using Jewel.JPMS.Contracts.Todos
+
+@* Previous / Next through the reader's open pile, beside the way back to the list. Each button
+   names the item it goes to, so a hover says where the step lands before it is taken. *@
+
+<div class="flex items-center gap-2">
+    <button type="button" class="btn-ghost text-xs" disabled="@(!Neighbours.HasPrevious || Busy)"
+            title="@StepTitle(Neighbours.Previous)" @onclick="() => Step(Neighbours.Previous)">← Previous</button>
+    <button type="button" class="btn-ghost text-xs" disabled="@(!Neighbours.HasNext || Busy)"
+            title="@StepTitle(Neighbours.Next)" @onclick="() => Step(Neighbours.Next)">Next →</button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TodoNeighbours Neighbours { get; set; } = TodoNeighbours.None;
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback<TodoItem> OnStep { get; set; }
+
+    private static string StepTitle(TodoItem? neighbour) =>
+        neighbour is null ? "No other open to-do this way" : $"{neighbour.Reference} — {neighbour.Title}";
+
+    private Task Step(TodoItem? neighbour) =>
+        neighbour is null ? Task.CompletedTask : OnStep.InvokeAsync(neighbour);
+}
