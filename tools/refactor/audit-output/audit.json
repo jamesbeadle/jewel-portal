@@ -1,22 +1,22 @@
 {
-  "generatedAt": "2026-10-01T07:55:43+00:00",
+  "generatedAt": "2026-10-02T12:18:37+00:00",
   "kitVersion": "1.12.1",
   "score": {
-    "overall": 78.4,
+    "overall": 78.5,
     "groups": [
       {
         "group": "Standard baseline checks",
-        "score": 70.1,
+        "score": 70.2,
         "weight": 60
       },
       {
         "group": "Design pattern file count",
-        "score": 92.5,
+        "score": 92.4,
         "weight": 20
       },
       {
         "group": "Prose",
-        "score": 93.4,
+        "score": 93.5,
         "weight": 20
       },
       {
@@ -39,9 +39,9 @@
         "zeroAt": 0.5,
         "unit": "files",
         "isMeasured": true,
-        "offenders": 788,
-        "measuredAgainst": 4828,
-        "score": 67.4
+        "offenders": 793,
+        "measuredAgainst": 4886,
+        "score": 67.5
       },
       {
         "key": "worstFile",
@@ -64,8 +64,8 @@
         "unit": "functions",
         "isMeasured": true,
         "offenders": 836,
-        "measuredAgainst": 9501,
-        "score": 64.8
+        "measuredAgainst": 9630,
+        "score": 65.3
       },
       {
         "key": "elseBlocks",
@@ -75,9 +75,9 @@
         "zeroAt": 0.5,
         "unit": "branches",
         "isMeasured": true,
-        "offenders": 1183,
-        "measuredAgainst": 13188,
-        "score": 82.1
+        "offenders": 1181,
+        "measuredAgainst": 13291,
+        "score": 82.2
       },
       {
         "key": "duplication",
@@ -99,8 +99,8 @@
         "zeroAt": 50,
         "unit": "thousand lines",
         "isMeasured": true,
-        "offenders": 16307,
-        "measuredAgainst": 308.31,
+        "offenders": 16311,
+        "measuredAgainst": 311.07,
         "score": 0.0
       },
       {
@@ -112,7 +112,7 @@
         "unit": "thousand lines",
         "isMeasured": true,
         "offenders": 135,
-        "measuredAgainst": 308.31,
+        "measuredAgainst": 311.07,
         "score": 97.8
       },
       {
@@ -124,7 +124,7 @@
         "unit": "components and functions",
         "isMeasured": true,
         "offenders": 27,
-        "measuredAgainst": 9651,
+        "measuredAgainst": 9780,
         "score": 97.2
       },
       {
@@ -136,8 +136,8 @@
         "unit": "thousand lines",
         "isMeasured": true,
         "offenders": 4117,
-        "measuredAgainst": 308.31,
-        "score": 55.5
+        "measuredAgainst": 311.07,
+        "score": 55.9
       },
       {
         "key": "deepIndentation",
@@ -148,8 +148,8 @@
         "unit": "thousand lines",
         "isMeasured": true,
         "offenders": 3064,
-        "measuredAgainst": 308.31,
-        "score": 66.9
+        "measuredAgainst": 311.07,
+        "score": 67.2
       },
       {
         "key": "functionNames",
@@ -159,8 +159,8 @@
         "zeroAt": 0.1,
         "unit": "functions",
         "isMeasured": true,
-        "offenders": 57,
-        "measuredAgainst": 9501,
+        "offenders": 58,
+        "measuredAgainst": 9630,
         "score": 94.0
       },
       {
@@ -171,9 +171,9 @@
         "zeroAt": 0.5,
         "unit": "predicted files",
         "isMeasured": true,
-        "offenders": 186,
-        "measuredAgainst": 2467,
-        "score": 84.9
+        "offenders": 187,
+        "measuredAgainst": 2468,
+        "score": 84.8
       },
       {
         "key": "entityFileCounts",
@@ -195,8 +195,8 @@
         "zeroAt": 0.25,
         "unit": "branches",
         "isMeasured": true,
-        "offenders": 276,
-        "measuredAgainst": 13188,
+        "offenders": 278,
+        "measuredAgainst": 13291,
         "score": 91.6
       },
       {
@@ -207,8 +207,8 @@
         "zeroAt": 0.25,
         "unit": "branches",
         "isMeasured": true,
-        "offenders": 234,
-        "measuredAgainst": 13188,
+        "offenders": 236,
+        "measuredAgainst": 13291,
         "score": 92.9
       },
       {
@@ -220,8 +220,8 @@
         "unit": "functions",
         "isMeasured": true,
         "offenders": 34,
-        "measuredAgainst": 9501,
-        "score": 96.4
+        "measuredAgainst": 9630,
+        "score": 96.5
       },
       {
         "key": "handRolledWidgets",
@@ -231,8 +231,8 @@
         "zeroAt": 0.5,
         "unit": "widget slots",
         "isMeasured": true,
-        "offenders": 699,
-        "measuredAgainst": 2678,
+        "offenders": 706,
+        "measuredAgainst": 2703,
         "score": 47.8
       },
       {
@@ -244,7 +244,7 @@
         "unit": "write doors",
         "isMeasured": true,
         "offenders": 3,
-        "measuredAgainst": 714,
+        "measuredAgainst": 716,
         "score": 99.2
       }
     ]
@@ -252,22 +252,22 @@
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 788,
-      "totalFiles": 4828,
-      "totalLines": 308314,
+      "filesOverLimit": 793,
+      "totalFiles": 4886,
+      "totalLines": 311067,
       "worstFileLines": 551,
       "worstFileTimesOverLimit": 4.51
     },
     "functionShape": {
       "limit": 30,
       "functionsOverLimit": 836,
-      "totalFunctions": 9501,
-      "elseBlocks": 1183,
-      "ifBlocks": 13188,
+      "totalFunctions": 9630,
+      "elseBlocks": 1181,
+      "ifBlocks": 13291,
       "measurementIsHeuristic": true
     },
     "functionNames": {
-      "overlongFunctionNames": 57,
+      "overlongFunctionNames": 58,
       "maxWords": 5,
       "maxLength": 40
     },
@@ -283,12 +283,12 @@
       "carriedFromBaseline": true
     },
     "naming": {
-      "bannedAbbreviationHits": 783,
-      "unprefixedBooleans": 2049
+      "bannedAbbreviationHits": 800,
+      "unprefixedBooleans": 2054
     },
     "comments": {
-      "explanatoryCommentLines": 16307,
-      "filesWithComments": 2303,
+      "explanatoryCommentLines": 16311,
+      "filesWithComments": 2305,
       "taskMarkers": 52
     },
     "magicValues": {
@@ -299,62 +299,62 @@
     "prose": {
       "longMemberChainLines": 4117,
       "deeplyIndentedLines": 3064,
-      "overlongLines": 1968,
+      "overlongLines": 1984,
       "measurementIsHeuristic": true
     },
     "conditions": {
-      "tangledConditionLines": 276,
-      "literalComparisonLines": 234,
+      "tangledConditionLines": 278,
+      "literalComparisonLines": 236,
       "measurementIsHeuristic": true
     },
     "orphans": {
       "orphanFunctions": 21,
-      "functionsExamined": 9501
+      "functionsExamined": 9630
     },
     "designPatterns": {
-      "roleFamilies": 188,
-      "predictedFiles": 2467,
-      "predictedFilesMissing": 186,
+      "roleFamilies": 196,
+      "predictedFiles": 2468,
+      "predictedFilesMissing": 187,
       "entities": 19,
       "entitiesOutOfRange": 0,
       "measurementIsHeuristic": true
     },
     "inventory": {
-      "pages": 119,
+      "pages": 120,
       "components": 150,
       "orphanComponents": 6,
       "averagePageLines": 173
     },
     "siteDefinition": {
-      "routes": 132,
-      "views": 696,
-      "siteComponents": 665,
+      "routes": 133,
+      "views": 716,
+      "siteComponents": 685,
       "catalogue": 34,
-      "widgetUsages": 1979,
-      "handRolledElements": 699,
-      "widgetSlots": 2678,
-      "viewsWithHandRolled": 316,
+      "widgetUsages": 1997,
+      "handRolledElements": 706,
+      "widgetSlots": 2703,
+      "viewsWithHandRolled": 323,
       "designSheets": 0,
       "designsLastChecked": "never",
       "brandCheckedAt": "never"
     },
     "inputValidation": {
-      "schemaTables": 216,
-      "limitedColumns": 1301,
-      "writeDoors": 714,
+      "schemaTables": 217,
+      "limitedColumns": 1304,
+      "writeDoors": 716,
       "unvalidatedDoors": 0,
       "looserLimits": 3
     },
     "fileAreas": {
-      "totalFiles": 5909,
-      "api": 2451,
-      "frontend": 1457,
-      "contracts": 767,
-      "database": 314,
-      "connector": 254,
+      "totalFiles": 5976,
+      "api": 2470,
+      "frontend": 1487,
+      "contracts": 775,
+      "database": 316,
+      "connector": 256,
       "docs": 232,
+      "tests": 195,
       "tooling": 192,
-      "tests": 189,
       "infrastructure": 38,
       "worker": 14,
       "other": 1
@@ -365,9 +365,9 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 788,
-        "totalFiles": 4828,
-        "totalLines": 308314,
+        "filesOverLimit": 793,
+        "totalFiles": 4886,
+        "totalLines": 311067,
         "worstFileLines": 551,
         "worstFileTimesOverLimit": 4.51
       },
@@ -382,7 +382,7 @@
         },
         {
           "file": "jpms/Services/Navigation/SidebarFolders.cs",
-          "lines": 463
+          "lines": 465
         },
         {
           "file": "jpms/Services/HttpLabourStore.cs",
@@ -814,7 +814,7 @@
         },
         {
           "file": "api/Data/JpmsContext.cs",
-          "lines": 282
+          "lines": 283
         },
         {
           "file": "api/Features/Ai/Tools/Actions/CommercialActions.ClaimsAndValuations.cs",
@@ -1029,7 +1029,15 @@
           "lines": 251
         },
         {
+          "file": "api/Features/Labour/LabourFeatureRegistration.cs",
+          "lines": 249
+        },
+        {
           "file": "jpms/Pages/ProjectCashflow.razor.cs",
+          "lines": 249
+        },
+        {
+          "file": "jpms/Program.cs",
           "lines": 249
         },
         {
@@ -1058,10 +1066,6 @@
         },
         {
           "file": "api/Features/Ai/Tools/Actions/SiteAndProgressActions.ProgressProgramme.cs",
-          "lines": 246
-        },
-        {
-          "file": "jpms/Program.cs",
           "lines": 246
         },
         {
@@ -1277,6 +1281,10 @@
           "lines": 223
         },
         {
+          "file": "contracts/Models/Labour.cs",
+          "lines": 222
+        },
+        {
           "file": "jpms/Features/Sales/LeadImaginePanel.razor",
           "lines": 222
         },
@@ -1317,10 +1325,6 @@
           "lines": 219
         },
         {
-          "file": "api/Features/Labour/LabourFeatureRegistration.cs",
-          "lines": 218
-        },
-        {
           "file": "api/Features/Ai/Tools/Actions/CommercialActions.Financials.cs",
           "lines": 217
         },
@@ -1350,10 +1354,6 @@
         },
         {
           "file": "api/Features/Drawings/Geometry/DrawingTitleBlockReader.cs",
-          "lines": 216
-        },
-        {
-          "file": "contracts/Models/Labour.cs",
           "lines": 216
         },
         {
@@ -1461,6 +1461,10 @@
           "lines": 206
         },
         {
+          "file": "jpms/Pages/TodoDetail.razor.cs",
+          "lines": 205
+        },
+        {
           "file": "jpms/Features/Sales/StrategyFormModal.razor",
           "lines": 205
         },
@@ -1503,10 +1507,6 @@
         {
           "file": "jpms/Features/Procurement/TenderInviteComposerModal.razor.cs",
           "lines": 202
-        },
-        {
-          "file": "jpms/Pages/TodoDetail.razor.cs",
-          "lines": 201
         },
         {
           "file": "jpms/Components/RequestForm.razor",
@@ -1827,6 +1827,10 @@
         {
           "file": "jpms/Features/Triage/Panels/Actions/StageRequestTransitionAction.razor",
           "lines": 175
+        },
+        {
+          "file": "jpms/Features/Labour/LabourRouteRegistration.cs",
+          "lines": 174
         },
         {
           "file": "jpms/Pages/ProfitSummary.razor.cs",
@@ -2169,10 +2173,6 @@
           "lines": 153
         },
         {
-          "file": "jpms/Features/Labour/LabourRouteRegistration.cs",
-          "lines": 153
-        },
-        {
           "file": "jpms/Pages/SalesStrategies.razor",
           "lines": 153
         },
@@ -2369,6 +2369,10 @@
           "lines": 141
         },
         {
+          "file": "jpms/Pages/LabourOverview.razor.cs",
+          "lines": 141
+        },
+        {
           "file": "jpms/Features/Triage/Panels/Actions/StageVariationDecisionAction.razor",
           "lines": 141
         },
@@ -2389,15 +2393,15 @@
           "lines": 140
         },
         {
-          "file": "jpms/Pages/LabourOverview.razor.cs",
-          "lines": 140
-        },
-        {
           "file": "jpms/Components/ErrorToast.razor",
           "lines": 140
         },
         {
           "file": "jpms/Features/Cvr/RunningProfitTable.razor",
+          "lines": 140
+        },
+        {
+          "file": "jpms/Pages/LabourOverview.razor",
           "lines": 140
         },
         {
@@ -2553,8 +2557,8 @@
           "lines": 134
         },
         {
-          "file": "jpms/Pages/LabourOverview.razor",
-          "lines": 134
+          "file": "api/Features/Ai/Tools/AiWeekReviewTools.cs",
+          "lines": 133
         },
         {
           "file": "api/Features/ValuationInvoices/XeroRaise/ValuationInvoiceXeroRaisePlanner.cs",
@@ -2653,6 +2657,10 @@
           "lines": 129
         },
         {
+          "file": "api/Features/Ai/Tools/AiToolCatalogue.cs",
+          "lines": 129
+        },
+        {
           "file": "api/Features/Labour/Commands/WorkerDayCorrectionByNameSlices.cs",
           "lines": 129
         },
@@ -2670,10 +2678,6 @@
         },
         {
           "file": "api/Features/Ai/Tools/Actions/AiActionExecutor.cs",
-          "lines": 128
-        },
-        {
-          "file": "api/Features/Ai/Tools/AiToolCatalogue.cs",
           "lines": 128
         },
         {
@@ -3041,6 +3045,10 @@
           "lines": 114
         },
         {
+          "file": "api/Features/Labour/Commands/WeekReviewByNameSlices.cs",
+          "lines": 114
+        },
+        {
           "file": "api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.cs",
           "lines": 114
         },
@@ -3098,6 +3106,10 @@
         },
         {
           "file": "jpms/Components/WorkOrderForm.razor.cs",
+          "lines": 112
+        },
+        {
+          "file": "jpms/Features/Labour/MyDay/MyDayWeekPanel.razor",
           "lines": 112
         },
         {
@@ -3285,6 +3297,10 @@
           "lines": 107
         },
         {
+          "file": "jpms/Pages/TodoDetail.razor",
+          "lines": 107
+        },
+        {
           "file": "api/Features/Ai/Tools/Actions/SubcontractorsAndLeadsActions.DirectoryUsers.cs",
           "lines": 106
         },
@@ -3461,6 +3477,10 @@
           "lines": 102
         },
         {
+          "file": "api/Features/Labour/Commands/SignOffWorkerWeekHandler.cs",
+          "lines": 102
+        },
+        {
           "file": "api/Features/Procurement/Commands/CreateManualWorkOrderHandler.cs",
           "lines": 102
         },
@@ -3531,9 +3551,9 @@
       "summary": {
         "limit": 30,
         "functionsOverLimit": 836,
-        "totalFunctions": 9501,
-        "elseBlocks": 1183,
-        "ifBlocks": 13188,
+        "totalFunctions": 9630,
+        "elseBlocks": 1181,
+        "ifBlocks": 13291,
         "measurementIsHeuristic": true
       },
       "offenders": [
@@ -3545,7 +3565,7 @@
         },
         {
           "file": "jpms/Services/Navigation/SidebarFolders.cs",
-          "lines": 420,
+          "lines": 422,
           "name": "SidebarFolderInfo",
           "line": 44
         },
@@ -3640,6 +3660,12 @@
           "line": 8
         },
         {
+          "file": "api/Features/Labour/LabourFeatureRegistration.cs",
+          "lines": 239,
+          "name": "AddLabourFeature",
+          "line": 10
+        },
+        {
           "file": "api/Features/Ai/Tools/Actions/SiteAndProgressActions.ProgressProgramme.cs",
           "lines": 227,
           "name": "ProgressProgrammeActions",
@@ -3680,12 +3706,6 @@
           "lines": 212,
           "name": "TimesheetActions",
           "line": 9
-        },
-        {
-          "file": "api/Features/Labour/LabourFeatureRegistration.cs",
-          "lines": 208,
-          "name": "AddLabourFeature",
-          "line": 10
         },
         {
           "file": "api/Features/Ai/Tools/AiCommercialTools.Variation.cs",
@@ -3842,7 +3862,7 @@
     "functionNames": {
       "name": "functionNames",
       "summary": {
-        "overlongFunctionNames": 57,
+        "overlongFunctionNames": 58,
         "maxWords": 5,
         "maxLength": 40
       },
@@ -3903,6 +3923,11 @@
           "name": "ClientReferencesByCostCodeAsync"
         },
         {
+          "file": "api/Features/Labour/Commands/SignOffWorkerWeekHandler.cs",
+          "line": 74,
+          "name": "RecordOffDaysAsAbsencesAsync"
+        },
+        {
           "file": "api/Features/Labour/LabourIdentifierFactory.cs",
           "line": 11,
           "name": "NextXeroLineTimesheetCoverId"
@@ -3914,7 +3939,7 @@
         },
         {
           "file": "api/Features/Labour/LabourIdentifierFactory.cs",
-          "line": 19,
+          "line": 20,
           "name": "NextCostCodeXeroMappingId"
         },
         {
@@ -4091,11 +4116,6 @@
           "file": "jpms/Services/HttpIntakeQueue.cs",
           "line": 102,
           "name": "CreateBidPackageFromMessageAsync"
-        },
-        {
-          "file": "jpms/Services/HttpIntakeQueue.cs",
-          "line": 105,
-          "name": "CreateWorkOrderFromMessageAsync"
         }
       ]
     },
@@ -4281,8 +4301,8 @@
     "naming": {
       "name": "naming",
       "summary": {
-        "bannedAbbreviationHits": 783,
-        "unprefixedBooleans": 2049
+        "bannedAbbreviationHits": 800,
+        "unprefixedBooleans": 2054
       },
       "offenders": {
         "abbreviations": [
@@ -4744,8 +4764,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 16307,
-        "filesWithComments": 2303,
+        "explanatoryCommentLines": 16311,
+        "filesWithComments": 2305,
         "taskMarkers": 52
       },
       "offenders": [
@@ -5326,31 +5346,35 @@
         "repeatedLiterals": [
           {
             "literal": "button",
-            "occurrences": 965
+            "occurrences": 984
           },
           {
             "literal": "text-xs text-content-subtle",
-            "occurrences": 279
+            "occurrences": 286
           },
           {
             "literal": "string",
-            "occurrences": 261
+            "occurrences": 262
           },
           {
             "literal": "text-right whitespace-nowrap",
             "occurrences": 173
           },
           {
-            "literal": "text-content",
-            "occurrences": 156
-          },
-          {
             "literal": "text-right",
-            "occurrences": 156
+            "occurrences": 160
           },
           {
             "literal": "whitespace-nowrap",
-            "occurrences": 155
+            "occurrences": 159
+          },
+          {
+            "literal": "text-content",
+            "occurrences": 157
+          },
+          {
+            "literal": "text-content-subtle",
+            "occurrences": 152
           },
           {
             "literal": "number",
@@ -5358,15 +5382,11 @@
           },
           {
             "literal": "btn-primary",
-            "occurrences": 147
-          },
-          {
-            "literal": "text-content-subtle",
-            "occurrences": 147
+            "occurrences": 148
           },
           {
             "literal": "btn-secondary",
-            "occurrences": 142
+            "occurrences": 147
           },
           {
             "literal": "eyebrow",
@@ -5409,12 +5429,16 @@
             "occurrences": 78
           },
           {
+            "literal": "font-medium text-content",
+            "occurrences": 76
+          },
+          {
             "literal": "noopener",
             "occurrences": 76
           },
           {
-            "literal": "font-medium text-content",
-            "occurrences": 74
+            "literal": "yyyy-MM-dd",
+            "occurrences": 75
           },
           {
             "literal": "text-sm text-content-subtle italic",
@@ -5422,10 +5446,6 @@
           },
           {
             "literal": "projectId",
-            "occurrences": 73
-          },
-          {
-            "literal": "yyyy-MM-dd",
             "occurrences": 73
           },
           {
@@ -5452,7 +5472,7 @@
       "summary": {
         "longMemberChainLines": 4117,
         "deeplyIndentedLines": 3064,
-        "overlongLines": 1968,
+        "overlongLines": 1984,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -6067,8 +6087,8 @@
     "conditions": {
       "name": "conditions",
       "summary": {
-        "tangledConditionLines": 276,
-        "literalComparisonLines": 234,
+        "tangledConditionLines": 278,
+        "literalComparisonLines": 236,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -6251,15 +6271,19 @@
           },
           {
             "file": "api/Features/Labour/Commands/MyAmendSiteDaySlice.cs",
-            "line": 78
+            "line": 79
           },
           {
             "file": "api/Features/Labour/Commands/MyLogMissedSiteDaySlice.cs",
-            "line": 68
+            "line": 69
           },
           {
             "file": "api/Features/Labour/Commands/MySiteSignOutSlice.cs",
-            "line": 85
+            "line": 86
+          },
+          {
+            "file": "api/Features/Labour/Commands/SignOffWorkerWeekHandler.cs",
+            "line": 65
           },
           {
             "file": "api/Features/Labour/Commands/SubmitWorkerWeekByNameSlice.cs",
@@ -6268,10 +6292,6 @@
           {
             "file": "api/Features/Labour/Commands/SubmitWorkerWeekSlice.cs",
             "line": 48
-          },
-          {
-            "file": "api/Features/Labour/Commands/WorkerWeekApprovalByNameSlices.cs",
-            "line": 28
           }
         ],
         "literalComparisons": [
@@ -6482,7 +6502,7 @@
       "name": "orphans",
       "summary": {
         "orphanFunctions": 21,
-        "functionsExamined": 9501
+        "functionsExamined": 9630
       },
       "offenders": [
         {
@@ -6595,9 +6615,9 @@
     "designPatterns": {
       "name": "designPatterns",
       "summary": {
-        "roleFamilies": 188,
-        "predictedFiles": 2467,
-        "predictedFilesMissing": 186,
+        "roleFamilies": 196,
+        "predictedFiles": 2468,
+        "predictedFilesMissing": 187,
         "entities": 19,
         "entitiesOutOfRange": 0,
         "measurementIsHeuristic": true
@@ -6619,8 +6639,10 @@
           "bills": 9,
           "body": 5,
           "builder": 11,
-          "card": 16,
+          "calendar": 4,
+          "card": 17,
           "catalogue": 4,
+          "cell": 5,
           "check": 5,
           "claim": 10,
           "client": 16,
@@ -6633,6 +6655,8 @@
           "context": 8,
           "contracts": 9,
           "control": 7,
+          "dates": 4,
+          "days": 4,
           "detail": 20,
           "details": 8,
           "dialog": 22,
@@ -6642,13 +6666,13 @@
           "draft": 21,
           "drawing": 4,
           "drawings": 6,
-          "editor": 16,
+          "editor": 17,
           "email": 16,
           "emails": 13,
           "endpoint": 490,
           "endpoints": 52,
           "entities": 46,
-          "entity": 27,
+          "entity": 28,
           "entry": 4,
           "export": 13,
           "extraction": 4,
@@ -6665,10 +6689,11 @@
           "forms": 4,
           "gate": 7,
           "gates": 20,
+          "grid": 4,
           "guard": 4,
           "guards": 4,
           "guides": 9,
-          "handler": 489,
+          "handler": 490,
           "handlers": 19,
           "header": 14,
           "helpers": 6,
@@ -6711,14 +6736,15 @@
           "pack": 4,
           "package": 10,
           "pane": 8,
-          "panel": 79,
+          "panel": 81,
           "people": 4,
           "photo": 4,
           "photos": 7,
           "picker": 11,
           "pill": 6,
           "placement": 4,
-          "planner": 7,
+          "plan": 4,
+          "planner": 8,
           "preview": 6,
           "progress": 4,
           "project": 41,
@@ -6730,12 +6756,12 @@
           "queue": 11,
           "queues": 4,
           "razor": 144,
-          "reader": 14,
+          "reader": 15,
           "reading": 6,
           "reads": 8,
           "recipients": 6,
           "record": 11,
-          "records": 9,
+          "records": 10,
           "references": 4,
           "register": 7,
           "registration": 110,
@@ -6748,9 +6774,9 @@
           "retention": 8,
           "revision": 4,
           "roles": 40,
-          "row": 45,
+          "row": 46,
           "rows": 16,
-          "rules": 12,
+          "rules": 13,
           "scope": 20,
           "search": 6,
           "section": 13,
@@ -6762,22 +6788,24 @@
           "settlement": 4,
           "sheet": 9,
           "site": 4,
-          "slice": 35,
-          "slices": 14,
+          "slice": 41,
+          "slices": 16,
           "staging": 5,
           "standing": 4,
           "state": 8,
           "statement": 5,
-          "status": 6,
+          "status": 7,
           "storage": 8,
-          "store": 108,
+          "store": 114,
           "strip": 10,
           "subcontractor": 4,
+          "submissions": 4,
           "summary": 14,
-          "table": 39,
+          "table": 40,
           "tags": 8,
           "text": 8,
-          "tools": 23,
+          "tools": 24,
+          "totals": 4,
           "trade": 4,
           "ups": 5,
           "user": 9,
@@ -6796,7 +6824,7 @@
         "patterns": [
           {
             "pattern": "every handler has a endpoint",
-            "predicted": 489,
+            "predicted": 490,
             "missing": [
               "api/Features/Subcontractors/Commands/AddComplianceDocumentVersionEndpoint.cs",
               "api/Features/Kpi/Commands/AddKpiPersonEndpoint.cs",
@@ -6843,6 +6871,7 @@
               "api/Features/Closeout/Commands/SendDefectToSupplierEndpoint.cs",
               "api/Features/Commercial/Commands/SetReconciliationPackageLockEndpoint.cs",
               "api/Features/Xero/Ledger/Allocation/SetXeroAllocationEndpoint.cs",
+              "api/Features/Labour/Commands/SignOffWorkerWeekEndpoint.cs",
               "api/Features/ValuationInvoices/XeroPayments/SyncValuationInvoicePaymentsFromXeroEndpoint.cs",
               "api/Features/Xero/Ledger/SyncXeroLedgerEndpoint.cs",
               "api/Features/Xero/SitePnl/SyncXeroSitePnlEndpoint.cs",
@@ -7098,6 +7127,7 @@
           "api/Features/Closeout/Commands/SendDefectToSupplierEndpoint.cs",
           "api/Features/Commercial/Commands/SetReconciliationPackageLockEndpoint.cs",
           "api/Features/Xero/Ledger/Allocation/SetXeroAllocationEndpoint.cs",
+          "api/Features/Labour/Commands/SignOffWorkerWeekEndpoint.cs",
           "api/Features/ValuationInvoices/XeroPayments/SyncValuationInvoicePaymentsFromXeroEndpoint.cs",
           "api/Features/Xero/Ledger/SyncXeroLedgerEndpoint.cs",
           "api/Features/Xero/SitePnl/SyncXeroSitePnlEndpoint.cs",
@@ -7151,8 +7181,7 @@
           "api/Features/Projects/Commands/SetProjectXeroContactValidation.cs",
           "api/Features/Subcontractors/Commands/UploadComplianceDocumentFileValidation.cs",
           "api/Features/ValuationInvoices/Commands/ValuationInvoiceWorkflowValidation.cs",
-          "api/Features/Commercial/Commands/ValuationReportValidation.cs",
-          "api/Features/Portal/Commands/AcceptMyWorkOrderHandler.cs"
+          "api/Features/Commercial/Commands/ValuationReportValidation.cs"
         ],
         "entityFileCounts": [
           {
@@ -7294,7 +7323,7 @@
     "inventory": {
       "name": "inventory",
       "summary": {
-        "pages": 119,
+        "pages": 120,
         "components": 150,
         "orphanComponents": 6,
         "averagePageLines": 173
@@ -7883,7 +7912,7 @@
           },
           {
             "page": "jpms/Pages/LabourOverview.razor",
-            "lines": 134,
+            "lines": 140,
             "widgets": [
               "modal",
               "panel",
@@ -7905,6 +7934,14 @@
           {
             "page": "jpms/Pages/SubcontractorCommunications.razor",
             "lines": 122,
+            "widgets": [
+              "loadGate",
+              "panel"
+            ]
+          },
+          {
+            "page": "jpms/Pages/TodoDetail.razor",
+            "lines": 107,
             "widgets": [
               "loadGate",
               "panel"
@@ -7945,12 +7982,9 @@
             ]
           },
           {
-            "page": "jpms/Pages/TodoDetail.razor",
-            "lines": 95,
-            "widgets": [
-              "loadGate",
-              "panel"
-            ]
+            "page": "jpms/Pages/LabourPlanner.razor",
+            "lines": 93,
+            "widgets": []
           },
           {
             "page": "jpms/Pages/FormsTraining.razor",
@@ -8250,7 +8284,7 @@
         "componentReuse": [
           {
             "component": "jpms/Components/Notice.razor",
-            "reusedBy": 236
+            "reusedBy": 241
           },
           {
             "component": "jpms/Components/FormField.razor",
@@ -8258,7 +8292,7 @@
           },
           {
             "component": "jpms/Components/Pill.razor",
-            "reusedBy": 138
+            "reusedBy": 141
           },
           {
             "component": "jpms/Components/Modal.razor",
@@ -8270,11 +8304,11 @@
           },
           {
             "component": "jpms/Components/Page.razor",
-            "reusedBy": 127
+            "reusedBy": 128
           },
           {
             "component": "jpms/Components/Panel.razor",
-            "reusedBy": 74
+            "reusedBy": 78
           },
           {
             "component": "jpms/Components/SearchSelect.razor",
@@ -8310,7 +8344,7 @@
           },
           {
             "component": "jpms/Components/SectionHeader.razor",
-            "reusedBy": 27
+            "reusedBy": 28
           },
           {
             "component": "jpms/Components/ToolbarButton.razor",
@@ -8318,7 +8352,7 @@
           },
           {
             "component": "jpms/Components/TableNote.razor",
-            "reusedBy": 22
+            "reusedBy": 23
           },
           {
             "component": "jpms/Components/Checkbox.razor",
@@ -8349,12 +8383,12 @@
             "reusedBy": 12
           },
           {
-            "component": "jpms/Components/StatTile.razor",
+            "component": "jpms/Components/InlineConfirm.razor",
             "reusedBy": 11
           },
           {
-            "component": "jpms/Components/InlineConfirm.razor",
-            "reusedBy": 10
+            "component": "jpms/Components/StatTile.razor",
+            "reusedBy": 11
           },
           {
             "component": "jpms/Components/Icons/ActionIcon.razor",
@@ -8369,15 +8403,15 @@
             "reusedBy": 6
           },
           {
+            "component": "jpms/Components/StatusPill.razor",
+            "reusedBy": 6
+          },
+          {
             "component": "jpms/Components/TabRow.razor",
             "reusedBy": 6
           },
           {
             "component": "jpms/Components/ImageViewer.razor",
-            "reusedBy": 5
-          },
-          {
-            "component": "jpms/Components/StatusPill.razor",
             "reusedBy": 5
           },
           {
@@ -8410,6 +8444,10 @@
           },
           {
             "component": "jpms/Components/MarkdownText.razor",
+            "reusedBy": 3
+          },
+          {
+            "component": "jpms/Components/MetricStat.razor",
             "reusedBy": 3
           },
           {
@@ -8458,10 +8496,6 @@
           },
           {
             "component": "jpms/Components/ManualWorkOrderModal.razor",
-            "reusedBy": 2
-          },
-          {
-            "component": "jpms/Components/MetricStat.razor",
             "reusedBy": 2
           },
           {
@@ -8862,14 +8896,14 @@
     "siteDefinition": {
       "name": "siteDefinition",
       "summary": {
-        "routes": 132,
-        "views": 696,
-        "siteComponents": 665,
+        "routes": 133,
+        "views": 716,
+        "siteComponents": 685,
         "catalogue": 34,
-        "widgetUsages": 1979,
-        "handRolledElements": 699,
-        "widgetSlots": 2678,
-        "viewsWithHandRolled": 316,
+        "widgetUsages": 1997,
+        "handRolledElements": 706,
+        "widgetSlots": 2703,
+        "viewsWithHandRolled": 323,
         "designSheets": 0,
         "designsLastChecked": "never",
         "brandCheckedAt": "never"
@@ -10391,6 +10425,48 @@
           {
             "file": "jpms/Features/Labour/CoverInvoiceLinesTable.razor",
             "line": 3,
+            "element": "table",
+            "ownedBy": "RecordsTable"
+          },
+          {
+            "file": "jpms/Features/Labour/MyDay/MyDayCalendar.razor",
+            "line": 5,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Labour/MyDay/MyDayMonthCell.razor",
+            "line": 3,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Labour/Planner/WeekPlannerCell.razor",
+            "line": 12,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Labour/Planner/WeekPlannerRow.razor",
+            "line": 12,
+            "element": "button",
+            "ownedBy": "Button"
+          },
+          {
+            "file": "jpms/Features/Labour/Planner/WeekPlannerTable.razor",
+            "line": 16,
+            "element": "table",
+            "ownedBy": "RecordsTable"
+          },
+          {
+            "file": "jpms/Features/Labour/Review/WeekReviewAnswer.razor",
+            "line": 6,
+            "element": "input",
+            "ownedBy": "FormField"
+          },
+          {
+            "file": "jpms/Features/Labour/Review/WeekReviewDays.razor",
+            "line": 4,
             "element": "table",
             "ownedBy": "RecordsTable"
           },
@@ -12364,7 +12440,7 @@
           },
           {
             "file": "jpms/Pages/LabourOverview.razor",
-            "line": 76,
+            "line": 77,
             "element": "button",
             "ownedBy": "Button"
           },
@@ -13356,7 +13432,7 @@
         "byWidget": [
           {
             "ownedBy": "Button",
-            "count": 305,
+            "count": 309,
             "files": [
               "jpms/Components/ApprovedUserRow.razor",
               "jpms/Components/ApprovedUsersPanel.razor",
@@ -13405,6 +13481,10 @@
               "jpms/Features/DocumentControl/SourceEmailCard.razor",
               "jpms/Features/Forms/Public/FormTableInput.razor",
               "jpms/Features/Labour/ChaseListPanel.razor",
+              "jpms/Features/Labour/MyDay/MyDayCalendar.razor",
+              "jpms/Features/Labour/MyDay/MyDayMonthCell.razor",
+              "jpms/Features/Labour/Planner/WeekPlannerCell.razor",
+              "jpms/Features/Labour/Planner/WeekPlannerRow.razor",
               "jpms/Features/Procurement/DeleteWorkOrderModal.razor",
               "jpms/Features/Procurement/DraftWorkOrdersPanel.razor",
               "jpms/Features/Procurement/InvitedSubcontractorsSection.razor",
@@ -13535,7 +13615,7 @@
           },
           {
             "ownedBy": "FormField",
-            "count": 155,
+            "count": 156,
             "files": [
               "jpms/Components/ApprovedUserRow.razor",
               "jpms/Components/ClaimProgressDialog.razor",
@@ -13567,6 +13647,7 @@
               "jpms/Features/Forms/Public/FormTableCellInput.razor",
               "jpms/Features/Hs/Audits/HsAuditItemRow.razor",
               "jpms/Features/Hs/Audits/HsAuditKeySelect.razor",
+              "jpms/Features/Labour/Review/WeekReviewAnswer.razor",
               "jpms/Features/Labour/TimesheetRow.razor",
               "jpms/Features/Procurement/LineCoverageModal.razor",
               "jpms/Features/Procurement/LocalSubcontractorFinderModal.razor",
@@ -13744,7 +13825,7 @@
           },
           {
             "ownedBy": "RecordsTable",
-            "count": 69,
+            "count": 71,
             "files": [
               "jpms/Components/ClientCostReferencesModal.razor",
               "jpms/Components/CostCentreCostOfSalesModal.razor",
@@ -13773,6 +13854,8 @@
               "jpms/Features/Labour/ChaseListPanel.razor",
               "jpms/Features/Labour/CostCodeTable.razor",
               "jpms/Features/Labour/CoverInvoiceLinesTable.razor",
+              "jpms/Features/Labour/Planner/WeekPlannerTable.razor",
+              "jpms/Features/Labour/Review/WeekReviewDays.razor",
               "jpms/Features/Labour/SettlementScheduleDetail.razor",
               "jpms/Features/Labour/SettlementSchedulesPanel.razor",
               "jpms/Features/Labour/SettlementSummaryTable.razor",
@@ -13999,7 +14082,7 @@
           "route": "/dashboard",
           "file": "jpms/Pages/Dashboard.razor",
           "definition": "Page{ ( ?Session.ActiveRole == Role.Admin: AdminHome | ?Session.ActiveRole is not null: RoleHome ) }",
-          "expanded": "Page{ ( ?Session.ActiveRole == Role.Admin: AdminHome=( PageHeader{ DropdownMenu }, AdminStatsRow=( LoadGate{ [ (3) StatTile ] } ), MyTodosPanel=( [ \u26a0h2\u2192SectionHeader ?!loading: [ (2) \u26a0button\u2192Button ] ], ?error is not null: Notice, ?!loading && items.Count > 0 && \u2026: \u26a0select\u2192FormField, LoadGate{ ( ?boardView && items.Count > 0: TodoBoard=( (n) ( \u26a0h3\u2192SectionHeader, (n) \u26a0button\u2192Button ) ) | (n) \u26a0button\u2192Button ) } ), AdminKpiPanel=( \u26a0h2\u2192SectionHeader, LoadGate{ EmptyState } ), OpenRequestsPanel=( \u26a0h2\u2192SectionHeader, LoadGate ), NextValuationsPanel=( \u26a0h2\u2192SectionHeader, ( ?Projects.Current is null: LoadGate | \u26a0table\u2192RecordsTable ) ), PendingRequestsPanel=( \u26a0h2\u2192SectionHeader, LoadGate{ (n) PendingRequestRow=( ?isApproving: RoleAssignmentForm ) } ) ) | ?Session.ActiveRole is not null: RoleHome=( PageHeader, ?Tiles.Count > 0: (n) ( ?tile.SecondLine is { } secondLi\u2026: MetricStat | MetricStat ), ?ShowMyDay: MyDayWorkspace=( ?IsShown: ( SectionHeader{ ToolbarButton }, ?loadError is not null: Notice, LoadGate{ ?Day is { IsLinked: true } day: ( ?HasNoProjects(day): Notice, (n) MyDayProjectCard=( Panel{ ?Project.IsLoggedToday: Pill, ?IsOnSite: Pill, ?photoProblem is not null: Notice, ?IsArriving: MyDayArrival, ?IsOnSite: MyDayLogForm, ?Project.IsLoggedToday: MyDayLoggedSummary } ), MyDayWeekPanel=( Panel{ ?amending is { } day: MyDayAmendForm, MyDayMissedDayForm, (n) MyDayWeekRow } ), MyDayRejectedPanel=( ?HasRejected: Panel{ ?error is not null: Notice, (n) FormField } ) ), ?Day is { IsLinked: false }: Notice } ) ), ?ShowMyTodos: MyTodosPanel=( [ \u26a0h2\u2192SectionHeader ?!loading: [ (2) \u26a0button\u2192Button ] ], ?error is not null: Notice, ?!loading && items.Count > 0 && \u2026: \u26a0select\u2192FormField, LoadGate{ ( ?boardView && items.Count > 0: TodoBoard=( (n) ( \u26a0h3\u2192SectionHeader, (n) \u26a0button\u2192Button ) ) | (n) \u26a0button\u2192Button ) } ), ?ShowRequests: OpenRequestsPanel=( \u26a0h2\u2192SectionHeader, LoadGate ), ?ShowValuations: NextValuationsPanel=( \u26a0h2\u2192SectionHeader, ( ?Projects.Current is null: LoadGate | \u26a0table\u2192RecordsTable ) ), ?ShowHsOfficer: HsOfficerPanel=( [ \u26a0h2\u2192SectionHeader HsSiteCheckFormsMenu=( DropdownMenu ) ], ?State: ( LoadGate, HsOpenActionsTable=( ?Actions.Count > 0: \u26a0table\u2192RecordsTable ), HsSiteStandingsTable=( \u26a0h2\u2192SectionHeader, ?Standings.Count > 0: \u26a0table\u2192RecordsTable ) ) ), ?ShowExpiringDocuments: ExpiringDocumentsPanel=( \u26a0h2\u2192SectionHeader, ( ?LoadState.UntilAllPresent(Compl\u2026: LoadGate | \u26a0table\u2192RecordsTable ) ), ?ShowStaleRates: \u26a0h2\u2192SectionHeader, \u26a0h2\u2192SectionHeader, (n) NavIcon ) ) }"
+          "expanded": "Page{ ( ?Session.ActiveRole == Role.Admin: AdminHome=( PageHeader{ DropdownMenu }, AdminStatsRow=( LoadGate{ [ (3) StatTile ] } ), MyTodosPanel=( [ \u26a0h2\u2192SectionHeader ?!loading: [ (2) \u26a0button\u2192Button ] ], ?error is not null: Notice, ?!loading && items.Count > 0 && \u2026: \u26a0select\u2192FormField, LoadGate{ ( ?boardView && items.Count > 0: TodoBoard=( (n) ( \u26a0h3\u2192SectionHeader, (n) \u26a0button\u2192Button ) ) | (n) \u26a0button\u2192Button ) } ), AdminKpiPanel=( \u26a0h2\u2192SectionHeader, LoadGate{ EmptyState } ), OpenRequestsPanel=( \u26a0h2\u2192SectionHeader, LoadGate ), NextValuationsPanel=( \u26a0h2\u2192SectionHeader, ( ?Projects.Current is null: LoadGate | \u26a0table\u2192RecordsTable ) ), PendingRequestsPanel=( \u26a0h2\u2192SectionHeader, LoadGate{ (n) PendingRequestRow=( ?isApproving: RoleAssignmentForm ) } ) ) | ?Session.ActiveRole is not null: RoleHome=( PageHeader, ?Tiles.Count > 0: (n) ( ?tile.SecondLine is { } secondLi\u2026: MetricStat | MetricStat ), ?ShowMyDay: MyDayWorkspace=( ?IsShown: ( SectionHeader{ ToolbarButton }, ?loadError is not null: Notice, LoadGate{ ?Day is { IsLinked: true } day: ( ?HasNoProjects(day): Notice, (n) MyDayProjectCard=( Panel{ ?Project.IsLoggedToday: Pill, ?IsOnSite: Pill, ?photoProblem is not null: Notice, ?IsArriving: MyDayArrival, ?IsOnSite: MyDayLogForm, ?Project.IsLoggedToday: MyDayLoggedSummary } ), MyDayCalendar=( [ (2) \u26a0button\u2192Button ], ?isMonth: MyDayMonthPanel, ?!isMonth: MyDayWeekPanel ), MyDayRejectedPanel=( ?HasRejected: Panel{ ?error is not null: Notice, (n) FormField } ) ), ?Day is { IsLinked: false }: Notice } ) ), ?ShowMyTodos: MyTodosPanel=( [ \u26a0h2\u2192SectionHeader ?!loading: [ (2) \u26a0button\u2192Button ] ], ?error is not null: Notice, ?!loading && items.Count > 0 && \u2026: \u26a0select\u2192FormField, LoadGate{ ( ?boardView && items.Count > 0: TodoBoard=( (n) ( \u26a0h3\u2192SectionHeader, (n) \u26a0button\u2192Button ) ) | (n) \u26a0button\u2192Button ) } ), ?ShowRequests: OpenRequestsPanel=( \u26a0h2\u2192SectionHeader, LoadGate ), ?ShowValuations: NextValuationsPanel=( \u26a0h2\u2192SectionHeader, ( ?Projects.Current is null: LoadGate | \u26a0table\u2192RecordsTable ) ), ?ShowHsOfficer: HsOfficerPanel=( [ \u26a0h2\u2192SectionHeader HsSiteCheckFormsMenu=( DropdownMenu ) ], ?State: ( LoadGate, HsOpenActionsTable=( ?Actions.Count > 0: \u26a0table\u2192RecordsTable ), HsSiteStandingsTable=( \u26a0h2\u2192SectionHeader, ?Standings.Count > 0: \u26a0table\u2192RecordsTable ) ) ), ?ShowExpiringDocuments: ExpiringDocumentsPanel=( \u26a0h2\u2192SectionHeader, ( ?LoadState.UntilAllPresent(Compl\u2026: LoadGate | \u26a0table\u2192RecordsTable ) ), ?ShowStaleRates: \u26a0h2\u2192SectionHeader, \u26a0h2\u2192SectionHeader, (n) NavIcon ) ) }"
         },
         {
           "route": "/directory",
@@ -14196,8 +14279,14 @@
         {
           "route": "/labour/overview",
           "file": "jpms/Pages/LabourOverview.razor",
-          "definition": "Page{ SectionHeader{ Toolbar{ ToolbarButton, ExportToExcelButton } }, TableNote, ?actionError is not null: Notice, ?weekSummaryLines is not null: Notice, LabourForecastHeader, (n) \u26a0button\u2192Button, ( ?view == \"workers\": WorkerPlacementTable | ?view == \"sites\": SiteCostTable | ?view == \"costcodes\": CostCodeTable | ?view == \"signoff\": WeeklySignOffTable | SettlementSchedulesPanel ), ?snapshot is not null && snapsho\u2026: ChaseListPanel, AbsenceModal, SettlementLineModal, CodingResetModal, LabourBillApproveDialog, WeekEntryModal }",
-          "expanded": "Page{ SectionHeader{ Toolbar{ ToolbarButton, ExportToExcelButton } }, TableNote, ?actionError is not null: Notice, ?weekSummaryLines is not null: Notice, LabourForecastHeader=( Panel{ MetricStat } ), (n) \u26a0button\u2192Button, ( ?view == \"workers\": WorkerPlacementTable=( Panel{ \u26a0table\u2192RecordsTable } ) | ?view == \"sites\": SiteCostTable=( Panel{ \u26a0table\u2192RecordsTable } ) | ?view == \"costcodes\": CostCodeTable=( Panel{ \u26a0table\u2192RecordsTable } ) | ?view == \"signoff\": WeeklySignOffTable=( Panel{ \u26a0table\u2192RecordsTable } ) | SettlementSchedulesPanel=( Panel{ ( [ ?Schedules.InvoicesToChase > 0: Pill ?Schedules.WorkersToReconcile > 0: Pill ], \u26a0table\u2192RecordsTable ) }, Modal ) ), ?snapshot is not null && snapsho\u2026: ChaseListPanel=( Panel{ \u26a0table\u2192RecordsTable, ?Items.Count > 8 && !showAll: \u26a0button\u2192Button } ), AbsenceModal=( Modal{ ?error is not null: Notice, FormField, [ (2) FormField ], (2) FormField } ), SettlementLineModal=( Modal{ (5) FormField, ?error is not null: Notice } ), CodingResetModal=( Modal{ FormField, ?error is not null: Notice } ), LabourBillApproveDialog=( ConfirmDialog{ ?error is not null: Notice } ), WeekEntryModal=( Modal{ FormField, \u26a0table\u2192RecordsTable, ?error is not null: Notice } ) }"
+          "definition": "Page{ SectionHeader{ Toolbar{ ToolbarButton, ExportToExcelButton } }, TableNote, ?actionError is not null: Notice, ?weekSummaryLines is not null: Notice, LabourForecastHeader, (n) \u26a0button\u2192Button, ( ?view == \"workers\": WorkerPlacementTable | ?view == \"sites\": SiteCostTable | ?view == \"costcodes\": CostCodeTable | ?view == \"signoff\": WeeklySignOffTable | ?view == \"settlement\": SettlementSchedulesPanel ), ?view == \"review\": WeekReviewPanel, ?snapshot is not null && snapsho\u2026: ChaseListPanel, AbsenceModal, SettlementLineModal, CodingResetModal, LabourBillApproveDialog, WeekEntryModal }",
+          "expanded": "Page{ SectionHeader{ Toolbar{ ToolbarButton, ExportToExcelButton } }, TableNote, ?actionError is not null: Notice, ?weekSummaryLines is not null: Notice, LabourForecastHeader=( Panel{ MetricStat } ), (n) \u26a0button\u2192Button, ( ?view == \"workers\": WorkerPlacementTable=( Panel{ \u26a0table\u2192RecordsTable } ) | ?view == \"sites\": SiteCostTable=( Panel{ \u26a0table\u2192RecordsTable } ) | ?view == \"costcodes\": CostCodeTable=( Panel{ \u26a0table\u2192RecordsTable } ) | ?view == \"signoff\": WeeklySignOffTable=( Panel{ \u26a0table\u2192RecordsTable } ) | ?view == \"settlement\": SettlementSchedulesPanel=( Panel{ ( [ ?Schedules.InvoicesToChase > 0: Pill ?Schedules.WorkersToReconcile > 0: Pill ], \u26a0table\u2192RecordsTable ) }, Modal ) ), ?view == \"review\": WeekReviewPanel=( Panel{ ?HasWeeks: (n) WeekReviewCard=( WeekReviewStatus=( Pill ), WeekReviewDays=( \u26a0table\u2192RecordsTable ), ?error is not null: Notice, ?Submission.IsAwaitingReview && \u2026: WeekReviewAnswer=( [ ?isSendingBack: \u26a0input\u2192FormField ?!isSendingBack: InlineConfirm ] ) ) } ), ?snapshot is not null && snapsho\u2026: ChaseListPanel=( Panel{ \u26a0table\u2192RecordsTable, ?Items.Count > 8 && !showAll: \u26a0button\u2192Button } ), AbsenceModal=( Modal{ ?error is not null: Notice, FormField, [ (2) FormField ], (2) FormField } ), SettlementLineModal=( Modal{ (5) FormField, ?error is not null: Notice } ), CodingResetModal=( Modal{ FormField, ?error is not null: Notice } ), LabourBillApproveDialog=( ConfirmDialog{ ?error is not null: Notice } ), WeekEntryModal=( Modal{ FormField, \u26a0table\u2192RecordsTable, ?error is not null: Notice } ) }"
+        },
+        {
+          "route": "/labour/planner",
+          "file": "jpms/Pages/LabourPlanner.razor",
+          "definition": "Page{ SectionHeader, TableNote, ?actionError is not null: Notice, ?Plan is { } plan: WeekPlannerTotals, WeekPlannerTable }",
+          "expanded": "Page{ SectionHeader, TableNote, ?actionError is not null: Notice, ?Plan is { } plan: WeekPlannerTotals=( Panel{ MetricStat } ), WeekPlannerTable=( Panel{ ?Plan is { HasWorkers: true } pl\u2026: \u26a0table\u2192RecordsTable } ) }"
         },
         {
           "route": "/labour/workers",
@@ -14676,8 +14765,8 @@
         {
           "route": "/todos/{TodoItemId}",
           "file": "jpms/Pages/TodoDetail.razor",
-          "definition": "Page{ ( ?!HasInternalRole: PageHeader | LoadGate{ ( ?item is null: PageHeader | ( PageHeader{ Pill, ?CanManage: InlineConfirm }, ?error is not null: Notice, [ TodoCommunicationsPanel ( TodoFactsPanel, TodoActivityPanel, LinkedTodosPanel ) ] ) ) } ) }",
-          "expanded": "Page{ ( ?!HasInternalRole: PageHeader | LoadGate{ ( ?item is null: PageHeader | ( PageHeader{ Pill, ?CanManage: InlineConfirm }, ?error is not null: Notice, [ TodoCommunicationsPanel=( Panel{ EmailFinder=( \u26a0button\u2192Button, Modal{ \u26a0input\u2192FormField, ?error is not null: Notice, ?results is not null: (n) ( ?email.HasAttachments: Pill, [ ?alreadyTagged: Pill (n) Pill ] ) } ), Toolbar{ ?CanSend: ToolbarButton, ToolbarButton }, ?failed is not null: Notice, ?sentNote is not null: Notice, ?composingNew: TodoEmailComposer=( MailReplyComposer=( \u26a0button\u2192Button, ?error is not null: Notice, FormField{ RecipientInput }, ?!showBcc: \u26a0button\u2192Button, RecipientInput, ?showBcc: FormField{ RecipientInput }, FormField, RichTextEditor, AttachmentPicker ) ), ?replyingTo is { } replyAnchor: TodoEmailComposer=( MailReplyComposer=( \u26a0button\u2192Button, ?error is not null: Notice, FormField{ RecipientInput }, ?!showBcc: \u26a0button\u2192Button, RecipientInput, ?showBcc: FormField{ RecipientInput }, FormField, RichTextEditor, AttachmentPicker ) ), UnfiledRepliesNotice, ?emails.Count > 0: CorrespondenceThreadList } ) ( TodoFactsPanel=( Panel{ \u26a0dl\u2192KeyValueList } ), TodoActivityPanel=( Panel{ ?formOpen: TodoProgressForm=( \u26a0textarea\u2192FormField ) } ), LinkedTodosPanel=( Panel{ ?!loading && failed is null && l\u2026: Pill, ( ?failed is not null: Notice | (n) Pill ) } ) ) ] ) ) } ) }"
+          "definition": "Page{ ( ?!HasInternalRole: PageHeader | ( ?item is not null: TodoStepper, LoadGate{ ( ?item is null: PageHeader | ( PageHeader{ Pill, ?CanManage: InlineConfirm }, ?error is not null: Notice, [ TodoCommunicationsPanel ( TodoFactsPanel, TodoActivityPanel, LinkedTodosPanel ) ] ) ) } ) ) }",
+          "expanded": "Page{ ( ?!HasInternalRole: PageHeader | ( ?item is not null: TodoStepper, LoadGate{ ( ?item is null: PageHeader | ( PageHeader{ Pill, ?CanManage: InlineConfirm }, ?error is not null: Notice, [ TodoCommunicationsPanel=( Panel{ EmailFinder=( \u26a0button\u2192Button, Modal{ \u26a0input\u2192FormField, ?error is not null: Notice, ?results is not null: (n) ( ?email.HasAttachments: Pill, [ ?alreadyTagged: Pill (n) Pill ] ) } ), Toolbar{ ?CanSend: ToolbarButton, ToolbarButton }, ?failed is not null: Notice, ?sentNote is not null: Notice, ?composingNew: TodoEmailComposer=( MailReplyComposer=( \u26a0button\u2192Button, ?error is not null: Notice, FormField{ RecipientInput }, ?!showBcc: \u26a0button\u2192Button, RecipientInput, ?showBcc: FormField{ RecipientInput }, FormField, RichTextEditor, AttachmentPicker ) ), ?replyingTo is { } replyAnchor: TodoEmailComposer=( MailReplyComposer=( \u26a0button\u2192Button, ?error is not null: Notice, FormField{ RecipientInput }, ?!showBcc: \u26a0button\u2192Button, RecipientInput, ?showBcc: FormField{ RecipientInput }, FormField, RichTextEditor, AttachmentPicker ) ), UnfiledRepliesNotice, ?emails.Count > 0: CorrespondenceThreadList } ) ( TodoFactsPanel=( Panel{ \u26a0dl\u2192KeyValueList } ), TodoActivityPanel=( Panel{ ?formOpen: TodoProgressForm=( \u26a0textarea\u2192FormField ) } ), LinkedTodosPanel=( Panel{ ?!loading && failed is null && l\u2026: Pill, ( ?failed is not null: Notice | (n) Pill ) } ) ) ] ) ) } ) ) }"
         },
         {
           "route": "/work-orders/accept/{Token}",
@@ -14697,7 +14786,7 @@
           "component": "TableNote",
           "file": "jpms/Components/TableNote.razor",
           "definition": "",
-          "usedBy": 22
+          "usedBy": 23
         },
         {
           "component": "JewelIcon",
@@ -15060,6 +15149,12 @@
           "usedBy": 2
         },
         {
+          "component": "MyDayDayEditor",
+          "file": "jpms/Features/Labour/MyDay/MyDayDayEditor.razor",
+          "definition": "?Amending is { } day: MyDayAmendForm, ?Adding is { } missed: MyDayMissedDayForm",
+          "usedBy": 2
+        },
+        {
           "component": "MyDayOffForm",
           "file": "jpms/Features/Labour/MyDay/MyDayOffForm.razor",
           "definition": "FormField",
@@ -15075,6 +15170,12 @@
           "component": "MyDaySitePicker",
           "file": "jpms/Features/Labour/MyDay/MyDaySitePicker.razor",
           "definition": "?Projects.Count > 1: FormField",
+          "usedBy": 2
+        },
+        {
+          "component": "MyDayWeekRow",
+          "file": "jpms/Features/Labour/MyDay/MyDayWeekRow.razor",
+          "definition": "[ ?Row.IsLogged: StatusPill ?Row.IsFiledLate: Pill ?Row.Kind == MyWeekDayKind.Off: Pill ?Row.IsPlannedOff: Pill ?IsNothingYet: Pill ]",
           "usedBy": 2
         },
         {
@@ -16230,6 +16331,12 @@
           "usedBy": 1
         },
         {
+          "component": "MyDayCalendar",
+          "file": "jpms/Features/Labour/MyDay/MyDayCalendar.razor",
+          "definition": "[ (2) \u26a0button\u2192Button ], ?isMonth: MyDayMonthPanel, ?!isMonth: MyDayWeekPanel",
+          "usedBy": 1
+        },
+        {
           "component": "MyDayDefectBox",
           "file": "jpms/Features/Labour/MyDay/MyDayDefectBox.razor",
           "definition": "FormField",
@@ -16260,6 +16367,36 @@
           "usedBy": 1
         },
         {
+          "component": "MyDayMonthCell",
+          "file": "jpms/Features/Labour/MyDay/MyDayMonthCell.razor",
+          "definition": "\u26a0button\u2192Button",
+          "usedBy": 1
+        },
+        {
+          "component": "MyDayMonthDay",
+          "file": "jpms/Features/Labour/MyDay/MyDayMonthDay.razor",
+          "definition": "(n) MyDayWeekRow",
+          "usedBy": 1
+        },
+        {
+          "component": "MyDayMonthGrid",
+          "file": "jpms/Features/Labour/MyDay/MyDayMonthGrid.razor",
+          "definition": "(n) MyDayMonthCell",
+          "usedBy": 1
+        },
+        {
+          "component": "MyDayMonthPanel",
+          "file": "jpms/Features/Labour/MyDay/MyDayMonthPanel.razor",
+          "definition": "Panel{ ?IsEditing: MyDayDayEditor, ?HasFailed: Notice, ?IsShowingTheMonth && Month is {\u2026: ( MyDayMonthGrid, MyDayMonthTotals, ?selected is { } day: MyDayMonthDay ) }",
+          "usedBy": 1
+        },
+        {
+          "component": "MyDayMonthTotals",
+          "file": "jpms/Features/Labour/MyDay/MyDayMonthTotals.razor",
+          "definition": "",
+          "usedBy": 1
+        },
+        {
           "component": "MyDayProjectCard",
           "file": "jpms/Features/Labour/MyDay/MyDayProjectCard.razor",
           "definition": "Panel{ ?Project.IsLoggedToday: Pill, ?IsOnSite: Pill, ?photoProblem is not null: Notice, ?IsArriving: MyDayArrival, ?IsOnSite: MyDayLogForm, ?Project.IsLoggedToday: MyDayLoggedSummary }",
@@ -16272,21 +16409,27 @@
           "usedBy": 1
         },
         {
-          "component": "MyDayWeekPanel",
-          "file": "jpms/Features/Labour/MyDay/MyDayWeekPanel.razor",
-          "definition": "Panel{ ?amending is { } day: MyDayAmendForm, MyDayMissedDayForm, (n) MyDayWeekRow }",
+          "component": "MyDayWeekHeading",
+          "file": "jpms/Features/Labour/MyDay/MyDayWeekHeading.razor",
+          "definition": "",
           "usedBy": 1
         },
         {
-          "component": "MyDayWeekRow",
-          "file": "jpms/Features/Labour/MyDay/MyDayWeekRow.razor",
-          "definition": "[ ?Row.IsLogged: StatusPill ?Row.IsFiledLate: Pill ?Row.Kind == MyWeekDayKind.Off: Pill ?Row.IsMissed: Pill ]",
+          "component": "MyDayWeekPanel",
+          "file": "jpms/Features/Labour/MyDay/MyDayWeekPanel.razor",
+          "definition": "Panel{ MyDayWeekHeading, ?IsEditing: MyDayDayEditor, ?HasFailed: Notice, ?IsShowingTheWeek && Week is { }\u2026: ( (n) MyDayWeekRow, MyDayWeekSubmission ) }",
+          "usedBy": 1
+        },
+        {
+          "component": "MyDayWeekSubmission",
+          "file": "jpms/Features/Labour/MyDay/MyDayWeekSubmission.razor",
+          "definition": "?Week.Submission is { IsWithTheO\u2026: Pill, ?Week.Submission is { IsSignedOf\u2026: Pill, ?Week.Submission is { IsSentBack\u2026: Notice, ?error is not null: Notice",
           "usedBy": 1
         },
         {
           "component": "MyDayWorkspace",
           "file": "jpms/Features/Labour/MyDay/MyDayWorkspace.razor",
-          "definition": "?IsShown: ( SectionHeader{ ToolbarButton }, ?loadError is not null: Notice, LoadGate{ ?Day is { IsLinked: true } day: ( ?HasNoProjects(day): Notice, (n) MyDayProjectCard, MyDayWeekPanel, MyDayRejectedPanel ), ?Day is { IsLinked: false }: Notice } )",
+          "definition": "?IsShown: ( SectionHeader{ ToolbarButton }, ?loadError is not null: Notice, LoadGate{ ?Day is { IsLinked: true } day: ( ?HasNoProjects(day): Notice, (n) MyDayProjectCard, MyDayCalendar, MyDayRejectedPanel ), ?Day is { IsLinked: false }: Notice } )",
           "usedBy": 1
         },
         {
@@ -17334,6 +17477,12 @@
           "usedBy": 1
         },
         {
+          "component": "TodoStepper",
+          "file": "jpms/Features/Todos/Detail/TodoStepper.razor",
+          "definition": "",
+          "usedBy": 1
+        },
+        {
           "component": "TrainingRecordModal",
           "file": "jpms/Features/Forms/Office/TrainingRecordModal.razor",
           "definition": "Modal{ ?write.Problem is { } problem: Notice, (3) FormField }",
@@ -17529,6 +17678,54 @@
           "component": "WeekEntryModal",
           "file": "jpms/Features/Labour/WeekEntryModal.razor",
           "definition": "Modal{ FormField, \u26a0table\u2192RecordsTable, ?error is not null: Notice }",
+          "usedBy": 1
+        },
+        {
+          "component": "WeekPlannerCell",
+          "file": "jpms/Features/Labour/Planner/WeekPlannerCell.razor",
+          "definition": "?!Day.IsLogged: \u26a0button\u2192Button",
+          "usedBy": 1
+        },
+        {
+          "component": "WeekPlannerTable",
+          "file": "jpms/Features/Labour/Planner/WeekPlannerTable.razor",
+          "definition": "Panel{ ?Plan is { HasWorkers: true } pl\u2026: \u26a0table\u2192RecordsTable }",
+          "usedBy": 1
+        },
+        {
+          "component": "WeekPlannerTotals",
+          "file": "jpms/Features/Labour/Planner/WeekPlannerTotals.razor",
+          "definition": "Panel{ MetricStat }",
+          "usedBy": 1
+        },
+        {
+          "component": "WeekReviewAnswer",
+          "file": "jpms/Features/Labour/Review/WeekReviewAnswer.razor",
+          "definition": "[ ?isSendingBack: \u26a0input\u2192FormField ?!isSendingBack: InlineConfirm ]",
+          "usedBy": 1
+        },
+        {
+          "component": "WeekReviewCard",
+          "file": "jpms/Features/Labour/Review/WeekReviewCard.razor",
+          "definition": "WeekReviewStatus, WeekReviewDays, ?error is not null: Notice, ?Submission.IsAwaitingReview && \u2026: WeekReviewAnswer",
+          "usedBy": 1
+        },
+        {
+          "component": "WeekReviewDays",
+          "file": "jpms/Features/Labour/Review/WeekReviewDays.razor",
+          "definition": "\u26a0table\u2192RecordsTable",
+          "usedBy": 1
+        },
+        {
+          "component": "WeekReviewPanel",
+          "file": "jpms/Features/Labour/Review/WeekReviewPanel.razor",
+          "definition": "Panel{ ?HasWeeks: (n) WeekReviewCard }",
+          "usedBy": 1
+        },
+        {
+          "component": "WeekReviewStatus",
+          "file": "jpms/Features/Labour/Review/WeekReviewStatus.razor",
+          "definition": "Pill",
           "usedBy": 1
         },
         {
@@ -17966,7 +18163,13 @@
         {
           "component": "LabourOverview",
           "file": "jpms/Pages/LabourOverview.razor",
-          "definition": "Page{ SectionHeader{ Toolbar{ ToolbarButton, ExportToExcelButton } }, TableNote, ?actionError is not null: Notice, ?weekSummaryLines is not null: Notice, LabourForecastHeader, (n) \u26a0button\u2192Button, ( ?view == \"workers\": WorkerPlacementTable | ?view == \"sites\": SiteCostTable | ?view == \"costcodes\": CostCodeTable | ?view == \"signoff\": WeeklySignOffTable | SettlementSchedulesPanel ), ?snapshot is not null && snapsho\u2026: ChaseListPanel, AbsenceModal, SettlementLineModal, CodingResetModal, LabourBillApproveDialog, WeekEntryModal }",
+          "definition": "Page{ SectionHeader{ Toolbar{ ToolbarButton, ExportToExcelButton } }, TableNote, ?actionError is not null: Notice, ?weekSummaryLines is not null: Notice, LabourForecastHeader, (n) \u26a0button\u2192Button, ( ?view == \"workers\": WorkerPlacementTable | ?view == \"sites\": SiteCostTable | ?view == \"costcodes\": CostCodeTable | ?view == \"signoff\": WeeklySignOffTable | ?view == \"settlement\": SettlementSchedulesPanel ), ?view == \"review\": WeekReviewPanel, ?snapshot is not null && snapsho\u2026: ChaseListPanel, AbsenceModal, SettlementLineModal, CodingResetModal, LabourBillApproveDialog, WeekEntryModal }",
+          "usedBy": 0
+        },
+        {
+          "component": "LabourPlanner",
+          "file": "jpms/Pages/LabourPlanner.razor",
+          "definition": "Page{ SectionHeader, TableNote, ?actionError is not null: Notice, ?Plan is { } plan: WeekPlannerTotals, WeekPlannerTable }",
           "usedBy": 0
         },
         {
@@ -18542,7 +18745,7 @@
         {
           "component": "TodoDetail",
           "file": "jpms/Pages/TodoDetail.razor",
-          "definition": "Page{ ( ?!HasInternalRole: PageHeader | LoadGate{ ( ?item is null: PageHeader | ( PageHeader{ Pill, ?CanManage: InlineConfirm }, ?error is not null: Notice, [ TodoCommunicationsPanel ( TodoFactsPanel, TodoActivityPanel, LinkedTodosPanel ) ] ) ) } ) }",
+          "definition": "Page{ ( ?!HasInternalRole: PageHeader | ( ?item is not null: TodoStepper, LoadGate{ ( ?item is null: PageHeader | ( PageHeader{ Pill, ?CanManage: InlineConfirm }, ?error is not null: Notice, [ TodoCommunicationsPanel ( TodoFactsPanel, TodoActivityPanel, LinkedTodosPanel ) ] ) ) } ) ) }",
           "usedBy": 0
         },
         {
@@ -18591,6 +18794,12 @@
           "component": "ValuationSummary",
           "file": "jpms/Pages/ValuationSummary.razor",
           "definition": "",
+          "usedBy": 0
+        },
+        {
+          "component": "WeekPlannerRow",
+          "file": "jpms/Features/Labour/Planner/WeekPlannerRow.razor",
+          "definition": "(n) WeekPlannerCell, \u26a0button\u2192Button",
           "usedBy": 0
         },
         {
@@ -18682,15 +18891,15 @@
     "fileAreas": {
       "name": "fileAreas",
       "summary": {
-        "totalFiles": 5909,
-        "api": 2451,
-        "frontend": 1457,
-        "contracts": 767,
-        "database": 314,
-        "connector": 254,
+        "totalFiles": 5976,
+        "api": 2470,
+        "frontend": 1487,
+        "contracts": 775,
+        "database": 316,
+        "connector": 256,
         "docs": 232,
+        "tests": 195,
         "tooling": 192,
-        "tests": 189,
         "infrastructure": 38,
         "worker": 14,
         "other": 1
@@ -18698,33 +18907,33 @@
       "offenders": [
         {
           "area": "api",
-          "files": 2451,
-          "sourceFiles": 2446,
-          "sourceLines": 122914
+          "files": 2470,
+          "sourceFiles": 2465,
+          "sourceLines": 123947
         },
         {
           "area": "frontend",
-          "files": 1457,
-          "sourceFiles": 1347,
-          "sourceLines": 129590
+          "files": 1487,
+          "sourceFiles": 1376,
+          "sourceLines": 130842
         },
         {
           "area": "contracts",
-          "files": 767,
-          "sourceFiles": 767,
-          "sourceLines": 28085
+          "files": 775,
+          "sourceFiles": 775,
+          "sourceLines": 28344
         },
         {
           "area": "database",
-          "files": 314,
+          "files": 316,
           "sourceFiles": 0,
           "sourceLines": 0
         },
         {
           "area": "connector",
-          "files": 254,
-          "sourceFiles": 254,
-          "sourceLines": 26901
+          "files": 256,
+          "sourceFiles": 256,
+          "sourceLines": 27110
         },
         {
           "area": "docs",
@@ -18733,14 +18942,14 @@
           "sourceLines": 0
         },
         {
-          "area": "tooling",
-          "files": 192,
+          "area": "tests",
+          "files": 195,
           "sourceFiles": 0,
           "sourceLines": 0
         },
         {
-          "area": "tests",
-          "files": 189,
+          "area": "tooling",
+          "files": 192,
           "sourceFiles": 0,
           "sourceLines": 0
         },
@@ -18767,9 +18976,9 @@
     "inputValidation": {
       "name": "inputValidation",
       "summary": {
-        "schemaTables": 216,
-        "limitedColumns": 1301,
-        "writeDoors": 714,
+        "schemaTables": 217,
+        "limitedColumns": 1304,
+        "writeDoors": 716,
         "unvalidatedDoors": 0,
         "looserLimits": 3
       },

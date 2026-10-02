@@ -4,9 +4,6 @@ using Xunit;
 
 namespace Jewel.JPMS.Tests;
 
-// The item's page steps through the reader's open pile and "Done & next" lands on the item after
-// the one just closed (2026-10-02). Pinned because the pile is read once, before the close, so
-// the item being closed is still in it when its neighbours are worked out.
 public sealed class TodoNeighboursTests
 {
     private static readonly IReadOnlyList<TodoItem> Pile = new[] { Open("a"), Open("b"), Open("c") };

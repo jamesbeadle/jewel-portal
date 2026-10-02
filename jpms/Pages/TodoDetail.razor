@@ -77,10 +77,8 @@
                     }
                     @if (CanComplete && CanStepOn)
                     {
-                        @* Nigel's way through the pile: close this one and land on the next open
-                           to-do without the list page in between. *@
                         <button type="button" class="btn-primary" disabled="@busy" @onclick="CompleteAndStepOnAsync"
-                                title="@($"Mark done, then open {neighbours.Next!.Reference}")">Done &amp; next →</button>
+                                title="@($"Mark done, then open {neighbours.NextReference}")">Done &amp; next →</button>
                     }
                 </Primary>
             </PageHeader>

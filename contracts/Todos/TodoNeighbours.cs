@@ -2,19 +2,15 @@ using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Contracts.Todos;
 
-// The to-dos either side of one item in the reader's OPEN pile, in the order the To-dos page
-// shows it — what the item's page steps through with Previous / Next, and where "Done & next"
-// lands (2026-10-02, Nigel: "close then move on to the next"). The pile is the reader's own list
-// (everything for the MD and administrators, the items on their roles for everyone else) with
-// the done items taken out; an item that is not in it — already done, or filed away from the
-// reader — has nothing before it and the top of the pile after it, so there is always somewhere
-// to go while anything is open.
+// The to-dos either side of one item in the reader's OPEN pile, in the To-dos page's order. An
+// item outside the pile (already done) has nothing before it and the top of the pile after it.
 public sealed record TodoNeighbours(TodoItem? Previous, TodoItem? Next)
 {
     public static readonly TodoNeighbours None = new(null, null);
 
     public bool HasPrevious => Previous is not null;
     public bool HasNext => Next is not null;
+    public string? NextReference => Next?.Reference;
 
     public static TodoNeighbours Of(IReadOnlyList<TodoItem> openInOrder, string todoItemId)
     {

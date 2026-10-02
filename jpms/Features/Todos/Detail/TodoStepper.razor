@@ -1,9 +1,6 @@
 @namespace Jewel.JPMS.Features.Todos.Detail
 @using Jewel.JPMS.Contracts.Todos
 
-@* Previous / Next through the reader's open pile, beside the way back to the list. Each button
-   names the item it goes to, so a hover says where the step lands before it is taken. *@
-
 <div class="flex items-center gap-2">
     <button type="button" class="btn-ghost text-xs" disabled="@(!Neighbours.HasPrevious || Busy)"
             title="@StepTitle(Neighbours.Previous)" @onclick="() => Step(Neighbours.Previous)">← Previous</button>
