@@ -1,6 +1,7 @@
 @page "/finance/weekly-cashflow"
 @using Jewel.JPMS.Contracts.WeeklyCashflow
 @using Jewel.JPMS.Features.WeeklyCashflow
+@using Jewel.JPMS.Features.Cashflow
 @inject AuthService Auth
 @inject SessionService Session
 @inject IXeroAgedPayablesStore Payables
@@ -83,7 +84,8 @@
        account, and the grid is fully useful without it. *@
     <LoadGate IsLoading="@(!GridReady)" Prominent="true" Label="Loading the weekly cashflow">
         <WeeklyKpiStrip IsDirector="IsDirector" Bank="BankSnapshot" BankReady="BankReady"
-                        View="view" FetchedText="@FetchedText" />
+                        View="view" FetchedText="@FetchedText"
+                        OnKeyStatements="() => statementModal.Open()" />
 
         @if (moveError is not null)
         {
@@ -178,4 +180,5 @@
 
     <CashflowItemModal @ref="itemModal" />
     <SupplierGroupsModal @ref="groupsModal" />
+    <BankStatementModal @ref="statementModal" />
 </Page>

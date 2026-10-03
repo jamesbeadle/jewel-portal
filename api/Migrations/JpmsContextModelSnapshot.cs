@@ -3900,6 +3900,37 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("InventoryItems");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.KeyedBankStatementBalanceEntity", b =>
+                {
+                    b.Property<string>("AccountId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("AccountName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("Balance")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTimeOffset>("KeyedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("KeyedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("StatementDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("AccountId");
+
+                    b.ToTable("KeyedBankStatementBalances");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.KpiEmailEntity", b =>
                 {
                     b.Property<string>("KpiEmailId")

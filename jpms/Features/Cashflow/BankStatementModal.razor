@@ -1,0 +1,51 @@
+@namespace Jewel.JPMS.Features.Cashflow
+@using static Jewel.JPMS.Contracts.Xero.BankStatementBalanceLimits
+
+@* Key a bank account's statement balance — the figure the bank (or Xero's dashboard, under
+   "Statement balance") shows, not Xero's own balance with its unreconciled items. Opened by
+   the page with Open(); the dialog owns its fields and the save, and reloads the bank position. *@
+<Modal IsOpen="@open" Title="Statement balances" OnCancel="Close">
+    <ChildContent>
+    <div class="space-y-4">
+        <p class="text-sm text-content-muted">
+            Cash in bank counts each account's <span class="text-content">statement balance</span> — what the
+            bank holds. Xero gives it when the connection may read it; key it here for any account it
+            doesn't, from the bank or Xero's dashboard. The newest statement date wins.
+        </p>
+        <ul class="divide-y divide-line rounded border border-line">
+            @foreach (var account in Accounts)
+            {
+                <li class="flex items-center gap-3 px-3 py-2 text-sm">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-content font-medium truncate">@account.Name</p>
+                        <p class="text-xs text-content-faint">@StatementText(account)</p>
+                    </div>
+                    <span class="font-semibold text-content">@Money(account.CashInBank)</span>
+                    <button type="button" class="btn-neutral" @onclick="() => Choose(account)">Key</button>
+                </li>
+            }
+        </ul>
+        @if (chosen is not null)
+        {
+            <div class="grid grid-cols-2 gap-4">
+                <FormField Label="@($"{chosen.Name} — statement balance (£)")" Required>
+                    <input type="number" step="0.01" min="@(-LargestBalance)" max="@LargestBalance"
+                           value="@formBalance" @oninput="args => formBalance = (string)args.Value!" class="field" />
+                </FormField>
+                <FormField Label="Statement date" Required>
+                    <input type="date" max="@TodayText" value="@formDate"
+                           @onchange="args => formDate = (string)args.Value!" class="field" />
+                </FormField>
+            </div>
+        }
+        @if (error is not null)
+        {
+            <p class="text-sm text-negative">@error</p>
+        }
+    </div>
+    </ChildContent>
+    <FooterContent>
+        <button type="button" class="btn-neutral" disabled="@saving" @onclick="Close">Close</button>
+        <button type="button" class="btn-primary" disabled="@(saving || chosen is null)" @onclick="SaveAsync">Save statement balance</button>
+    </FooterContent>
+</Modal>

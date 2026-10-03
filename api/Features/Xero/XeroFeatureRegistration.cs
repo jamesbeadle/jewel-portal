@@ -1,3 +1,4 @@
+using Jewel.JPMS.Api.Features.Xero.Commands;
 using Jewel.JPMS.Api.Features.Xero.Ledger;
 using Jewel.JPMS.Api.Features.Xero.Ledger.WorkOrderBills;
 using Jewel.JPMS.Api.Features.Xero.Queries;
@@ -54,6 +55,9 @@ public static class XeroFeatureRegistration
 
         // Cash summary: bank balances + outstanding sales invoices for the company Cash Summary page.
         services.AddScoped<IQueryHandler<GetXeroCashSummary, XeroCashSummarySnapshot>, GetXeroCashSummaryHandler>();
+        services.AddScoped<ICommandHandler<KeyBankStatementBalance, KeyedBankStatementBalance>, KeyBankStatementBalanceHandler>();
+        services.AddScoped<KeyBankStatementBalanceAuthorisation>();
+        services.AddScoped<KeyBankStatementBalanceValidation>();
 
         // Aged payables: outstanding supplier bills aged like Xero's report, drafts included —
         // the report Xero itself cannot show while bills wait in draft for portal coding.

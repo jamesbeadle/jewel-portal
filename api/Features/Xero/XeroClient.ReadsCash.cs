@@ -23,8 +23,15 @@ public sealed partial class XeroClient
         try
         {
             var bankAccounts = await FetchBankBalancesAsync(token, ct);
+            var (statements, statementError) = await FetchStatementBalancesAsync(token, ct);
             var outstanding = await FetchOutstandingSalesInvoicesAsync(token, ct);
-            return new XeroCashSummarySnapshot(true, null, DateTimeOffset.UtcNow, bankAccounts, outstanding);
+            var accountsWithStatements = bankAccounts
+                .Select(account => statements.TryGetValue(account.AccountId, out var statement)
+                    ? account with { Statement = statement }
+                    : account)
+                .ToList();
+            return new XeroCashSummarySnapshot(
+                true, null, DateTimeOffset.UtcNow, accountsWithStatements, outstanding, statementError);
         }
         catch (XeroCallFailedException callFailure)
         {

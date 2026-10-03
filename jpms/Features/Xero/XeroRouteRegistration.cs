@@ -33,6 +33,9 @@ public static class XeroRouteRegistration
             new QueryRoute("/api/xero/cash-summary",
                 query => ((GetXeroCashSummary)query).Force ? "/api/xero/cash-summary?force=true" : "/api/xero/cash-summary"));
 
+        commands.Register<KeyBankStatementBalance, KeyedBankStatementBalance>(
+            CommandRoute.Post("/api/xero/bank-statement-balances"));
+
         queries.Register<GetXeroAgedPayables, XeroAgedPayablesSnapshot>(
             new QueryRoute("/api/xero/aged-payables",
                 query => ((GetXeroAgedPayables)query).Force ? "/api/xero/aged-payables?force=true" : "/api/xero/aged-payables"));

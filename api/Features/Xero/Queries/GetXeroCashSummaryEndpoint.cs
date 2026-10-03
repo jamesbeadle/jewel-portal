@@ -4,11 +4,6 @@ namespace Jewel.JPMS.Api.Features.Xero.Queries;
 
 public sealed class GetXeroCashSummaryEndpoint
 {
-    // Bank balances are the company's most sensitive figures — directors only, deliberately
-    // tighter than the ledger audience. Admins pass because Role.Admin is included explicitly.
-    private static readonly RoleSet AllowedToViewCash = RoleSet.Of(
-        Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector);
-
     private readonly SignedInUserResolver users;
     private readonly IQueryHandler<GetXeroCashSummary, XeroCashSummarySnapshot> handler;
 
@@ -26,7 +21,7 @@ public sealed class GetXeroCashSummaryEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!AllowedToViewCash.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(StatusCodes.Status403Forbidden);
+        if (!BankPositionGates.Admits(signedInUser.Roles)) return new StatusCodeResult(StatusCodes.Status403Forbidden);
 
         var force = string.Equals(request.Query["force"], "true", StringComparison.OrdinalIgnoreCase);
         var snapshot = await handler.HandleAsync(new GetXeroCashSummary(force), request.HttpContext.RequestAborted);
