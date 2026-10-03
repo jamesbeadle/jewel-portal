@@ -89,7 +89,7 @@ public sealed class AzureBlobEmailFileShareStore : IEmailFileShareStore
             // Download with the real file name rather than rendering in the browser tab.
             ContentDisposition = $"attachment; filename=\"{safeName}\"",
         };
-        var url = blob.GenerateSasUri(sas);
+        var url = SignedLinkQuery.WithPercentEncodedSpaces(blob.GenerateSasUri(sas));
 
         await SweepExpiredAsync(cancellationToken);
 
