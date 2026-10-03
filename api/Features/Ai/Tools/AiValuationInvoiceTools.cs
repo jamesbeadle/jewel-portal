@@ -239,7 +239,7 @@ internal static partial class AiValuationInvoiceTools
                             kind,
                             fileName = link.FileName,
                             sizeBytes = link.SizeBytes,
-                            url = link.Url.ToString(),
+                            url = link.Url.AbsoluteUri,
                             expiresAt = link.ExpiresAt
                         });
                     }

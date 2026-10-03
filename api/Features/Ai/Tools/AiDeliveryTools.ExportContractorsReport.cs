@@ -56,7 +56,7 @@ internal static partial class AiDeliveryTools
             ok = true,
             fileName = link.FileName,
             sizeBytes = link.SizeBytes,
-            url = link.Url.ToString(),
+            url = link.Url.AbsoluteUri,
             expiresAt = link.ExpiresAt
         });
     }
