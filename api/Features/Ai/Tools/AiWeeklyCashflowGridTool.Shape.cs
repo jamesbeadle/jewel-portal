@@ -20,6 +20,7 @@ internal static partial class AiWeeklyCashflowGridTool
         IReadOnlyList<WeeklyCashflowSeed> excluded,
         IReadOnlyList<WeeklyCashflowExclusion> exclusions,
         XeroAgedPayablesSnapshot payables,
+        XeroCashSummarySnapshot? bank,
         bool includeEntries) => new
     {
         ok = true,
@@ -45,6 +46,15 @@ internal static partial class AiWeeklyCashflowGridTool
         }),
         netByWeek = view.Net,
         closingBalanceByWeek = view.Closing,
+        bankAccounts = bank?.BankAccounts.Select(account => new
+        {
+            account.AccountId,
+            account.Name,
+            xeroBalance = account.Balance,
+            account.CashInBank,
+            account.Statement
+        }),
+        statementError = bank?.StatementError,
         lowestWeek = view.Closing is null ? null : Day(view.WeekStarts[view.MinClosingIndex]),
         excluded = excluded.Select(seed => new
         {

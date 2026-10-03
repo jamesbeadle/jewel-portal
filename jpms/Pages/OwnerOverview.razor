@@ -58,7 +58,7 @@
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-6">
         <StatTile Label="Cash in bank" IsLoading="@(BankSnapshot is null)"
                   Value="@BankCashText" Caption="@BankCashCaption"
-                  Title="Every Xero bank account's balance added up — the Cash Forecast's and Weekly Cashflow's opening position." />
+                  Title="Every bank account's statement balance added up (Xero's balance where no statement is known yet) — the Cash Forecast's and Weekly Cashflow's opening position." />
         <StatTile Label="Lowest week, 13-week plan" IsLoading="@(!planFailed && weekly is null)"
                   Title="The Weekly Cashflow's running bank balance at its low point — recorded bills, invoices and manual items only.">
             @if (weekly?.Closing is null)

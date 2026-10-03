@@ -13,7 +13,7 @@
         else
         {
             <p class="text-2xl font-semibold text-content">@Money(Bank.TotalCash)</p>
-            <p class="text-xs text-content-subtle mt-1">@Bank.BankAccounts.Count @(Bank.BankAccounts.Count == 1 ? "account" : "accounts") · fetched @FetchedText</p>
+            <p class="text-xs text-content-subtle mt-1">@BankPositionCaption.For(Bank) · fetched @FetchedText</p>
         }
     </StatTile>
     <StatTile Label="Lowest forecast balance" IsLoading="@(!BankReady || !TableReady)"

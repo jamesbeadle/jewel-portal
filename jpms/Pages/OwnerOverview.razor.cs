@@ -1,4 +1,5 @@
 using Jewel.JPMS.Contracts.WeeklyCashflow;
+using Jewel.JPMS.Features.Cashflow;
 using Jewel.JPMS.Features.Cvr;
 using Jewel.JPMS.Features.Owner;
 using Jewel.JPMS.Features.Projects;
@@ -87,7 +88,7 @@ public partial class OwnerOverview
         {
             if (!BankReady) return "The bank position is read from Xero.";
             var fetched = BankSnapshot!.FetchedAtUtc is { } at ? at.ToLocalTime().ToString("HH:mm") : "—";
-            return $"{BankSnapshot.BankAccounts.Count} accounts · Xero, as of {fetched}";
+            return $"{BankPositionCaption.For(BankSnapshot)} · read {fetched}";
         }
     }
 

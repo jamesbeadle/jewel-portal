@@ -61,6 +61,24 @@ The project-process kit writes this file once and never touches it again, and `C
   contracts/Models). RFIs are not on the chart: nothing links an RFI to a task yet.
 
 
+## Cash in bank is the bank statement balance, never Xero's balance (contracts + api + jpms)
+
+- **Why** (2026-10-02, Nigel): the tile read Xero's Bank Summary closing balance — "Balance in
+  Xero", every payment and receipt coded in Xero whether it has reached the bank or not. Lloyds
+  read £5,718.66 on the statement against £107,899.50 in Xero (33 items unreconciled).
+- **The figure**: each account's statement balance (`XeroBankAccountBalance.Statement`), else its
+  Xero balance where none is known yet; `XeroCashSummarySnapshot.TotalCash` is that sum and opens
+  the Weekly Cashflow's running balance, the Cash Forecast and the Owner overview. The caption
+  under the figure (`BankPositionCaption`) says which it is.
+- **Two sources, newest statement date wins** (a keyed figure wins a tie): Xero's Finance API
+  `CashValidation` (`XeroClient.ReadsStatements`; needs the custom connection's
+  `finance.cashvalidation.read` scope — a refusal is `StatementError`, never a failed read), and
+  `KeyBankStatementBalance` — a director keys an account's statement balance and date
+  ("Statement balances…" under Cash in bank on the Weekly Cashflow; POST
+  `xero/bank-statement-balances`; connector `key_bank_statement_balance`; one row per account in
+  `KeyedBankStatementBalances`, laid over the Xero read by `GetXeroCashSummaryHandler`, after
+  the Xero cache). Gate: `BankPositionGates` (directors), shared with the cash summary read.
+
 ## A locked claim's money moves between its lines, never in or out (contracts + api + jpms)
 
 - **Why** (2026-09-29, Jeremy on By France): Valuation 20 was confirmed and paid with every V16

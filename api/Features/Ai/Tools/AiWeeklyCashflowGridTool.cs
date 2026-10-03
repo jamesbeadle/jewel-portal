@@ -25,10 +25,6 @@ internal static partial class AiWeeklyCashflowGridTool
     // camelCase throughout, so a projected record member (entry.Label) reads like its neighbours.
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    // Mirror of GetXeroCashSummaryEndpoint.AllowedToViewCash — the bank position is directors only.
-    private static readonly RoleSet AllowedToViewCash = RoleSet.Of(
-        Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector);
-
     public static IReadOnlyList<AiTool> Build() => new List<AiTool>
     {
         new(
@@ -38,9 +34,10 @@ internal static partial class AiWeeklyCashflowGridTool
             + "with a totals row per band and ONE LINE PER SUPPLIER, client or item — a supplier group "
             + "is one line — each line giving its amount per week (the current week carries everything "
             + "overdue; Later is beyond the horizon) and whether the accountant moved money into that "
-            + "week. Net movement per week; for directors also the closing bank balance. Use this to "
-            + "answer 'what do we pay whom, which week' — it is Xero-seeded and placement-adjusted, so "
-            + "quote it over the raw plan. Pass includeEntries for the bills behind each line.",
+            + "week. Net movement per week; for directors also the closing bank balance, opened from "
+            + "each bank account's statement balance (its Xero balance where none is known yet), "
+            + "listed under bankAccounts. Use this to answer 'what do we pay whom, which week' — it is "
+            + "Xero-seeded and placement-adjusted, so quote it over the raw plan. Pass includeEntries for the bills behind each line.",
             AiToolSchema.Object(
                 (ForceArgument, "boolean", "true bypasses the server's short Xero cache for a fresh read.", false),
                 (IncludeEntriesArgument, "boolean", "true lists every bill, invoice and occurrence under its line (large).", false)),
@@ -63,21 +60,22 @@ internal static partial class AiWeeklyCashflowGridTool
             .Select(WeeklyCashflowSeeding.FromBill)
             .Concat(receivables.Invoices.Select(WeeklyCashflowSeeding.FromInvoice));
         var (counted, excluded) = WeeklyCashflowSeeding.Split(seeds, plan.Exclusions);
+        var bank = await BankPositionFor(context, force, ct);
         var view = WeeklyCashflowMaths.Build(
-            SiteClock.Today(), counted, plan.Items, plan.Placements, await OpeningBalanceFor(context, force, ct));
+            SiteClock.Today(), counted, plan.Items, plan.Placements, bank?.TotalCash);
         var bands = WeeklyCashflowExportBands.For(view, plan.SupplierGroups);
         var includeEntries = AiToolSchema.Flag(input, IncludeEntriesArgument) ?? false;
-        return Serialise(Shape(view, bands, excluded, plan.Exclusions, payables, includeEntries));
+        return Serialise(Shape(view, bands, excluded, plan.Exclusions, payables, bank, includeEntries));
     }
 
     // The bank position only for those the cash-summary endpoint would serve; null leaves the
     // closing balance out of the grid exactly as the page does for Accounts.
-    private static async Task<decimal?> OpeningBalanceFor(AiToolContext context, bool force, CancellationToken ct)
+    private static async Task<XeroCashSummarySnapshot?> BankPositionFor(AiToolContext context, bool force, CancellationToken ct)
     {
-        if (!AllowedToViewCash.IncludesAny(context.User.Roles)) return null;
+        if (!BankPositionGates.Admits(context.User.Roles)) return null;
         var cash = await Ask<GetXeroCashSummary, XeroCashSummarySnapshot>(context, new GetXeroCashSummary(force), ct);
         if (!cash.IsConfigured || cash.Error is not null) return null;
-        return cash.TotalCash;
+        return cash;
     }
 
     private static Task<TResult> Ask<TQuery, TResult>(AiToolContext context, TQuery query, CancellationToken ct)

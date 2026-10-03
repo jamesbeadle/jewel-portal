@@ -199,6 +199,7 @@ public sealed partial class JpmsContext : DbContext
     public DbSet<WeeklyCashflowPlacementEntity> WeeklyCashflowPlacements => Set<WeeklyCashflowPlacementEntity>();
     public DbSet<WeeklyCashflowSupplierGroupEntity> WeeklyCashflowSupplierGroups => Set<WeeklyCashflowSupplierGroupEntity>();
     public DbSet<WeeklyCashflowExclusionEntity> WeeklyCashflowExclusions => Set<WeeklyCashflowExclusionEntity>();
+    public DbSet<KeyedBankStatementBalanceEntity> KeyedBankStatementBalances => Set<KeyedBankStatementBalanceEntity>();
     public DbSet<ValuationInvoiceEntity> ValuationInvoices => Set<ValuationInvoiceEntity>();
     public DbSet<ValuationInvoiceEventEntity> ValuationInvoiceEvents => Set<ValuationInvoiceEventEntity>();
     // The retired snapshot object's alias register (2026-09-18) — old ids and VRS tag numbers → claim.

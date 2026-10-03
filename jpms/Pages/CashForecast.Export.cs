@@ -111,10 +111,11 @@ public partial class CashForecast
         {
             var banksSheet = workbook.AddSheet("Bank accounts",
                 new ExcelColumn("Account"),
-                new ExcelColumn("Balance", ExcelFormat.Currency));
-            foreach (var account in bank.BankAccounts.OrderByDescending(account => account.Balance))
-                banksSheet.AddRow(account.Name, account.Balance);
-            banksSheet.AddRow("Total", bank.TotalCash);
+                new ExcelColumn("Cash in bank", ExcelFormat.Currency),
+                new ExcelColumn("Balance in Xero", ExcelFormat.Currency));
+            foreach (var account in bank.BankAccounts.OrderByDescending(account => account.CashInBank))
+                banksSheet.AddRow(account.Name, account.CashInBank, account.Balance);
+            banksSheet.AddRow("Total", bank.TotalCash, bank.BankAccounts.Sum(account => account.Balance));
         }
 
         return workbook;

@@ -1,3 +1,4 @@
+using Jewel.JPMS.Features.Cashflow;
 using Jewel.JPMS.Features.WeeklyCashflow;
 using static Jewel.JPMS.Features.Cashflow.CashflowDisplay;
 using Jewel.JPMS.Contracts.WeeklyCashflow;
@@ -47,6 +48,7 @@ public partial class WeeklyCashflow
 
     private CashflowItemModal itemModal = default!;
     private SupplierGroupsModal groupsModal = default!;
+    private BankStatementModal statementModal = default!;
 
     // ---- Sources ------------------------------------------------------------
 
