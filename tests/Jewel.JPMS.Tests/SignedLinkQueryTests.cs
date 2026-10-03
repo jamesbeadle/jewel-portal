@@ -40,6 +40,14 @@ public sealed class SignedLinkQueryTests
         Assert.Equal(SignatureOf(signedLink), SignatureOf(link));
     }
 
+    [Fact]
+    public void The_link_as_handed_out_carries_no_bare_space()
+    {
+        var link = SignedLinkQuery.WithPercentEncodedSpaces(SignedLinkWithSpacedFileName());
+
+        Assert.DoesNotContain(" ", link.AbsoluteUri);
+    }
+
     private static Uri SignedLinkWithSpacedFileName()
     {
         var credential = new StorageSharedKeyCredential(AccountName, AccountKey);
